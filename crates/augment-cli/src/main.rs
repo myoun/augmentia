@@ -178,10 +178,8 @@ fn render_position(output: &mut impl Write, state: &GameState) -> io::Result<()>
         write!(output, "{} |", rank + 1)?;
         for file in 0..8 {
             let square = Square::new(file, rank).expect("board coordinate");
-            let symbol = state
-                .board
-                .get(square)
-                .map_or_else(|| ".".to_owned(), piece_symbol);
+            let symbol =
+                display_piece_at(state, square).map_or_else(|| ".".to_owned(), piece_symbol);
             write!(output, " {symbol:>2}")?;
         }
         writeln!(output, " | {}", rank + 1)?;
@@ -291,6 +289,41 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
             )?;
         }
     }
+    for (piece_id, status) in &state.card_runtime.large_pieces {
+        if let Some((_, piece)) = state.board.find_by_id(*piece_id) {
+            writeln!(
+                output,
+                "대형 기물: {} {} 앵커 {} HP {}/{}",
+                player_name(piece.owner),
+                kind_name(piece.kind),
+                status.anchor,
+                status.hp,
+                status.max_hp
+            )?;
+        }
+    }
+    for (piece_id, gold) in &state.card_runtime.merchant_gold {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(output, "상인: {square} 골드 {gold}")?;
+        }
+    }
+    for (piece_id, ready) in &state.card_runtime.holdout_promotions {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(
+                output,
+                "존버: {square} 승진까지 {}수",
+                ready.saturating_sub(state.shared_turn_count())
+            )?;
+        }
+    }
+    for pending in &state.card_runtime.pending_otherworld {
+        writeln!(
+            output,
+            "이세계: {} 귀환까지 {} ply",
+            pending.square,
+            pending.due_ply.saturating_sub(state.ply)
+        )?;
+    }
     if !state.card_runtime.delayed_hazards.is_empty() {
         writeln!(
             output,
@@ -299,6 +332,23 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
         )?;
     }
     Ok(())
+}
+
+fn display_piece_at(state: &GameState, square: Square) -> Option<augment_core::Piece> {
+    state.board.get(square).or_else(|| {
+        state
+            .card_runtime
+            .large_pieces
+            .iter()
+            .find(|(_, status)| {
+                let anchor = status.anchor;
+                square.file() >= anchor.file()
+                    && square.file() <= anchor.file().saturating_add(1)
+                    && square.rank() <= anchor.rank()
+                    && square.rank().saturating_add(1) >= anchor.rank()
+            })
+            .and_then(|(piece_id, _)| state.board.find_by_id(*piece_id).map(|(_, piece)| piece))
+    })
 }
 
 fn render_piece_status_map(
@@ -584,6 +634,16 @@ fn kind_code(kind: PieceKind) -> &'static str {
         PieceKind::Protestant => "P",
         PieceKind::StandardBearer => "SB",
         PieceKind::Windmill => "W",
+        PieceKind::Squire => "SQ",
+        PieceKind::BigRook => "BR",
+        PieceKind::Checker | PieceKind::CheckerKing => "CH",
+        PieceKind::Alfil => "A",
+        PieceKind::Guard => "GD",
+        PieceKind::Fanatic => "F",
+        PieceKind::Colossus => "X",
+        PieceKind::RoyalKnight => "RN",
+        PieceKind::Man => "MN",
+        PieceKind::Merchant => "M",
     }
 }
 
@@ -617,6 +677,17 @@ fn kind_name(kind: PieceKind) -> &'static str {
         PieceKind::Protestant => "프로테스탄트",
         PieceKind::StandardBearer => "기수",
         PieceKind::Windmill => "풍차",
+        PieceKind::Squire => "종자",
+        PieceKind::BigRook => "빅룩",
+        PieceKind::Checker => "체커",
+        PieceKind::CheckerKing => "체커 킹",
+        PieceKind::Alfil => "알필",
+        PieceKind::Guard => "근위병",
+        PieceKind::Fanatic => "광신도",
+        PieceKind::Colossus => "거신병",
+        PieceKind::RoyalKnight => "로얄 나이트",
+        PieceKind::Man => "만",
+        PieceKind::Merchant => "상인",
     }
 }
 

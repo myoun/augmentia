@@ -1,16 +1,20 @@
 use crate::{
-    AMAZON, ASSASSIN, Action, ActionTarget, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY,
-    CardActivation, CardInstance, CardPhase, ChoiceContinuation, ChoiceRegistry, DICE, DISARM,
-    DRAGON, DeathmatchState, DelayedHazard, DelayedHazardKind, DiceLockStatus, DraftPhase,
-    DraftState, DrawReason, EAGLE, EARLY_PROMOTION, EASTERN_POLICY, EMPTY_LUNCHBOX, EffectCommand,
-    EffectRegistry, EmptyLunchboxStatus, EnPassantState, Event, FREEZE, ForcedMoveContinuation,
-    ForcedMoveSource, FrozenStatus, GENEVA_CONVENTION, GRASSHOPPER, GamePhase, GameState,
-    GameStatus, HERALD, HOOK, IDOL, IMPLEMENTED_CARDS, INITIATIVE, InitiativeStatus, JESTER,
-    JUDGMENT, KING_OF_THE_HILL, KNIGHTMASTER, LOCAL_CONSCRIPTION, LOG, LogStatus, MISSIONARY, Mode,
-    MoveAction, ORDINATION, PARRY, PEGASUS, PLATFORM, PendingChoice, Piece, PieceAbility,
-    PieceKind, PlatformRuleState, Player, REAPER, REFORMATION, REPOSITION, REVELATION,
-    RepositionStatus, RulesetManifest, SPRINT, STANDARD_BEARER, Square, Transition, WINDMILL,
-    WIZARD, WinReason, WindmillMode, implemented_card,
+    AMAZON, APPRENTICE_KNIGHTS, ASSASSIN, Action, ActionTarget, BIG_ROOK, CALLING_CARD, CHECKER,
+    CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, CardActivation, CardInstance, CardPhase,
+    ChoiceContinuation, ChoiceRegistry, DEMOCRACY, DICE, DISARM, DRAGON, DUTCH, DeathmatchState,
+    DelayedHazard, DelayedHazardKind, DiceLockStatus, DraftPhase, DraftState, DrawReason, EAGLE,
+    EARLY_PROMOTION, EASTERN_POLICY, ELEPHANT_ESCAPE, EMPTY_LUNCHBOX, EffectCommand,
+    EffectRegistry, EmptyLunchboxStatus, EnPassantState, Event, FAST_GROWTH, FIANCHETTO, FREEZE,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GENEVA_CONVENTION, GRASSHOPPER, GUARD,
+    GamePhase, GameState, GameStatus, HERALD, HOLDOUT, HOOK, HORDE, IDOL, IMPLEMENTED_CARDS,
+    INITIATIVE, IRON_MONARCH, InitiativeStatus, JESTER, JUDGMENT, KING_OF_THE_HILL, KNIGHTMASTER,
+    KNIGHTMATE, LAST_STAND, LOCAL_CONSCRIPTION, LOG, LONDON_SYSTEM, LOYALIST, LargePieceStatus,
+    LogStatus, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode, MoveAction, ORDINATION, OTHERWORLD,
+    PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM, PendingChoice, PendingOtherworld, Piece,
+    PieceAbility, PieceKind, PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER,
+    REFORMATION, REPOSITION, REVELATION, RepositionStatus, RulesetManifest, SPRINT,
+    STANDARD_BEARER, SUMMON_COLOSSUS, Square, Transition, WINDMILL, WIZARD, WinReason,
+    WindmillMode, implemented_card,
 };
 use std::collections::BTreeSet;
 use std::fmt;
@@ -193,6 +197,828 @@ impl Engine {
             state: next,
             events,
         })
+    }
+
+    fn apply_opening_card(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        definition_id: &str,
+        target: &ActionTarget,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let none = || {
+            (target == &ActionTarget::None)
+                .then_some(())
+                .ok_or_else(|| {
+                    EngineError::Invariant(format!("{definition_id} must not have a target"))
+                })
+        };
+        match definition_id {
+            APPRENTICE_KNIGHTS => {
+                none()?;
+                for origin in opening_squares(actor, &["b2", "g2"], &["b7", "g7"]) {
+                    let found = state.board.iter().find(|(_, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Pawn
+                            && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
+                    });
+                    if let Some((square, mut pawn)) = found {
+                        pawn.kind = PieceKind::Squire;
+                        state.board.set(square, Some(pawn));
+                        self.mark_transformed_piece(state, pawn);
+                    }
+                }
+            }
+            CHECKER => {
+                none()?;
+                for origin in opening_squares(actor, &["a2", "h2"], &["a7", "h7"]) {
+                    let found = state.board.iter().find(|(_, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Pawn
+                            && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
+                    });
+                    if let Some((square, mut pawn)) = found {
+                        pawn.kind = PieceKind::Checker;
+                        state.board.set(square, Some(pawn));
+                        self.mark_transformed_piece(state, pawn);
+                    }
+                }
+            }
+            ELEPHANT_ESCAPE => {
+                none()?;
+                for square in opening_squares(actor, &["a3", "h3"], &["a6", "h6"]) {
+                    let piece =
+                        Piece::new(actor, PieceKind::Alfil).with_id(state.allocate_piece_id());
+                    state.board.set(square, Some(piece));
+                    self.register_spawned_piece(state, square, piece, true);
+                }
+            }
+            GUARD => {
+                none()?;
+                let king_origin = opening_square(actor, "e1", "e8");
+                let pawn_origin = opening_square(actor, "e2", "e7");
+                let Some((square, mut pawn)) = state.board.iter().find(|(_, piece)| {
+                    piece.owner == actor
+                        && matches!(piece.kind, PieceKind::Pawn | PieceKind::Fanatic)
+                        && state.card_runtime.piece_origins.get(&piece.id) == Some(&pawn_origin)
+                }) else {
+                    return Err(EngineError::Invariant(format!(
+                        "guard has no pawn originating in front of {king_origin}"
+                    )));
+                };
+                pawn.kind = PieceKind::Guard;
+                state.board.set(square, Some(pawn));
+                self.mark_transformed_piece(state, pawn);
+            }
+            LAST_STAND => {
+                none()?;
+                let pawns = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Pawn)
+                    .collect::<Vec<_>>();
+                for (square, mut pawn) in pawns {
+                    pawn.kind = PieceKind::Fanatic;
+                    state.board.set(square, Some(pawn));
+                }
+            }
+            QUEEN_CAVALRY => {
+                none()?;
+                let mut candidates = state
+                    .board
+                    .iter()
+                    .filter(|(square, piece)| {
+                        piece.owner == actor && piece.kind == PieceKind::Pawn && square.file() == 3
+                    })
+                    .collect::<Vec<_>>();
+                candidates.sort_by_key(|(square, _)| match actor {
+                    Player::White => square.rank(),
+                    Player::Black => 7 - square.rank(),
+                });
+                let Some((square, mut pawn)) = candidates.first().copied() else {
+                    return Err(EngineError::Invariant(
+                        "queen cavalry has no pawn on the d-file".to_owned(),
+                    ));
+                };
+                pawn.kind = PieceKind::Knight;
+                state.card_runtime.shielded_piece_ids.remove(&pawn.id);
+                state.board.set(square, Some(pawn));
+                self.mark_transformed_piece(state, pawn);
+            }
+            DUTCH => {
+                none()?;
+                let pieces = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == actor
+                            && matches!(
+                                piece.kind,
+                                PieceKind::Rook | PieceKind::Bishop | PieceKind::Knight
+                            )
+                    })
+                    .collect::<Vec<_>>();
+                for (square, mut piece) in pieces {
+                    piece.kind = PieceKind::Windmill;
+                    state.board.set(square, Some(piece));
+                    state
+                        .card_runtime
+                        .windmill_modes
+                        .insert(piece.id, WindmillMode::Bishop);
+                    self.mark_transformed_piece(state, piece);
+                }
+            }
+            HORDE => {
+                none()?;
+                self.apply_horde_layout(state, actor, events)?;
+            }
+            KNIGHTMATE => {
+                none()?;
+                let pieces = state.board.iter().collect::<Vec<_>>();
+                let mut found_king = false;
+                for (square, mut piece) in pieces {
+                    if piece.owner != actor {
+                        continue;
+                    }
+                    if piece.kind == PieceKind::King {
+                        piece.kind = PieceKind::RoyalKnight;
+                        state.card_runtime.royal_piece_ids.insert(piece.id);
+                        found_king = true;
+                    } else if piece.kind == PieceKind::Knight {
+                        piece.kind = PieceKind::Man;
+                    } else {
+                        continue;
+                    }
+                    state.board.set(square, Some(piece));
+                    self.mark_transformed_piece(state, piece);
+                }
+                if !found_king {
+                    return Err(EngineError::Invariant("knightmate has no king".to_owned()));
+                }
+            }
+            LONDON_SYSTEM => {
+                none()?;
+                self.apply_london_layout(state, actor, events);
+            }
+            SUMMON_COLOSSUS => {
+                none()?;
+                self.apply_summon_colossus(state, actor, events)?;
+            }
+            BIG_ROOK => {
+                none()?;
+                self.apply_big_rook_layout(state, actor, events);
+            }
+            CALLING_CARD => {
+                none()?;
+                let candidates = web_ordered_pieces(state)
+                    .into_iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == actor.opponent()
+                            && piece.kind != PieceKind::Pawn
+                            && !self.is_royal_piece(state, *piece)
+                            && !matches!(piece.kind, PieceKind::Guard | PieceKind::Jester)
+                    })
+                    .collect::<Vec<_>>();
+                let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+                events.push(Event::RandomSample {
+                    purpose: "calling-card".to_owned(),
+                    roll_53: roll,
+                });
+                let (_, piece) = candidates[index.ok_or_else(|| {
+                    EngineError::Invariant("calling card has no target".to_owned())
+                })?];
+                state.card_runtime.calling_cards.insert(piece.id, actor);
+            }
+            DEMOCRACY => {
+                none()?;
+                state.card_runtime.democracy[actor.index()] = true;
+            }
+            FAST_GROWTH => {
+                none()?;
+                state.card_runtime.fast_growth[actor.index()] = true;
+            }
+            FIANCHETTO => {
+                none()?;
+                state.card_runtime.fianchetto[actor.index()] = true;
+            }
+            HOLDOUT => {
+                let (_, pawn) = piece_target(state, target)?;
+                state
+                    .card_runtime
+                    .holdout_promotions
+                    .insert(pawn.id, state.shared_turn_count().saturating_add(14));
+            }
+            IRON_MONARCH => {
+                none()?;
+                state.card_runtime.iron_monarch[actor.index()] = true;
+            }
+            LOYALIST => {
+                let (_, piece) = piece_target(state, target)?;
+                state.card_runtime.loyalist_piece_ids.insert(piece.id);
+            }
+            MARTYRDOM => {
+                none()?;
+                let bishops = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Bishop)
+                    .collect::<Vec<_>>();
+                for (square, bishop) in bishops {
+                    self.remove_piece_for_card(
+                        state,
+                        square,
+                        bishop,
+                        actor.opponent(),
+                        definition_id,
+                        events,
+                    );
+                }
+                for (_, pawn) in state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Pawn)
+                {
+                    state.card_runtime.shielded_piece_ids.insert(pawn.id);
+                }
+            }
+            MERCHANT_GUILD => {
+                none()?;
+                self.apply_merchant_guild(state, actor, events)?;
+            }
+            OTHERWORLD => {
+                none()?;
+                let pawns = web_ordered_pieces(state)
+                    .into_iter()
+                    .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Pawn)
+                    .collect::<Vec<_>>();
+                let (roll, index) = state.rng_mut().web_choice_index(pawns.len());
+                events.push(Event::RandomSample {
+                    purpose: "otherworld-pawn".to_owned(),
+                    roll_53: roll,
+                });
+                let (square, pawn) = pawns[index
+                    .ok_or_else(|| EngineError::Invariant("otherworld has no pawn".to_owned()))?];
+                let origin = state
+                    .card_runtime
+                    .piece_origins
+                    .get(&pawn.id)
+                    .copied()
+                    .unwrap_or(square);
+                state.board.set(square, None);
+                self.clear_removed_piece_statuses(state, pawn.id);
+                state
+                    .card_runtime
+                    .pending_otherworld
+                    .push(PendingOtherworld {
+                        piece_id: pawn.id,
+                        owner: actor,
+                        square,
+                        origin,
+                        due_ply: state.ply.saturating_add(28),
+                    });
+            }
+            PAWN_CONVERSION => {
+                none()?;
+                state.card_runtime.pawn_conversion[actor.index()] = true;
+            }
+            QUEENS_GAMBIT => {
+                let (queen_square, queen) = piece_target(state, target)?;
+                self.remove_piece_for_card(
+                    state,
+                    queen_square,
+                    queen,
+                    actor.opponent(),
+                    definition_id,
+                    events,
+                );
+                for (square, pawn) in state.board.iter().filter(|(square, piece)| {
+                    piece.owner == actor
+                        && piece.kind == PieceKind::Pawn
+                        && matches!(square.file(), 2 | 3)
+                }) {
+                    let _ = square;
+                    state.card_runtime.protected_piece_ids.insert(pawn.id);
+                }
+            }
+            QXE1 => {
+                none()?;
+                self.apply_qxe1(state, actor, events)?;
+            }
+            _ => unreachable!("opening card dispatcher received {definition_id}"),
+        }
+        Ok(())
+    }
+
+    fn mark_transformed_piece(&self, state: &mut GameState, piece: Piece) {
+        state.card_runtime.moved_piece_ids.insert(piece.id);
+        self.mark_fresh_no_capture(state, piece);
+    }
+
+    fn register_spawned_piece(
+        &self,
+        state: &mut GameState,
+        square: Square,
+        piece: Piece,
+        moved: bool,
+    ) {
+        state.card_runtime.piece_origins.insert(piece.id, square);
+        if moved {
+            state.card_runtime.moved_piece_ids.insert(piece.id);
+        }
+        self.mark_fresh_no_capture(state, piece);
+    }
+
+    fn remove_piece_for_card(
+        &self,
+        state: &mut GameState,
+        square: Square,
+        piece: Piece,
+        remover: Player,
+        cause: &str,
+        events: &mut Vec<Event>,
+    ) {
+        state.board.set(square, None);
+        self.clear_removed_piece_statuses(state, piece.id);
+        events.push(Event::PieceRemoved {
+            actor: remover,
+            piece,
+            at: square,
+            cause: cause.to_owned(),
+        });
+        self.grant_wizard_mana_for_loss(state, piece.owner);
+        self.resolve_reaper_deaths(state, &[(square, piece)], remover, events);
+    }
+
+    fn replace_layout(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        layout: &[(&str, PieceKind, bool)],
+        cause: &str,
+        events: &mut Vec<Event>,
+    ) {
+        let targets: BTreeSet<_> = layout
+            .iter()
+            .map(|(name, _, _)| name.parse::<Square>().expect("static layout square"))
+            .collect();
+        let enemies = targets
+            .iter()
+            .filter_map(|square| {
+                state
+                    .board
+                    .get(*square)
+                    .filter(|piece| piece.owner != actor)
+                    .map(|piece| (*square, piece))
+            })
+            .collect::<Vec<_>>();
+        for (square, piece) in enemies {
+            self.remove_piece_for_card(state, square, piece, actor, cause, events);
+        }
+        let allied = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == actor)
+            .collect::<Vec<_>>();
+        for (square, piece) in allied {
+            state.board.set(square, None);
+            self.clear_removed_piece_statuses(state, piece.id);
+        }
+        for &(name, kind, moved) in layout {
+            let square = name.parse::<Square>().expect("static layout square");
+            let piece = Piece::new(actor, kind).with_id(state.allocate_piece_id());
+            state.board.set(square, Some(piece));
+            self.register_spawned_piece(state, square, piece, moved);
+        }
+    }
+
+    fn apply_london_layout(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
+        const WHITE: &[(&str, PieceKind, bool)] = &[
+            ("a1", PieceKind::Rook, false),
+            ("d1", PieceKind::Queen, false),
+            ("e1", PieceKind::King, false),
+            ("h1", PieceKind::Rook, false),
+            ("f4", PieceKind::Bishop, true),
+            ("d3", PieceKind::Bishop, true),
+            ("f3", PieceKind::Knight, true),
+            ("d2", PieceKind::Knight, true),
+            ("a2", PieceKind::Pawn, false),
+            ("b2", PieceKind::Pawn, false),
+            ("c3", PieceKind::Pawn, true),
+            ("d4", PieceKind::Pawn, true),
+            ("e3", PieceKind::Pawn, true),
+            ("f2", PieceKind::Pawn, false),
+            ("g2", PieceKind::Pawn, false),
+            ("h2", PieceKind::Pawn, false),
+        ];
+        const BLACK: &[(&str, PieceKind, bool)] = &[
+            ("a8", PieceKind::Rook, false),
+            ("d8", PieceKind::Queen, false),
+            ("e8", PieceKind::King, false),
+            ("h8", PieceKind::Rook, false),
+            ("f5", PieceKind::Bishop, true),
+            ("d6", PieceKind::Bishop, true),
+            ("f6", PieceKind::Knight, true),
+            ("d7", PieceKind::Knight, true),
+            ("a7", PieceKind::Pawn, false),
+            ("b7", PieceKind::Pawn, false),
+            ("c6", PieceKind::Pawn, true),
+            ("d5", PieceKind::Pawn, true),
+            ("e6", PieceKind::Pawn, true),
+            ("f7", PieceKind::Pawn, false),
+            ("g7", PieceKind::Pawn, false),
+            ("h7", PieceKind::Pawn, false),
+        ];
+        self.replace_layout(
+            state,
+            actor,
+            if actor == Player::White { WHITE } else { BLACK },
+            LONDON_SYSTEM,
+            events,
+        );
+    }
+
+    fn apply_horde_layout(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let Some((king_square, king)) = state
+            .board
+            .iter()
+            .find(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+        else {
+            return Err(EngineError::Invariant("horde has no king".to_owned()));
+        };
+        let home = opening_square(actor, "e1", "e8");
+        if state
+            .board
+            .get(home)
+            .is_some_and(|piece| piece.owner != actor)
+        {
+            return Err(EngineError::Invariant(
+                "horde king home is occupied by the enemy".to_owned(),
+            ));
+        }
+        let allied = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == actor && piece.id != king.id)
+            .collect::<Vec<_>>();
+        for (square, piece) in allied {
+            state.board.set(square, None);
+            self.clear_removed_piece_statuses(state, piece.id);
+        }
+        state.board.set(king_square, None);
+        state.board.set(home, Some(king));
+        state.card_runtime.moved_piece_ids.insert(king.id);
+        state
+            .card_runtime
+            .piece_origins
+            .entry(king.id)
+            .or_insert(home);
+
+        let ranks: &[u8] = if actor == Player::White {
+            &[0, 1, 2, 3]
+        } else {
+            &[7, 6, 5, 4]
+        };
+        let extra_rank = if actor == Player::White { 4 } else { 3 };
+        let mut squares = Vec::new();
+        for &rank in ranks {
+            for file in 0..8 {
+                squares.push(Square::new(file, rank).expect("horde square"));
+            }
+        }
+        for file in [1, 2, 6, 5] {
+            squares.push(Square::new(file, extra_rank).expect("horde extra square"));
+        }
+        for square in squares {
+            if square == home || state.board.get(square).is_some() {
+                continue;
+            }
+            let pawn = Piece::new(actor, PieceKind::Pawn).with_id(state.allocate_piece_id());
+            state.board.set(square, Some(pawn));
+            self.register_spawned_piece(state, square, pawn, false);
+        }
+        let _ = events;
+        Ok(())
+    }
+
+    fn apply_summon_colossus(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let anchor = opening_square(actor, "d3", "d7");
+        let pawns = web_ordered_pieces(state)
+            .into_iter()
+            .filter(|(square, piece)| {
+                piece.owner == actor
+                    && piece.kind == PieceKind::Pawn
+                    && !matches!(square.file(), 0 | 7)
+            })
+            .collect::<Vec<_>>();
+        if pawns.len() != 6 {
+            return Err(EngineError::Invariant(
+                "summon colossus requires the six non-rook-file pawns".to_owned(),
+            ));
+        }
+        let sacrifice_ids: BTreeSet<_> = pawns.iter().map(|(_, piece)| piece.id).collect();
+        for cell in large_piece_cells(anchor) {
+            if state
+                .board
+                .get(cell)
+                .is_some_and(|piece| !sacrifice_ids.contains(&piece.id))
+            {
+                return Err(EngineError::Invariant(
+                    "colossus footprint is blocked".to_owned(),
+                ));
+            }
+        }
+        for (square, pawn) in pawns {
+            self.remove_piece_for_card(
+                state,
+                square,
+                pawn,
+                actor.opponent(),
+                SUMMON_COLOSSUS,
+                events,
+            );
+        }
+        let colossus = Piece::new(actor, PieceKind::Colossus).with_id(state.allocate_piece_id());
+        state.board.set(anchor, Some(colossus));
+        state.card_runtime.large_pieces.insert(
+            colossus.id,
+            LargePieceStatus {
+                anchor,
+                hp: 3,
+                max_hp: 3,
+            },
+        );
+        self.register_spawned_piece(state, anchor, colossus, true);
+        Ok(())
+    }
+
+    fn apply_big_rook_layout(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
+        let anchor = opening_square(actor, "g2", "g8");
+        let placements: &[(&str, PieceKind)] = if actor == Player::White {
+            &[
+                ("f3", PieceKind::Knight),
+                ("g3", PieceKind::Pawn),
+                ("h3", PieceKind::Pawn),
+            ]
+        } else {
+            &[
+                ("f6", PieceKind::Knight),
+                ("g6", PieceKind::Pawn),
+                ("h6", PieceKind::Pawn),
+            ]
+        };
+        let mut targets = large_piece_cells(anchor);
+        targets.extend(
+            placements
+                .iter()
+                .map(|(name, _)| name.parse::<Square>().expect("static ROOK square")),
+        );
+        targets.sort();
+        targets.dedup();
+        for square in targets {
+            if let Some(piece) = state.board.get(square) {
+                let remover = if piece.owner == actor {
+                    actor.opponent()
+                } else {
+                    actor
+                };
+                self.remove_piece_for_card(state, square, piece, remover, BIG_ROOK, events);
+            }
+        }
+        for &(name, kind) in placements {
+            let square = name.parse::<Square>().expect("static ROOK square");
+            let piece = Piece::new(actor, kind).with_id(state.allocate_piece_id());
+            state.board.set(square, Some(piece));
+            self.register_spawned_piece(state, square, piece, true);
+        }
+        let rook = Piece::new(actor, PieceKind::BigRook).with_id(state.allocate_piece_id());
+        state.board.set(anchor, Some(rook));
+        state.card_runtime.large_pieces.insert(
+            rook.id,
+            LargePieceStatus {
+                anchor,
+                hp: 2,
+                max_hp: 2,
+            },
+        );
+        self.register_spawned_piece(state, anchor, rook, false);
+    }
+
+    fn apply_merchant_guild(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let Some((from, mut king)) = state
+            .board
+            .iter()
+            .find(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+        else {
+            return Err(EngineError::Invariant(
+                "merchant guild has no king".to_owned(),
+            ));
+        };
+        let direction = if actor == Player::White { 1 } else { -1 };
+        let to = from.offset(0, direction * 2).ok_or_else(|| {
+            EngineError::Invariant("merchant destination is off board".to_owned())
+        })?;
+        if let Some(blocker) = state.board.get(to) {
+            if blocker.owner != actor {
+                return Err(EngineError::Invariant(
+                    "merchant destination has an enemy".to_owned(),
+                ));
+            }
+            self.remove_piece_for_card(
+                state,
+                to,
+                blocker,
+                actor.opponent(),
+                MERCHANT_GUILD,
+                events,
+            );
+        }
+        state.board.set(from, None);
+        king.kind = PieceKind::Merchant;
+        state.board.set(to, Some(king));
+        state.card_runtime.merchant_gold.insert(king.id, 0);
+        state.card_runtime.royal_piece_ids.insert(king.id);
+        state.card_runtime.moved_piece_ids.insert(king.id);
+        Ok(())
+    }
+
+    fn apply_qxe1(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let kings = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+            .collect::<Vec<_>>();
+        let queens = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Queen)
+            .collect::<Vec<_>>();
+        let mut plans = Vec::new();
+        for &(king_square, king) in &kings {
+            for &(queen_square, queen) in &queens {
+                if clear_queen_line(&state.board, queen_square, king_square) {
+                    plans.push((
+                        queen_square
+                            .file()
+                            .abs_diff(king_square.file())
+                            .max(queen_square.rank().abs_diff(king_square.rank())),
+                        king_square,
+                        king,
+                        queen_square,
+                        queen,
+                    ));
+                }
+            }
+        }
+        plans.sort_by_key(|plan| (plan.0, plan.1, plan.3));
+        let Some((_, throne, king, queen_square, queen)) = plans.first().copied() else {
+            return Err(EngineError::Invariant(
+                "qxe1 has no usurpation line".to_owned(),
+            ));
+        };
+        state.board.set(queen_square, None);
+        self.remove_piece_for_card(state, throne, king, actor, QXE1, events);
+        state.board.set(throne, Some(queen));
+        state.card_runtime.royal_piece_ids.insert(queen.id);
+        state.card_runtime.moved_piece_ids.insert(queen.id);
+        Ok(())
+    }
+
+    fn is_royal_piece(&self, state: &GameState, piece: Piece) -> bool {
+        piece.kind == PieceKind::King
+            || matches!(piece.kind, PieceKind::RoyalKnight | PieceKind::Merchant)
+            || state.card_runtime.royal_piece_ids.contains(&piece.id)
+    }
+
+    fn opening_card_none_legal(
+        &self,
+        state: &GameState,
+        definition_id: &str,
+        actor: Player,
+    ) -> bool {
+        let has = |kind| {
+            state
+                .board
+                .iter()
+                .any(|(_, piece)| piece.owner == actor && piece.kind == kind)
+        };
+        match definition_id {
+            APPRENTICE_KNIGHTS => opening_squares(actor, &["b2", "g2"], &["b7", "g7"])
+                .into_iter()
+                .any(|origin| {
+                    state.board.iter().any(|(_, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Pawn
+                            && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
+                    })
+                }),
+            CHECKER => opening_squares(actor, &["a2", "h2"], &["a7", "h7"])
+                .into_iter()
+                .any(|origin| {
+                    state.board.iter().any(|(_, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Pawn
+                            && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
+                    })
+                }),
+            ELEPHANT_ESCAPE => opening_squares(actor, &["a3", "h3"], &["a6", "h6"])
+                .into_iter()
+                .all(|square| self.board_piece_at(state, square).is_none()),
+            GUARD => {
+                let origin = opening_square(actor, "e2", "e7");
+                state.board.iter().any(|(_, piece)| {
+                    piece.owner == actor
+                        && matches!(piece.kind, PieceKind::Pawn | PieceKind::Fanatic)
+                        && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
+                })
+            }
+            LAST_STAND | OTHERWORLD => has(PieceKind::Pawn),
+            QUEEN_CAVALRY => state.board.iter().any(|(square, piece)| {
+                piece.owner == actor && piece.kind == PieceKind::Pawn && square.file() == 3
+            }),
+            CALLING_CARD => state.board.iter().any(|(_, piece)| {
+                piece.owner == actor.opponent()
+                    && piece.kind != PieceKind::Pawn
+                    && !self.is_royal_piece(state, piece)
+                    && !matches!(piece.kind, PieceKind::Guard | PieceKind::Jester)
+            }),
+            DEMOCRACY => has(PieceKind::Pawn) && !state.card_runtime.democracy[actor.index()],
+            FIANCHETTO => has(PieceKind::Bishop),
+            HORDE => {
+                state
+                    .board
+                    .iter()
+                    .any(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+                    && self
+                        .board_piece_at(state, opening_square(actor, "e1", "e8"))
+                        .is_none_or(|piece| piece.owner == actor)
+            }
+            KNIGHTMATE => has(PieceKind::King),
+            MERCHANT_GUILD => state
+                .board
+                .iter()
+                .find(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+                .and_then(|(square, _)| {
+                    square.offset(0, if actor == Player::White { 2 } else { -2 })
+                })
+                .is_some_and(|destination| {
+                    self.board_piece_at(state, destination).is_none_or(|piece| {
+                        piece.owner == actor
+                            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                    })
+                }),
+            QXE1 => state.board.iter().any(|(king_square, king)| {
+                king.owner == actor
+                    && king.kind == PieceKind::King
+                    && state.board.iter().any(|(queen_square, queen)| {
+                        queen.owner == actor
+                            && queen.kind == PieceKind::Queen
+                            && clear_queen_line(&state.board, queen_square, king_square)
+                    })
+            }),
+            MARTYRDOM => has(PieceKind::Bishop) && has(PieceKind::Pawn),
+            SUMMON_COLOSSUS => {
+                let pawns = state
+                    .board
+                    .iter()
+                    .filter(|(square, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Pawn
+                            && !matches!(square.file(), 0 | 7)
+                    })
+                    .map(|(_, piece)| piece.id)
+                    .collect::<BTreeSet<_>>();
+                pawns.len() == 6
+                    && large_piece_cells(opening_square(actor, "d3", "d7"))
+                        .into_iter()
+                        .all(|square| {
+                            self.board_piece_at(state, square)
+                                .is_none_or(|piece| pawns.contains(&piece.id))
+                        })
+            }
+            BIG_ROOK | DUTCH | FAST_GROWTH | IRON_MONARCH | LONDON_SYSTEM | PAWN_CONVERSION => true,
+            _ => false,
+        }
     }
 
     /// Install a global RULE card. RULE cards are not owned and do not contribute stars.
@@ -690,12 +1516,117 @@ impl Engine {
     ) -> Result<Transition, EngineError> {
         let mut next = state.clone();
         let actor = next.turn;
-        let (_, wizard) = next.board.find_by_id(piece_id).ok_or_else(|| {
+        let (_, source_piece) = next.board.find_by_id(piece_id).ok_or_else(|| {
             EngineError::Invariant("legal ability has no source piece".to_owned())
         })?;
-        if wizard.owner != actor || wizard.kind != PieceKind::Wizard {
+        if source_piece.owner != actor {
             return Err(EngineError::Invariant(
-                "wizard ability source is not the acting wizard".to_owned(),
+                "ability source is not owned by the actor".to_owned(),
+            ));
+        }
+        if ability == PieceAbility::ColossusSector {
+            let ActionTarget::Squares(squares) = target else {
+                return Err(EngineError::Invariant(
+                    "colossus sector requires four squares".to_owned(),
+                ));
+            };
+            let mut events = vec![Event::ActionApplied { actor, action }];
+            let mut seen = BTreeSet::new();
+            for square in squares {
+                let Some((anchor, target_piece)) = self.board_piece_entry_at(&next, square) else {
+                    continue;
+                };
+                if target_piece.owner == actor
+                    || target_piece.kind == PieceKind::Guard
+                    || !seen.insert(target_piece.id)
+                {
+                    continue;
+                }
+                if next
+                    .card_runtime
+                    .shielded_piece_ids
+                    .contains(&target_piece.id)
+                    || next
+                        .card_runtime
+                        .protected_piece_ids
+                        .contains(&target_piece.id)
+                {
+                    continue;
+                }
+                if let Some(status) = next.card_runtime.large_pieces.get_mut(&target_piece.id) {
+                    status.hp = status.hp.saturating_sub(1);
+                    if status.hp > 0 {
+                        continue;
+                    }
+                }
+                self.remove_piece_for_card(
+                    &mut next,
+                    anchor,
+                    target_piece,
+                    actor,
+                    "colossus-sector",
+                    &mut events,
+                );
+                self.resolve_calling_card_capture(
+                    &mut next,
+                    target_piece,
+                    Some(source_piece),
+                    &mut events,
+                );
+            }
+            next.actions_remaining = next.actions_remaining.saturating_sub(1);
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = 0;
+            next.mark_deathmatch_progress();
+            self.resolve_after_counted_move(&mut next, &mut events);
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status == GameStatus::Ongoing {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.push_game_ended(&next, &mut events);
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if ability == PieceAbility::MerchantBuy {
+            let (square, mut purchased) = piece_target(&next, &target)?;
+            let cost = merchant_cost(purchased.kind);
+            let gold = next.card_runtime.merchant_gold.entry(piece_id).or_default();
+            *gold = gold.saturating_sub(cost);
+            let royal_purchase = self.is_royal_piece(&next, purchased)
+                && !next.card_runtime.democracy[purchased.owner.index()];
+            if royal_purchase {
+                next.status = GameStatus::Won {
+                    winner: actor,
+                    reason: WinReason::CardEffect("merchant-purchase".to_owned()),
+                };
+            } else {
+                purchased.owner = actor;
+                next.board.set(square, Some(purchased));
+                next.card_runtime.moved_piece_ids.insert(purchased.id);
+            }
+            let mut events = vec![Event::ActionApplied { actor, action }];
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("merchant-buy:{piece_id}:{}:{cost}", purchased.id),
+            });
+            next.actions_remaining = next.actions_remaining.saturating_sub(1);
+            if next.status == GameStatus::Ongoing {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.push_game_ended(&next, &mut events);
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        let wizard = source_piece;
+        if wizard.kind != PieceKind::Wizard {
+            return Err(EngineError::Invariant(
+                "wizard ability source is not a wizard".to_owned(),
             ));
         }
         let cost = match ability {
@@ -703,6 +1634,7 @@ impl Engine {
             PieceAbility::WizardShield => 2,
             PieceAbility::WizardMeteor => 3,
             PieceAbility::WizardTimeStop => 5,
+            PieceAbility::ColossusSector | PieceAbility::MerchantBuy => unreachable!(),
         };
         let mana = next.card_runtime.wizard_mana.entry(piece_id).or_default();
         if *mana < cost {
@@ -751,6 +1683,7 @@ impl Engine {
                 next.card_runtime.skip_turns[actor.opponent().index()] = true;
                 ends_turn = false;
             }
+            PieceAbility::ColossusSector | PieceAbility::MerchantBuy => unreachable!(),
         }
         events.push(Event::EffectApplied {
             source_card_instance: 0,
@@ -798,6 +1731,13 @@ impl Engine {
             },
         ];
         match definition_id.as_str() {
+            APPRENTICE_KNIGHTS | BIG_ROOK | CALLING_CARD | CHECKER | DEMOCRACY | DUTCH
+            | ELEPHANT_ESCAPE | FAST_GROWTH | FIANCHETTO | GUARD | HOLDOUT | HORDE
+            | IRON_MONARCH | KNIGHTMATE | LAST_STAND | LONDON_SYSTEM | LOYALIST | MARTYRDOM
+            | MERCHANT_GUILD | OTHERWORLD | PAWN_CONVERSION | QUEEN_CAVALRY | QUEENS_GAMBIT
+            | QXE1 | SUMMON_COLOSSUS => {
+                self.apply_opening_card(&mut next, actor, &definition_id, &target, &mut events)?;
+            }
             PARRY => {
                 let (_, target_piece) = piece_target(&next, &target)?;
                 next.card_runtime.parry_piece_ids.insert(target_piece.id);
@@ -1218,7 +2158,8 @@ impl Engine {
         } else {
             self.available_adjacent_idol(&next, movement.from, moving_piece.owner)
         };
-        let destination_piece = next.board.get(movement.to);
+        let destination_entry = self.board_piece_entry_at(&next, movement.to);
+        let destination_piece = destination_entry.map(|(_, piece)| piece);
         let en_passant_capture = (moving_piece.kind == PieceKind::Pawn
             && destination_piece.is_none()
             && movement.from.file() != movement.to.file())
@@ -1240,6 +2181,7 @@ impl Engine {
         });
         let capture_square = en_passant_capture
             .map(|(square, _)| square)
+            .or_else(|| destination_entry.map(|(square, _)| square))
             .unwrap_or(movement.to);
         let target_piece = destination_piece.or(en_passant_capture.map(|(_, piece)| piece));
         let irreversible = moving_piece.kind == PieceKind::Pawn || target_piece.is_some();
@@ -1248,6 +2190,50 @@ impl Engine {
             actor,
             action: action.clone(),
         }];
+
+        if matches!(moving_piece.kind, PieceKind::BigRook | PieceKind::Colossus) {
+            let targets = self.large_landing_targets(&next, moving_piece, movement.to);
+            for (square, target) in targets {
+                let remover = if target.owner == actor {
+                    actor.opponent()
+                } else {
+                    actor
+                };
+                self.remove_piece_for_card(
+                    &mut next,
+                    square,
+                    target,
+                    remover,
+                    "large-piece-landing",
+                    &mut events,
+                );
+            }
+            next.board.set(movement.from, None);
+            next.board.set(movement.to, Some(moving_piece));
+            if let Some(status) = next.card_runtime.large_pieces.get_mut(&moving_piece.id) {
+                status.anchor = movement.to;
+            }
+            next.card_runtime.moved_piece_ids.insert(moving_piece.id);
+            next.en_passant = None;
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = if target_piece.is_some() {
+                0
+            } else {
+                next.quiet_ply.saturating_add(1)
+            };
+            next.mark_deathmatch_progress();
+            self.resolve_after_counted_move(&mut next, &mut events);
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status == GameStatus::Ongoing {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.push_game_ended(&next, &mut events);
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
 
         if moving_piece.kind == PieceKind::Log {
             let file_delta = movement.to.file() as i8 - movement.from.file() as i8;
@@ -1263,6 +2249,7 @@ impl Engine {
             next.card_runtime.moved_piece_ids.insert(moving_piece.id);
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
                 command: format!(
@@ -1288,6 +2275,7 @@ impl Engine {
             next.en_passant = None;
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
                 command: format!("dragon-swap:{}:{}", movement.from, movement.to),
@@ -1307,15 +2295,62 @@ impl Engine {
         if let Some(target) = target_piece
             && target.owner != actor
             && moving_piece.kind != PieceKind::Missionary
-            && next.card_runtime.shielded_piece_ids.remove(&target.id)
+            && (next.card_runtime.shielded_piece_ids.remove(&target.id)
+                || next.card_runtime.protected_piece_ids.contains(&target.id))
         {
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
                 command: format!("shield-broken:{}", target.id),
             });
             self.finish_turn(&mut next, actor, &mut events)?;
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+
+        if let Some(target) = target_piece
+            && let Some(status) = next.card_runtime.large_pieces.get_mut(&target.id)
+        {
+            status.hp = status.hp.saturating_sub(1);
+            let defeated = status.hp == 0;
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("hp-hit:{}:{}/{}", target.id, status.hp, status.max_hp),
+            });
+            if defeated {
+                next.board.set(capture_square, None);
+                next.card_runtime.large_pieces.remove(&target.id);
+                self.clear_removed_piece_statuses(&mut next, target.id);
+                events.push(Event::PieceCaptured {
+                    actor,
+                    piece: target,
+                    at: capture_square,
+                });
+                self.resolve_calling_card_capture(
+                    &mut next,
+                    target,
+                    Some(moving_piece),
+                    &mut events,
+                );
+            }
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = if defeated {
+                0
+            } else {
+                next.quiet_ply.saturating_add(1)
+            };
+            next.en_passant = None;
+            self.resolve_after_counted_move(&mut next, &mut events);
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status == GameStatus::Ongoing {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.push_game_ended(&next, &mut events);
+            }
             return Ok(Transition {
                 state: next,
                 events,
@@ -1335,6 +2370,7 @@ impl Engine {
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = 0;
             next.mark_deathmatch_progress();
+            self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
                 command: format!("missionary-convert:{}:{}", converted.id, movement.to),
@@ -1353,6 +2389,112 @@ impl Engine {
                 } else {
                     self.resolve_no_action_loss(&mut next, actor, &mut events);
                 }
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+
+        if matches!(
+            moving_piece.kind,
+            PieceKind::Checker | PieceKind::CheckerKing
+        ) && movement.from.file().abs_diff(movement.to.file()) == 2
+        {
+            let mid = Square::new(
+                (movement.from.file() + movement.to.file()) / 2,
+                (movement.from.rank() + movement.to.rank()) / 2,
+            )
+            .expect("checker midpoint is on board");
+            let captured = self.board_piece_at(&next, mid).ok_or_else(|| {
+                EngineError::Invariant("checker jump has no captured piece".to_owned())
+            })?;
+            let captured_square = next
+                .board
+                .find_by_id(captured.id)
+                .map(|(square, _)| square)
+                .unwrap_or(mid);
+            next.board.set(movement.from, None);
+            let mut checker = moving_piece;
+            let mut jumped_attack = false;
+            let mut defeated = false;
+            if next.card_runtime.shielded_piece_ids.remove(&captured.id) {
+                jumped_attack = true;
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("shield-broken:{}", captured.id),
+                });
+            } else if !next.card_runtime.protected_piece_ids.contains(&captured.id) {
+                jumped_attack = true;
+                if let Some(status) = next.card_runtime.large_pieces.get_mut(&captured.id) {
+                    status.hp = status.hp.saturating_sub(1);
+                    defeated = status.hp == 0;
+                    events.push(Event::EffectApplied {
+                        source_card_instance: 0,
+                        command: format!("hp-hit:{}:{}/{}", captured.id, status.hp, status.max_hp),
+                    });
+                } else {
+                    defeated = true;
+                }
+                if defeated {
+                    next.board.set(captured_square, None);
+                    self.clear_removed_piece_statuses(&mut next, captured.id);
+                    checker.capture_count = checker.capture_count.saturating_add(1);
+                    events.push(Event::PieceCaptured {
+                        actor,
+                        piece: captured,
+                        at: captured_square,
+                    });
+                    self.resolve_calling_card_capture(
+                        &mut next,
+                        captured,
+                        Some(checker),
+                        &mut events,
+                    );
+                }
+            }
+            if checker.kind == PieceKind::Checker
+                && ((checker.owner == Player::White && movement.to.rank() == 7)
+                    || (checker.owner == Player::Black && movement.to.rank() == 0))
+            {
+                checker.kind = PieceKind::CheckerKing;
+            }
+            next.board.set(movement.to, Some(checker));
+            next.card_runtime.moved_piece_ids.insert(checker.id);
+            next.en_passant = None;
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = if defeated {
+                0
+            } else {
+                next.quiet_ply.saturating_add(1)
+            };
+            next.mark_deathmatch_progress();
+            self.resolve_after_counted_move(&mut next, &mut events);
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status != GameStatus::Ongoing {
+                self.push_game_ended(&next, &mut events);
+            } else if jumped_attack {
+                let mut followups = Vec::new();
+                self.generate_checker_moves(&next, movement.to, checker, &mut followups);
+                let has_capture = followups.iter().any(|action| {
+                    matches!(action, Action::Move(movement) if movement.from.file().abs_diff(movement.to.file()) == 2)
+                });
+                if has_capture {
+                    next.phase = GamePhase::ForcedMove {
+                        piece_id: checker.id,
+                        source: ForcedMoveSource::Effect(CHECKER.to_owned()),
+                        continuation: ForcedMoveContinuation::FinishTurn,
+                    };
+                    events.push(Event::ForcedMoveStarted {
+                        player: actor,
+                        piece_id: checker.id,
+                        source: CHECKER.to_owned(),
+                    });
+                } else {
+                    self.finish_turn(&mut next, actor, &mut events)?;
+                }
+            } else {
+                self.finish_turn(&mut next, actor, &mut events)?;
             }
             return Ok(Transition {
                 state: next,
@@ -1407,6 +2549,9 @@ impl Engine {
                     placed_piece.kind = promotion;
                 }
                 placed_piece.capture_count = placed_piece.capture_count.saturating_add(1);
+                if moving_piece.kind == PieceKind::Squire {
+                    placed_piece.kind = PieceKind::Knight;
+                }
                 next.board.set(movement.to, Some(placed_piece));
                 events.push(Event::PieceCaptured {
                     actor,
@@ -1421,6 +2566,17 @@ impl Engine {
                     actor,
                     &mut events,
                 );
+                self.resolve_calling_card_capture(
+                    &mut next,
+                    captured,
+                    Some(placed_piece),
+                    &mut events,
+                );
+                if moving_piece.kind == PieceKind::King
+                    && next.card_runtime.iron_monarch[actor.index()]
+                {
+                    next.actions_remaining = next.actions_remaining.saturating_add(1);
+                }
             }
         } else {
             let mut placed_piece = moving_piece;
@@ -1436,6 +2592,15 @@ impl Engine {
             )
         {
             next.card_runtime.moved_piece_ids.insert(moving_piece.id);
+        }
+        if moving_survived
+            && moving_piece.kind == PieceKind::Checker
+            && ((actor == Player::White && movement.to.rank() == 7)
+                || (actor == Player::Black && movement.to.rank() == 0))
+            && let Some(mut checker) = next.board.get(movement.to)
+        {
+            checker.kind = PieceKind::CheckerKing;
+            next.board.set(movement.to, Some(checker));
         }
         if moving_survived && moving_piece.kind == PieceKind::Recruiter {
             let pawn = Piece::new(actor, PieceKind::Pawn).with_id(next.allocate_piece_id());
@@ -1488,6 +2653,8 @@ impl Engine {
         if irreversible {
             next.mark_deathmatch_progress();
         }
+
+        self.resolve_after_counted_move(&mut next, &mut events);
 
         self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
 
@@ -2009,20 +3176,176 @@ impl Engine {
         state.card_runtime.wizard_mana.remove(&piece_id);
         state.card_runtime.reaper_souls.remove(&piece_id);
         state.card_runtime.shielded_piece_ids.remove(&piece_id);
+        state.card_runtime.protected_piece_ids.remove(&piece_id);
         state.card_runtime.idol_used_turn.remove(&piece_id);
         state.card_runtime.idol_rest_piece_ids.remove(&piece_id);
+        state.card_runtime.loyalist_piece_ids.remove(&piece_id);
+        state.card_runtime.royal_piece_ids.remove(&piece_id);
+        state.card_runtime.holdout_promotions.remove(&piece_id);
+        state.card_runtime.merchant_gold.remove(&piece_id);
+        state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.piece_origins.remove(&piece_id);
+    }
+
+    fn resolve_calling_card_capture(
+        &self,
+        state: &mut GameState,
+        captured: Piece,
+        attacker: Option<Piece>,
+        events: &mut Vec<Event>,
+    ) {
+        let Some(by) = state.card_runtime.calling_cards.remove(&captured.id) else {
+            return;
+        };
+        let remaining = web_ordered_pieces(state)
+            .into_iter()
+            .filter(|(_, piece)| piece.owner == captured.owner && piece.id != captured.id)
+            .collect::<Vec<_>>();
+        let nonroyal = remaining
+            .iter()
+            .copied()
+            .filter(|(_, piece)| {
+                attacker.is_none_or(|attacker| piece.id != attacker.id)
+                    && !self.is_royal_piece(state, *piece)
+                    && !matches!(piece.kind, PieceKind::Guard | PieceKind::Jester)
+            })
+            .collect::<Vec<_>>();
+        let candidates = if nonroyal.is_empty()
+            && !remaining.is_empty()
+            && remaining
+                .iter()
+                .all(|(_, piece)| self.is_royal_piece(state, *piece))
+        {
+            remaining
+                .into_iter()
+                .filter(|(_, piece)| attacker.is_none_or(|attacker| piece.id != attacker.id))
+                .collect::<Vec<_>>()
+        } else {
+            nonroyal
+        };
+        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+        events.push(Event::RandomSample {
+            purpose: "calling-card-followup".to_owned(),
+            roll_53: roll,
+        });
+        let Some(index) = index else {
+            return;
+        };
+        let (square, piece) = candidates[index];
+        state.card_runtime.calling_cards.remove(&piece.id);
+        self.remove_piece_for_card(state, square, piece, by, CALLING_CARD, events);
+    }
+
+    fn resolve_after_counted_move(&self, state: &mut GameState, events: &mut Vec<Event>) {
+        let mut pending = std::mem::take(&mut state.card_runtime.pending_otherworld);
+        let mut remaining = Vec::new();
+        for entry in pending.drain(..) {
+            if state.ply < entry.due_ply {
+                remaining.push(entry);
+                continue;
+            }
+            let captured_blocker = if let Some(blocker) = self.board_piece_at(state, entry.square) {
+                let blocker_square = state
+                    .board
+                    .find_by_id(blocker.id)
+                    .map(|(square, _)| square)
+                    .unwrap_or(entry.square);
+                self.remove_piece_for_card(
+                    state,
+                    blocker_square,
+                    blocker,
+                    entry.owner,
+                    OTHERWORLD,
+                    events,
+                );
+                true
+            } else {
+                false
+            };
+            let mut wizard = Piece::new(entry.owner, PieceKind::Wizard).with_id(entry.piece_id);
+            wizard.capture_count = u16::from(captured_blocker);
+            state.board.set(entry.square, Some(wizard));
+            state.card_runtime.wizard_mana.insert(wizard.id, 0);
+            state
+                .card_runtime
+                .piece_origins
+                .insert(wizard.id, entry.origin);
+            state.card_runtime.moved_piece_ids.insert(wizard.id);
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("otherworld-return:{}:{}", wizard.id, entry.square),
+            });
+        }
+        state.card_runtime.pending_otherworld = remaining;
+    }
+
+    fn resolve_holdout_promotions(&self, state: &mut GameState, player: Player) {
+        let due = state
+            .card_runtime
+            .holdout_promotions
+            .iter()
+            .filter_map(|(piece_id, ready)| {
+                (state.shared_turn_count() >= *ready)
+                    .then_some(*piece_id)
+                    .filter(|piece_id| {
+                        state.board.find_by_id(*piece_id).is_some_and(|(_, piece)| {
+                            piece.owner == player && piece.kind == PieceKind::Pawn
+                        })
+                    })
+            })
+            .collect::<Vec<_>>();
+        for piece_id in due {
+            if let Some((square, mut pawn)) = state.board.find_by_id(piece_id) {
+                pawn.kind = PieceKind::Queen;
+                state.board.set(square, Some(pawn));
+                state.card_runtime.moved_piece_ids.insert(piece_id);
+            }
+            state.card_runtime.holdout_promotions.remove(&piece_id);
+        }
+    }
+
+    fn grant_merchant_gold(&self, state: &mut GameState, player: Player) {
+        let merchants = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == player && piece.kind == PieceKind::Merchant)
+            .map(|(_, piece)| piece.id)
+            .collect::<Vec<_>>();
+        for piece_id in merchants {
+            let gold = state
+                .card_runtime
+                .merchant_gold
+                .entry(piece_id)
+                .or_default();
+            *gold = gold.saturating_add(1);
+        }
     }
 
     fn resolve_missing_king(&self, state: &mut GameState, _events: &mut Vec<Event>) {
         if state.status != GameStatus::Ongoing || !self.ruleset.base_rules.king_capture_wins {
             return;
         }
-        if !state.has_king(Player::White) {
+        let defeated = |state: &GameState, player: Player| {
+            if state.card_runtime.democracy[player.index()] {
+                !state
+                    .board
+                    .iter()
+                    .any(|(_, piece)| piece.owner == player && piece.kind == PieceKind::Pawn)
+            } else {
+                !state.board.iter().any(|(_, piece)| {
+                    piece.owner == player
+                        && (piece.kind == PieceKind::King
+                            || matches!(piece.kind, PieceKind::RoyalKnight | PieceKind::Merchant)
+                            || state.card_runtime.royal_piece_ids.contains(&piece.id))
+                })
+            }
+        };
+        if defeated(state, Player::White) {
             state.status = GameStatus::Won {
                 winner: Player::Black,
                 reason: WinReason::KingCaptured,
             };
-        } else if !state.has_king(Player::Black) {
+        } else if defeated(state, Player::Black) {
             state.status = GameStatus::Won {
                 winner: Player::White,
                 reason: WinReason::KingCaptured,
@@ -2359,6 +3682,8 @@ impl Engine {
         state.cards_used_this_turn[actor.index()] = 0;
         state.cards_used_this_turn[defender.index()] = 0;
         let next_turn_event_start = events.len();
+        self.resolve_holdout_promotions(state, next_player);
+        self.grant_merchant_gold(state, next_player);
         events.push(Event::TurnChanged {
             player: next_player,
         });
@@ -2705,6 +4030,65 @@ impl Engine {
                 continue;
             }
             match card.definition_id.as_str() {
+                APPRENTICE_KNIGHTS | BIG_ROOK | CALLING_CARD | CHECKER | DEMOCRACY | DUTCH
+                | ELEPHANT_ESCAPE | FAST_GROWTH | FIANCHETTO | GUARD | HORDE | IRON_MONARCH
+                | KNIGHTMATE | LAST_STAND | LONDON_SYSTEM | MARTYRDOM | MERCHANT_GUILD
+                | OTHERWORLD | PAWN_CONVERSION | QUEEN_CAVALRY | QXE1 | SUMMON_COLOSSUS => {
+                    if self.opening_card_none_legal(state, &card.definition_id, state.turn) {
+                        actions.push(Action::UseCard {
+                            instance_id: card.instance_id,
+                            target: ActionTarget::None,
+                        });
+                    }
+                }
+                HOLDOUT => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn && piece.kind == PieceKind::Pawn {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
+                LOYALIST => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn
+                            && !self.is_royal_piece(state, piece)
+                            && !matches!(
+                                piece.kind,
+                                PieceKind::Merchant | PieceKind::BigRook | PieceKind::Colossus
+                            )
+                            && !state.card_runtime.loyalist_piece_ids.contains(&piece.id)
+                        {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
+                QUEENS_GAMBIT => {
+                    let protected_pawns = state.board.iter().any(|(square, piece)| {
+                        piece.owner == state.turn
+                            && piece.kind == PieceKind::Pawn
+                            && matches!(square.file(), 2 | 3)
+                            && !state.card_runtime.shielded_piece_ids.contains(&piece.id)
+                    });
+                    if protected_pawns {
+                        for (square, piece) in state.board.iter() {
+                            if piece.owner == state.turn
+                                && piece.kind == PieceKind::Queen
+                                && !self.is_royal_piece(state, piece)
+                            {
+                                actions.push(Action::UseCard {
+                                    instance_id: card.instance_id,
+                                    target: ActionTarget::PieceAt(square),
+                                });
+                            }
+                        }
+                    }
+                }
                 PARRY => {
                     for (square, piece) in state.board.iter() {
                         if piece.owner == state.turn
@@ -2973,6 +4357,22 @@ impl Engine {
     }
 
     fn generate_move_actions(&self, state: &GameState) -> Vec<Action> {
+        let mut forced_checker_captures = Vec::new();
+        for (from, piece) in state.board.iter().filter(|(_, piece)| {
+            piece.owner == state.turn
+                && matches!(piece.kind, PieceKind::Checker | PieceKind::CheckerKing)
+        }) {
+            let mut candidates = Vec::new();
+            self.generate_checker_moves(state, from, piece, &mut candidates);
+            forced_checker_captures.extend(candidates.into_iter().filter(|action| {
+                matches!(action, Action::Move(movement) if movement.from.file().abs_diff(movement.to.file()) == 2)
+            }));
+        }
+        if !forced_checker_captures.is_empty() {
+            forced_checker_captures.sort();
+            forced_checker_captures.dedup();
+            return forced_checker_captures;
+        }
         let mut actions = Vec::new();
         for (from, piece) in state.board.iter() {
             if piece.owner != state.turn {
@@ -3012,7 +4412,9 @@ impl Engine {
             return;
         }
         match piece.kind {
-            PieceKind::Pawn => self.generate_pawn_moves(state, from, piece, actions),
+            PieceKind::Pawn | PieceKind::Squire => {
+                self.generate_pawn_moves(state, from, piece, actions)
+            }
             PieceKind::Knight => self.generate_leaper_moves(
                 state,
                 from,
@@ -3269,7 +4671,54 @@ impl Engine {
                     actions,
                 ),
             },
+            PieceKind::Alfil => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-2, -2), (-2, 2), (2, -2), (2, 2)],
+                actions,
+            ),
+            PieceKind::Guard => self.generate_empty_leaper_moves(
+                state,
+                from,
+                &[
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (0, -1),
+                    (0, 1),
+                    (1, -1),
+                    (1, 0),
+                    (1, 1),
+                ],
+                actions,
+            ),
+            PieceKind::Fanatic => self.generate_fanatic_moves(state, from, piece, actions),
+            PieceKind::Checker | PieceKind::CheckerKing => {
+                self.generate_checker_moves(state, from, piece, actions)
+            }
+            PieceKind::RoyalKnight => self.generate_knight_moves(state, from, piece, actions),
+            PieceKind::Man => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (0, -1),
+                    (0, 1),
+                    (1, -1),
+                    (1, 0),
+                    (1, 1),
+                ],
+                actions,
+            ),
+            PieceKind::BigRook => self.generate_big_rook_moves(state, from, piece, actions),
+            PieceKind::Colossus => self.generate_large_step_moves(state, from, piece, actions),
+            PieceKind::Merchant => {}
         }
+        self.generate_loyalist_moves(state, from, piece, actions);
     }
 
     fn generate_pawn_moves(
@@ -3318,7 +4767,9 @@ impl Engine {
             Player::White => (
                 1,
                 [1, 0],
-                if state.card_runtime.early_promotion[piece.owner.index()] {
+                if state.card_runtime.fast_growth[piece.owner.index()] {
+                    4
+                } else if state.card_runtime.early_promotion[piece.owner.index()] {
                     5
                 } else {
                     7
@@ -3327,7 +4778,9 @@ impl Engine {
             Player::Black => (
                 -1,
                 [6, 7],
-                if state.card_runtime.early_promotion[piece.owner.index()] {
+                if state.card_runtime.fast_growth[piece.owner.index()] {
+                    3
+                } else if state.card_runtime.early_promotion[piece.owner.index()] {
                     2
                 } else {
                     0
@@ -3335,21 +4788,67 @@ impl Engine {
             ),
         };
 
-        if let Some(one_step) = from.offset(0, direction)
-            && state.board.get(one_step).is_none()
+        if piece.kind == PieceKind::Pawn && state.card_runtime.pawn_conversion[piece.owner.index()]
         {
-            push_pawn_move(from, one_step, promotion_rank, actions);
+            for file_delta in [-1, 1] {
+                if let Some(one_step) = from.offset(file_delta, direction)
+                    && self.board_piece_at(state, one_step).is_none()
+                {
+                    self.push_card_pawn_move(state, piece, from, one_step, promotion_rank, actions);
+                    if !state.card_runtime.moved_piece_ids.contains(&piece.id)
+                        && double_step_ranks.contains(&from.rank())
+                        && let Some(two_steps) = from.offset(file_delta * 2, direction * 2)
+                        && self.board_piece_at(state, two_steps).is_none()
+                    {
+                        actions.push(Action::Move(MoveAction::new(from, two_steps, None)));
+                        if state.card_runtime.pawn_sprint[piece.owner.index()]
+                            && let Some(three_steps) = from.offset(file_delta * 3, direction * 3)
+                            && self.board_piece_at(state, three_steps).is_none()
+                        {
+                            self.push_card_pawn_move(
+                                state,
+                                piece,
+                                from,
+                                three_steps,
+                                promotion_rank,
+                                actions,
+                            );
+                        }
+                    }
+                }
+            }
+            if let Some(target) = from.offset(0, direction)
+                && self
+                    .board_piece_at(state, target)
+                    .is_some_and(|target_piece| self.can_capture(state, piece, target_piece))
+            {
+                self.push_card_pawn_move(state, piece, from, target, promotion_rank, actions);
+            }
+            return;
+        }
+
+        if let Some(one_step) = from.offset(0, direction)
+            && self.board_piece_at(state, one_step).is_none()
+        {
+            self.push_card_pawn_move(state, piece, from, one_step, promotion_rank, actions);
             if !state.card_runtime.moved_piece_ids.contains(&piece.id)
                 && double_step_ranks.contains(&from.rank())
                 && let Some(two_steps) = from.offset(0, direction * 2)
-                && state.board.get(two_steps).is_none()
+                && self.board_piece_at(state, two_steps).is_none()
             {
                 actions.push(Action::Move(MoveAction::new(from, two_steps, None)));
                 if state.card_runtime.pawn_sprint[piece.owner.index()]
                     && let Some(three_steps) = from.offset(0, direction * 3)
-                    && state.board.get(three_steps).is_none()
+                    && self.board_piece_at(state, three_steps).is_none()
                 {
-                    push_pawn_move(from, three_steps, promotion_rank, actions);
+                    self.push_card_pawn_move(
+                        state,
+                        piece,
+                        from,
+                        three_steps,
+                        promotion_rank,
+                        actions,
+                    );
                 }
             }
         }
@@ -3358,14 +4857,16 @@ impl Engine {
             let Some(target) = from.offset(file_delta, direction) else {
                 continue;
             };
-            let regular_capture = state.board.get(target).is_some_and(|target_piece| {
-                if piece.kind == PieceKind::StandardBearer {
-                    self.can_capture_ignoring_fresh(state, piece, target_piece)
-                        && self.capture_status_allows_ignoring_fresh(state, piece)
-                } else {
-                    self.can_capture(state, piece, target_piece)
-                }
-            });
+            let regular_capture = self
+                .board_piece_at(state, target)
+                .is_some_and(|target_piece| {
+                    if piece.kind == PieceKind::StandardBearer {
+                        self.can_capture_ignoring_fresh(state, piece, target_piece)
+                            && self.capture_status_allows_ignoring_fresh(state, piece)
+                    } else {
+                        self.can_capture(state, piece, target_piece)
+                    }
+                });
             let en_passant_capture = state.en_passant.is_some_and(|en_passant| {
                 en_passant.target == target
                     && en_passant.pawn_owner != piece.owner
@@ -3386,7 +4887,7 @@ impl Engine {
                         })
             });
             if regular_capture || en_passant_capture {
-                push_pawn_move(from, target, promotion_rank, actions);
+                self.push_card_pawn_move(state, piece, from, target, promotion_rank, actions);
             }
         }
 
@@ -3423,6 +4924,264 @@ impl Engine {
         }
     }
 
+    fn push_card_pawn_move(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        from: Square,
+        to: Square,
+        promotion_rank: u8,
+        actions: &mut Vec<Action>,
+    ) {
+        if piece.kind == PieceKind::Squire || to.rank() != promotion_rank {
+            actions.push(Action::Move(MoveAction::new(from, to, None)));
+            return;
+        }
+        let promotions: &[PieceKind] = if state.card_runtime.fast_growth[piece.owner.index()] {
+            &[PieceKind::Knight, PieceKind::Bishop]
+        } else {
+            &[
+                PieceKind::Knight,
+                PieceKind::Bishop,
+                PieceKind::Rook,
+                PieceKind::Queen,
+            ]
+        };
+        for &promotion in promotions {
+            actions.push(Action::Move(MoveAction::new(from, to, Some(promotion))));
+        }
+    }
+
+    fn generate_fanatic_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        let direction = if piece.owner == Player::White { 1 } else { -1 };
+        for distance in 1..=2 {
+            let Some(target) = from.offset(0, direction * distance) else {
+                break;
+            };
+            match self.board_piece_at(state, target) {
+                None => actions.push(Action::Move(MoveAction::new(from, target, None))),
+                Some(target_piece) if self.can_capture(state, piece, target_piece) => {
+                    actions.push(Action::Move(MoveAction::new(from, target, None)));
+                    break;
+                }
+                Some(_) => break,
+            }
+        }
+    }
+
+    fn generate_checker_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        let directions: &[(i8, i8)] = if piece.kind == PieceKind::CheckerKing {
+            &[(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        } else if piece.owner == Player::White {
+            &[(1, -1), (1, 1)]
+        } else {
+            &[(-1, -1), (-1, 1)]
+        };
+        let mut captures = Vec::new();
+        for &(rank_delta, file_delta) in directions {
+            let Some(mid) = from.offset(file_delta, rank_delta) else {
+                continue;
+            };
+            let Some(landing) = from.offset(file_delta * 2, rank_delta * 2) else {
+                continue;
+            };
+            if self.board_piece_at(state, landing).is_none()
+                && self
+                    .board_piece_at(state, mid)
+                    .is_some_and(|target| self.can_capture(state, piece, target))
+            {
+                captures.push(Action::Move(MoveAction::new(from, landing, None)));
+            }
+        }
+        if !captures.is_empty() {
+            actions.extend(captures);
+            return;
+        }
+        for &(rank_delta, file_delta) in directions {
+            if let Some(target) = from.offset(file_delta, rank_delta)
+                && self.board_piece_at(state, target).is_none()
+            {
+                actions.push(Action::Move(MoveAction::new(from, target, None)));
+            }
+        }
+    }
+
+    fn generate_loyalist_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        if !state.card_runtime.loyalist_piece_ids.contains(&piece.id) {
+            return;
+        }
+        let anchors = state
+            .board
+            .iter()
+            .filter(|(_, candidate)| {
+                candidate.owner == piece.owner
+                    && (self.is_royal_piece(state, *candidate)
+                        || candidate.kind == PieceKind::Merchant)
+            })
+            .map(|(square, _)| square)
+            .collect::<Vec<_>>();
+        for anchor in anchors {
+            for rank_delta in -1..=1 {
+                for file_delta in -1..=1 {
+                    if (file_delta != 0 || rank_delta != 0)
+                        && let Some(target) = anchor.offset(file_delta, rank_delta)
+                        && self.board_piece_at(state, target).is_none()
+                    {
+                        actions.push(Action::Move(MoveAction::new(from, target, None)));
+                    }
+                }
+            }
+        }
+    }
+
+    fn generate_large_step_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            if let Some(anchor) = from.offset(file_delta, rank_delta)
+                && self.large_landing_is_legal(state, piece, anchor, usize::MAX)
+            {
+                actions.push(Action::Move(MoveAction::new(from, anchor, None)));
+            }
+        }
+    }
+
+    fn generate_big_rook_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            let mut cursor = from;
+            while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
+                if !self.large_landing_is_legal(state, piece, anchor, 2) {
+                    break;
+                }
+                actions.push(Action::Move(MoveAction::new(from, anchor, None)));
+                if !self.large_landing_targets(state, piece, anchor).is_empty() {
+                    break;
+                }
+                cursor = anchor;
+            }
+        }
+    }
+
+    fn large_landing_is_legal(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        anchor: Square,
+        max_captures: usize,
+    ) -> bool {
+        let cells = large_piece_cells(anchor);
+        if cells.len() != 4 {
+            return false;
+        }
+        let targets = self.large_landing_targets(state, piece, anchor);
+        targets.len() <= max_captures
+            && targets.iter().all(|(_, target)| {
+                if piece.kind == PieceKind::BigRook && target.owner == piece.owner {
+                    !self.is_royal_piece(state, *target)
+                } else {
+                    target.owner != piece.owner && self.can_capture(state, piece, *target)
+                }
+            })
+    }
+
+    fn large_landing_targets(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        anchor: Square,
+    ) -> Vec<(Square, Piece)> {
+        let mut seen = BTreeSet::new();
+        large_piece_cells(anchor)
+            .into_iter()
+            .filter_map(|cell| {
+                self.board_piece_entry_at(state, cell)
+                    .filter(|(_, target)| target.id != piece.id && seen.insert(target.id))
+            })
+            .collect()
+    }
+
+    fn board_piece_at(&self, state: &GameState, square: Square) -> Option<Piece> {
+        self.board_piece_entry_at(state, square)
+            .map(|(_, piece)| piece)
+    }
+
+    fn board_piece_entry_at(&self, state: &GameState, square: Square) -> Option<(Square, Piece)> {
+        state
+            .board
+            .get(square)
+            .map(|piece| (square, piece))
+            .or_else(|| {
+                state
+                    .card_runtime
+                    .large_pieces
+                    .iter()
+                    .find_map(|(piece_id, status)| {
+                        large_piece_cells(status.anchor)
+                            .contains(&square)
+                            .then(|| state.board.find_by_id(*piece_id))
+                            .flatten()
+                    })
+            })
+    }
+
+    fn fianchetto_destination_blocked(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        from: Square,
+        to: Square,
+    ) -> bool {
+        if piece.kind != PieceKind::Bishop {
+            return false;
+        }
+        let diagonal = |square: Square| {
+            if square.file() == square.rank() {
+                1
+            } else if square.file() + square.rank() == 7 {
+                2
+            } else {
+                0
+            }
+        };
+        let target_diagonal = diagonal(to);
+        target_diagonal != 0
+            && diagonal(from) != target_diagonal
+            && state.card_runtime.fianchetto[piece.owner.opponent().index()]
+            && state.board.iter().any(|(square, candidate)| {
+                candidate.owner == piece.owner.opponent()
+                    && candidate.kind == PieceKind::Bishop
+                    && diagonal(square) == target_diagonal
+            })
+    }
+
     fn generate_leaper_moves(
         &self,
         state: &GameState,
@@ -3435,11 +5194,16 @@ impl Engine {
             let Some(target) = from.offset(file_delta, rank_delta) else {
                 continue;
             };
-            match state.board.get(target) {
-                None => actions.push(Action::Move(MoveAction::new(from, target, None))),
-                Some(target_piece) if self.can_capture(state, piece, target_piece) => {
-                    actions.push(Action::Move(MoveAction::new(from, target, None)));
+            match self.board_piece_at(state, target) {
+                None if !self.fianchetto_destination_blocked(state, piece, from, target) => {
+                    actions.push(Action::Move(MoveAction::new(from, target, None)))
                 }
+                Some(target_piece) if self.can_capture(state, piece, target_piece) => {
+                    if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                        actions.push(Action::Move(MoveAction::new(from, target, None)));
+                    }
+                }
+                None => {}
                 Some(_) => {}
             }
         }
@@ -3456,10 +5220,16 @@ impl Engine {
         for &(file_delta, rank_delta) in directions {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                match state.board.get(target) {
-                    None => actions.push(Action::Move(MoveAction::new(from, target, None))),
+                match self.board_piece_at(state, target) {
+                    None => {
+                        if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                            actions.push(Action::Move(MoveAction::new(from, target, None)));
+                        }
+                    }
                     Some(target_piece) if self.can_capture(state, piece, target_piece) => {
-                        actions.push(Action::Move(MoveAction::new(from, target, None)));
+                        if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                            actions.push(Action::Move(MoveAction::new(from, target, None)));
+                        }
                         break;
                     }
                     Some(_) => break,
@@ -3489,7 +5259,7 @@ impl Engine {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
                 if let Some(target_piece) = state.board.get(target) {
-                    if target_piece.kind == PieceKind::King
+                    if self.is_royal_piece(state, target_piece)
                         && self.can_capture(state, piece, target_piece)
                     {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -3561,7 +5331,7 @@ impl Engine {
     ) {
         for &(file_delta, rank_delta) in offsets {
             if let Some(target) = from.offset(file_delta, rank_delta)
-                && state.board.get(target).is_none()
+                && self.board_piece_at(state, target).is_none()
             {
                 actions.push(Action::Move(MoveAction::new(from, target, None)));
             }
@@ -3836,7 +5606,51 @@ impl Engine {
 
     fn generate_piece_ability_actions(&self, state: &GameState, actions: &mut Vec<Action>) {
         for (_, piece) in state.board.iter() {
-            if piece.owner != state.turn || piece.kind != PieceKind::Wizard {
+            if piece.owner != state.turn {
+                continue;
+            }
+            if piece.kind == PieceKind::Colossus {
+                let Some(status) = state.card_runtime.large_pieces.get(&piece.id) else {
+                    continue;
+                };
+                for sector in colossus_attack_sectors(status.anchor, piece.owner) {
+                    if sector.iter().any(|square| {
+                        self.board_piece_at(state, *square).is_some_and(|target| {
+                            target.owner != piece.owner && target.kind != PieceKind::Guard
+                        })
+                    }) {
+                        actions.push(Action::UsePieceAbility {
+                            piece_id: piece.id,
+                            ability: PieceAbility::ColossusSector,
+                            target: ActionTarget::Squares(sector),
+                        });
+                    }
+                }
+                continue;
+            }
+            if piece.kind == PieceKind::Merchant {
+                let gold = state
+                    .card_runtime
+                    .merchant_gold
+                    .get(&piece.id)
+                    .copied()
+                    .unwrap_or(0);
+                for (square, target) in state.board.iter() {
+                    if target.owner != piece.owner
+                        && target.kind != PieceKind::Merchant
+                        && !state.card_runtime.frozen.contains_key(&target.id)
+                        && merchant_cost(target.kind) <= gold
+                    {
+                        actions.push(Action::UsePieceAbility {
+                            piece_id: piece.id,
+                            ability: PieceAbility::MerchantBuy,
+                            target: ActionTarget::PieceAt(square),
+                        });
+                    }
+                }
+                continue;
+            }
+            if piece.kind != PieceKind::Wizard {
                 continue;
             }
             let mana = state
@@ -3979,12 +5793,13 @@ impl Engine {
     ) -> bool {
         attacker.owner != target.owner
             && !state.card_runtime.frozen.contains_key(&target.id)
+            && target.kind != PieceKind::Guard
             && !matches!(
                 attacker.kind,
                 PieceKind::Idol | PieceKind::Recruiter | PieceKind::Wizard | PieceKind::Herald
             )
-            && (attacker.kind != PieceKind::Jester || target.kind == PieceKind::King)
-            && (target.kind != PieceKind::Jester || attacker.kind == PieceKind::King)
+            && (attacker.kind != PieceKind::Jester || self.is_royal_piece(state, target))
+            && (target.kind != PieceKind::Jester || self.is_royal_piece(state, attacker))
             && !(attacker.kind == PieceKind::Queen
                 && target.kind == PieceKind::Pawn
                 && state.card_runtime.geneva_convention[target.owner.index()])
@@ -4010,6 +5825,125 @@ fn square_target(target: &ActionTarget) -> Result<Square, EngineError> {
         _ => Err(EngineError::Invariant(
             "action requires exactly one square".to_owned(),
         )),
+    }
+}
+
+fn opening_square(player: Player, white: &str, black: &str) -> Square {
+    if player == Player::White {
+        white
+    } else {
+        black
+    }
+    .parse()
+    .expect("static opening square")
+}
+
+fn opening_squares(player: Player, white: &[&str], black: &[&str]) -> Vec<Square> {
+    if player == Player::White {
+        white
+    } else {
+        black
+    }
+    .iter()
+    .map(|name| name.parse().expect("static opening square"))
+    .collect()
+}
+
+fn large_piece_cells(anchor: Square) -> Vec<Square> {
+    [(0, 0), (1, 0), (0, -1), (1, -1)]
+        .into_iter()
+        .filter_map(|(file_delta, rank_delta)| anchor.offset(file_delta, rank_delta))
+        .collect()
+}
+
+fn clear_queen_line(board: &crate::Board, from: Square, to: Square) -> bool {
+    let file_delta = to.file() as i8 - from.file() as i8;
+    let rank_delta = to.rank() as i8 - from.rank() as i8;
+    if file_delta != 0 && rank_delta != 0 && file_delta.abs() != rank_delta.abs() {
+        return false;
+    }
+    if file_delta == 0 && rank_delta == 0 {
+        return false;
+    }
+    let file_step = file_delta.signum();
+    let rank_step = rank_delta.signum();
+    let mut cursor = from;
+    while let Some(next) = cursor.offset(file_step, rank_step) {
+        if next == to {
+            return true;
+        }
+        if board.get(next).is_some() {
+            return false;
+        }
+        cursor = next;
+    }
+    false
+}
+
+fn colossus_attack_sectors(anchor: Square, player: Player) -> [Vec<Square>; 2] {
+    let ranks = if player == Player::White {
+        [
+            anchor.rank().saturating_add(2),
+            anchor.rank().saturating_add(3),
+        ]
+    } else {
+        [
+            anchor.rank().saturating_sub(3),
+            anchor.rank().saturating_sub(4),
+        ]
+    };
+    let sector = |files: [u8; 2]| {
+        ranks
+            .into_iter()
+            .flat_map(|rank| {
+                files
+                    .into_iter()
+                    .filter_map(move |file| Square::new(file, rank))
+            })
+            .collect::<Vec<_>>()
+    };
+    [sector([6, 7]), sector([0, 1])]
+}
+
+fn merchant_cost(kind: PieceKind) -> u16 {
+    match kind {
+        PieceKind::Pawn | PieceKind::Fanatic => 2,
+        PieceKind::Knight
+        | PieceKind::Bishop
+        | PieceKind::Protestant
+        | PieceKind::Man
+        | PieceKind::Dragon
+        | PieceKind::Alfil => 3,
+        PieceKind::Assassin | PieceKind::Windmill => 4,
+        PieceKind::Rook
+        | PieceKind::Herald
+        | PieceKind::Cannon
+        | PieceKind::Cardinal
+        | PieceKind::RoyalKnight => 5,
+        PieceKind::BigRook
+        | PieceKind::Wizard
+        | PieceKind::Queen
+        | PieceKind::PrimeMinister
+        | PieceKind::Jester
+        | PieceKind::Recruiter
+        | PieceKind::Reaper
+        | PieceKind::Idol => 9,
+        PieceKind::Amazon => 13,
+        PieceKind::Colossus => 15,
+        PieceKind::King => 20,
+        PieceKind::Merchant => 100,
+        PieceKind::Hook => 14,
+        PieceKind::Guard => 1,
+        PieceKind::Log
+        | PieceKind::Squire
+        | PieceKind::Checker
+        | PieceKind::CheckerKing
+        | PieceKind::StandardBearer => 2,
+        PieceKind::Grasshopper
+        | PieceKind::Knightmaster
+        | PieceKind::Unicorn
+        | PieceKind::Missionary => 4,
+        PieceKind::Alibaba => 3,
     }
 }
 
@@ -4106,21 +6040,6 @@ fn draft_gap_within_balance_limit(gap: DraftAverageGap) -> bool {
 fn draft_card_uses_next_turn_delay(draft_phase: DraftPhase, card_phase: CardPhase) -> bool {
     matches!(draft_phase, DraftPhase::Middle | DraftPhase::End)
         && matches!(card_phase, CardPhase::Middle | CardPhase::End)
-}
-
-fn push_pawn_move(from: Square, to: Square, promotion_rank: u8, actions: &mut Vec<Action>) {
-    if to.rank() == promotion_rank {
-        for promotion in [
-            PieceKind::Knight,
-            PieceKind::Bishop,
-            PieceKind::Rook,
-            PieceKind::Queen,
-        ] {
-            actions.push(Action::Move(MoveAction::new(from, to, Some(promotion))));
-        }
-    } else {
-        actions.push(Action::Move(MoveAction::new(from, to, None)));
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -6757,5 +8676,557 @@ mod tests {
         );
         assert!(!has_move(&engine, &state, "d5", "d4"));
         assert!(has_move(&engine, &state, "e5", "d4"));
+    }
+
+    #[test]
+    fn opening_pawn_transform_cards_follow_original_files() {
+        let engine = Engine::bundled_20260807().unwrap();
+        for (card, expected) in [
+            (APPRENTICE_KNIGHTS, PieceKind::Squire),
+            (CHECKER, PieceKind::Checker),
+        ] {
+            let mut state = standard_play_state(101);
+            grant_test_card(&mut state, card, 1);
+            let state = engine
+                .apply(&state, use_card_without_target(1))
+                .unwrap()
+                .state;
+            assert_eq!(
+                state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == Player::White && piece.kind == expected)
+                    .count(),
+                2
+            );
+        }
+
+        let mut state = standard_play_state(102);
+        grant_test_card(&mut state, GUARD, 1);
+        let state = engine
+            .apply(&state, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            state.board.get("e2".parse().unwrap()).unwrap().kind,
+            PieceKind::Guard
+        );
+
+        let mut state = standard_play_state(103);
+        grant_test_card(&mut state, QUEEN_CAVALRY, 1);
+        let state = engine
+            .apply(&state, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            state.board.get("d2".parse().unwrap()).unwrap().kind,
+            PieceKind::Knight
+        );
+    }
+
+    #[test]
+    fn every_part_two_opening_card_executes_from_the_standard_opening() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let cards = [
+            APPRENTICE_KNIGHTS,
+            BIG_ROOK,
+            CALLING_CARD,
+            CHECKER,
+            DEMOCRACY,
+            DUTCH,
+            ELEPHANT_ESCAPE,
+            FAST_GROWTH,
+            FIANCHETTO,
+            GUARD,
+            HOLDOUT,
+            HORDE,
+            IRON_MONARCH,
+            KNIGHTMATE,
+            LAST_STAND,
+            LONDON_SYSTEM,
+            LOYALIST,
+            MARTYRDOM,
+            MERCHANT_GUILD,
+            OTHERWORLD,
+            PAWN_CONVERSION,
+            QUEEN_CAVALRY,
+            QUEENS_GAMBIT,
+            QXE1,
+            SUMMON_COLOSSUS,
+        ];
+        for (index, card) in cards.into_iter().enumerate() {
+            let instance_id = 500 + index as u32;
+            let mut state = standard_play_state(200 + index as u64);
+            grant_test_card(&mut state, card, instance_id);
+            let action = engine
+                .legal_actions(&state)
+                .unwrap()
+                .into_iter()
+                .find(|action| {
+                    matches!(action, Action::UseCard { instance_id: id, .. } if *id == instance_id)
+                })
+                .unwrap_or_else(|| panic!("{card} has no legal opening action"));
+            let transition = engine
+                .apply(&state, action)
+                .unwrap_or_else(|error| panic!("{card} failed: {error}"));
+            assert_eq!(
+                transition
+                    .state
+                    .cards
+                    .iter()
+                    .find(|owned| owned.instance_id == instance_id)
+                    .unwrap()
+                    .charges,
+                0,
+                "{card} did not consume its charge"
+            );
+        }
+    }
+
+    #[test]
+    fn squire_fanatic_alfil_and_checker_moves_match_the_bundle() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let squire = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Squire),
+                ("e5", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            104,
+        );
+        let squire = engine.apply(&squire, movement("d4", "e5")).unwrap().state;
+        assert_eq!(
+            squire.board.get("e5".parse().unwrap()).unwrap().kind,
+            PieceKind::Knight
+        );
+
+        let fanatic = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Fanatic),
+                ("d6", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            105,
+        );
+        assert!(has_move(&engine, &fanatic, "d4", "d5"));
+        assert!(has_move(&engine, &fanatic, "d4", "d6"));
+
+        let alfil = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Alfil),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            106,
+        );
+        assert!(has_move(&engine, &alfil, "d4", "f6"));
+        assert!(!has_move(&engine, &alfil, "d4", "e5"));
+
+        let checker = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Checker),
+                ("d4", Player::Black, PieceKind::Pawn),
+                ("f6", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            107,
+        );
+        let first = engine.apply(&checker, movement("c3", "e5")).unwrap().state;
+        assert!(matches!(first.phase, GamePhase::ForcedMove { .. }));
+        assert!(has_move(&engine, &first, "e5", "g7"));
+    }
+
+    #[test]
+    fn checker_jump_lands_and_breaks_a_consumable_shield_without_capturing() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Checker),
+                ("d4", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            108,
+        );
+        let shielded = state.board.get("d4".parse().unwrap()).unwrap();
+        state.card_runtime.shielded_piece_ids.insert(shielded.id);
+
+        let state = engine.apply(&state, movement("c3", "e5")).unwrap().state;
+
+        assert_eq!(
+            state.board.get("e5".parse().unwrap()).unwrap().kind,
+            PieceKind::Checker
+        );
+        assert_eq!(state.board.get("d4".parse().unwrap()), Some(shielded));
+        assert!(!state.card_runtime.shielded_piece_ids.contains(&shielded.id));
+    }
+
+    #[test]
+    fn mass_opening_cards_build_expected_armies() {
+        let engine = Engine::bundled_20260807().unwrap();
+
+        let mut dutch = standard_play_state(108);
+        grant_test_card(&mut dutch, DUTCH, 1);
+        let dutch = engine
+            .apply(&dutch, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            dutch
+                .board
+                .iter()
+                .filter(
+                    |(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Windmill
+                )
+                .count(),
+            6
+        );
+
+        let mut horde = standard_play_state(109);
+        grant_test_card(&mut horde, HORDE, 1);
+        let horde = engine
+            .apply(&horde, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            horde
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Pawn)
+                .count(),
+            35
+        );
+
+        let mut london = standard_play_state(110);
+        grant_test_card(&mut london, LONDON_SYSTEM, 1);
+        let london = engine
+            .apply(&london, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            london.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        assert_eq!(
+            london.board.get("f4".parse().unwrap()).unwrap().kind,
+            PieceKind::Bishop
+        );
+        assert_eq!(
+            london
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == Player::White)
+                .count(),
+            16
+        );
+    }
+
+    #[test]
+    fn big_rook_and_colossus_have_large_piece_state() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut rook = standard_play_state(111);
+        grant_test_card(&mut rook, BIG_ROOK, 1);
+        let rook = engine
+            .apply(&rook, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let piece = rook.board.get("g2".parse().unwrap()).unwrap();
+        assert_eq!(piece.kind, PieceKind::BigRook);
+        assert_eq!(rook.card_runtime.large_pieces[&piece.id].hp, 2);
+
+        let mut colossus = standard_play_state(112);
+        grant_test_card(&mut colossus, SUMMON_COLOSSUS, 1);
+        let colossus = engine
+            .apply(&colossus, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let piece = colossus.board.get("d3".parse().unwrap()).unwrap();
+        assert_eq!(piece.kind, PieceKind::Colossus);
+        assert_eq!(colossus.card_runtime.large_pieces[&piece.id].hp, 3);
+        assert_eq!(
+            colossus
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Pawn)
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn colossus_sector_skips_protected_targets_without_breaking_their_shield() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(113);
+        grant_test_card(&mut state, SUMMON_COLOSSUS, 1);
+        let mut state = engine
+            .apply(&state, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let colossus = state.board.get("d3".parse().unwrap()).unwrap();
+        let target_square = "g5".parse().unwrap();
+        let target = Piece::new(Player::Black, PieceKind::Pawn).with_id(state.allocate_piece_id());
+        state.board.set(target_square, Some(target));
+        state.card_runtime.shielded_piece_ids.insert(target.id);
+        let action = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| {
+                matches!(
+                    action,
+                    Action::UsePieceAbility {
+                        piece_id,
+                        ability: PieceAbility::ColossusSector,
+                        ..
+                    } if *piece_id == colossus.id
+                )
+            })
+            .unwrap();
+
+        let state = engine.apply(&state, action).unwrap().state;
+
+        assert_eq!(state.board.get(target_square), Some(target));
+        assert!(state.card_runtime.shielded_piece_ids.contains(&target.id));
+    }
+
+    #[test]
+    fn democracy_knightmate_qxe1_and_merchant_replace_royalty() {
+        let engine = Engine::bundled_20260807().unwrap();
+
+        let mut knightmate = standard_play_state(113);
+        grant_test_card(&mut knightmate, KNIGHTMATE, 1);
+        let knightmate = engine
+            .apply(&knightmate, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            knightmate.board.get("e1".parse().unwrap()).unwrap().kind,
+            PieceKind::RoyalKnight
+        );
+        assert_eq!(
+            knightmate
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Man)
+                .count(),
+            2
+        );
+
+        let mut qxe1 = standard_play_state(114);
+        grant_test_card(&mut qxe1, QXE1, 1);
+        let qxe1 = engine
+            .apply(&qxe1, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let heir = qxe1.board.get("e1".parse().unwrap()).unwrap();
+        assert_eq!(heir.kind, PieceKind::Queen);
+        assert!(qxe1.card_runtime.royal_piece_ids.contains(&heir.id));
+
+        let mut merchant = standard_play_state(115);
+        grant_test_card(&mut merchant, MERCHANT_GUILD, 1);
+        let merchant = engine
+            .apply(&merchant, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(
+            merchant.board.get("e3".parse().unwrap()).unwrap().kind,
+            PieceKind::Merchant
+        );
+
+        let mut democracy = minimal_state(
+            &[
+                ("a2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            116,
+        );
+        democracy.card_runtime.democracy[Player::White.index()] = true;
+        engine.resolve_missing_king(&mut democracy, &mut Vec::new());
+        assert_eq!(democracy.status, GameStatus::Ongoing);
+        democracy.board.set("a2".parse().unwrap(), None);
+        engine.resolve_missing_king(&mut democracy, &mut Vec::new());
+        assert!(matches!(
+            democracy.status,
+            GameStatus::Won {
+                winner: Player::Black,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn pawn_conversion_fast_growth_fianchetto_and_iron_monarch_modify_moves() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut conversion = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Pawn),
+                ("d5", Player::Black, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            117,
+        );
+        conversion.card_runtime.pawn_conversion[Player::White.index()] = true;
+        assert!(has_move(&engine, &conversion, "d4", "d5"));
+        assert!(has_move(&engine, &conversion, "d4", "e5"));
+
+        let mut growth = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("e4", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            118,
+        );
+        growth.card_runtime.fast_growth[Player::White.index()] = true;
+        let promotions = engine
+            .legal_actions(&growth)
+            .unwrap()
+            .into_iter()
+            .filter(|action| matches!(action, Action::Move(m) if m.from == "e4".parse().unwrap() && m.to == "e5".parse().unwrap()))
+            .collect::<Vec<_>>();
+        assert_eq!(promotions.len(), 2);
+
+        let mut fianchetto = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("b1", Player::White, PieceKind::Bishop),
+                ("a8", Player::Black, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            119,
+        );
+        fianchetto.card_runtime.fianchetto[Player::Black.index()] = true;
+        assert!(!has_move(&engine, &fianchetto, "b1", "e4"));
+
+        let mut iron = minimal_state(
+            &[
+                ("d4", Player::White, PieceKind::King),
+                ("e5", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            120,
+        );
+        iron.card_runtime.iron_monarch[Player::White.index()] = true;
+        let iron = engine.apply(&iron, movement("d4", "e5")).unwrap().state;
+        assert_eq!(iron.turn, Player::White);
+        assert_eq!(iron.actions_remaining, 1);
+    }
+
+    #[test]
+    fn delayed_opening_cards_resolve_on_bundle_timers() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut holdout = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            121,
+        );
+        let pawn = holdout.board.get("a2".parse().unwrap()).unwrap();
+        holdout.card_runtime.holdout_promotions.insert(pawn.id, 14);
+        holdout.turns_taken = [14, 14];
+        engine.resolve_holdout_promotions(&mut holdout, Player::White);
+        assert_eq!(
+            holdout.board.get("a2".parse().unwrap()).unwrap().kind,
+            PieceKind::Queen
+        );
+
+        let mut otherworld = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("a2", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            122,
+        );
+        otherworld
+            .card_runtime
+            .pending_otherworld
+            .push(PendingOtherworld {
+                piece_id: 77,
+                owner: Player::White,
+                square: "a2".parse().unwrap(),
+                origin: "b2".parse().unwrap(),
+                due_ply: 28,
+            });
+        otherworld.ply = 28;
+        let mut events = Vec::new();
+        engine.resolve_after_counted_move(&mut otherworld, &mut events);
+        let wizard = otherworld.board.get("a2".parse().unwrap()).unwrap();
+        assert_eq!(wizard.kind, PieceKind::Wizard);
+        assert_eq!(wizard.id, 77);
+        assert_eq!(wizard.capture_count, 1);
+    }
+
+    #[test]
+    fn shields_loyalist_and_calling_card_apply_followup_effects() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut gambit = standard_play_state(123);
+        grant_test_card(&mut gambit, QUEENS_GAMBIT, 1);
+        let gambit = engine.apply(&gambit, use_card(1, "d1")).unwrap().state;
+        assert!(gambit.board.get("d1".parse().unwrap()).is_none());
+        for square in ["c2", "d2"] {
+            let pawn = gambit.board.get(square.parse().unwrap()).unwrap();
+            assert!(gambit.card_runtime.protected_piece_ids.contains(&pawn.id));
+        }
+
+        let mut martyrdom = standard_play_state(124);
+        grant_test_card(&mut martyrdom, MARTYRDOM, 1);
+        let martyrdom = engine
+            .apply(&martyrdom, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert!(!martyrdom.board.contains(Player::White, PieceKind::Bishop));
+        assert_eq!(martyrdom.card_runtime.shielded_piece_ids.len(), 8);
+
+        let mut loyalist = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a4", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            125,
+        );
+        let rook = loyalist.board.get("a4".parse().unwrap()).unwrap();
+        loyalist.card_runtime.loyalist_piece_ids.insert(rook.id);
+        assert!(has_move(&engine, &loyalist, "a4", "d1"));
+
+        let mut calling = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("a8", Player::Black, PieceKind::Rook),
+                ("b8", Player::Black, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            126,
+        );
+        let rook = calling.board.get("a8".parse().unwrap()).unwrap();
+        calling
+            .card_runtime
+            .calling_cards
+            .insert(rook.id, Player::White);
+        calling.board.set("a8".parse().unwrap(), None);
+        let mut events = Vec::new();
+        engine.resolve_calling_card_capture(&mut calling, rook, None, &mut events);
+        assert!(calling.board.get("b8".parse().unwrap()).is_none());
     }
 }

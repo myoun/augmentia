@@ -135,6 +135,17 @@ pub enum PieceKind {
     Protestant,
     StandardBearer,
     Windmill,
+    Squire,
+    BigRook,
+    Checker,
+    CheckerKing,
+    Alfil,
+    Guard,
+    Fanatic,
+    Colossus,
+    RoyalKnight,
+    Man,
+    Merchant,
 }
 
 impl PieceKind {
@@ -168,6 +179,17 @@ impl PieceKind {
             Self::Protestant => 26,
             Self::StandardBearer => 27,
             Self::Windmill => 28,
+            Self::Squire => 29,
+            Self::BigRook => 30,
+            Self::Checker => 31,
+            Self::CheckerKing => 32,
+            Self::Alfil => 33,
+            Self::Guard => 34,
+            Self::Fanatic => 35,
+            Self::Colossus => 36,
+            Self::RoyalKnight => 37,
+            Self::Man => 38,
+            Self::Merchant => 39,
         }
     }
 

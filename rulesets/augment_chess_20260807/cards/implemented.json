@@ -4,9 +4,9 @@
   "source_bundle_sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834",
   "scope": {
     "status": "behavioral_slice",
-    "implemented_cards": 37,
+    "implemented_cards": 62,
     "site_parity_verified_cards": 0,
-    "notes": "Base-piece behavior and 20 special-piece cards are implemented. Interactions with the remaining 155 cards are not yet parity-verified."
+    "notes": "Base-piece behavior, 20 special-piece cards, and 25 opening cards are implemented. Interactions with the remaining 130 cards are not yet parity-verified."
   },
   "cards": [
     {
@@ -559,6 +559,106 @@
       "target": "windmill-pair",
       "engine_primitives": ["double_transform", "alternating_bishop_rook_mode"],
       "source_symbols": ["windmill", "windmillDirections"]
+    },
+    {
+      "id": "apprentice-knights", "name_ko": "견습 기사단", "phase": "OPENING", "activation": "active", "half_stars": 3, "ends_turn": false, "turn_exclusive": false, "effect": "apprenticeKnights",
+      "engine_primitives": ["origin_filtered_transform", "squire_first_capture"], "source_symbols": ["apprenticeKnights", "apprenticePawnOrigins"]
+    },
+    {
+      "id": "big-rook", "name_ko": "ROOK", "phase": "OPENING", "activation": "active", "half_stars": 8, "ends_turn": false, "turn_exclusive": false, "effect": "bigRook",
+      "engine_primitives": ["opening_layout", "large_piece", "hp"], "source_symbols": ["bigRook", "applyBigRookOpening", "bigRookMoves"]
+    },
+    {
+      "id": "calling-card", "name_ko": "예고장", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "callingCard",
+      "engine_primitives": ["deterministic_random_mark", "capture_followup_removal"], "source_symbols": ["callingCard", "resolveCallingCardCapture"]
+    },
+    {
+      "id": "checker", "name_ko": "체커", "phase": "OPENING", "activation": "active", "half_stars": 3, "ends_turn": false, "turn_exclusive": false, "effect": "checker",
+      "engine_primitives": ["origin_filtered_transform", "mandatory_jump_capture", "chain_capture"], "source_symbols": ["checker", "checkerMoves", "hasForcedCheckerCapture"]
+    },
+    {
+      "id": "democracy", "name_ko": "민주주의", "phase": "OPENING", "activation": "active", "half_stars": 7, "ends_turn": false, "turn_exclusive": false, "effect": "democracy",
+      "engine_primitives": ["alternate_defeat_condition"], "source_symbols": ["democracy", "resolveDemocracyDefeats"]
+    },
+    {
+      "id": "dutch", "name_ko": "네덜란드", "phase": "OPENING", "activation": "active", "half_stars": 8, "ends_turn": false, "turn_exclusive": false, "effect": "dutch",
+      "engine_primitives": ["bulk_transform", "alternating_bishop_rook_mode"], "source_symbols": ["dutch", "isDutchTransformPiece"]
+    },
+    {
+      "id": "elephant-escape", "name_ko": "코끼리 탈출", "phase": "OPENING", "activation": "active", "half_stars": 5, "ends_turn": false, "turn_exclusive": false, "effect": "elephantEscape",
+      "engine_primitives": ["fixed_square_spawn", "alfil_move"], "source_symbols": ["elephantEscape"]
+    },
+    {
+      "id": "fast-growth", "name_ko": "성급한 승진", "phase": "OPENING", "activation": "active", "half_stars": 7, "ends_turn": false, "turn_exclusive": false, "effect": "fastGrowth",
+      "engine_primitives": ["promotion_rank_override", "minor_only_promotion"], "source_symbols": ["fastGrowth", "pawnPromotionOptions"]
+    },
+    {
+      "id": "fianchetto", "name_ko": "피앙케토", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "fianchetto",
+      "engine_primitives": ["occupied_long_diagonal_lock"], "source_symbols": ["fianchetto", "isFianchettoBlockedMove"]
+    },
+    {
+      "id": "guard", "name_ko": "근위병", "phase": "OPENING", "activation": "active", "half_stars": 4, "ends_turn": false, "turn_exclusive": false, "effect": "guard",
+      "engine_primitives": ["origin_filtered_transform", "indirect_immunity", "uncapturable_piece"], "source_symbols": ["guard", "findGuardPawnSquare"]
+    },
+    {
+      "id": "holdout", "name_ko": "존버", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "holdout", "target": "own-pawn",
+      "engine_primitives": ["shared_turn_timer", "forced_queen_promotion"], "source_symbols": ["holdout", "resolveHoldoutPromotions"]
+    },
+    {
+      "id": "horde", "name_ko": "호드", "phase": "OPENING", "activation": "active", "half_stars": 8, "ends_turn": false, "turn_exclusive": false, "effect": "horde",
+      "engine_primitives": ["full_army_layout", "35_pawn_spawn"], "source_symbols": ["horde", "hordeSquares"]
+    },
+    {
+      "id": "iron-monarch", "name_ko": "철혈군주", "phase": "OPENING", "activation": "active", "half_stars": 9, "ends_turn": false, "turn_exclusive": false, "effect": "ironMonarch",
+      "engine_primitives": ["king_capture_extra_action"], "source_symbols": ["ironMonarch"]
+    },
+    {
+      "id": "knightmate", "name_ko": "나이트메이트", "phase": "OPENING", "activation": "active", "half_stars": 8, "ends_turn": false, "turn_exclusive": false, "effect": "knightmate",
+      "engine_primitives": ["royal_identity_replacement", "bulk_transform"], "source_symbols": ["knightmate", "isRoyalKing"]
+    },
+    {
+      "id": "last-stand", "name_ko": "집단 광기", "phase": "OPENING", "activation": "active", "half_stars": 4, "ends_turn": false, "turn_exclusive": false, "effect": "lastStand",
+      "engine_primitives": ["bulk_transform", "fanatic_forward_capture"], "source_symbols": ["lastStand", "fanaticMoves"]
+    },
+    {
+      "id": "london-system", "name_ko": "런던 시스템", "phase": "OPENING", "activation": "active", "half_stars": 8, "ends_turn": false, "turn_exclusive": false, "effect": "londonSystem",
+      "engine_primitives": ["full_army_layout", "enemy_layout_crush"], "source_symbols": ["londonSystem"]
+    },
+    {
+      "id": "loyalist", "name_ko": "충신", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "loyalist", "target": "own-loyalist-piece",
+      "engine_primitives": ["piece_status", "remote_royal_adjacent_move"], "source_symbols": ["loyalist", "loyalistMoves"]
+    },
+    {
+      "id": "martyrdom", "name_ko": "순교", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "martyrdom",
+      "engine_primitives": ["bulk_sacrifice", "bulk_shield"], "source_symbols": ["martyrdom"]
+    },
+    {
+      "id": "merchant-guild", "name_ko": "상인 조합", "phase": "OPENING", "activation": "active", "half_stars": 10, "ends_turn": false, "turn_exclusive": false, "effect": "merchantGuild",
+      "engine_primitives": ["royal_identity_replacement", "turn_income", "remote_purchase"], "source_symbols": ["merchantGuild", "merchantMoves", "merchantBuy"]
+    },
+    {
+      "id": "otherworld", "name_ko": "이세계", "phase": "OPENING", "activation": "active", "half_stars": 7, "ends_turn": false, "turn_exclusive": false, "effect": "otherworld",
+      "engine_primitives": ["deterministic_random_remove", "28_ply_delayed_spawn", "blocked_return_capture"], "source_symbols": ["otherworld", "resolvePendingOtherworldAfterMove"]
+    },
+    {
+      "id": "pawn-conversion", "name_ko": "전환", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "pawnConversion",
+      "engine_primitives": ["pawn_move_capture_axis_swap"], "source_symbols": ["pawnConversion", "pawnMoves"]
+    },
+    {
+      "id": "queen-cavalry", "name_ko": "퀸의 기병대", "phase": "OPENING", "activation": "active", "half_stars": 4, "ends_turn": false, "turn_exclusive": false, "effect": "queenCavalry",
+      "engine_primitives": ["file_selected_transform"], "source_symbols": ["queenCavalry", "selectQueenCavalryPawn"]
+    },
+    {
+      "id": "queens-gambit", "name_ko": "퀸즈 갬빗", "phase": "OPENING", "activation": "active", "half_stars": 6, "ends_turn": false, "turn_exclusive": false, "effect": "queensGambit", "target": "own-queen",
+      "engine_primitives": ["queen_sacrifice", "file_pawn_permanent_shield"], "source_symbols": ["queensGambit", "queensGambitPawns"]
+    },
+    {
+      "id": "qxe1", "name_ko": "Qxe1!!", "phase": "OPENING", "activation": "active", "half_stars": 4, "ends_turn": false, "turn_exclusive": false, "effect": "qxe1",
+      "engine_primitives": ["queen_line_usurpation", "royal_identity_replacement"], "source_symbols": ["qxe1", "qxe1UsurpationPlan"]
+    },
+    {
+      "id": "summon-colossus", "name_ko": "메가체스트론", "phase": "OPENING", "activation": "active", "half_stars": 10, "ends_turn": false, "turn_exclusive": false, "effect": "summonColossus",
+      "engine_primitives": ["six_pawn_sacrifice", "large_piece", "hp", "sector_attack"], "source_symbols": ["summonColossus", "colossusMoves", "attackColossusSector"]
     }
   ],
   "known_quirks": [
@@ -575,6 +675,13 @@
     "herald.fresh_transform_temporarily_blocks_jumping",
     "standard_bearer.native_pawn_capture_ignores_fresh_lock",
     "log.first_roll_waits_for_next_owner_turn",
-    "wizard.time_stop_does_not_consume_the_current_action"
+    "wizard.time_stop_does_not_consume_the_current_action",
+    "guard.selects_pawn_by_original_king_file_origin",
+    "queen_cavalry.selects_home_nearest_pawn_on_d_file",
+    "calling_card.followup_falls_back_to_royal_only_when_all_remaining_pieces_are_royal",
+    "otherworld.return_reuses_piece_id_and_captures_blocker",
+    "horde.enemy_occupied_fill_squares_are_skipped",
+    "merchant_guild.friendly_destination_piece_is_sacrificed",
+    "qxe1.selects_shortest_clear_queen_line"
   ]
 }

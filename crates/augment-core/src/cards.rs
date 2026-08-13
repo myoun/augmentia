@@ -35,6 +35,31 @@ pub const ORDINATION: &str = "ordination";
 pub const REFORMATION: &str = "reformation";
 pub const STANDARD_BEARER: &str = "standard-bearer";
 pub const WINDMILL: &str = "windmill";
+pub const APPRENTICE_KNIGHTS: &str = "apprentice-knights";
+pub const BIG_ROOK: &str = "big-rook";
+pub const CALLING_CARD: &str = "calling-card";
+pub const CHECKER: &str = "checker";
+pub const DEMOCRACY: &str = "democracy";
+pub const DUTCH: &str = "dutch";
+pub const ELEPHANT_ESCAPE: &str = "elephant-escape";
+pub const FAST_GROWTH: &str = "fast-growth";
+pub const FIANCHETTO: &str = "fianchetto";
+pub const GUARD: &str = "guard";
+pub const HOLDOUT: &str = "holdout";
+pub const HORDE: &str = "horde";
+pub const IRON_MONARCH: &str = "iron-monarch";
+pub const KNIGHTMATE: &str = "knightmate";
+pub const LAST_STAND: &str = "last-stand";
+pub const LONDON_SYSTEM: &str = "london-system";
+pub const LOYALIST: &str = "loyalist";
+pub const MARTYRDOM: &str = "martyrdom";
+pub const MERCHANT_GUILD: &str = "merchant-guild";
+pub const OTHERWORLD: &str = "otherworld";
+pub const PAWN_CONVERSION: &str = "pawn-conversion";
+pub const QUEEN_CAVALRY: &str = "queen-cavalry";
+pub const QUEENS_GAMBIT: &str = "queens-gambit";
+pub const QXE1: &str = "qxe1";
+pub const SUMMON_COLOSSUS: &str = "summon-colossus";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
@@ -64,7 +89,7 @@ pub struct ImplementedCardDefinition {
     pub turn_exclusive: bool,
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 37] = [
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 62] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -432,6 +457,256 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 37] = [
         activation: CardActivation::Active,
         phase: CardPhase::Piece,
         half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: APPRENTICE_KNIGHTS,
+        name_ko: "견습 기사단",
+        effect: "apprenticeKnights",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 3,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: BIG_ROOK,
+        name_ko: "ROOK",
+        effect: "bigRook",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: CALLING_CARD,
+        name_ko: "예고장",
+        effect: "callingCard",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: CHECKER,
+        name_ko: "체커",
+        effect: "checker",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 3,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: DEMOCRACY,
+        name_ko: "민주주의",
+        effect: "democracy",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: DUTCH,
+        name_ko: "네덜란드",
+        effect: "dutch",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: ELEPHANT_ESCAPE,
+        name_ko: "코끼리 탈출",
+        effect: "elephantEscape",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: FAST_GROWTH,
+        name_ko: "성급한 승진",
+        effect: "fastGrowth",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: FIANCHETTO,
+        name_ko: "피앙케토",
+        effect: "fianchetto",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: GUARD,
+        name_ko: "근위병",
+        effect: "guard",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: HOLDOUT,
+        name_ko: "존버",
+        effect: "holdout",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: HORDE,
+        name_ko: "호드",
+        effect: "horde",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: IRON_MONARCH,
+        name_ko: "철혈군주",
+        effect: "ironMonarch",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 9,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: KNIGHTMATE,
+        name_ko: "나이트메이트",
+        effect: "knightmate",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LAST_STAND,
+        name_ko: "집단 광기",
+        effect: "lastStand",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LONDON_SYSTEM,
+        name_ko: "런던 시스템",
+        effect: "londonSystem",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LOYALIST,
+        name_ko: "충신",
+        effect: "loyalist",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: MARTYRDOM,
+        name_ko: "순교",
+        effect: "martyrdom",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: MERCHANT_GUILD,
+        name_ko: "상인 조합",
+        effect: "merchantGuild",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 10,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: OTHERWORLD,
+        name_ko: "이세계",
+        effect: "otherworld",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: PAWN_CONVERSION,
+        name_ko: "전환",
+        effect: "pawnConversion",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: QUEEN_CAVALRY,
+        name_ko: "퀸의 기병대",
+        effect: "queenCavalry",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: QUEENS_GAMBIT,
+        name_ko: "퀸즈 갬빗",
+        effect: "queensGambit",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: QXE1,
+        name_ko: "Qxe1!!",
+        effect: "qxe1",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: SUMMON_COLOSSUS,
+        name_ko: "메가체스트론",
+        effect: "summonColossus",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 10,
         ends_turn: false,
         turn_exclusive: false,
     },

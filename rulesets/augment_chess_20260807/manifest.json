@@ -18,10 +18,10 @@
   "coverage": {
     "status": "partial",
     "target_card_count": 192,
-    "implemented_card_count": 37,
-    "behavioral_slice_card_count": 37,
+    "implemented_card_count": 62,
+    "behavioral_slice_card_count": 62,
     "site_parity_verified_card_count": 0,
-    "notes": "37개 카드의 기본 동작과 직접 hook을 구현함. Part 01 특수 기물 20장을 포함하며, 나머지 155개 카드 및 전체 상호작용 검증 필요."
+    "notes": "62개 카드의 기본 동작과 직접 hook을 구현함. Part 01 특수 기물 20장과 Part 02 오프닝 25장을 포함하며, 나머지 130개 카드 및 전체 상호작용 검증 필요."
   },
   "base_rules": {
     "king_capture_wins": true,

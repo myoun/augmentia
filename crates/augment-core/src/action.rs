@@ -28,6 +28,8 @@ pub enum PieceAbility {
     WizardShield,
     WizardMeteor,
     WizardTimeStop,
+    ColossusSector,
+    MerchantBuy,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

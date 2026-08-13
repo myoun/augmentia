@@ -201,6 +201,22 @@ pub struct DelayedHazard {
     pub squares: Vec<Square>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingOtherworld {
+    pub piece_id: u32,
+    pub owner: Player,
+    pub square: Square,
+    pub origin: Square,
+    pub due_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LargePieceStatus {
+    pub anchor: Square,
+    pub hp: u8,
+    pub max_hp: u8,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     pub hill_king: [bool; 2],
@@ -224,10 +240,24 @@ pub struct CardRuntimeState {
     pub wizard_mana: BTreeMap<u32, u8>,
     pub reaper_souls: BTreeMap<u32, u8>,
     pub shielded_piece_ids: BTreeSet<u32>,
+    pub protected_piece_ids: BTreeSet<u32>,
     pub idol_used_turn: BTreeMap<u32, u32>,
     pub idol_rest_piece_ids: BTreeSet<u32>,
     pub delayed_hazards: Vec<DelayedHazard>,
     pub skip_turns: [bool; 2],
+    pub piece_origins: BTreeMap<u32, Square>,
+    pub large_pieces: BTreeMap<u32, LargePieceStatus>,
+    pub loyalist_piece_ids: BTreeSet<u32>,
+    pub royal_piece_ids: BTreeSet<u32>,
+    pub calling_cards: BTreeMap<u32, Player>,
+    pub holdout_promotions: BTreeMap<u32, u32>,
+    pub pending_otherworld: Vec<PendingOtherworld>,
+    pub merchant_gold: BTreeMap<u32, u16>,
+    pub democracy: [bool; 2],
+    pub fast_growth: [bool; 2],
+    pub fianchetto: [bool; 2],
+    pub iron_monarch: [bool; 2],
+    pub pawn_conversion: [bool; 2],
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -297,6 +327,11 @@ impl GameState {
             turn_end_requested: false,
             repetitions: BTreeMap::new(),
         };
+        state.card_runtime.piece_origins = state
+            .board
+            .iter()
+            .map(|(square, piece)| (piece.id, square))
+            .collect();
         state.record_current_position();
         state
     }
@@ -553,6 +588,56 @@ impl GameState {
         }
         for piece_id in &self.card_runtime.shielded_piece_ids {
             hash.u32(*piece_id);
+        }
+        for piece_id in &self.card_runtime.protected_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for (piece_id, status) in &self.card_runtime.large_pieces {
+            hash.u32(*piece_id);
+            hash.u8(status.anchor.index() as u8);
+            hash.u8(status.hp);
+            hash.u8(status.max_hp);
+        }
+        for piece_id in &self.card_runtime.loyalist_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for piece_id in &self.card_runtime.royal_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for (piece_id, owner) in &self.card_runtime.calling_cards {
+            hash.u32(*piece_id);
+            hash.u8(owner.index() as u8);
+        }
+        for (piece_id, ready) in &self.card_runtime.holdout_promotions {
+            hash.u32(*piece_id);
+            hash.u32(ready.saturating_sub(self.shared_turn_count()));
+        }
+        for pending in &self.card_runtime.pending_otherworld {
+            hash.u32(pending.piece_id);
+            hash.u8(pending.owner.index() as u8);
+            hash.u8(pending.square.index() as u8);
+            hash.u8(pending.origin.index() as u8);
+            hash.u32(pending.due_ply.saturating_sub(self.ply));
+        }
+        for (piece_id, gold) in &self.card_runtime.merchant_gold {
+            hash.u32(*piece_id);
+            hash.u16(*gold);
+        }
+        for (index, flags) in [
+            self.card_runtime.democracy,
+            self.card_runtime.fast_growth,
+            self.card_runtime.fianchetto,
+            self.card_runtime.iron_monarch,
+            self.card_runtime.pawn_conversion,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if flags != [false, false] {
+                hash.u8(index as u8);
+                hash.u8(u8::from(flags[0]));
+                hash.u8(u8::from(flags[1]));
+            }
         }
         for (piece_id, turn) in &self.card_runtime.idol_used_turn {
             hash.u32(*piece_id);
