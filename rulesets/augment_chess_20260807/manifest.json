@@ -10,6 +10,7 @@
   },
   "artifacts": {
     "source_manifest": "sources/source-manifest.json",
+    "catalog": "cards/catalog.json",
     "implemented_cards": "cards/implemented.json",
     "notation": "notation.json",
     "notation_raw": "sources/raw/notation-legend.html"
@@ -29,6 +30,11 @@
     "repetition_tiebreak": "lower_half_star_total",
     "deathmatch_starts_at_move_count": 45,
     "deathmatch_quiet_move_count": 10
+  },
+  "opening_rule": {
+    "enabled": true,
+    "chance_numerator": 2,
+    "chance_denominator": 5
   },
   "modes": [
     {

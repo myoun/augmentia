@@ -2,6 +2,10 @@ use crate::{Action, DraftPhase, GameState, GameStatus, Piece, Player, Square};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Event {
+    OpeningRuleChecked {
+        triggered: bool,
+        definition_id: Option<String>,
+    },
     DraftStarted {
         phase: DraftPhase,
         player: Player,

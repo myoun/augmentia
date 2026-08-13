@@ -13,7 +13,13 @@ MIDDLE, 20수의 END 드래프트, MIDDLE/END 카드의 첫 턴 잠금, 앙파�
 manifest에 보존하지만 현재 `new_game`에서는 명시적으로 거부합니다.
 
 `cards/implemented.json`은 다섯 카드의 번들 effect, 관련 hook, 재현해야 하는 quirk와
-현재 검증 범위를 기록합니다.
+현재 검증 범위를 기록합니다. `cards/catalog.json`은 번들 원시 정의 193개에서 기본 숨김
+`shotgun-king`을 제외한 공개 카드 192개의 정규화 메타데이터입니다. 분포는 OPENING 30,
+MIDDLE 71, PIECE 22, END 44, RULE 25입니다.
+
+일반 모드는 첫 드래프트 전에 2/5 확률로 오프닝 RULE을 판정합니다. 현재 실행 가능한
+RULE이 발판 하나뿐이므로 엔진의 RULE 선택 풀은 구현 완료 카드로 제한됩니다. 전체
+25개 RULE 효과가 구현되기 전까지 이 선택 분포는 사이트와 동일하지 않습니다.
 
 `notation.json`에는 사용자 제공 HTML에서 정규화한 기물 기보 코드 52개가 들어
 있습니다. 원본은 `sources/raw/notation-legend.html`에 그대로 보존했으며, 사이트

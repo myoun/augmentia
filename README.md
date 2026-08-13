@@ -5,7 +5,8 @@
 현재 범위는 `augment_chess_20260807`의 일반 모드 게임 코어입니다. 백·흑 순서의 게임
 시작 드래프트, 양쪽 10수/20수 완료 시 드래프트, 다음 턴 카드 잠금, 기본 이동과
 앙파상, 행동 예산 기반 연속 행동, 강제 이동, 카드 후속 선택, 45수 연장전 및 별 판정을
-실행합니다. 첫 behavioral slice로 언덕의 왕,
+실행합니다. 게임 시작 전 40% 오프닝 RULE 판정도 결정론적으로 실행합니다. 첫
+behavioral slice로 언덕의 왕,
 제네바 협약, 패링, 빈 찬합, 발판을 구현했습니다. 카오스·그랜드 실행과 나머지 187개
 카드 및 전체 상호작용은 아직 구현되지 않았습니다.
 
@@ -19,14 +20,34 @@ cargo run -p augment-cli
 CLI는 한 터미널에서 백과 흑을 번갈아 조종하는 핫시트 게임입니다. 드래프트·카드·후속
 선택은 화면에 표시된 번호로 고르고, 보드 이동은 `e2e4` 또는 `e2-e4`로 입력합니다.
 프로모션은 `e7e8q`처럼 기물 문자를 붙입니다. `--seed 1234`를 전달하면 같은 드래프트와
-확률 결과를 다시 재현할 수 있습니다. 현재 정규화된 카드가 5장뿐이라 실제 사이트의
-192장 후보 분포는 아직 재현하지 않습니다.
+확률 결과를 다시 재현할 수 있습니다. 전체 공개 카드 192장의 메타데이터는 정규화되어
+있지만 실제 효과를 실행할 수 있는 카드는 아직 5장뿐이므로, 드래프트도 이 5장만
+사용합니다. 오프닝 RULE 역시 현재 실행 가능한 `발판`만 선택 풀에 들어갑니다.
+
+## 카드 스냅숏 갱신
+
+사이트에서 발견한 JS 번들을 내려받은 뒤 전체 카드 카탈로그를 다시 생성할 수 있습니다.
+
+```powershell
+cargo run -p augment-snapshot -- extract `
+  --bundle C:\path\to\main.js `
+  --ruleset-id augment_chess_20260807 `
+  --output rulesets\augment_chess_20260807\cards\catalog.json
+
+cargo run -p augment-snapshot -- diff `
+  --old rulesets\augment_chess_20260807\cards\catalog.json `
+  --new C:\path\to\new-catalog.json
+```
+
+추출기는 번들 SHA-256, 원시·공개 카드 수, 숨김 카드, ID·이름·카테고리·별·effect·target·
+설명을 보존합니다.
 
 ## 저장소 구조
 
 ```text
 crates/augment-core/                 결정론적 게임 엔진 코어
 crates/augment-cli/                  엔진 연동 예제
+crates/augment-snapshot/             카드 카탈로그 추출·diff 도구
 docs/architecture.md                 엔진, 규칙 버전, self-play 설계
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```

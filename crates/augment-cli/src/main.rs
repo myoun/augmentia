@@ -39,11 +39,13 @@ fn play_hotseat<R: BufRead, W: Write>(
     mut input: R,
     mut output: W,
 ) -> Result<(), Box<dyn Error>> {
-    let mut state = engine.new_game(Mode::Standard, seed)?;
+    let initial = engine.new_game_transition(Mode::Standard, seed)?;
+    let mut state = initial.state;
     writeln!(output, "증강체스 터미널 핫시트")?;
     writeln!(output, "규칙: {} | seed: {seed}", engine.ruleset().id)?;
     writeln!(output, "백과 흑을 한 터미널에서 번갈아 조종합니다.")?;
     render_help(&mut output)?;
+    render_events(&mut output, &initial.events)?;
 
     loop {
         render_position(&mut output, &state)?;
@@ -310,6 +312,22 @@ fn action_description(state: &GameState, action: &Action) -> String {
 fn render_events(output: &mut impl Write, events: &[Event]) -> io::Result<()> {
     for event in events {
         match event {
+            Event::OpeningRuleChecked {
+                triggered,
+                definition_id,
+            } => {
+                if *triggered {
+                    let name = definition_id
+                        .as_deref()
+                        .map_or("실행 가능한 RULE 없음", card_name);
+                    writeln!(output, "→ RULE CHECK 적중: {name}")?;
+                } else {
+                    writeln!(output, "→ RULE CHECK 미발동")?;
+                }
+            }
+            Event::RuleApplied { definition_id } => {
+                writeln!(output, "→ 전역 RULE 적용: {}", card_name(definition_id))?
+            }
             Event::DraftPicked {
                 player,
                 definition_id,

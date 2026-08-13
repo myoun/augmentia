@@ -32,8 +32,8 @@ pub use notation::{
 };
 pub use rng::DeterministicRng;
 pub use ruleset::{
-    Artifacts, BaseRules, Coverage, DraftConfig, ModeConfig, RulesetError, RulesetManifest,
-    SourceLinks,
+    Artifacts, BaseRules, Coverage, DraftConfig, ModeConfig, OpeningRuleConfig, RulesetError,
+    RulesetManifest, SourceLinks,
 };
 pub use state::{
     CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DraftPhase, DraftState,

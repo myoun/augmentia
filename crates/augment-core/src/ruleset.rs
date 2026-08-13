@@ -17,6 +17,7 @@ pub struct RulesetManifest {
     pub artifacts: Artifacts,
     pub coverage: Coverage,
     pub base_rules: BaseRules,
+    pub opening_rule: OpeningRuleConfig,
     pub modes: Vec<ModeConfig>,
 }
 
@@ -76,6 +77,13 @@ impl RulesetManifest {
                 "deathmatch thresholds must be positive".to_owned(),
             ));
         }
+        if self.opening_rule.chance_denominator == 0
+            || self.opening_rule.chance_numerator > self.opening_rule.chance_denominator
+        {
+            return Err(RulesetError::InvalidManifest(
+                "opening RULE chance must be a valid fraction".to_owned(),
+            ));
+        }
         if self.base_rules.repetition_tiebreak != "lower_half_star_total" {
             return Err(RulesetError::InvalidManifest(format!(
                 "unsupported repetition_tiebreak {:?}",
@@ -117,9 +125,17 @@ pub struct SourceLinks {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Artifacts {
     pub source_manifest: String,
+    pub catalog: String,
     pub implemented_cards: String,
     pub notation: String,
     pub notation_raw: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+pub struct OpeningRuleConfig {
+    pub enabled: bool,
+    pub chance_numerator: u64,
+    pub chance_denominator: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -216,6 +232,8 @@ mod tests {
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
         assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);
+        assert_eq!(manifest.opening_rule.chance_numerator, 2);
+        assert_eq!(manifest.opening_rule.chance_denominator, 5);
         assert_eq!(
             manifest.artifacts.source_manifest,
             "sources/source-manifest.json"
@@ -224,6 +242,7 @@ mod tests {
             manifest.artifacts.implemented_cards,
             "cards/implemented.json"
         );
+        assert_eq!(manifest.artifacts.catalog, "cards/catalog.json");
         assert_eq!(manifest.artifacts.notation, "notation.json");
     }
 

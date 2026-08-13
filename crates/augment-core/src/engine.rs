@@ -59,6 +59,15 @@ impl Engine {
     }
 
     pub fn new_game(&self, mode: Mode, seed: u64) -> Result<GameState, EngineError> {
+        self.new_game_transition(mode, seed)
+            .map(|transition| transition.state)
+    }
+
+    /// Create a game together with its deterministic opening chance events.
+    ///
+    /// Callers that persist replay logs should prefer this method over `new_game` so the opening
+    /// RULE check and initial draft offer are retained.
+    pub fn new_game_transition(&self, mode: Mode, seed: u64) -> Result<Transition, EngineError> {
         if self.ruleset.mode(mode.id()).is_none() {
             return Err(EngineError::UnknownMode(mode.id().to_owned()));
         }
@@ -68,8 +77,60 @@ impl Engine {
 
         let mut state = GameState::standard(self.ruleset.id.clone(), mode, seed);
         state.reset_repetition_history();
+        let mut events = Vec::new();
+        self.resolve_opening_rule(&mut state, &mut events)?;
         self.start_draft(&mut state, DraftPhase::Opening, Player::White, None, None);
-        Ok(state)
+        let GamePhase::Draft(draft) = &state.phase else {
+            unreachable!("start_draft always installs a draft")
+        };
+        events.push(Event::DraftStarted {
+            phase: DraftPhase::Opening,
+            player: Player::White,
+            offers: draft.offers.clone(),
+        });
+        Ok(Transition { state, events })
+    }
+
+    fn resolve_opening_rule(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        if !self.ruleset.opening_rule.enabled {
+            return Ok(());
+        }
+        let (roll, triggered) = state.rng_mut().web_probability(
+            self.ruleset.opening_rule.chance_numerator,
+            self.ruleset.opening_rule.chance_denominator,
+        );
+        events.push(Event::RandomSample {
+            purpose: "opening-rule-check".to_owned(),
+            roll_53: roll,
+        });
+
+        let definition_id = if triggered {
+            let mut executable_rules: Vec<_> = IMPLEMENTED_CARDS
+                .iter()
+                .filter(|card| card.activation == CardActivation::Rule)
+                .collect();
+            executable_rules.sort_by_key(|card| card.name_ko);
+            let (selection_roll, index) = state.rng_mut().web_choice_index(executable_rules.len());
+            events.push(Event::RandomSample {
+                purpose: "opening-rule-selection".to_owned(),
+                roll_53: selection_roll,
+            });
+            index.map(|index| executable_rules[index].id.to_owned())
+        } else {
+            None
+        };
+        events.push(Event::OpeningRuleChecked {
+            triggered,
+            definition_id: definition_id.clone(),
+        });
+        if let Some(definition_id) = definition_id {
+            self.install_rule(state, &definition_id, events)?;
+        }
+        Ok(())
     }
 
     /// Add a player-owned card as a draft/acquisition transition.
@@ -130,6 +191,21 @@ impl Engine {
         definition_id: &str,
     ) -> Result<Transition, EngineError> {
         self.ensure_ruleset(state)?;
+        let mut next = state.clone();
+        let mut events = Vec::new();
+        self.install_rule(&mut next, definition_id, &mut events)?;
+        Ok(Transition {
+            state: next,
+            events,
+        })
+    }
+
+    fn install_rule(
+        &self,
+        state: &mut GameState,
+        definition_id: &str,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
         let definition = implemented_card(definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.to_owned()))?;
         if definition.activation != CardActivation::Rule {
@@ -143,25 +219,30 @@ impl Engine {
             return Err(EngineError::RuleAlreadyApplied(definition_id.to_owned()));
         }
 
-        let mut next = state.clone();
-        next.applied_rules.push(definition_id.to_owned());
-        next.applied_rules.sort();
-        let current_turn = next.shared_turn_count();
-        next.card_runtime.platform = Some(PlatformRuleState {
-            cell: None,
-            spawned_at: current_turn,
-            next_at: current_turn.saturating_add(5),
-            triggered_piece_ids: BTreeSet::new(),
-            nonce: 0,
-        });
-        let mut events = vec![Event::RuleApplied {
+        state.applied_rules.push(definition_id.to_owned());
+        state.applied_rules.sort();
+        events.push(Event::RuleApplied {
             definition_id: definition_id.to_owned(),
-        }];
-        self.spawn_platform(&mut next, current_turn, &mut events);
-        Ok(Transition {
-            state: next,
-            events,
-        })
+        });
+        match definition_id {
+            PLATFORM => {
+                let current_turn = state.shared_turn_count();
+                state.card_runtime.platform = Some(PlatformRuleState {
+                    cell: None,
+                    spawned_at: current_turn,
+                    next_at: current_turn.saturating_add(5),
+                    triggered_piece_ids: BTreeSet::new(),
+                    nonce: 0,
+                });
+                self.spawn_platform(state, current_turn, events);
+            }
+            _ => {
+                return Err(EngineError::Invariant(format!(
+                    "implemented RULE {definition_id:?} has no installer"
+                )));
+            }
+        }
+        Ok(())
     }
 
     fn draft_candidates_for_categories(
@@ -2038,6 +2119,65 @@ mod tests {
                 .count(),
             20
         );
+    }
+
+    #[test]
+    fn opening_rule_check_is_deterministic_and_precedes_the_first_draft() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let hit = (0..100)
+            .find_map(|seed| {
+                let transition = engine.new_game_transition(Mode::Standard, seed).unwrap();
+                transition
+                    .events
+                    .iter()
+                    .any(|event| {
+                        matches!(
+                            event,
+                            Event::OpeningRuleChecked {
+                                triggered: true,
+                                definition_id: Some(id),
+                            } if id == PLATFORM
+                        )
+                    })
+                    .then_some((seed, transition))
+            })
+            .expect("a 40% RULE check must hit within the first 100 seeds");
+        let miss = (0..100)
+            .find_map(|seed| {
+                let transition = engine.new_game_transition(Mode::Standard, seed).unwrap();
+                transition
+                    .events
+                    .iter()
+                    .any(|event| {
+                        matches!(
+                            event,
+                            Event::OpeningRuleChecked {
+                                triggered: false,
+                                definition_id: None,
+                            }
+                        )
+                    })
+                    .then_some(transition)
+            })
+            .expect("a 40% RULE check must miss within the first 100 seeds");
+
+        assert_eq!(engine.new_game(Mode::Standard, hit.0).unwrap(), hit.1.state);
+        assert_eq!(hit.1.state.applied_rules, [PLATFORM]);
+        assert!(hit.1.state.card_runtime.platform.is_some());
+        assert!(miss.state.applied_rules.is_empty());
+        let rule_index = hit
+            .1
+            .events
+            .iter()
+            .position(|event| matches!(event, Event::RuleApplied { .. }))
+            .unwrap();
+        let draft_index = hit
+            .1
+            .events
+            .iter()
+            .position(|event| matches!(event, Event::DraftStarted { .. }))
+            .unwrap();
+        assert!(rule_index < draft_index);
     }
 
     #[test]
