@@ -85,6 +85,17 @@ test: add 20260807 democracy simultaneous-loss fixture
 원본 snapshot commit은 다운로드한 자료와 digest만 포함한다. 의미 해석과 엔진 코드는
 후속 commit에 둬서 나중에 추출 오류와 엔진 오류를 구분할 수 있게 한다.
 
+카드 정의는 번들에서 수작업으로 옮기지 않고 `augment-snapshot`으로 정규화한다. 새
+번들은 기존 스냅숏을 덮어쓰기 전에 임시 출력으로 추출하고 diff를 검토한다.
+
+```powershell
+cargo run -p augment-snapshot -- extract --bundle C:\path\to\main.js `
+  --ruleset-id augment_chess_YYYYMMDD --output C:\temp\new-catalog.json
+cargo run -p augment-snapshot -- diff `
+  --old rulesets\augment_chess_YYYYMMDD\cards\catalog.json `
+  --new C:\temp\new-catalog.json
+```
+
 ## 학습 산출물
 
 대용량 checkpoint와 replay buffer는 일반 Git에 넣지 않는다. 기본적으로 로컬/객체

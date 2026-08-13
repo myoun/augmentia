@@ -95,6 +95,8 @@ mod tests {
 
     const BUNDLED_IMPLEMENTED_CARDS_JSON: &str =
         include_str!("../../../rulesets/augment_chess_20260807/cards/implemented.json");
+    const BUNDLED_CARD_CATALOG_JSON: &str =
+        include_str!("../../../rulesets/augment_chess_20260807/cards/catalog.json");
 
     #[test]
     fn implemented_ids_and_effects_are_unique() {
@@ -136,6 +138,50 @@ mod tests {
                     CardPhase::Rule => "RULE",
                 })
             );
+        }
+    }
+
+    #[test]
+    fn full_snapshot_catalog_contains_all_visible_cards_and_compiled_subset() {
+        let document: serde_json::Value = serde_json::from_str(BUNDLED_CARD_CATALOG_JSON).unwrap();
+        let implemented_document: serde_json::Value =
+            serde_json::from_str(BUNDLED_IMPLEMENTED_CARDS_JSON).unwrap();
+        let cards = document["cards"].as_array().unwrap();
+        assert_eq!(document["raw_card_definitions"].as_u64(), Some(193));
+        assert_eq!(document["visible_card_count"].as_u64(), Some(192));
+        assert_eq!(
+            document["source_bundle_sha256"],
+            implemented_document["source_bundle_sha256"]
+        );
+        assert_eq!(cards.len(), 192);
+        let phase_counts = cards.iter().fold(
+            std::collections::BTreeMap::<&str, usize>::new(),
+            |mut counts, card| {
+                *counts.entry(card["phase"].as_str().unwrap()).or_default() += 1;
+                counts
+            },
+        );
+        assert_eq!(phase_counts["OPENING"], 30);
+        assert_eq!(phase_counts["MIDDLE"], 71);
+        assert_eq!(phase_counts["PIECE"], 22);
+        assert_eq!(phase_counts["END"], 44);
+        assert_eq!(phase_counts["RULE"], 25);
+
+        for compiled in IMPLEMENTED_CARDS {
+            let catalog = cards
+                .iter()
+                .find(|card| card["id"].as_str() == Some(compiled.id))
+                .unwrap_or_else(|| panic!("{} is missing from the full catalog", compiled.id));
+            assert_eq!(catalog["name_ko"].as_str(), Some(compiled.name_ko));
+            assert_eq!(catalog["effect"].as_str(), Some(compiled.effect));
+            if compiled.activation == CardActivation::Rule {
+                assert!(catalog["half_stars"].is_null());
+            } else {
+                assert_eq!(
+                    catalog["half_stars"].as_u64(),
+                    Some(compiled.half_stars.into())
+                );
+            }
         }
     }
 }

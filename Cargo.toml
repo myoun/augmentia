@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/augment-core", "crates/augment-cli"]
+members = ["crates/augment-core", "crates/augment-cli", "crates/augment-snapshot"]
 resolver = "2"
 
 [workspace.package]
@@ -10,3 +10,4 @@ rust-version = "1.85"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
