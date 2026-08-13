@@ -1,0 +1,24 @@
+{
+  "ruleset_id": "augment_chess_20260807",
+  "captured_at": "2026-08-14T00:00:00+09:00",
+  "upstream_update_date": "2026-08-07",
+  "page_url": "https://augmentchess.org/",
+  "bundle": {
+    "url": "https://augmentchess.org/assets/main-C7W4ivPY.js",
+    "byte_length": 10462240,
+    "sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834"
+  },
+  "extraction_probe": {
+    "raw_card_definitions": 193,
+    "default_visible_cards": 192,
+    "hidden_by_default_ids": ["shotgun-king"],
+    "unique_visible_effects": 192,
+    "visible_effects_with_apply_case": 192,
+    "unique_notation_codes": 52
+  },
+  "notes": [
+    "Bundle URL was discovered from the live page HTML rather than hard-coded discovery.",
+    "The bundle is identified by both its content hash and Vite asset URL.",
+    "Game-state behavior in this bundle is the compatibility authority when display text differs."
+  ]
+}

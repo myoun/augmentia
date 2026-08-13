@@ -9,6 +9,7 @@
     "updates": "https://augmentchess.org/updates/"
   },
   "artifacts": {
+    "source_manifest": "sources/source-manifest.json",
     "notation": "notation.json",
     "notation_raw": "sources/raw/notation-legend.html"
   },

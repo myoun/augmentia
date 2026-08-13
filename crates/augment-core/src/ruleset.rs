@@ -101,6 +101,7 @@ pub struct SourceLinks {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Artifacts {
+    pub source_manifest: String,
     pub notation: String,
     pub notation_raw: String,
 }
@@ -193,6 +194,10 @@ mod tests {
         assert_eq!(manifest.coverage.status, "scaffold");
         assert_eq!(manifest.coverage.target_card_count, 192);
         assert_eq!(manifest.coverage.implemented_card_count, 0);
+        assert_eq!(
+            manifest.artifacts.source_manifest,
+            "sources/source-manifest.json"
+        );
         assert_eq!(manifest.artifacts.notation, "notation.json");
     }
 
