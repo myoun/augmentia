@@ -1,5 +1,5 @@
-use crate::{Board, DeterministicRng, PieceKind, Player};
-use std::collections::BTreeMap;
+use crate::{Board, DeterministicRng, PieceKind, Player, Square};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Mode {
@@ -23,11 +23,20 @@ impl Mode {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum GamePhase {
     Playing,
+    ForcedMove {
+        piece_id: u32,
+        source: ForcedMoveSource,
+    },
     Draft {
         round: u16,
         offers: Vec<Vec<String>>,
     },
     AwaitingChoice(PendingChoice),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ForcedMoveSource {
+    Platform,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -69,6 +78,30 @@ pub struct CardInstance {
     pub charges: u16,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EmptyLunchboxStatus {
+    pub by: Player,
+    pub deadline_turn: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PlatformRuleState {
+    pub cell: Option<Square>,
+    pub spawned_at: u32,
+    pub next_at: u32,
+    pub triggered_piece_ids: BTreeSet<u32>,
+    pub nonce: u32,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CardRuntimeState {
+    pub hill_king: [bool; 2],
+    pub geneva_convention: [bool; 2],
+    pub parry_piece_ids: BTreeSet<u32>,
+    pub empty_lunchboxes: BTreeMap<u32, EmptyLunchboxStatus>,
+    pub platform: Option<PlatformRuleState>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GameState {
     pub ruleset_id: String,
@@ -81,7 +114,11 @@ pub struct GameState {
     pub status: GameStatus,
     pub cards: Vec<CardInstance>,
     pub half_star_totals: [u16; 2],
+    pub turns_taken: [u32; 2],
+    pub applied_rules: Vec<String>,
+    pub card_runtime: CardRuntimeState,
     rng: DeterministicRng,
+    next_piece_id: u32,
     repetitions: BTreeMap<u64, u8>,
 }
 
@@ -93,10 +130,11 @@ impl GameState {
     pub fn from_board(
         ruleset_id: impl Into<String>,
         mode: Mode,
-        board: Board,
+        mut board: Board,
         turn: Player,
         seed: u64,
     ) -> Self {
+        let next_piece_id = board.assign_stable_ids();
         let mut state = Self {
             ruleset_id: ruleset_id.into(),
             mode,
@@ -108,7 +146,11 @@ impl GameState {
             status: GameStatus::Ongoing,
             cards: Vec::new(),
             half_star_totals: [0, 0],
+            turns_taken: [0, 0],
+            applied_rules: Vec::new(),
+            card_runtime: CardRuntimeState::default(),
             rng: DeterministicRng::new(seed),
+            next_piece_id,
             repetitions: BTreeMap::new(),
         };
         state.record_current_position();
@@ -129,9 +171,18 @@ impl GameState {
         self.rng.state()
     }
 
-    #[cfg(test)]
     pub(crate) fn rng_mut(&mut self) -> &mut DeterministicRng {
         &mut self.rng
+    }
+
+    pub(crate) fn allocate_piece_id(&mut self) -> u32 {
+        let id = self.next_piece_id.max(1);
+        self.next_piece_id = id.saturating_add(1).max(1);
+        id
+    }
+
+    pub fn shared_turn_count(&self) -> u32 {
+        self.turns_taken[0].min(self.turns_taken[1])
     }
 
     pub fn position_key(&self) -> u64 {
@@ -145,8 +196,10 @@ impl GameState {
             match self.board.get(square) {
                 None => hash.u8(0),
                 Some(piece) => {
+                    hash.u32(piece.id);
                     hash.u8(piece.kind.stable_code());
                     hash.u8(piece.owner.index() as u8);
+                    hash.u16(piece.capture_count);
                 }
             }
         }
@@ -160,10 +213,53 @@ impl GameState {
             hash.u16(card.half_stars);
             hash.u16(card.charges);
         }
+        for rule in &self.applied_rules {
+            hash.bytes(rule.as_bytes());
+        }
+        for enabled in self.card_runtime.hill_king {
+            hash.u8(u8::from(enabled));
+        }
+        for enabled in self.card_runtime.geneva_convention {
+            hash.u8(u8::from(enabled));
+        }
+        for piece_id in &self.card_runtime.parry_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for (piece_id, status) in &self.card_runtime.empty_lunchboxes {
+            hash.u32(*piece_id);
+            hash.u8(status.by.index() as u8);
+            let owner = self
+                .board
+                .find_by_id(*piece_id)
+                .map_or(status.by.opponent(), |(_, piece)| piece.owner);
+            hash.u32(
+                status
+                    .deadline_turn
+                    .saturating_sub(self.turns_taken[owner.index()]),
+            );
+        }
+        match &self.card_runtime.platform {
+            None => hash.u8(0),
+            Some(platform) => {
+                hash.u8(1);
+                hash.u8(platform.cell.map_or(u8::MAX, |square| square.index() as u8));
+                hash.u32(platform.next_at.saturating_sub(self.shared_turn_count()));
+                for piece_id in &platform.triggered_piece_ids {
+                    hash.u32(*piece_id);
+                }
+            }
+        }
         match &self.phase {
             GamePhase::Playing => hash.u8(0),
-            GamePhase::Draft { round, offers } => {
+            GamePhase::ForcedMove { piece_id, source } => {
                 hash.u8(1);
+                hash.u32(*piece_id);
+                hash.u8(match source {
+                    ForcedMoveSource::Platform => 0,
+                });
+            }
+            GamePhase::Draft { round, offers } => {
+                hash.u8(2);
                 hash.u16(*round);
                 for bundle in offers {
                     for card in bundle {
@@ -173,7 +269,7 @@ impl GameState {
                 }
             }
             GamePhase::AwaitingChoice(choice) => {
-                hash.u8(2);
+                hash.u8(3);
                 hash.u32(choice.id);
                 hash.u8(choice.owner.index() as u8);
                 hash.u32(choice.source_card_instance);
@@ -193,6 +289,17 @@ impl GameState {
         hash.u32(self.ply);
         hash.u32(self.quiet_ply);
         hash.u64(self.rng.state());
+        hash.u32(self.turns_taken[0]);
+        hash.u32(self.turns_taken[1]);
+        hash.u32(self.next_piece_id);
+        for status in self.card_runtime.empty_lunchboxes.values() {
+            hash.u32(status.deadline_turn);
+        }
+        if let Some(platform) = &self.card_runtime.platform {
+            hash.u32(platform.spawned_at);
+            hash.u32(platform.next_at);
+            hash.u32(platform.nonce);
+        }
         match &self.status {
             GameStatus::Ongoing => hash.u8(0),
             GameStatus::Won { winner, reason } => {

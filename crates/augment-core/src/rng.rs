@@ -33,6 +33,29 @@ impl DeterministicRng {
             Some((self.next_u64() % len as u64) as usize)
         }
     }
+
+    /// Draw the 53-bit mantissa used by browser-style `[0, 1)` decisions.
+    pub(crate) fn next_unit_53(&mut self) -> u64 {
+        self.next_u64() >> 11
+    }
+
+    /// Mirrors `items[Math.floor(Math.random() * items.length)] || null`.
+    ///
+    /// The web implementation consumes a random value even for an empty list; preserving that
+    /// quirk matters for all later random outcomes in the same game.
+    pub(crate) fn web_choice_index(&mut self, len: usize) -> (u64, Option<usize>) {
+        let roll = self.next_unit_53();
+        let index = (len > 0).then(|| ((u128::from(roll) * len as u128) >> 53) as usize);
+        (roll, index)
+    }
+
+    pub(crate) fn web_probability(&mut self, numerator: u64, denominator: u64) -> (u64, bool) {
+        debug_assert!(denominator > 0 && numerator <= denominator);
+        let roll = self.next_unit_53();
+        let triggered =
+            u128::from(roll) * u128::from(denominator) < u128::from(numerator) * (1_u128 << 53);
+        (roll, triggered)
+    }
 }
 
 #[cfg(test)]

@@ -1,0 +1,98 @@
+{
+  "ruleset_id": "augment_chess_20260807",
+  "schema_version": 1,
+  "source_bundle_sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834",
+  "scope": {
+    "status": "behavioral_slice",
+    "implemented_cards": 5,
+    "site_parity_verified_cards": 0,
+    "notes": "Base-piece behavior and directly reachable hooks are implemented. Interactions with the remaining 187 cards and special pieces are not yet parity-verified."
+  },
+  "cards": [
+    {
+      "id": "king-of-the-hill",
+      "name_ko": "언덕의 왕",
+      "phase": "OPENING",
+      "activation": "passive",
+      "half_stars": 5,
+      "effect": "kingOfTheHill",
+      "engine_primitives": ["player_flag", "conditional_queen_rays"],
+      "source_symbols": ["kingOfTheHill", "getLegalMoves", "isCenterTwoByTwoCell"],
+      "compatibility": [
+        "Only a piece whose runtime type is the base king receives the extra rays.",
+        "The king must start the move on one of the central four squares."
+      ]
+    },
+    {
+      "id": "geneva-convention",
+      "name_ko": "제네바 협약",
+      "phase": "OPENING",
+      "activation": "passive",
+      "half_stars": 6,
+      "effect": "genevaConvention",
+      "engine_primitives": ["player_flag", "capture_legality_filter"],
+      "source_symbols": ["genevaConvention", "canCaptureTarget"],
+      "compatibility": [
+        "The flag belongs to the protected pawn owner.",
+        "Only an attacker rendered as a queen is blocked from capturing that player's pawn."
+      ]
+    },
+    {
+      "id": "parry",
+      "name_ko": "패링",
+      "phase": "MIDDLE",
+      "activation": "active",
+      "half_stars": 8,
+      "effect": "parry",
+      "target": "own-parry-piece",
+      "engine_primitives": ["piece_status", "probability_2_over_5", "capture_replacement"],
+      "source_symbols": ["parry", "armParryRetaliation", "resolvePendingBearRetaliations"],
+      "compatibility": [
+        "The status is deleted before the random roll and is consumed on both success and failure.",
+        "On success the attacker is removed and the defender is restored at the attacker's original square.",
+        "A successful defender gains one capture count."
+      ]
+    },
+    {
+      "id": "empty-lunchbox",
+      "name_ko": "빈 찬합",
+      "phase": "END",
+      "activation": "active",
+      "half_stars": 7,
+      "effect": "emptyLunchbox",
+      "target": "enemy-empty-lunchbox-piece",
+      "engine_primitives": ["piece_status", "per_player_turn_deadline", "forced_removal"],
+      "source_symbols": ["emptyLunchbox", "resolveEmptyLunchboxesAfterTurn"],
+      "compatibility": [
+        "The deadline is target-owner turnsTaken plus three.",
+        "Adjacency is checked before the deadline and clears the status early at any target-owner turn end.",
+        "Only the first runtime royal king found for that color is used for the adjacency check."
+      ]
+    },
+    {
+      "id": "platform",
+      "name_ko": "발판",
+      "phase": "RULE",
+      "activation": "rule",
+      "half_stars": 0,
+      "effect": "platformRule",
+      "engine_primitives": ["global_rule", "random_empty_square", "forced_same_piece_move"],
+      "source_symbols": ["enablePlatformRule", "spawnPlatformAtTurn", "tryStartPlatformExtraMove", "tickPlatformRuleAfterTurn"],
+      "compatibility": [
+        "A platform spawn is attempted immediately when the RULE is installed.",
+        "Candidate order follows web rows: a8 through h8 down to a1 through h1.",
+        "The random source is consumed even when the candidate list is empty.",
+        "A landing piece is added to triggeredIds before legal moves are checked and remains there when no extra move exists.",
+        "A valid extra move keeps the same turn and restricts the next action to that piece."
+      ]
+    }
+  ],
+  "known_quirks": [
+    "parry.status_consumed_before_roll",
+    "parry.counter_restores_at_attacker_origin",
+    "empty_lunchbox.adjacency_clears_before_deadline",
+    "platform.immediate_initial_spawn",
+    "platform.empty_pool_consumes_rng",
+    "platform.triggered_id_persists_without_legal_move"
+  ]
+}

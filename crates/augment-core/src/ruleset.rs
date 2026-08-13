@@ -56,6 +56,14 @@ impl RulesetManifest {
                 "implemented_card_count cannot exceed target_card_count".to_owned(),
             ));
         }
+        if self.coverage.behavioral_slice_card_count < self.coverage.implemented_card_count
+            || self.coverage.behavioral_slice_card_count > self.coverage.target_card_count
+            || self.coverage.site_parity_verified_card_count > self.coverage.implemented_card_count
+        {
+            return Err(RulesetError::InvalidManifest(
+                "card coverage counters are inconsistent".to_owned(),
+            ));
+        }
         if self.base_rules.repetition_count < 2 {
             return Err(RulesetError::InvalidManifest(
                 "repetition_count must be at least two".to_owned(),
@@ -102,6 +110,7 @@ pub struct SourceLinks {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Artifacts {
     pub source_manifest: String,
+    pub implemented_cards: String,
     pub notation: String,
     pub notation_raw: String,
 }
@@ -111,6 +120,8 @@ pub struct Coverage {
     pub status: String,
     pub target_card_count: u32,
     pub implemented_card_count: u32,
+    pub behavioral_slice_card_count: u32,
+    pub site_parity_verified_card_count: u32,
     pub notes: String,
 }
 
@@ -191,12 +202,18 @@ mod tests {
         let manifest = RulesetManifest::bundled_20260807().unwrap();
         assert_eq!(manifest.id, BUNDLED_RULESET_ID);
         assert_eq!(manifest.snapshot_date, "2026-08-07");
-        assert_eq!(manifest.coverage.status, "scaffold");
+        assert_eq!(manifest.coverage.status, "partial");
         assert_eq!(manifest.coverage.target_card_count, 192);
-        assert_eq!(manifest.coverage.implemented_card_count, 0);
+        assert_eq!(manifest.coverage.implemented_card_count, 5);
+        assert_eq!(manifest.coverage.behavioral_slice_card_count, 5);
+        assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(
             manifest.artifacts.source_manifest,
             "sources/source-manifest.json"
+        );
+        assert_eq!(
+            manifest.artifacts.implemented_cards,
+            "cards/implemented.json"
         );
         assert_eq!(manifest.artifacts.notation, "notation.json");
     }

@@ -134,13 +134,26 @@ impl PieceKind {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Piece {
+    /// Stable per-game identity used by card statuses and replay-compatible quirks.
+    pub id: u32,
     pub owner: Player,
     pub kind: PieceKind,
+    pub capture_count: u16,
 }
 
 impl Piece {
     pub const fn new(owner: Player, kind: PieceKind) -> Self {
-        Self { owner, kind }
+        Self {
+            id: 0,
+            owner,
+            kind,
+            capture_count: 0,
+        }
+    }
+
+    pub const fn with_id(mut self, id: u32) -> Self {
+        self.id = id;
+        self
     }
 }
 
@@ -213,6 +226,40 @@ impl Board {
         self.iter()
             .any(|(_, piece)| piece.owner == owner && piece.kind == kind)
     }
+
+    pub fn find_by_id(&self, id: u32) -> Option<(Square, Piece)> {
+        (id != 0)
+            .then(|| self.iter().find(|(_, piece)| piece.id == id))
+            .flatten()
+    }
+
+    pub(crate) fn assign_stable_ids(&mut self) -> u32 {
+        let mut used = std::collections::BTreeSet::new();
+        let mut next_id = self
+            .iter()
+            .map(|(_, piece)| piece.id)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1)
+            .max(1);
+
+        for index in 0..BOARD_SQUARES as u8 {
+            let square = Square::from_index(index).expect("board index is valid");
+            let Some(mut piece) = self.get(square) else {
+                continue;
+            };
+            if piece.id == 0 || !used.insert(piece.id) {
+                while used.contains(&next_id) || next_id == 0 {
+                    next_id = next_id.saturating_add(1).max(1);
+                }
+                piece.id = next_id;
+                used.insert(next_id);
+                next_id = next_id.saturating_add(1).max(1);
+                self.set(square, Some(piece));
+            }
+        }
+        next_id
+    }
 }
 
 impl Default for Board {
@@ -241,5 +288,31 @@ mod tests {
         assert_eq!(board.iter().count(), 32);
         assert!(board.contains(Player::White, PieceKind::King));
         assert!(board.contains(Player::Black, PieceKind::King));
+    }
+
+    #[test]
+    fn duplicate_and_missing_ids_are_normalized_in_square_order() {
+        let mut board = Board::empty();
+        board.set(
+            "a1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::King).with_id(7)),
+        );
+        board.set(
+            "b1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Rook).with_id(7)),
+        );
+        board.set(
+            "c1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Bishop)),
+        );
+        let next = board.assign_stable_ids();
+        let ids: Vec<_> = board.iter().map(|(_, piece)| piece.id).collect();
+        assert_eq!(ids.len(), 3);
+        assert!(ids.iter().all(|id| *id != 0));
+        assert_eq!(
+            ids.iter().collect::<std::collections::BTreeSet<_>>().len(),
+            3
+        );
+        assert!(next > *ids.iter().max().unwrap());
     }
 }

@@ -10,14 +10,17 @@
   },
   "artifacts": {
     "source_manifest": "sources/source-manifest.json",
+    "implemented_cards": "cards/implemented.json",
     "notation": "notation.json",
     "notation_raw": "sources/raw/notation-legend.html"
   },
   "coverage": {
-    "status": "scaffold",
+    "status": "partial",
     "target_card_count": 192,
-    "implemented_card_count": 0,
-    "notes": "기본 이동과 판정 스켈레톤만 구현됨. 전체 카드 데이터 수집 및 검증 필요."
+    "implemented_card_count": 5,
+    "behavioral_slice_card_count": 5,
+    "site_parity_verified_card_count": 0,
+    "notes": "5개 카드의 기본 기물 동작과 직접 hook을 구현함. 나머지 카드 및 전체 상호작용 검증 필요."
   },
   "base_rules": {
     "king_capture_wins": true,
