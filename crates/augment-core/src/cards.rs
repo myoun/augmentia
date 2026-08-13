@@ -28,6 +28,8 @@ pub struct ImplementedCardDefinition {
     pub activation: CardActivation,
     pub phase: CardPhase,
     pub half_stars: u16,
+    pub ends_turn: bool,
+    pub turn_exclusive: bool,
 }
 
 pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
@@ -38,6 +40,8 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Passive,
         phase: CardPhase::Opening,
         half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
     },
     ImplementedCardDefinition {
         id: GENEVA_CONVENTION,
@@ -46,6 +50,8 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Passive,
         phase: CardPhase::Opening,
         half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
     },
     ImplementedCardDefinition {
         id: PARRY,
@@ -54,6 +60,8 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Active,
         phase: CardPhase::Middle,
         half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
     },
     ImplementedCardDefinition {
         id: EMPTY_LUNCHBOX,
@@ -62,6 +70,8 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Active,
         phase: CardPhase::End,
         half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
     },
     ImplementedCardDefinition {
         id: PLATFORM,
@@ -70,6 +80,8 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Rule,
         phase: CardPhase::Rule,
         half_stars: 0,
+        ends_turn: false,
+        turn_exclusive: false,
     },
 ];
 
@@ -108,6 +120,11 @@ mod tests {
             assert_eq!(
                 snapshot["half_stars"].as_u64(),
                 Some(compiled.half_stars.into())
+            );
+            assert_eq!(snapshot["ends_turn"].as_bool(), Some(compiled.ends_turn));
+            assert_eq!(
+                snapshot["turn_exclusive"].as_bool(),
+                Some(compiled.turn_exclusive)
             );
             assert_eq!(
                 snapshot["phase"].as_str(),

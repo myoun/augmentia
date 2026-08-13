@@ -1,9 +1,11 @@
 use crate::{
-    Action, ActionTarget, CardActivation, CardInstance, CardPhase, DeathmatchState, DraftPhase,
-    DraftState, DrawReason, EMPTY_LUNCHBOX, EffectCommand, EffectRegistry, EmptyLunchboxStatus,
-    EnPassantState, Event, ForcedMoveSource, GENEVA_CONVENTION, GamePhase, GameState, GameStatus,
-    IMPLEMENTED_CARDS, KING_OF_THE_HILL, Mode, MoveAction, PARRY, PLATFORM, Piece, PieceKind,
-    PlatformRuleState, Player, RulesetManifest, Square, Transition, WinReason, implemented_card,
+    Action, ActionTarget, CardActivation, CardInstance, CardPhase, ChoiceContinuation,
+    ChoiceRegistry, DeathmatchState, DraftPhase, DraftState, DrawReason, EMPTY_LUNCHBOX,
+    EffectCommand, EffectRegistry, EmptyLunchboxStatus, EnPassantState, Event,
+    ForcedMoveContinuation, ForcedMoveSource, GENEVA_CONVENTION, GamePhase, GameState, GameStatus,
+    IMPLEMENTED_CARDS, KING_OF_THE_HILL, Mode, MoveAction, PARRY, PLATFORM, PendingChoice, Piece,
+    PieceKind, PlatformRuleState, Player, RulesetManifest, Square, Transition, WinReason,
+    implemented_card,
 };
 use std::collections::BTreeSet;
 use std::fmt;
@@ -11,13 +13,18 @@ use std::fmt;
 pub struct Engine {
     ruleset: RulesetManifest,
     effects: EffectRegistry,
+    choices: ChoiceRegistry,
 }
+
+const MAX_EFFECT_EVENTS_PER_RESOLUTION: usize = 4_096;
+const MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION: usize = 256;
 
 impl Engine {
     pub fn new(ruleset: RulesetManifest) -> Self {
         Self {
             ruleset,
             effects: EffectRegistry::default(),
+            choices: ChoiceRegistry::default(),
         }
     }
 
@@ -31,6 +38,10 @@ impl Engine {
 
     pub fn effects_mut(&mut self) -> &mut EffectRegistry {
         &mut self.effects
+    }
+
+    pub fn choices_mut(&mut self) -> &mut ChoiceRegistry {
+        &mut self.choices
     }
 
     pub fn new_game(&self, mode: Mode, seed: u64) -> Result<GameState, EngineError> {
@@ -91,7 +102,7 @@ impl Engine {
             instance_id,
             definition_id: definition_id.to_owned(),
         }];
-        self.apply_card_reactions(&mut next, &mut events)?;
+        self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
         Ok(Transition {
             state: next,
             events,
@@ -312,8 +323,10 @@ impl Engine {
             next.completed_drafts[draft.phase.index()] = true;
             next.phase = GamePhase::Playing;
             next.turn = draft.resume_turn;
+            next.actions_remaining = 1;
+            next.cards_used_this_turn[draft.resume_turn.index()] = 0;
+            next.take_turn_end_request();
             self.activate_cards_for_turn(&mut next, draft.resume_turn, &mut events);
-            next.record_current_position();
             events.push(Event::DraftCompleted {
                 phase: draft.phase,
                 resume_turn: draft.resume_turn,
@@ -321,6 +334,24 @@ impl Engine {
             events.push(Event::TurnChanged {
                 player: draft.resume_turn,
             });
+            events.push(Event::TurnStarted {
+                player: draft.resume_turn,
+                actions_remaining: next.actions_remaining,
+            });
+            self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status != GameStatus::Ongoing {
+                self.push_game_ended(&next, &mut events);
+            } else if matches!(next.phase, GamePhase::Playing) {
+                if next.take_turn_end_request() {
+                    self.finish_turn(&mut next, draft.resume_turn, &mut events)?;
+                } else {
+                    self.resolve_no_action_loss(&mut next, draft.resume_turn, &mut events);
+                    if next.status == GameStatus::Ongoing {
+                        next.record_current_position();
+                    }
+                }
+            }
         }
 
         Ok(Transition {
@@ -336,7 +367,11 @@ impl Engine {
         }
         match &state.phase {
             GamePhase::Playing => {
-                let mut actions = self.generate_move_actions(state);
+                let mut actions = if state.actions_remaining > 0 {
+                    self.generate_move_actions(state)
+                } else {
+                    Vec::new()
+                };
                 self.generate_card_actions(state, &mut actions);
                 actions.sort();
                 actions.dedup();
@@ -350,7 +385,19 @@ impl Engine {
                     offer_index: index as u16,
                 })
                 .collect()),
-            GamePhase::AwaitingChoice(_) => Err(EngineError::UnsupportedPhase("choice")),
+            GamePhase::AwaitingChoice(choice) => {
+                if choice.owner != state.turn {
+                    return Err(EngineError::Invariant(
+                        "pending choice owner does not match turn".to_owned(),
+                    ));
+                }
+                Ok((0..choice.options.len())
+                    .map(|option_index| Action::ResolveChoice {
+                        choice_id: choice.id,
+                        option_index: option_index as u16,
+                    })
+                    .collect())
+            }
         }
     }
 
@@ -373,7 +420,10 @@ impl Engine {
                 target,
             } => self.apply_active_card(state, action, instance_id, target),
             Action::DraftPick { offer_index } => self.apply_draft_pick(state, action, offer_index),
-            Action::ResolveChoice { .. } => Err(EngineError::UnsupportedPhase("choice")),
+            Action::ResolveChoice {
+                choice_id,
+                option_index,
+            } => self.apply_choice(state, action, choice_id, option_index),
         }
     }
 
@@ -392,7 +442,12 @@ impl Engine {
             .position(|card| card.instance_id == instance_id)
             .ok_or_else(|| EngineError::Invariant("legal card action has no card".to_owned()))?;
         let definition_id = next.cards[card_index].definition_id.clone();
+        let definition = *implemented_card(&definition_id).ok_or_else(|| {
+            EngineError::Invariant(format!("legal card {definition_id:?} is not implemented"))
+        })?;
         next.cards[card_index].charges = next.cards[card_index].charges.saturating_sub(1);
+        next.cards_used_this_turn[actor.index()] =
+            next.cards_used_this_turn[actor.index()].saturating_add(1);
 
         let target_square = match target {
             ActionTarget::PieceAt(square) => square,
@@ -435,7 +490,84 @@ impl Engine {
                 definition_id,
             },
         ];
-        self.apply_card_reactions(&mut next, &mut events)?;
+        self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
+        self.resolve_missing_king(&mut next, &mut events);
+        if next.status != GameStatus::Ongoing {
+            self.push_game_ended(&next, &mut events);
+        } else if matches!(next.phase, GamePhase::Playing) {
+            if definition.ends_turn || next.take_turn_end_request() {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.resolve_no_action_loss(&mut next, actor, &mut events);
+            }
+        }
+        Ok(Transition {
+            state: next,
+            events,
+        })
+    }
+
+    fn apply_choice(
+        &self,
+        state: &GameState,
+        action: Action,
+        choice_id: u32,
+        option_index: u16,
+    ) -> Result<Transition, EngineError> {
+        let mut next = state.clone();
+        let actor = next.turn;
+        let choice = match &next.phase {
+            GamePhase::AwaitingChoice(choice) => choice.clone(),
+            _ => {
+                return Err(EngineError::Invariant(
+                    "choice action outside pending choice".to_owned(),
+                ));
+            }
+        };
+        if choice.id != choice_id || usize::from(option_index) >= choice.options.len() {
+            return Err(EngineError::Invariant(
+                "legal choice action does not match pending choice".to_owned(),
+            ));
+        }
+        let handler = self.choices.get(&choice.handler_id).ok_or_else(|| {
+            EngineError::Invariant(format!(
+                "pending choice handler {:?} is not registered",
+                choice.handler_id
+            ))
+        })?;
+        let commands = handler.resolve(&choice, option_index, &next);
+        next.phase = GamePhase::Playing;
+
+        let mut events = vec![
+            Event::ActionApplied { actor, action },
+            Event::ChoiceResolved {
+                choice_id,
+                owner: actor,
+                option_index,
+            },
+        ];
+        self.apply_effect_commands(
+            &mut next,
+            &mut events,
+            choice.source_card_instance,
+            commands,
+        )?;
+        self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
+        self.resolve_missing_king(&mut next, &mut events);
+
+        if next.status != GameStatus::Ongoing {
+            self.push_game_ended(&next, &mut events);
+        } else if matches!(next.phase, GamePhase::Playing) {
+            if choice.continuation == ChoiceContinuation::FinishTurn
+                || next.take_turn_end_request()
+                || next.actions_remaining == 0
+            {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.resolve_no_action_loss(&mut next, actor, &mut events);
+            }
+        }
+
         Ok(Transition {
             state: next,
             events,
@@ -450,7 +582,21 @@ impl Engine {
     ) -> Result<Transition, EngineError> {
         let mut next = state.clone();
         let actor = next.turn;
-        let was_forced = matches!(next.phase, GamePhase::ForcedMove { .. });
+        let forced_continuation = match &next.phase {
+            GamePhase::ForcedMove { continuation, .. } => Some(*continuation),
+            _ => None,
+        };
+        if forced_continuation.is_none() {
+            if next.actions_remaining == 0 {
+                return Err(EngineError::Invariant(
+                    "legal move has no remaining action budget".to_owned(),
+                ));
+            }
+            next.actions_remaining -= 1;
+        }
+        // A new forced move emitted while resolving this move must be distinguishable from the
+        // forced move that is currently being fulfilled.
+        next.phase = GamePhase::Playing;
         let moving_piece = next
             .board
             .get(movement.from)
@@ -568,9 +714,29 @@ impl Engine {
             next.mark_deathmatch_progress();
         }
 
-        self.apply_card_reactions(&mut next, &mut events)?;
+        self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
 
         self.resolve_missing_king(&mut next, &mut events);
+        if next.status != GameStatus::Ongoing {
+            self.push_game_ended(&next, &mut events);
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if !matches!(next.phase, GamePhase::Playing) {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if next.take_turn_end_request() {
+            self.finish_turn(&mut next, actor, &mut events)?;
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
         if next.status == GameStatus::Ongoing
             && moving_survived
             && self.try_start_platform_extra_move(
@@ -585,10 +751,13 @@ impl Engine {
                 events,
             });
         }
-        if was_forced {
-            next.phase = GamePhase::Playing;
+        if forced_continuation == Some(ForcedMoveContinuation::FinishTurn)
+            || next.actions_remaining == 0
+        {
+            self.finish_turn(&mut next, actor, &mut events)?;
+        } else {
+            self.resolve_no_action_loss(&mut next, actor, &mut events);
         }
-        self.finish_turn(&mut next, actor, &mut events);
         Ok(Transition {
             state: next,
             events,
@@ -606,37 +775,73 @@ impl Engine {
         }
     }
 
-    fn apply_card_reactions(
+    fn apply_effect_commands(
         &self,
         state: &mut GameState,
         events: &mut Vec<Event>,
+        source_card_instance: u32,
+        commands: Vec<EffectCommand>,
     ) -> Result<(), EngineError> {
-        let stimuli = events.clone();
-        let mut cards = state.cards.clone();
-        cards.sort_by_key(|card| (card.owner.index(), card.instance_id));
+        for command in commands {
+            let emitted = self.reduce_effect(state, source_card_instance, &command)?;
+            events.push(Event::EffectApplied {
+                source_card_instance,
+                command: format!("{command:?}"),
+            });
+            events.extend(emitted);
+        }
+        Ok(())
+    }
 
-        for event in &stimuli {
+    fn resolve_effect_queue_from(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+        start_index: usize,
+    ) -> Result<(), EngineError> {
+        let mut cursor = start_index;
+        let mut processed = 0_usize;
+        while cursor < events.len() {
+            if processed >= MAX_EFFECT_EVENTS_PER_RESOLUTION {
+                return Err(EngineError::EffectResolutionLimit(
+                    MAX_EFFECT_EVENTS_PER_RESOLUTION,
+                ));
+            }
+            processed += 1;
+            let event = events[cursor].clone();
+            cursor += 1;
+
+            let mut cards = state.cards.clone();
+            cards.sort_by_key(|card| (card.owner.index(), card.instance_id));
             for card in &cards {
                 let Some(handler) = self.effects.get(&card.definition_id) else {
                     continue;
                 };
-                for command in handler.react(card, event, state) {
-                    self.reduce_effect(state, &command)?;
-                    events.push(Event::EffectApplied {
-                        source_card_instance: card.instance_id,
-                        command: format!("{command:?}"),
-                    });
-                }
+                let commands = handler.react(card, &event, state);
+                self.apply_effect_commands(state, events, card.instance_id, commands)?;
             }
         }
         Ok(())
     }
 
+    fn emit_and_resolve(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+        event: Event,
+    ) -> Result<(), EngineError> {
+        let start_index = events.len();
+        events.push(event);
+        self.resolve_effect_queue_from(state, events, start_index)
+    }
+
     fn reduce_effect(
         &self,
         state: &mut GameState,
+        source_card_instance: u32,
         command: &EffectCommand,
-    ) -> Result<(), EngineError> {
+    ) -> Result<Vec<Event>, EngineError> {
+        let mut emitted = Vec::new();
         match command {
             EffectCommand::AdjustHalfStars { player, delta } => {
                 let current = i32::from(state.half_star_totals[player.index()]);
@@ -675,6 +880,91 @@ impl Engine {
                 state.board.set(*square, None);
                 state.mark_deathmatch_progress();
             }
+            EffectCommand::GrantActions { player, count } => {
+                if *player != state.turn || *count == 0 {
+                    return Err(EngineError::InvalidEffect(
+                        "extra actions must be granted to the current player with positive count"
+                            .to_owned(),
+                    ));
+                }
+                state.actions_remaining = state.actions_remaining.saturating_add(*count);
+            }
+            EffectCommand::ForceMove {
+                player,
+                piece_id,
+                source,
+                finish_turn,
+            } => {
+                if *player != state.turn {
+                    return Err(EngineError::InvalidEffect(
+                        "forced move owner must be the current player".to_owned(),
+                    ));
+                }
+                let Some((_, piece)) = state.board.find_by_id(*piece_id) else {
+                    return Err(EngineError::InvalidEffect(format!(
+                        "forced move piece {piece_id} does not exist"
+                    )));
+                };
+                if piece.owner != *player {
+                    return Err(EngineError::InvalidEffect(format!(
+                        "forced move piece {piece_id} has the wrong owner"
+                    )));
+                }
+                state.phase = GamePhase::ForcedMove {
+                    piece_id: *piece_id,
+                    source: ForcedMoveSource::Effect(source.clone()),
+                    continuation: if *finish_turn {
+                        ForcedMoveContinuation::FinishTurn
+                    } else {
+                        ForcedMoveContinuation::ResumeTurn
+                    },
+                };
+                emitted.push(Event::ForcedMoveStarted {
+                    player: *player,
+                    piece_id: *piece_id,
+                    source: source.clone(),
+                });
+            }
+            EffectCommand::RequestChoice {
+                owner,
+                handler_id,
+                options,
+                continuation,
+            } => {
+                if *owner != state.turn || options.is_empty() {
+                    return Err(EngineError::InvalidEffect(
+                        "choice must belong to the current player and contain options".to_owned(),
+                    ));
+                }
+                if self.choices.get(handler_id).is_none() {
+                    return Err(EngineError::InvalidEffect(format!(
+                        "choice handler {handler_id:?} is not registered"
+                    )));
+                }
+                let choice_id = state.allocate_choice_id();
+                state.phase = GamePhase::AwaitingChoice(PendingChoice {
+                    id: choice_id,
+                    owner: *owner,
+                    source_card_instance,
+                    handler_id: handler_id.clone(),
+                    options: options.clone(),
+                    continuation: *continuation,
+                });
+                emitted.push(Event::ChoiceRequested {
+                    choice_id,
+                    owner: *owner,
+                    handler_id: handler_id.clone(),
+                    options: options.clone(),
+                });
+            }
+            EffectCommand::EndTurn { player } => {
+                if *player != state.turn || matches!(state.phase, GamePhase::AwaitingChoice(_)) {
+                    return Err(EngineError::InvalidEffect(
+                        "turn-end request is invalid in the current phase".to_owned(),
+                    ));
+                }
+                state.request_turn_end();
+            }
             EffectCommand::Win { winner, reason } => {
                 state.status = GameStatus::Won {
                     winner: *winner,
@@ -687,7 +977,7 @@ impl Engine {
                 };
             }
         }
-        Ok(())
+        Ok(emitted)
     }
 
     fn clear_removed_piece_statuses(&self, state: &mut GameState, piece_id: u32) {
@@ -808,39 +1098,89 @@ impl Engine {
         true
     }
 
-    fn finish_turn(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
+    fn finish_turn(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        self.finish_turn_chain(state, actor, events, 0)
+    }
+
+    fn finish_turn_chain(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+        automatic_turn_ends: usize,
+    ) -> Result<(), EngineError> {
+        if automatic_turn_ends >= MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION {
+            return Err(EngineError::AutomaticTurnEndLimit(
+                MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION,
+            ));
+        }
+        state.take_turn_end_request();
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
-            return;
+            return Ok(());
         }
+
+        self.emit_and_resolve(state, events, Event::TurnEnding { player: actor })?;
+        self.resolve_missing_king(state, events);
+        if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+            return Ok(());
+        }
+        if !matches!(state.phase, GamePhase::Playing) {
+            return Ok(());
+        }
+        // An EndTurn command raised while TurnEnding is already being handled is satisfied by
+        // this same transition and must not leak into the opponent's turn.
+        state.take_turn_end_request();
 
         state.turns_taken[actor.index()] = state.turns_taken[actor.index()].saturating_add(1);
         self.resolve_empty_lunchboxes_after_turn(state, actor, events);
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
-            return;
+            return Ok(());
         }
         self.tick_platform_after_turn(state, events);
         if self.tick_deathmatch_after_turn(state, actor) {
             self.push_game_ended(state, events);
-            return;
+            return Ok(());
         }
         self.start_deathmatch_if_due(state, events);
+        events.push(Event::TurnEnded { player: actor });
 
         let defender = actor.opponent();
         state.turn = defender;
+        state.phase = GamePhase::Playing;
+        state.actions_remaining = 1;
+        state.cards_used_this_turn[actor.index()] = 0;
+        state.cards_used_this_turn[defender.index()] = 0;
+        let next_turn_event_start = events.len();
         events.push(Event::TurnChanged { player: defender });
         self.activate_cards_for_turn(state, defender, events);
+        events.push(Event::TurnStarted {
+            player: defender,
+            actions_remaining: state.actions_remaining,
+        });
+        self.resolve_effect_queue_from(state, events, next_turn_event_start)?;
+        self.resolve_missing_king(state, events);
+        if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+            return Ok(());
+        }
+        if !matches!(state.phase, GamePhase::Playing) {
+            return Ok(());
+        }
+        if state.take_turn_end_request() {
+            return self.finish_turn_chain(state, defender, events, automatic_turn_ends + 1);
+        }
         if self.start_due_milestone_draft(state, defender, events) {
-            return;
+            return Ok(());
         }
-        if self.ruleset.base_rules.immobility_loses && self.generate_move_actions(state).is_empty()
-        {
-            state.status = GameStatus::Won {
-                winner: actor,
-                reason: WinReason::NoLegalActions,
-            };
-        }
+        self.resolve_no_action_loss(state, defender, events);
 
         if state.status == GameStatus::Ongoing {
             let repetition_count = state.record_current_position();
@@ -862,6 +1202,32 @@ impl Engine {
             }
         }
         if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+        }
+        Ok(())
+    }
+
+    fn resolve_no_action_loss(
+        &self,
+        state: &mut GameState,
+        blocked_player: Player,
+        events: &mut Vec<Event>,
+    ) {
+        if state.status != GameStatus::Ongoing
+            || !self.ruleset.base_rules.immobility_loses
+            || !matches!(state.phase, GamePhase::Playing)
+        {
+            return;
+        }
+
+        let has_move = state.actions_remaining > 0 && !self.generate_move_actions(state).is_empty();
+        let mut card_actions = Vec::new();
+        self.generate_card_actions(state, &mut card_actions);
+        if !has_move && card_actions.is_empty() {
+            state.status = GameStatus::Won {
+                winner: blocked_player.opponent(),
+                reason: WinReason::NoLegalActions,
+            };
             self.push_game_ended(state, events);
         }
     }
@@ -1006,6 +1372,7 @@ impl Engine {
         state.phase = GamePhase::ForcedMove {
             piece_id,
             source: ForcedMoveSource::Platform,
+            continuation: ForcedMoveContinuation::FinishTurn,
         };
         events.push(Event::ForcedMoveStarted {
             player: state.turn,
@@ -1017,11 +1384,15 @@ impl Engine {
 
     fn generate_card_actions(&self, state: &GameState, actions: &mut Vec<Action>) {
         for card in &state.cards {
+            let definition = implemented_card(&card.definition_id);
             if card.owner != state.turn
                 || card.charges == 0
                 || card
                     .available_after_turn
                     .is_some_and(|available| state.turns_taken[card.owner.index()] < available)
+                || definition.is_some_and(|definition| {
+                    definition.turn_exclusive && state.cards_used_this_turn[state.turn.index()] > 0
+                })
             {
                 continue;
             }
@@ -1320,6 +1691,8 @@ pub enum EngineError {
     UnsupportedPhase(&'static str),
     IllegalAction(String),
     InvalidEffect(String),
+    EffectResolutionLimit(usize),
+    AutomaticTurnEndLimit(usize),
     Invariant(String),
 }
 
@@ -1342,6 +1715,12 @@ impl fmt::Display for EngineError {
             Self::UnsupportedPhase(phase) => write!(f, "phase {phase:?} is not implemented yet"),
             Self::IllegalAction(action) => write!(f, "illegal action {action}"),
             Self::InvalidEffect(message) => write!(f, "invalid effect command: {message}"),
+            Self::EffectResolutionLimit(limit) => {
+                write!(f, "effect resolution exceeded {limit} events")
+            }
+            Self::AutomaticTurnEndLimit(limit) => {
+                write!(f, "automatic turn ending exceeded {limit} turns")
+            }
             Self::Invariant(message) => write!(f, "engine invariant failed: {message}"),
         }
     }
@@ -1352,7 +1731,7 @@ impl std::error::Error for EngineError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BUNDLED_RULESET_ID, Board, CardInstance, EffectHandler};
+    use crate::{BUNDLED_RULESET_ID, Board, CardInstance, ChoiceHandler, EffectHandler};
     use std::str::FromStr;
 
     fn movement(from: &str, to: &str) -> Action {
@@ -1940,7 +2319,7 @@ mod tests {
             } if purpose == "parry"
         )));
         assert_eq!(state.turn, Player::White);
-        assert_eq!(state.fingerprint(), 0x743f_7f95_1140_d33b);
+        assert_eq!(state.fingerprint(), 0xa609_c6df_568e_9f3e);
     }
 
     #[test]
@@ -2013,7 +2392,7 @@ mod tests {
         assert_eq!(state.board.get("a5".parse().unwrap()), None);
         assert!(state.card_runtime.empty_lunchboxes.is_empty());
         assert_eq!(state.turns_taken[Player::Black.index()], 3);
-        assert_eq!(state.fingerprint(), 0xf08e_6da3_7b48_0c17);
+        assert_eq!(state.fingerprint(), 0xcbb9_b584_9fd9_534a);
     }
 
     #[test]
@@ -2128,7 +2507,8 @@ mod tests {
             state.phase,
             GamePhase::ForcedMove {
                 piece_id: rook_id,
-                source: ForcedMoveSource::Platform
+                source: ForcedMoveSource::Platform,
+                continuation: ForcedMoveContinuation::FinishTurn,
             }
         );
         assert!(engine.legal_actions(&state).unwrap().iter().all(
@@ -2140,7 +2520,7 @@ mod tests {
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
         assert_eq!(state.ply, 2);
-        assert_eq!(state.fingerprint(), 0xd81e_f859_987b_8d37);
+        assert_eq!(state.fingerprint(), 0x05fa_8474_ccda_c939);
     }
 
     #[test]
@@ -2240,6 +2620,321 @@ mod tests {
                 .events
                 .iter()
                 .any(|event| matches!(event, Event::EffectApplied { .. }))
+        );
+    }
+
+    struct ExtraMoveAfterE2E4;
+
+    impl EffectHandler for ExtraMoveAfterE2E4 {
+        fn definition_id(&self) -> &str {
+            "test.extra_move"
+        }
+
+        fn react(
+            &self,
+            card: &CardInstance,
+            event: &Event,
+            _state: &GameState,
+        ) -> Vec<EffectCommand> {
+            if matches!(
+                event,
+                Event::ActionApplied {
+                    actor,
+                    action: Action::Move(movement),
+                } if *actor == card.owner
+                    && movement.from == "e2".parse().unwrap()
+                    && movement.to == "e4".parse().unwrap()
+            ) {
+                vec![EffectCommand::GrantActions {
+                    player: card.owner,
+                    count: 1,
+                }]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    #[test]
+    fn action_budget_supports_multiple_moves_without_special_case_turn_code() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine.effects_mut().register(ExtraMoveAfterE2E4).unwrap();
+        let mut state = standard_play_state(37);
+        state.add_card(CardInstance {
+            instance_id: 1,
+            definition_id: "test.extra_move".to_owned(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+
+        let first = engine.apply(&state, movement("e2", "e4")).unwrap();
+        assert_eq!(first.state.turn, Player::White);
+        assert_eq!(first.state.actions_remaining, 1);
+        assert_eq!(first.state.turns_taken, [0, 0]);
+
+        let second = engine.apply(&first.state, movement("g1", "f3")).unwrap();
+        assert_eq!(second.state.turn, Player::Black);
+        assert_eq!(second.state.actions_remaining, 1);
+        assert_eq!(second.state.turns_taken, [1, 0]);
+        assert!(second.events.iter().any(|event| matches!(
+            event,
+            Event::TurnEnding {
+                player: Player::White
+            }
+        )));
+        assert!(second.events.iter().any(|event| matches!(
+            event,
+            Event::TurnStarted {
+                player: Player::Black,
+                actions_remaining: 1
+            }
+        )));
+    }
+
+    struct ChooseStarAfterE2E4;
+
+    impl EffectHandler for ChooseStarAfterE2E4 {
+        fn definition_id(&self) -> &str {
+            "test.choose_star"
+        }
+
+        fn react(
+            &self,
+            card: &CardInstance,
+            event: &Event,
+            _state: &GameState,
+        ) -> Vec<EffectCommand> {
+            if matches!(
+                event,
+                Event::ActionApplied {
+                    actor,
+                    action: Action::Move(movement),
+                } if *actor == card.owner
+                    && movement.from == "e2".parse().unwrap()
+                    && movement.to == "e4".parse().unwrap()
+            ) {
+                vec![EffectCommand::RequestChoice {
+                    owner: card.owner,
+                    handler_id: "test.star_choice".to_owned(),
+                    options: vec!["half-star".to_owned(), "one-star".to_owned()],
+                    continuation: ChoiceContinuation::FinishTurn,
+                }]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    struct StarChoice;
+
+    impl ChoiceHandler for StarChoice {
+        fn handler_id(&self) -> &str {
+            "test.star_choice"
+        }
+
+        fn resolve(
+            &self,
+            choice: &PendingChoice,
+            option_index: u16,
+            _state: &GameState,
+        ) -> Vec<EffectCommand> {
+            vec![EffectCommand::AdjustHalfStars {
+                player: choice.owner,
+                delta: (option_index + 1) as i16,
+            }]
+        }
+    }
+
+    #[test]
+    fn pending_choice_exposes_only_choice_actions_and_resumes_deterministically() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine.effects_mut().register(ChooseStarAfterE2E4).unwrap();
+        engine.choices_mut().register(StarChoice).unwrap();
+        let mut state = standard_play_state(41);
+        state.add_card(CardInstance {
+            instance_id: 7,
+            definition_id: "test.choose_star".to_owned(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+
+        let waiting = engine.apply(&state, movement("e2", "e4")).unwrap();
+        let GamePhase::AwaitingChoice(choice) = &waiting.state.phase else {
+            panic!("the move must suspend on a choice")
+        };
+        assert_eq!(waiting.state.turn, Player::White);
+        assert_eq!(choice.options, ["half-star", "one-star"]);
+        let choice_id = choice.id;
+        assert_eq!(
+            engine.legal_actions(&waiting.state).unwrap(),
+            vec![
+                Action::ResolveChoice {
+                    choice_id,
+                    option_index: 0,
+                },
+                Action::ResolveChoice {
+                    choice_id,
+                    option_index: 1,
+                },
+            ]
+        );
+
+        let resolved = engine
+            .apply(
+                &waiting.state,
+                Action::ResolveChoice {
+                    choice_id,
+                    option_index: 1,
+                },
+            )
+            .unwrap();
+        assert_eq!(resolved.state.half_star_totals, [2, 0]);
+        assert_eq!(resolved.state.phase, GamePhase::Playing);
+        assert_eq!(resolved.state.turn, Player::Black);
+        assert!(resolved.events.iter().any(|event| matches!(
+            event,
+            Event::ChoiceResolved {
+                choice_id: resolved_id,
+                owner: Player::White,
+                option_index: 1
+            } if *resolved_id == choice_id
+        )));
+    }
+
+    struct ForceRookAfterLanding;
+
+    impl EffectHandler for ForceRookAfterLanding {
+        fn definition_id(&self) -> &str {
+            "test.force_rook"
+        }
+
+        fn react(
+            &self,
+            card: &CardInstance,
+            event: &Event,
+            state: &GameState,
+        ) -> Vec<EffectCommand> {
+            if matches!(
+                event,
+                Event::ActionApplied {
+                    actor,
+                    action: Action::Move(movement),
+                } if *actor == card.owner
+                    && movement.from == "a1".parse().unwrap()
+                    && movement.to == "a2".parse().unwrap()
+            ) {
+                let piece_id = state.board.get("a2".parse().unwrap()).unwrap().id;
+                vec![
+                    EffectCommand::GrantActions {
+                        player: card.owner,
+                        count: 1,
+                    },
+                    EffectCommand::ForceMove {
+                        player: card.owner,
+                        piece_id,
+                        source: card.definition_id.clone(),
+                        finish_turn: false,
+                    },
+                ]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    #[test]
+    fn forced_move_can_resume_the_remaining_normal_action_budget() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine
+            .effects_mut()
+            .register(ForceRookAfterLanding)
+            .unwrap();
+        let mut state = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            43,
+        );
+        let rook_id = state.board.get("a1".parse().unwrap()).unwrap().id;
+        state.add_card(CardInstance {
+            instance_id: 9,
+            definition_id: "test.force_rook".to_owned(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+
+        state = engine.apply(&state, movement("a1", "a2")).unwrap().state;
+        assert_eq!(
+            state.phase,
+            GamePhase::ForcedMove {
+                piece_id: rook_id,
+                source: ForcedMoveSource::Effect("test.force_rook".to_owned()),
+                continuation: ForcedMoveContinuation::ResumeTurn,
+            }
+        );
+        assert_eq!(state.actions_remaining, 1);
+
+        state = engine.apply(&state, movement("a2", "a3")).unwrap().state;
+        assert_eq!(state.phase, GamePhase::Playing);
+        assert_eq!(state.turn, Player::White);
+        assert_eq!(state.actions_remaining, 1);
+
+        state = engine.apply(&state, movement("h1", "g1")).unwrap().state;
+        assert_eq!(state.turn, Player::Black);
+        assert_eq!(state.turns_taken, [1, 0]);
+    }
+
+    #[test]
+    fn a_playable_card_prevents_no_action_loss_until_it_is_used() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut board = Board::empty();
+        for rank in 0..8 {
+            for file in 0..8 {
+                let square = Square::new(file, rank).unwrap();
+                let piece = if square == "a8".parse().unwrap() {
+                    Piece::new(Player::White, PieceKind::King)
+                } else if square == "h1".parse().unwrap() {
+                    Piece::new(Player::Black, PieceKind::King)
+                } else {
+                    Piece::new(Player::White, PieceKind::Pawn)
+                };
+                board.set(square, Some(piece));
+            }
+        }
+        let state =
+            GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, Player::Black, 47);
+        let state = engine
+            .grant_card(&state, 11, PARRY, Player::White)
+            .unwrap()
+            .state;
+        let state = engine.apply(&state, movement("h1", "g1")).unwrap().state;
+
+        assert_eq!(state.status, GameStatus::Ongoing);
+        assert_eq!(state.turn, Player::White);
+        assert!(
+            engine
+                .legal_actions(&state)
+                .unwrap()
+                .iter()
+                .all(|action| matches!(action, Action::UseCard { .. }))
+        );
+
+        let transition = engine.apply(&state, use_card(11, "a8")).unwrap();
+        assert_eq!(
+            transition.state.status,
+            GameStatus::Won {
+                winner: Player::Black,
+                reason: WinReason::NoLegalActions,
+            }
         );
     }
 }

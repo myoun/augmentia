@@ -20,7 +20,10 @@ pub use cards::{
     CardActivation, CardPhase, EMPTY_LUNCHBOX, GENEVA_CONVENTION, IMPLEMENTED_CARDS,
     ImplementedCardDefinition, KING_OF_THE_HILL, PARRY, PLATFORM, implemented_card,
 };
-pub use effect::{EffectCommand, EffectHandler, EffectRegistry, EffectRegistryError};
+pub use effect::{
+    ChoiceHandler, ChoiceRegistry, ChoiceRegistryError, EffectCommand, EffectHandler,
+    EffectRegistry, EffectRegistryError,
+};
 pub use engine::{Engine, EngineError};
 pub use event::{Event, Transition};
 pub use model::{Board, Piece, PieceKind, Player, Square, SquareParseError};
@@ -33,9 +36,9 @@ pub use ruleset::{
     SourceLinks,
 };
 pub use state::{
-    CardInstance, CardRuntimeState, DeathmatchState, DraftPhase, DraftState, DrawReason,
-    EmptyLunchboxStatus, EnPassantState, ForcedMoveSource, GamePhase, GameState, GameStatus, Mode,
-    PendingChoice, PlatformRuleState, WinReason,
+    CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DraftPhase, DraftState,
+    DrawReason, EmptyLunchboxStatus, EnPassantState, ForcedMoveContinuation, ForcedMoveSource,
+    GamePhase, GameState, GameStatus, Mode, PendingChoice, PlatformRuleState, WinReason,
 };
 
 /// Ruleset bundled into this build and used by the first engine milestone.

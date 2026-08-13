@@ -1,4 +1,6 @@
-use crate::{CardInstance, Event, GameState, Piece, Player, Square};
+use crate::{
+    CardInstance, ChoiceContinuation, Event, GameState, PendingChoice, Piece, Player, Square,
+};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -20,6 +22,25 @@ pub enum EffectCommand {
     RemovePiece {
         square: Square,
     },
+    GrantActions {
+        player: Player,
+        count: u16,
+    },
+    ForceMove {
+        player: Player,
+        piece_id: u32,
+        source: String,
+        finish_turn: bool,
+    },
+    RequestChoice {
+        owner: Player,
+        handler_id: String,
+        options: Vec<String>,
+        continuation: ChoiceContinuation,
+    },
+    EndTurn {
+        player: Player,
+    },
     Win {
         winner: Player,
         reason: String,
@@ -34,6 +55,17 @@ pub trait EffectHandler: Send + Sync {
 
     /// React to one already-applied engine event. Returned commands are reduced in vector order.
     fn react(&self, card: &CardInstance, event: &Event, state: &GameState) -> Vec<EffectCommand>;
+}
+
+pub trait ChoiceHandler: Send + Sync {
+    fn handler_id(&self) -> &str;
+
+    fn resolve(
+        &self,
+        choice: &PendingChoice,
+        option_index: u16,
+        state: &GameState,
+    ) -> Vec<EffectCommand>;
 }
 
 #[derive(Default)]
@@ -66,6 +98,52 @@ impl EffectRegistry {
         self.handlers.get(definition_id).map(Box::as_ref)
     }
 }
+
+#[derive(Default)]
+pub struct ChoiceRegistry {
+    handlers: BTreeMap<String, Box<dyn ChoiceHandler>>,
+}
+
+impl ChoiceRegistry {
+    pub fn register<H>(&mut self, handler: H) -> Result<(), ChoiceRegistryError>
+    where
+        H: ChoiceHandler + 'static,
+    {
+        let id = handler.handler_id().to_owned();
+        if self.handlers.contains_key(&id) {
+            return Err(ChoiceRegistryError::DuplicateHandler(id));
+        }
+        self.handlers.insert(id, Box::new(handler));
+        Ok(())
+    }
+
+    pub fn len(&self) -> usize {
+        self.handlers.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.handlers.is_empty()
+    }
+
+    pub(crate) fn get(&self, handler_id: &str) -> Option<&dyn ChoiceHandler> {
+        self.handlers.get(handler_id).map(Box::as_ref)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ChoiceRegistryError {
+    DuplicateHandler(String),
+}
+
+impl fmt::Display for ChoiceRegistryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DuplicateHandler(id) => write!(f, "choice handler {id:?} is already registered"),
+        }
+    }
+}
+
+impl std::error::Error for ChoiceRegistryError {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum EffectRegistryError {

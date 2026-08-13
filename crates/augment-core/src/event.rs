@@ -21,6 +21,27 @@ pub enum Event {
         shared_turn: u32,
         interval_full_turns: u32,
     },
+    TurnStarted {
+        player: Player,
+        actions_remaining: u16,
+    },
+    TurnEnding {
+        player: Player,
+    },
+    TurnEnded {
+        player: Player,
+    },
+    ChoiceRequested {
+        choice_id: u32,
+        owner: Player,
+        handler_id: String,
+        options: Vec<String>,
+    },
+    ChoiceResolved {
+        choice_id: u32,
+        owner: Player,
+        option_index: u16,
+    },
     CardGranted {
         owner: Player,
         instance_id: u32,

@@ -26,6 +26,7 @@ pub enum GamePhase {
     ForcedMove {
         piece_id: u32,
         source: ForcedMoveSource,
+        continuation: ForcedMoveContinuation,
     },
     Draft(DraftState),
     AwaitingChoice(PendingChoice),
@@ -55,9 +56,22 @@ pub struct DraftState {
     pub resume_turn: Player,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ForcedMoveSource {
     Platform,
+    Effect(String),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ForcedMoveContinuation {
+    ResumeTurn,
+    FinishTurn,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ChoiceContinuation {
+    ResumeTurn,
+    FinishTurn,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -65,7 +79,9 @@ pub struct PendingChoice {
     pub id: u32,
     pub owner: Player,
     pub source_card_instance: u32,
+    pub handler_id: String,
     pub options: Vec<String>,
+    pub continuation: ChoiceContinuation,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -150,6 +166,8 @@ pub struct GameState {
     pub turn: Player,
     pub ply: u32,
     pub quiet_ply: u32,
+    pub actions_remaining: u16,
+    pub cards_used_this_turn: [u16; 2],
     pub phase: GamePhase,
     pub status: GameStatus,
     pub cards: Vec<CardInstance>,
@@ -163,6 +181,8 @@ pub struct GameState {
     rng: DeterministicRng,
     next_piece_id: u32,
     next_card_instance_id: u32,
+    next_choice_id: u32,
+    turn_end_requested: bool,
     repetitions: BTreeMap<u64, u8>,
 }
 
@@ -186,6 +206,8 @@ impl GameState {
             turn,
             ply: 0,
             quiet_ply: 0,
+            actions_remaining: 1,
+            cards_used_this_turn: [0, 0],
             phase: GamePhase::Playing,
             status: GameStatus::Ongoing,
             cards: Vec::new(),
@@ -199,6 +221,8 @@ impl GameState {
             rng: DeterministicRng::new(seed),
             next_piece_id,
             next_card_instance_id: 1,
+            next_choice_id: 1,
+            turn_end_requested: false,
             repetitions: BTreeMap::new(),
         };
         state.record_current_position();
@@ -243,6 +267,20 @@ impl GameState {
         id
     }
 
+    pub(crate) fn allocate_choice_id(&mut self) -> u32 {
+        let id = self.next_choice_id.max(1);
+        self.next_choice_id = id.saturating_add(1).max(1);
+        id
+    }
+
+    pub(crate) fn request_turn_end(&mut self) {
+        self.turn_end_requested = true;
+    }
+
+    pub(crate) fn take_turn_end_request(&mut self) -> bool {
+        std::mem::take(&mut self.turn_end_requested)
+    }
+
     pub(crate) fn reset_repetition_history(&mut self) {
         self.repetitions.clear();
     }
@@ -263,6 +301,10 @@ impl GameState {
         hash.bytes(self.ruleset_id.as_bytes());
         hash.bytes(self.mode.id().as_bytes());
         hash.u8(self.turn.index() as u8);
+        hash.u16(self.actions_remaining);
+        hash.u16(self.cards_used_this_turn[0]);
+        hash.u16(self.cards_used_this_turn[1]);
+        hash.u8(u8::from(self.turn_end_requested));
 
         for index in 0..64 {
             let square = crate::Square::from_index(index).expect("0..64 is a valid square");
@@ -347,11 +389,23 @@ impl GameState {
         }
         match &self.phase {
             GamePhase::Playing => hash.u8(0),
-            GamePhase::ForcedMove { piece_id, source } => {
+            GamePhase::ForcedMove {
+                piece_id,
+                source,
+                continuation,
+            } => {
                 hash.u8(1);
                 hash.u32(*piece_id);
-                hash.u8(match source {
-                    ForcedMoveSource::Platform => 0,
+                match source {
+                    ForcedMoveSource::Platform => hash.u8(0),
+                    ForcedMoveSource::Effect(id) => {
+                        hash.u8(1);
+                        hash.bytes(id.as_bytes());
+                    }
+                }
+                hash.u8(match continuation {
+                    ForcedMoveContinuation::ResumeTurn => 0,
+                    ForcedMoveContinuation::FinishTurn => 1,
                 });
             }
             GamePhase::Draft(draft) => {
@@ -367,6 +421,11 @@ impl GameState {
                 hash.u32(choice.id);
                 hash.u8(choice.owner.index() as u8);
                 hash.u32(choice.source_card_instance);
+                hash.bytes(choice.handler_id.as_bytes());
+                hash.u8(match choice.continuation {
+                    ChoiceContinuation::ResumeTurn => 0,
+                    ChoiceContinuation::FinishTurn => 1,
+                });
                 for option in &choice.options {
                     hash.bytes(option.as_bytes());
                 }
@@ -387,6 +446,7 @@ impl GameState {
         hash.u32(self.turns_taken[1]);
         hash.u32(self.next_piece_id);
         hash.u32(self.next_card_instance_id);
+        hash.u32(self.next_choice_id);
         for status in self.card_runtime.empty_lunchboxes.values() {
             hash.u32(status.deadline_turn);
         }
