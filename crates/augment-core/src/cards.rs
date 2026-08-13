@@ -15,6 +15,26 @@ pub const ASSASSIN: &str = "assassin";
 pub const GRASSHOPPER: &str = "grasshopper";
 pub const JUDGMENT: &str = "judgment";
 pub const CLEANUP_SACRIFICE: &str = "cleanup-sacrifice";
+pub const AMAZON: &str = "amazon";
+pub const CONSTITUTIONAL_MONARCHY: &str = "constitutional-monarchy";
+pub const DRAGON: &str = "dragon";
+pub const EASTERN_POLICY: &str = "eastern-policy";
+pub const HERALD: &str = "herald";
+pub const KNIGHTMASTER: &str = "knightmaster";
+pub const PEGASUS: &str = "pegasus";
+pub const HOOK: &str = "hook";
+pub const IDOL: &str = "idol";
+pub const JESTER: &str = "jester";
+pub const LOCAL_CONSCRIPTION: &str = "local-conscription";
+pub const REAPER: &str = "reaper";
+pub const WIZARD: &str = "wizard";
+pub const EAGLE: &str = "eagle";
+pub const LOG: &str = "log";
+pub const MISSIONARY: &str = "missionary";
+pub const ORDINATION: &str = "ordination";
+pub const REFORMATION: &str = "reformation";
+pub const STANDARD_BEARER: &str = "standard-bearer";
+pub const WINDMILL: &str = "windmill";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
@@ -44,7 +64,7 @@ pub struct ImplementedCardDefinition {
     pub turn_exclusive: bool,
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 17] = [
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 37] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -212,6 +232,206 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 17] = [
         activation: CardActivation::Active,
         phase: CardPhase::End,
         half_stars: 3,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: AMAZON,
+        name_ko: "아마존",
+        effect: "amazon",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 9,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: CONSTITUTIONAL_MONARCHY,
+        name_ko: "입헌군주제",
+        effect: "constitutionalMonarchy",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 3,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: DRAGON,
+        name_ko: "드래곤",
+        effect: "dragon",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: EASTERN_POLICY,
+        name_ko: "동방견문록",
+        effect: "easternPolicy",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: HERALD,
+        name_ko: "전령",
+        effect: "herald",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: KNIGHTMASTER,
+        name_ko: "기사단장",
+        effect: "knightmaster",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: PEGASUS,
+        name_ko: "유니콘",
+        effect: "pegasus",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: HOOK,
+        name_ko: "구행",
+        effect: "hook",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: IDOL,
+        name_ko: "아이돌",
+        effect: "idol",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: JESTER,
+        name_ko: "광대",
+        effect: "jester",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LOCAL_CONSCRIPTION,
+        name_ko: "현지군 징병",
+        effect: "localConscription",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: REAPER,
+        name_ko: "사신",
+        effect: "reaper",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: WIZARD,
+        name_ko: "마법사",
+        effect: "wizard",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 10,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: EAGLE,
+        name_ko: "알리바바",
+        effect: "eagle",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LOG,
+        name_ko: "통나무",
+        effect: "log",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: MISSIONARY,
+        name_ko: "선교사",
+        effect: "missionary",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: ORDINATION,
+        name_ko: "서품",
+        effect: "ordination",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: REFORMATION,
+        name_ko: "종교 개혁",
+        effect: "reformation",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: STANDARD_BEARER,
+        name_ko: "기수",
+        effect: "standardBearer",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: WINDMILL,
+        name_ko: "풍차",
+        effect: "windmill",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 5,
         ends_turn: false,
         turn_exclusive: false,
     },

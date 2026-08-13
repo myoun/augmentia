@@ -15,12 +15,14 @@ mod rng;
 mod ruleset;
 mod state;
 
-pub use action::{Action, ActionTarget, MoveAction};
+pub use action::{Action, ActionTarget, MoveAction, PieceAbility};
 pub use cards::{
-    ASSASSIN, CLEANUP_SACRIFICE, CardActivation, CardPhase, DICE, DISARM, EARLY_PROMOTION,
-    EMPTY_LUNCHBOX, FREEZE, GENEVA_CONVENTION, GRASSHOPPER, IMPLEMENTED_CARDS, INITIATIVE,
-    ImplementedCardDefinition, JUDGMENT, KING_OF_THE_HILL, PARRY, PLATFORM, REPOSITION, REVELATION,
-    SPRINT, implemented_card,
+    AMAZON, ASSASSIN, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, CardActivation, CardPhase, DICE,
+    DISARM, DRAGON, EAGLE, EARLY_PROMOTION, EASTERN_POLICY, EMPTY_LUNCHBOX, FREEZE,
+    GENEVA_CONVENTION, GRASSHOPPER, HERALD, HOOK, IDOL, IMPLEMENTED_CARDS, INITIATIVE,
+    ImplementedCardDefinition, JESTER, JUDGMENT, KING_OF_THE_HILL, KNIGHTMASTER,
+    LOCAL_CONSCRIPTION, LOG, MISSIONARY, ORDINATION, PARRY, PEGASUS, PLATFORM, REAPER, REFORMATION,
+    REPOSITION, REVELATION, SPRINT, STANDARD_BEARER, WINDMILL, WIZARD, implemented_card,
 };
 pub use effect::{
     ChoiceHandler, ChoiceRegistry, ChoiceRegistryError, EffectCommand, EffectHandler,
@@ -38,10 +40,11 @@ pub use ruleset::{
     RulesetManifest, SourceLinks,
 };
 pub use state::{
-    CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DiceLockStatus,
-    DraftPhase, DraftState, DrawReason, EmptyLunchboxStatus, EnPassantState,
-    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
-    InitiativeStatus, Mode, PendingChoice, PlatformRuleState, RepositionStatus, WinReason,
+    CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DelayedHazard,
+    DelayedHazardKind, DiceLockStatus, DraftPhase, DraftState, DrawReason, EmptyLunchboxStatus,
+    EnPassantState, ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState,
+    GameStatus, InitiativeStatus, LogStatus, Mode, PendingChoice, PlatformRuleState,
+    RepositionStatus, WinReason, WindmillMode,
 };
 
 /// Ruleset bundled into this build and used by the first engine milestone.

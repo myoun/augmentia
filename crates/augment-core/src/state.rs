@@ -174,6 +174,33 @@ pub struct RepositionStatus {
     pub used: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum WindmillMode {
+    Bishop,
+    Rook,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LogStatus {
+    pub file_delta: i8,
+    pub rank_delta: i8,
+    pub roll_after_turn: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DelayedHazardKind {
+    Lightning,
+    Meteor,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DelayedHazard {
+    pub kind: DelayedHazardKind,
+    pub owner: Player,
+    pub trigger_after: Player,
+    pub squares: Vec<Square>,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     pub hill_king: [bool; 2],
@@ -191,6 +218,16 @@ pub struct CardRuntimeState {
     pub parry_piece_ids: BTreeSet<u32>,
     pub empty_lunchboxes: BTreeMap<u32, EmptyLunchboxStatus>,
     pub platform: Option<PlatformRuleState>,
+    pub herald_jump_locked_until: BTreeMap<u32, u32>,
+    pub windmill_modes: BTreeMap<u32, WindmillMode>,
+    pub log_statuses: BTreeMap<u32, LogStatus>,
+    pub wizard_mana: BTreeMap<u32, u8>,
+    pub reaper_souls: BTreeMap<u32, u8>,
+    pub shielded_piece_ids: BTreeSet<u32>,
+    pub idol_used_turn: BTreeMap<u32, u32>,
+    pub idol_rest_piece_ids: BTreeSet<u32>,
+    pub delayed_hazards: Vec<DelayedHazard>,
+    pub skip_turns: [bool; 2],
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -476,6 +513,72 @@ impl GameState {
                     hash.u32(*piece_id);
                 }
             }
+        }
+        for (piece_id, deadline) in &self.card_runtime.herald_jump_locked_until {
+            hash.u32(*piece_id);
+            let owner = self
+                .board
+                .find_by_id(*piece_id)
+                .map_or(self.turn, |(_, piece)| piece.owner);
+            hash.u32(deadline.saturating_sub(self.turns_taken[owner.index()]));
+        }
+        for (piece_id, mode) in &self.card_runtime.windmill_modes {
+            hash.u32(*piece_id);
+            hash.u8(match mode {
+                WindmillMode::Bishop => 0,
+                WindmillMode::Rook => 1,
+            });
+        }
+        for (piece_id, status) in &self.card_runtime.log_statuses {
+            hash.u32(*piece_id);
+            hash.u8(status.file_delta as u8);
+            hash.u8(status.rank_delta as u8);
+            let owner = self
+                .board
+                .find_by_id(*piece_id)
+                .map_or(self.turn, |(_, piece)| piece.owner);
+            hash.u32(
+                status
+                    .roll_after_turn
+                    .saturating_sub(self.turns_taken[owner.index()]),
+            );
+        }
+        for (piece_id, mana) in &self.card_runtime.wizard_mana {
+            hash.u32(*piece_id);
+            hash.u8(*mana);
+        }
+        for (piece_id, souls) in &self.card_runtime.reaper_souls {
+            hash.u32(*piece_id);
+            hash.u8(*souls);
+        }
+        for piece_id in &self.card_runtime.shielded_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for (piece_id, turn) in &self.card_runtime.idol_used_turn {
+            hash.u32(*piece_id);
+            let owner = self
+                .board
+                .find_by_id(*piece_id)
+                .map_or(self.turn, |(_, piece)| piece.owner);
+            hash.u32(turn.saturating_sub(self.turns_taken[owner.index()]));
+        }
+        for piece_id in &self.card_runtime.idol_rest_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for hazard in &self.card_runtime.delayed_hazards {
+            hash.u8(match hazard.kind {
+                DelayedHazardKind::Lightning => 0,
+                DelayedHazardKind::Meteor => 1,
+            });
+            hash.u8(hazard.owner.index() as u8);
+            hash.u8(hazard.trigger_after.index() as u8);
+            for square in &hazard.squares {
+                hash.u8(square.index() as u8);
+            }
+        }
+        if self.card_runtime.skip_turns != [false, false] {
+            hash.u8(u8::from(self.card_runtime.skip_turns[0]));
+            hash.u8(u8::from(self.card_runtime.skip_turns[1]));
         }
         match &self.phase {
             GamePhase::Playing => hash.u8(0),

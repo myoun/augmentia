@@ -4,6 +4,11 @@ use std::fmt;
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Action {
     Move(MoveAction),
+    UsePieceAbility {
+        piece_id: u32,
+        ability: PieceAbility,
+        target: ActionTarget,
+    },
     UseCard {
         instance_id: u32,
         target: ActionTarget,
@@ -15,6 +20,14 @@ pub enum Action {
         choice_id: u32,
         option_index: u16,
     },
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum PieceAbility {
+    WizardLightning,
+    WizardShield,
+    WizardMeteor,
+    WizardTimeStop,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

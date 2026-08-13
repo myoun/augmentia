@@ -272,6 +272,32 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
             if status.used { " (2차 이동)" } else { "" }
         )?;
     }
+    for (piece_id, mana) in &state.card_runtime.wizard_mana {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(output, "마법사: {square} 마나 {mana}/5")?;
+        }
+    }
+    for (piece_id, souls) in &state.card_runtime.reaper_souls {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(output, "사신: {square} 영혼 {souls}/5")?;
+        }
+    }
+    for (piece_id, status) in &state.card_runtime.log_statuses {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(
+                output,
+                "통나무: {square} 방향 ({:+},{:+})",
+                status.file_delta, status.rank_delta
+            )?;
+        }
+    }
+    if !state.card_runtime.delayed_hazards.is_empty() {
+        writeln!(
+            output,
+            "예약 마법: {}개",
+            state.card_runtime.delayed_hazards.len()
+        )?;
+    }
     Ok(())
 }
 
@@ -342,6 +368,14 @@ fn action_description(state: &GameState, action: &Action) -> String {
                 .map_or(String::new(), |kind| format!("={}", kind_code(kind)));
             format!("이동 {}-{}{}", movement.from, movement.to, promotion)
         }
+        Action::UsePieceAbility {
+            piece_id,
+            ability,
+            target,
+        } => format!(
+            "기물 능력 #{piece_id} {ability:?} → {}",
+            target_description(target)
+        ),
         Action::UseCard {
             instance_id,
             target,
@@ -530,6 +564,26 @@ fn kind_code(kind: PieceKind) -> &'static str {
         PieceKind::King => "K",
         PieceKind::Assassin => "AS",
         PieceKind::Grasshopper => "G",
+        PieceKind::Amazon => "Z",
+        PieceKind::PrimeMinister => "PM",
+        PieceKind::Dragon => "D",
+        PieceKind::Cannon => "CN",
+        PieceKind::Herald => "H",
+        PieceKind::Knightmaster => "KM",
+        PieceKind::Unicorn => "U",
+        PieceKind::Hook => "HK",
+        PieceKind::Idol => "ID",
+        PieceKind::Jester => "J",
+        PieceKind::Recruiter => "RC",
+        PieceKind::Reaper => "RP",
+        PieceKind::Wizard => "WZ",
+        PieceKind::Alibaba => "AB",
+        PieceKind::Log => "L",
+        PieceKind::Missionary => "MI",
+        PieceKind::Cardinal => "CA",
+        PieceKind::Protestant => "P",
+        PieceKind::StandardBearer => "SB",
+        PieceKind::Windmill => "W",
     }
 }
 
@@ -543,6 +597,26 @@ fn kind_name(kind: PieceKind) -> &'static str {
         PieceKind::King => "킹",
         PieceKind::Assassin => "암살자",
         PieceKind::Grasshopper => "그래스호퍼",
+        PieceKind::Amazon => "아마존",
+        PieceKind::PrimeMinister => "국무총리",
+        PieceKind::Dragon => "드래곤",
+        PieceKind::Cannon => "포",
+        PieceKind::Herald => "전령",
+        PieceKind::Knightmaster => "기사단장",
+        PieceKind::Unicorn => "유니콘",
+        PieceKind::Hook => "구행",
+        PieceKind::Idol => "아이돌",
+        PieceKind::Jester => "광대",
+        PieceKind::Recruiter => "징집관",
+        PieceKind::Reaper => "사신",
+        PieceKind::Wizard => "마법사",
+        PieceKind::Alibaba => "알리바바",
+        PieceKind::Log => "통나무",
+        PieceKind::Missionary => "선교사",
+        PieceKind::Cardinal => "추기경",
+        PieceKind::Protestant => "프로테스탄트",
+        PieceKind::StandardBearer => "기수",
+        PieceKind::Windmill => "풍차",
     }
 }
 
