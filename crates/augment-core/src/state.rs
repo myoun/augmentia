@@ -149,10 +149,45 @@ pub struct PlatformRuleState {
     pub nonce: u32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct InitiativeStatus {
+    pub by: Player,
+    pub start_turn: u32,
+    pub limit: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DiceLockStatus {
+    pub kind: PieceKind,
+    pub remaining_turns: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FrozenStatus {
+    pub source: Player,
+    pub remaining_turns: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RepositionStatus {
+    pub piece_id: u32,
+    pub used: bool,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     pub hill_king: [bool; 2],
     pub geneva_convention: [bool; 2],
+    pub pawn_sprint: [bool; 2],
+    pub early_promotion: [bool; 2],
+    pub initiative: [Option<InitiativeStatus>; 2],
+    pub dice_locks: [Option<DiceLockStatus>; 2],
+    pub moved_piece_ids: BTreeSet<u32>,
+    pub fresh_no_capture_until: BTreeMap<u32, u32>,
+    pub disarmed: BTreeMap<u32, u32>,
+    pub frozen: BTreeMap<u32, FrozenStatus>,
+    pub reposition: Option<RepositionStatus>,
+    pub revelation: bool,
     pub parry_piece_ids: BTreeSet<u32>,
     pub empty_lunchboxes: BTreeMap<u32, EmptyLunchboxStatus>,
     pub platform: Option<PlatformRuleState>,
@@ -360,6 +395,61 @@ impl GameState {
         for enabled in self.card_runtime.geneva_convention {
             hash.u8(u8::from(enabled));
         }
+        for enabled in self.card_runtime.pawn_sprint {
+            hash.u8(u8::from(enabled));
+        }
+        for enabled in self.card_runtime.early_promotion {
+            hash.u8(u8::from(enabled));
+        }
+        for player in [Player::White, Player::Black] {
+            match self.card_runtime.initiative[player.index()] {
+                None => hash.u8(0),
+                Some(status) => {
+                    hash.u8(1);
+                    hash.u8(status.by.index() as u8);
+                    hash.u32(status.limit.saturating_sub(
+                        self.turns_taken[player.index()].saturating_sub(status.start_turn),
+                    ));
+                }
+            }
+            match self.card_runtime.dice_locks[player.index()] {
+                None => hash.u8(0),
+                Some(status) => {
+                    hash.u8(1);
+                    hash.u8(status.kind.stable_code());
+                    hash.u32(status.remaining_turns);
+                }
+            }
+        }
+        for piece_id in &self.card_runtime.moved_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for (piece_id, deadline) in &self.card_runtime.fresh_no_capture_until {
+            hash.u32(*piece_id);
+            let owner = self
+                .board
+                .find_by_id(*piece_id)
+                .map_or(self.turn, |(_, piece)| piece.owner);
+            hash.u32(deadline.saturating_sub(self.turns_taken[owner.index()]));
+        }
+        for (piece_id, remaining_turns) in &self.card_runtime.disarmed {
+            hash.u32(*piece_id);
+            hash.u32(*remaining_turns);
+        }
+        for (piece_id, status) in &self.card_runtime.frozen {
+            hash.u32(*piece_id);
+            hash.u8(status.source.index() as u8);
+            hash.u32(status.remaining_turns);
+        }
+        match self.card_runtime.reposition {
+            None => hash.u8(0),
+            Some(status) => {
+                hash.u8(1);
+                hash.u32(status.piece_id);
+                hash.u8(u8::from(status.used));
+            }
+        }
+        hash.u8(u8::from(self.card_runtime.revelation));
         for piece_id in &self.card_runtime.parry_piece_ids {
             hash.u32(*piece_id);
         }

@@ -3,6 +3,18 @@ pub const GENEVA_CONVENTION: &str = "geneva-convention";
 pub const PARRY: &str = "parry";
 pub const EMPTY_LUNCHBOX: &str = "empty-lunchbox";
 pub const PLATFORM: &str = "platform";
+pub const SPRINT: &str = "sprint";
+pub const EARLY_PROMOTION: &str = "early-promotion";
+pub const INITIATIVE: &str = "initiative";
+pub const REVELATION: &str = "revelation";
+pub const DISARM: &str = "disarm";
+pub const DICE: &str = "dice";
+pub const FREEZE: &str = "freeze";
+pub const REPOSITION: &str = "reposition";
+pub const ASSASSIN: &str = "assassin";
+pub const GRASSHOPPER: &str = "grasshopper";
+pub const JUDGMENT: &str = "judgment";
+pub const CLEANUP_SACRIFICE: &str = "cleanup-sacrifice";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
@@ -32,7 +44,7 @@ pub struct ImplementedCardDefinition {
     pub turn_exclusive: bool,
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 17] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -80,6 +92,126 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         activation: CardActivation::Rule,
         phase: CardPhase::Rule,
         half_stars: 0,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: SPRINT,
+        name_ko: "질주",
+        effect: "pawnSprint",
+        activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: EARLY_PROMOTION,
+        name_ko: "조기 진급",
+        effect: "earlyPromotion",
+        activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: INITIATIVE,
+        name_ko: "선공권",
+        effect: "initiative",
+        activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: REVELATION,
+        name_ko: "계시",
+        effect: "revelation",
+        activation: CardActivation::Rule,
+        phase: CardPhase::Rule,
+        half_stars: 3,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: DISARM,
+        name_ko: "무장해제",
+        effect: "disarm",
+        activation: CardActivation::Active,
+        phase: CardPhase::Middle,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: DICE,
+        name_ko: "주사위",
+        effect: "dice",
+        activation: CardActivation::Active,
+        phase: CardPhase::Middle,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: FREEZE,
+        name_ko: "빙결",
+        effect: "freeze",
+        activation: CardActivation::Active,
+        phase: CardPhase::Middle,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: REPOSITION,
+        name_ko: "재배치",
+        effect: "reposition",
+        activation: CardActivation::Active,
+        phase: CardPhase::Middle,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: ASSASSIN,
+        name_ko: "암살자",
+        effect: "assassin",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: GRASSHOPPER,
+        name_ko: "그래스호퍼",
+        effect: "grasshopper",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: JUDGMENT,
+        name_ko: "레드카드",
+        effect: "judgment",
+        activation: CardActivation::Active,
+        phase: CardPhase::End,
+        half_stars: 4,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: CLEANUP_SACRIFICE,
+        name_ko: "강제 교환",
+        effect: "cleanupSacrifice",
+        activation: CardActivation::Active,
+        phase: CardPhase::End,
+        half_stars: 3,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -174,8 +306,8 @@ mod tests {
                 .unwrap_or_else(|| panic!("{} is missing from the full catalog", compiled.id));
             assert_eq!(catalog["name_ko"].as_str(), Some(compiled.name_ko));
             assert_eq!(catalog["effect"].as_str(), Some(compiled.effect));
-            if compiled.activation == CardActivation::Rule {
-                assert!(catalog["half_stars"].is_null());
+            if catalog["half_stars"].is_null() {
+                assert_eq!(compiled.half_stars, 0);
             } else {
                 assert_eq!(
                     catalog["half_stars"].as_u64(),

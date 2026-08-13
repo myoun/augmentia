@@ -4,9 +4,9 @@
   "source_bundle_sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834",
   "scope": {
     "status": "behavioral_slice",
-    "implemented_cards": 5,
+    "implemented_cards": 17,
     "site_parity_verified_cards": 0,
-    "notes": "Base-piece behavior and directly reachable hooks are implemented. Interactions with the remaining 187 cards and special pieces are not yet parity-verified."
+    "notes": "Base-piece behavior and directly reachable hooks are implemented. Interactions with the remaining 175 cards and special pieces are not yet parity-verified."
   },
   "cards": [
     {
@@ -95,6 +95,210 @@
         "A landing piece is added to triggeredIds before legal moves are checked and remains there when no extra move exists.",
         "A valid extra move keeps the same turn and restricts the next action to that piece."
       ]
+    },
+    {
+      "id": "sprint",
+      "name_ko": "질주",
+      "phase": "OPENING",
+      "activation": "passive",
+      "half_stars": 6,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "pawnSprint",
+      "engine_primitives": ["player_flag", "unmoved_piece_status", "pawn_move_generation"],
+      "source_symbols": ["pawnSprint", "addPawnDirectionalMoves"],
+      "compatibility": [
+        "Only an unmoved base pawn on a normal double-step row receives the three-square option.",
+        "Every traversed square must be empty.",
+        "A three-square sprint does not create an en-passant target."
+      ]
+    },
+    {
+      "id": "early-promotion",
+      "name_ko": "조기 진급",
+      "phase": "OPENING",
+      "activation": "passive",
+      "half_stars": 7,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "earlyPromotion",
+      "engine_primitives": ["player_flag", "promotion_rank_modifier"],
+      "source_symbols": ["earlyPromotion", "activePromotionRow", "shouldPromote"],
+      "compatibility": [
+        "The promotion rank advances two ranks toward the owning side.",
+        "Normal knight, bishop, rook, and queen promotion choices remain available."
+      ]
+    },
+    {
+      "id": "initiative",
+      "name_ko": "선공권",
+      "phase": "OPENING",
+      "activation": "passive",
+      "half_stars": 4,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "initiative",
+      "engine_primitives": ["opponent_status", "capture_legality_filter", "per_player_turn_deadline"],
+      "source_symbols": ["initiative", "isInitiativeCaptureLocked", "breakInitiativeByAttack", "tickInitiativeLock"],
+      "compatibility": [
+        "The opponent is unable to capture for ten of that opponent's completed turns.",
+        "The lock is cleared immediately when the card owner captures one of the locked player's pieces."
+      ]
+    },
+    {
+      "id": "revelation",
+      "name_ko": "계시",
+      "phase": "RULE",
+      "activation": "rule",
+      "half_stars": 3,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "revelation",
+      "engine_primitives": ["global_rule", "deathmatch_interval_modifier"],
+      "source_symbols": ["revelation", "deathmatchIntervalTurns"],
+      "compatibility": [
+        "Future deathmatches use a five-full-turn quiet interval.",
+        "If installed during deathmatch, the live interval and accumulated quiet count are capped at five."
+      ]
+    },
+    {
+      "id": "disarm",
+      "name_ko": "무장해제",
+      "phase": "MIDDLE",
+      "activation": "active",
+      "half_stars": 8,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "disarm",
+      "target": "enemy-piece",
+      "engine_primitives": ["piece_status", "capture_legality_filter", "owner_turn_tick"],
+      "source_symbols": ["disarm", "applyDisarmRestrictions", "tickDisarmedPieces"],
+      "compatibility": [
+        "The target must be an enemy non-royal piece.",
+        "The target can move but cannot capture until its next completed turn ends."
+      ]
+    },
+    {
+      "id": "dice",
+      "name_ko": "주사위",
+      "phase": "MIDDLE",
+      "activation": "active",
+      "half_stars": 6,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "dice",
+      "engine_primitives": ["browser_random_choice", "piece_type_lock", "owner_turn_tick"],
+      "source_symbols": ["dice", "isDiceLocked", "tickDiceLock"],
+      "compatibility": [
+        "The die maps one through six to pawn, knight, bishop, rook, queen, and king.",
+        "Every opposing piece of the rolled base type is unable to move for two of its owner's turns."
+      ]
+    },
+    {
+      "id": "freeze",
+      "name_ko": "빙결",
+      "phase": "MIDDLE",
+      "activation": "active",
+      "half_stars": 6,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "freeze",
+      "engine_primitives": ["browser_fisher_yates", "piece_status", "move_and_capture_immunity", "owner_turn_tick"],
+      "source_symbols": ["freeze", "freezeCardAvailability", "tickCardFrozenPieces"],
+      "compatibility": [
+        "The card is unavailable when the opponent has four or fewer eligible non-royal pieces.",
+        "Up to three unfrozen enemy non-royal pieces are chosen using web-order Fisher-Yates shuffle.",
+        "Frozen pieces cannot move or be captured and thaw after their third completed owner turn."
+      ]
+    },
+    {
+      "id": "reposition",
+      "name_ko": "재배치",
+      "phase": "MIDDLE",
+      "activation": "active",
+      "half_stars": 5,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "reposition",
+      "target": "own-nonking-piece",
+      "engine_primitives": ["piece_status", "capture_legality_filter", "forced_same_piece_move"],
+      "source_symbols": ["reposition", "activeRepositionSquare", "clearRepositionMarks"],
+      "compatibility": [
+        "The marked piece cannot capture on either move.",
+        "Moving another piece wastes the card when the turn ends.",
+        "After the marked piece's first move, its second move is mandatory when at least one legal move exists."
+      ]
+    },
+    {
+      "id": "assassin",
+      "name_ko": "암살자",
+      "phase": "PIECE",
+      "activation": "active",
+      "half_stars": 7,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "assassin",
+      "target": "own-knight",
+      "engine_primitives": ["piece_transform", "knight_moves", "royal_ray_capture", "fresh_no_capture"],
+      "source_symbols": ["assassin", "assassinMoves", "markTransformedOrigin"],
+      "compatibility": [
+        "The selected base knight becomes an assassin and is marked moved.",
+        "An assassin has knight movement plus a capture-only ray to the first occupied royal piece.",
+        "From the third shared turn onward, the transformed piece cannot capture during the transformation turn."
+      ]
+    },
+    {
+      "id": "grasshopper",
+      "name_ko": "그래스호퍼",
+      "phase": "PIECE",
+      "activation": "active",
+      "half_stars": 6,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "grasshopper",
+      "target": "own-rook",
+      "engine_primitives": ["piece_transform", "hurdle_jump", "fresh_no_capture"],
+      "source_symbols": ["grasshopper", "grasshopperMoves", "markTransformedOrigin"],
+      "compatibility": [
+        "The selected base rook becomes a grasshopper and is marked moved.",
+        "It lands exactly one square beyond the first hurdle on each queen ray.",
+        "From the third shared turn onward, the transformed piece cannot capture during the transformation turn."
+      ]
+    },
+    {
+      "id": "judgment",
+      "name_ko": "레드카드",
+      "phase": "END",
+      "activation": "active",
+      "half_stars": 4,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "judgment",
+      "target": "judgment-piece",
+      "engine_primitives": ["capture_counter_query", "forced_removal", "royal_removal"],
+      "source_symbols": ["judgmentTargetEntries", "judgment"],
+      "compatibility": [
+        "Only pieces tied for the largest positive direct-capture count are legal targets.",
+        "Either player's piece, including a royal king, may receive the red card."
+      ]
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "name_ko": "강제 교환",
+      "phase": "END",
+      "activation": "active",
+      "half_stars": 3,
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "effect": "cleanupSacrifice",
+      "target": "own-cleanup-sacrifice",
+      "engine_primitives": ["same_type_query", "browser_random_choice", "double_forced_removal"],
+      "source_symbols": ["cleanupSacrificeEnemyCandidates", "cleanupSacrifice"],
+      "compatibility": [
+        "The selected friendly piece and candidates must be non-royal and have the same runtime type.",
+        "The enemy victim is selected in web board order using one browser-style random draw.",
+        "The enemy victim is removed before the friendly sacrifice."
+      ]
     }
   ],
   "known_quirks": [
@@ -103,6 +307,9 @@
     "empty_lunchbox.adjacency_clears_before_deadline",
     "platform.immediate_initial_spawn",
     "platform.empty_pool_consumes_rng",
-    "platform.triggered_id_persists_without_legal_move"
+    "platform.triggered_id_persists_without_legal_move",
+    "freeze.last_warmth_counts_nonroyal_eligible_pieces",
+    "reposition.other_piece_move_wastes_status",
+    "cleanup_sacrifice.enemy_removed_before_friendly_piece"
   ]
 }

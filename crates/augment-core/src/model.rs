@@ -113,6 +113,8 @@ pub enum PieceKind {
     Rook,
     Queen,
     King,
+    Assassin,
+    Grasshopper,
 }
 
 impl PieceKind {
@@ -124,6 +126,8 @@ impl PieceKind {
             Self::Rook => 4,
             Self::Queen => 5,
             Self::King => 6,
+            Self::Assassin => 7,
+            Self::Grasshopper => 8,
         }
     }
 

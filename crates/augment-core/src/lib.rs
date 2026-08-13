@@ -17,8 +17,10 @@ mod state;
 
 pub use action::{Action, ActionTarget, MoveAction};
 pub use cards::{
-    CardActivation, CardPhase, EMPTY_LUNCHBOX, GENEVA_CONVENTION, IMPLEMENTED_CARDS,
-    ImplementedCardDefinition, KING_OF_THE_HILL, PARRY, PLATFORM, implemented_card,
+    ASSASSIN, CLEANUP_SACRIFICE, CardActivation, CardPhase, DICE, DISARM, EARLY_PROMOTION,
+    EMPTY_LUNCHBOX, FREEZE, GENEVA_CONVENTION, GRASSHOPPER, IMPLEMENTED_CARDS, INITIATIVE,
+    ImplementedCardDefinition, JUDGMENT, KING_OF_THE_HILL, PARRY, PLATFORM, REPOSITION, REVELATION,
+    SPRINT, implemented_card,
 };
 pub use effect::{
     ChoiceHandler, ChoiceRegistry, ChoiceRegistryError, EffectCommand, EffectHandler,
@@ -36,9 +38,10 @@ pub use ruleset::{
     RulesetManifest, SourceLinks,
 };
 pub use state::{
-    CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DraftPhase, DraftState,
-    DrawReason, EmptyLunchboxStatus, EnPassantState, ForcedMoveContinuation, ForcedMoveSource,
-    GamePhase, GameState, GameStatus, Mode, PendingChoice, PlatformRuleState, WinReason,
+    CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState, DiceLockStatus,
+    DraftPhase, DraftState, DrawReason, EmptyLunchboxStatus, EnPassantState,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
+    InitiativeStatus, Mode, PendingChoice, PlatformRuleState, RepositionStatus, WinReason,
 };
 
 /// Ruleset bundled into this build and used by the first engine milestone.

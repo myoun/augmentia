@@ -18,10 +18,10 @@
   "coverage": {
     "status": "partial",
     "target_card_count": 192,
-    "implemented_card_count": 5,
-    "behavioral_slice_card_count": 5,
+    "implemented_card_count": 17,
+    "behavioral_slice_card_count": 17,
     "site_parity_verified_card_count": 0,
-    "notes": "5개 카드의 기본 기물 동작과 직접 hook을 구현함. 나머지 카드 및 전체 상호작용 검증 필요."
+    "notes": "17개 카드의 기본 동작과 직접 hook을 구현함. 나머지 175개 카드 및 전체 상호작용 검증 필요."
   },
   "base_rules": {
     "king_capture_wins": true,

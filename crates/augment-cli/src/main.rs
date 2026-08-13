@@ -172,19 +172,22 @@ fn parse_move(command: &str) -> Result<Option<MoveAction>, String> {
 
 fn render_position(output: &mut impl Write, state: &GameState) -> io::Result<()> {
     writeln!(output)?;
-    writeln!(output, "    a b c d e f g h")?;
-    writeln!(output, "  +-----------------+")?;
+    writeln!(output, "     a  b  c  d  e  f  g  h")?;
+    writeln!(output, "  +-------------------------+")?;
     for rank in (0..8).rev() {
         write!(output, "{} |", rank + 1)?;
         for file in 0..8 {
             let square = Square::new(file, rank).expect("board coordinate");
-            let symbol = state.board.get(square).map_or('.', piece_symbol);
-            write!(output, " {symbol}")?;
+            let symbol = state
+                .board
+                .get(square)
+                .map_or_else(|| ".".to_owned(), piece_symbol);
+            write!(output, " {symbol:>2}")?;
         }
         writeln!(output, " | {}", rank + 1)?;
     }
-    writeln!(output, "  +-----------------+")?;
-    writeln!(output, "    a b c d e f g h")?;
+    writeln!(output, "  +-------------------------+")?;
+    writeln!(output, "     a  b  c  d  e  f  g  h")?;
     writeln!(
         output,
         "턴: {} | 단계: {} | ply: {} | 남은 이동 행동: {}",
@@ -206,7 +209,90 @@ fn render_position(output: &mut impl Write, state: &GameState) -> io::Result<()>
     {
         writeln!(output, "발판: {square}")?;
     }
+    render_statuses(output, state)?;
     render_cards(output, state)
+}
+
+fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()> {
+    if !state.applied_rules.is_empty() {
+        let rules = state
+            .applied_rules
+            .iter()
+            .map(|id| card_name(id))
+            .collect::<Vec<_>>()
+            .join(", ");
+        writeln!(output, "적용 RULE: {rules}")?;
+    }
+    for target in [Player::White, Player::Black] {
+        if let Some(status) = state.card_runtime.initiative[target.index()] {
+            let elapsed = state.turns_taken[target.index()].saturating_sub(status.start_turn);
+            writeln!(
+                output,
+                "선공권: {} 포획 금지 (남은 {}턴)",
+                player_name(target),
+                status.limit.saturating_sub(elapsed)
+            )?;
+        }
+        if let Some(status) = state.card_runtime.dice_locks[target.index()] {
+            writeln!(
+                output,
+                "주사위: {} {} 이동 금지 (남은 {}턴)",
+                player_name(target),
+                kind_name(status.kind),
+                status.remaining_turns
+            )?;
+        }
+    }
+    render_piece_status_map(
+        output,
+        state,
+        "빙결",
+        state
+            .card_runtime
+            .frozen
+            .iter()
+            .map(|(piece_id, status)| (*piece_id, status.remaining_turns)),
+    )?;
+    render_piece_status_map(
+        output,
+        state,
+        "무장해제",
+        state
+            .card_runtime
+            .disarmed
+            .iter()
+            .map(|(piece_id, remaining)| (*piece_id, *remaining)),
+    )?;
+    if let Some(status) = state.card_runtime.reposition
+        && let Some((square, _)) = state.board.find_by_id(status.piece_id)
+    {
+        writeln!(
+            output,
+            "재배치: {square}{}",
+            if status.used { " (2차 이동)" } else { "" }
+        )?;
+    }
+    Ok(())
+}
+
+fn render_piece_status_map(
+    output: &mut impl Write,
+    state: &GameState,
+    label: &str,
+    statuses: impl Iterator<Item = (u32, u32)>,
+) -> io::Result<()> {
+    let entries = statuses
+        .filter_map(|(piece_id, remaining)| {
+            state
+                .board
+                .find_by_id(piece_id)
+                .map(|(square, _)| format!("{square}({remaining}턴)"))
+        })
+        .collect::<Vec<_>>();
+    if !entries.is_empty() {
+        writeln!(output, "{label}: {}", entries.join(", "))?;
+    }
+    Ok(())
 }
 
 fn render_cards(output: &mut impl Write, state: &GameState) -> io::Result<()> {
@@ -253,7 +339,7 @@ fn action_description(state: &GameState, action: &Action) -> String {
         Action::Move(movement) => {
             let promotion = movement
                 .promotion
-                .map_or(String::new(), |kind| format!("={}", kind_letter(kind)));
+                .map_or(String::new(), |kind| format!("={}", kind_code(kind)));
             format!("이동 {}-{}{}", movement.from, movement.to, promotion)
         }
         Action::UseCard {
@@ -426,22 +512,24 @@ fn render_help(output: &mut impl Write) -> io::Result<()> {
     writeln!(output, "  help/quit  도움말/종료")
 }
 
-fn piece_symbol(piece: augment_core::Piece) -> char {
-    let symbol = kind_letter(piece.kind);
+fn piece_symbol(piece: augment_core::Piece) -> String {
+    let symbol = kind_code(piece.kind);
     match piece.owner {
-        Player::White => symbol,
+        Player::White => symbol.to_owned(),
         Player::Black => symbol.to_ascii_lowercase(),
     }
 }
 
-fn kind_letter(kind: PieceKind) -> char {
+fn kind_code(kind: PieceKind) -> &'static str {
     match kind {
-        PieceKind::Pawn => 'P',
-        PieceKind::Knight => 'N',
-        PieceKind::Bishop => 'B',
-        PieceKind::Rook => 'R',
-        PieceKind::Queen => 'Q',
-        PieceKind::King => 'K',
+        PieceKind::Pawn => "P",
+        PieceKind::Knight => "N",
+        PieceKind::Bishop => "B",
+        PieceKind::Rook => "R",
+        PieceKind::Queen => "Q",
+        PieceKind::King => "K",
+        PieceKind::Assassin => "AS",
+        PieceKind::Grasshopper => "G",
     }
 }
 
@@ -453,6 +541,8 @@ fn kind_name(kind: PieceKind) -> &'static str {
         PieceKind::Rook => "룩",
         PieceKind::Queen => "퀸",
         PieceKind::King => "킹",
+        PieceKind::Assassin => "암살자",
+        PieceKind::Grasshopper => "그래스호퍼",
     }
 }
 

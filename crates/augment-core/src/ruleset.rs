@@ -227,8 +227,8 @@ mod tests {
         assert_eq!(manifest.snapshot_date, "2026-08-07");
         assert_eq!(manifest.coverage.status, "partial");
         assert_eq!(manifest.coverage.target_card_count, 192);
-        assert_eq!(manifest.coverage.implemented_card_count, 5);
-        assert_eq!(manifest.coverage.behavioral_slice_card_count, 5);
+        assert_eq!(manifest.coverage.implemented_card_count, 17);
+        assert_eq!(manifest.coverage.behavioral_slice_card_count, 17);
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
         assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);
