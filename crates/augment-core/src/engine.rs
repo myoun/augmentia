@@ -18,6 +18,20 @@ pub struct Engine {
 
 const MAX_EFFECT_EVENTS_PER_RESOLUTION: usize = 4_096;
 const MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION: usize = 256;
+const DRAFT_BALANCE_MAX_HALF_STAR_GAP: u64 = 2;
+const DRAFT_BALANCE_EXTRA_ATTEMPTS: usize = 2;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct DraftOfferAverage {
+    total_half_stars: u32,
+    card_count: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct DraftAverageGap {
+    numerator: u64,
+    denominator: u64,
+}
 
 impl Engine {
     pub fn new(ruleset: RulesetManifest) -> Self {
@@ -54,7 +68,7 @@ impl Engine {
 
         let mut state = GameState::standard(self.ruleset.id.clone(), mode, seed);
         state.reset_repetition_history();
-        self.start_draft(&mut state, DraftPhase::Opening, Player::White, None);
+        self.start_draft(&mut state, DraftPhase::Opening, Player::White, None, None);
         Ok(state)
     }
 
@@ -150,11 +164,11 @@ impl Engine {
         })
     }
 
-    fn draft_candidates(
+    fn draft_candidates_for_categories(
         &self,
         state: &GameState,
-        _player: Player,
-        phase: DraftPhase,
+        categories: &[CardPhase],
+        excluded: &BTreeSet<String>,
     ) -> Vec<String> {
         let owned: BTreeSet<_> = state
             .cards
@@ -166,29 +180,23 @@ impl Engine {
             .iter()
             .filter(|card| card.activation != CardActivation::Rule)
             .filter(|card| !owned.contains(card.id))
-            .filter(|card| match phase {
-                DraftPhase::Opening => matches!(
-                    card.phase,
-                    CardPhase::Opening | CardPhase::Middle | CardPhase::Piece
-                ),
-                DraftPhase::Middle => {
-                    matches!(card.phase, CardPhase::Middle | CardPhase::Piece)
-                }
-                DraftPhase::End => matches!(card.phase, CardPhase::Middle | CardPhase::End),
-            })
+            .filter(|card| !excluded.contains(card.id))
+            .filter(|card| categories.contains(&card.phase))
             .map(|card| card.id.to_owned())
             .collect()
     }
 
-    fn draw_draft_offers(
+    fn draw_weighted_draft_cards(
         &self,
         state: &mut GameState,
-        player: Player,
         phase: DraftPhase,
+        categories: &[CardPhase],
+        count: usize,
+        excluded: &mut BTreeSet<String>,
     ) -> Vec<String> {
-        let mut candidates = self.draft_candidates(state, player, phase);
-        let mut offers = Vec::new();
-        while offers.len() < 3 && !candidates.is_empty() {
+        let mut candidates = self.draft_candidates_for_categories(state, categories, excluded);
+        let mut picked = Vec::new();
+        while picked.len() < count && !candidates.is_empty() {
             let weights: Vec<_> = candidates
                 .iter()
                 .map(|candidate| draft_card_weight_units(candidate, phase))
@@ -204,9 +212,103 @@ impl Engine {
                     scaled_roll <= u128::from(cumulative_weight) * (1_u128 << 53)
                 })
                 .unwrap_or(weights.len() - 1);
-            offers.push(candidates.remove(index));
+            let card = candidates.remove(index);
+            excluded.insert(card.clone());
+            picked.push(card);
         }
-        offers
+        picked
+    }
+
+    fn draw_draft_offers_once(
+        &self,
+        state: &mut GameState,
+        _player: Player,
+        phase: DraftPhase,
+    ) -> Vec<String> {
+        let mut excluded = BTreeSet::new();
+        match phase {
+            DraftPhase::Opening => self.draw_weighted_draft_cards(
+                state,
+                phase,
+                &[CardPhase::Opening, CardPhase::Middle, CardPhase::Piece],
+                3,
+                &mut excluded,
+            ),
+            DraftPhase::Middle => {
+                let mut offers = self.draw_weighted_draft_cards(
+                    state,
+                    phase,
+                    &[CardPhase::Middle],
+                    2,
+                    &mut excluded,
+                );
+                offers.extend(self.draw_weighted_draft_cards(
+                    state,
+                    phase,
+                    &[CardPhase::Piece],
+                    1,
+                    &mut excluded,
+                ));
+                if offers.len() < 3 {
+                    offers.extend(self.draw_weighted_draft_cards(
+                        state,
+                        phase,
+                        &[CardPhase::Middle, CardPhase::Piece],
+                        3 - offers.len(),
+                        &mut excluded,
+                    ));
+                }
+                offers
+            }
+            DraftPhase::End => self.draw_weighted_draft_cards(
+                state,
+                phase,
+                &[CardPhase::Middle, CardPhase::End],
+                3,
+                &mut excluded,
+            ),
+        }
+    }
+
+    fn draw_draft_offers(
+        &self,
+        state: &mut GameState,
+        player: Player,
+        phase: DraftPhase,
+        balance_target: Option<DraftOfferAverage>,
+    ) -> Vec<String> {
+        let mut best = self.draw_draft_offers_once(state, player, phase);
+        let Some(target) = balance_target else {
+            return best;
+        };
+        if best.len() < 2 {
+            return best;
+        }
+        let Some(mut best_gap) =
+            draft_offer_average(&best).map(|average| draft_average_gap(average, target))
+        else {
+            return best;
+        };
+        if draft_gap_within_balance_limit(best_gap) {
+            return best;
+        }
+
+        for _ in 0..DRAFT_BALANCE_EXTRA_ATTEMPTS {
+            let candidate = self.draw_draft_offers_once(state, player, phase);
+            let Some(candidate_gap) =
+                draft_offer_average(&candidate).map(|average| draft_average_gap(average, target))
+            else {
+                continue;
+            };
+            if draft_gap_is_smaller(candidate_gap, best_gap) {
+                best = candidate;
+                best_gap = candidate_gap;
+                if draft_gap_within_balance_limit(best_gap) {
+                    break;
+                }
+            }
+        }
+        best
     }
 
     fn start_draft(
@@ -215,9 +317,10 @@ impl Engine {
         phase: DraftPhase,
         player: Player,
         resume_turn: Option<Player>,
+        balance_target: Option<DraftOfferAverage>,
     ) {
         let resume_turn = resume_turn.unwrap_or(Player::White);
-        let offers = self.draw_draft_offers(state, player, phase);
+        let offers = self.draw_draft_offers(state, player, phase, balance_target);
         state.turn = player;
         state.phase = GamePhase::Draft(DraftState {
             phase,
@@ -291,7 +394,7 @@ impl Engine {
         let definition = implemented_card(&definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.clone()))?;
         let instance_id = next.allocate_card_instance_id();
-        let delayed = draft.phase != DraftPhase::Opening;
+        let delayed = draft_card_uses_next_turn_delay(draft.phase, definition.phase);
         next.add_card(CardInstance {
             instance_id,
             definition_id: definition_id.clone(),
@@ -326,6 +429,7 @@ impl Engine {
                 draft.phase,
                 Player::Black,
                 Some(draft.resume_turn),
+                draft_offer_average(&draft.offers),
             );
             let GamePhase::Draft(next_draft) = &next.phase else {
                 unreachable!("start_draft always installs a draft")
@@ -1118,7 +1222,7 @@ impl Engine {
             return false;
         };
 
-        self.start_draft(state, phase, Player::White, Some(resume_turn));
+        self.start_draft(state, phase, Player::White, Some(resume_turn), None);
         let GamePhase::Draft(draft) = &state.phase else {
             unreachable!("start_draft always installs a draft")
         };
@@ -1127,7 +1231,7 @@ impl Engine {
                 phase,
                 player: Player::White,
             });
-            self.start_draft(state, phase, Player::Black, Some(resume_turn));
+            self.start_draft(state, phase, Player::Black, Some(resume_turn), None);
             let GamePhase::Draft(black_draft) = &state.phase else {
                 unreachable!("start_draft always installs a draft")
             };
@@ -1743,6 +1847,41 @@ fn draft_card_weight_units(definition_id: &str, draft_phase: DraftPhase) -> u64 
     base_eighths * phase_multiplier
 }
 
+fn draft_offer_average(offers: &[String]) -> Option<DraftOfferAverage> {
+    let scores: Vec<_> = offers
+        .iter()
+        .filter_map(|definition_id| implemented_card(definition_id))
+        .map(|card| u32::from(card.half_stars))
+        .collect();
+    (!scores.is_empty()).then(|| DraftOfferAverage {
+        total_half_stars: scores.iter().sum(),
+        card_count: scores.len() as u32,
+    })
+}
+
+fn draft_average_gap(left: DraftOfferAverage, right: DraftOfferAverage) -> DraftAverageGap {
+    let left_scaled = u64::from(left.total_half_stars) * u64::from(right.card_count);
+    let right_scaled = u64::from(right.total_half_stars) * u64::from(left.card_count);
+    DraftAverageGap {
+        numerator: left_scaled.abs_diff(right_scaled),
+        denominator: u64::from(left.card_count) * u64::from(right.card_count),
+    }
+}
+
+fn draft_gap_is_smaller(candidate: DraftAverageGap, current: DraftAverageGap) -> bool {
+    u128::from(candidate.numerator) * u128::from(current.denominator)
+        < u128::from(current.numerator) * u128::from(candidate.denominator)
+}
+
+fn draft_gap_within_balance_limit(gap: DraftAverageGap) -> bool {
+    gap.numerator <= DRAFT_BALANCE_MAX_HALF_STAR_GAP * gap.denominator
+}
+
+fn draft_card_uses_next_turn_delay(draft_phase: DraftPhase, card_phase: CardPhase) -> bool {
+    matches!(draft_phase, DraftPhase::Middle | DraftPhase::End)
+        && matches!(card_phase, CardPhase::Middle | CardPhase::End)
+}
+
 fn push_pawn_move(from: Square, to: Square, promotion_rank: u8, actions: &mut Vec<Action>) {
     if to.rank() == promotion_rank {
         for promotion in [
@@ -1906,7 +2045,11 @@ mod tests {
         let engine = Engine::bundled_20260807().unwrap();
         let state = standard_play_state(5);
         let candidates: BTreeSet<_> = engine
-            .draft_candidates(&state, Player::White, DraftPhase::Opening)
+            .draft_candidates_for_categories(
+                &state,
+                &[CardPhase::Opening, CardPhase::Middle, CardPhase::Piece],
+                &BTreeSet::new(),
+            )
             .into_iter()
             .collect();
 
@@ -1932,6 +2075,56 @@ mod tests {
             draft_card_weight_units(KING_OF_THE_HILL, DraftPhase::Middle),
             90
         );
+    }
+
+    #[test]
+    fn later_draft_card_delay_depends_on_card_category() {
+        assert!(!draft_card_uses_next_turn_delay(
+            DraftPhase::Opening,
+            CardPhase::Middle
+        ));
+        assert!(draft_card_uses_next_turn_delay(
+            DraftPhase::Middle,
+            CardPhase::Middle
+        ));
+        assert!(!draft_card_uses_next_turn_delay(
+            DraftPhase::Middle,
+            CardPhase::Piece
+        ));
+        assert!(draft_card_uses_next_turn_delay(
+            DraftPhase::End,
+            CardPhase::Middle
+        ));
+        assert!(draft_card_uses_next_turn_delay(
+            DraftPhase::End,
+            CardPhase::End
+        ));
+    }
+
+    #[test]
+    fn draft_balance_gap_uses_exact_half_star_averages() {
+        let white = DraftOfferAverage {
+            total_half_stars: 24,
+            card_count: 3,
+        };
+        let within_limit = draft_average_gap(
+            DraftOfferAverage {
+                total_half_stars: 30,
+                card_count: 3,
+            },
+            white,
+        );
+        let outside_limit = draft_average_gap(
+            DraftOfferAverage {
+                total_half_stars: 31,
+                card_count: 3,
+            },
+            white,
+        );
+
+        assert!(draft_gap_within_balance_limit(within_limit));
+        assert!(!draft_gap_within_balance_limit(outside_limit));
+        assert!(draft_gap_is_smaller(within_limit, outside_limit));
     }
 
     #[test]
