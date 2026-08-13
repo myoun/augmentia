@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/augment-core", "crates/augment-cli", "crates/augment-snapshot"]
+members = [
+    "crates/augment-core",
+    "crates/augment-cli",
+    "crates/augment-snapshot",
+    "crates/augment-web",
+]
 resolver = "2"
 
 [workspace.package]

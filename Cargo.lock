@@ -27,6 +27,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "augment-web"
+version = "0.1.0"
+dependencies = [
+ "augment-core",
+ "serde_json",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

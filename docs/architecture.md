@@ -61,6 +61,12 @@ Ruleset + seed
              Transition { state, events }
 ```
 
+`augment-web`은 이 경계 위의 로컬 어댑터다. 브라우저에는 엔진의 직렬화된 복제본을
+두지 않고, 현재 상태와 순서가 고정된 `legal_actions()`를 표시한다. UI는 선택한 행동의
+index와 현재 fingerprint를 서버로 돌려보내며, 서버는 오래된 화면의 행동을 거부한 뒤
+실제 `Engine::apply`만 실행한다. 따라서 웹 UI, CLI, 이후 self-play가 별도 규칙 구현으로
+갈라지지 않는다.
+
 상태에는 보드뿐 아니라 다음 값도 포함해야 한다.
 
 - 적용 중인 `ruleset_id`와 모드

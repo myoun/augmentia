@@ -14,13 +14,18 @@
 
 ```powershell
 cargo test --workspace
-cargo run -p augment-cli
+cargo run -p augment-web
 ```
 
-CLI는 한 터미널에서 백과 흑을 번갈아 조종하는 핫시트 게임입니다. 드래프트·카드·후속
+기본 실행은 `http://127.0.0.1:7878`의 로컬 웹 UI를 열어 백과 흑을 번갈아 조종하는
+핫시트 게임을 시작합니다. 보드 클릭 이동, 프로모션, 드래프트, 카드 대상 지정, 기물
+능력과 카드 후속 선택을 한 화면에서 처리합니다. `--seed 1234`를 전달하면 같은
+드래프트와 확률 결과를 다시 재현할 수 있고, `--port 9000`으로 포트를 바꾸거나
+`--no-open`으로 브라우저 자동 열기를 끌 수 있습니다.
+
+터미널 UI가 필요하면 `cargo run -p augment-cli`를 사용할 수 있습니다. 드래프트·카드·후속
 선택은 화면에 표시된 번호로 고르고, 보드 이동은 `e2e4` 또는 `e2-e4`로 입력합니다.
-프로모션은 `e7e8q`처럼 기물 문자를 붙입니다. `--seed 1234`를 전달하면 같은 드래프트와
-확률 결과를 다시 재현할 수 있습니다. 전체 공개 카드 192장의 메타데이터는 정규화되어
+전체 공개 카드 192장의 메타데이터는 정규화되어
 있지만 실제 효과를 실행할 수 있는 카드는 현재 62장이므로, 드래프트도 이 62장 중
 RULE을 제외한 카드를 사용합니다. 오프닝 RULE 선택 풀에는 현재 실행 가능한 `발판`과
 `계시`가 들어갑니다.
@@ -47,7 +52,8 @@ cargo run -p augment-snapshot -- diff `
 
 ```text
 crates/augment-core/                 결정론적 게임 엔진 코어
-crates/augment-cli/                  엔진 연동 예제
+crates/augment-web/                  로컬 핫시트 웹 UI와 엔진 API 어댑터
+crates/augment-cli/                  터미널 핫시트 UI
 crates/augment-snapshot/             카드 카탈로그 추출·diff 도구
 docs/architecture.md                 엔진, 규칙 버전, self-play 설계
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏

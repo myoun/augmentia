@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Augmentia · 증강체스 로컬 플레이</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">A</div>
+        <div>
+          <div class="eyebrow">AUGMENTIA LAB</div>
+          <h1>증강체스 로컬 플레이</h1>
+        </div>
+      </div>
+      <div class="session-tools">
+        <label class="seed-field">
+          <span>SEED</span>
+          <input id="seedInput" inputmode="numeric" value="20260807" aria-label="게임 seed" />
+        </label>
+        <button id="newGameButton" class="button secondary" type="button">새 게임</button>
+        <div id="connectionState" class="connection" data-state="loading">
+          <span class="connection-dot"></span>
+          <span>연결 중</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <aside class="side-column cards-column">
+        <section class="panel player-panel black-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">BLACK LOADOUT</span>
+              <h2>흑 카드</h2>
+            </div>
+            <span id="blackStars" class="star-count">0 ★</span>
+          </div>
+          <div id="blackCards" class="card-list empty-message">아직 카드가 없습니다.</div>
+        </section>
+
+        <section class="panel player-panel white-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">WHITE LOADOUT</span>
+              <h2>백 카드</h2>
+            </div>
+            <span id="whiteStars" class="star-count">0 ★</span>
+          </div>
+          <div id="whiteCards" class="card-list empty-message">아직 카드가 없습니다.</div>
+        </section>
+      </aside>
+
+      <section class="board-column">
+        <div class="match-strip panel">
+          <div class="turn-block">
+            <span id="turnPill" class="turn-pill white">백 차례</span>
+            <div>
+              <strong id="phaseLabel">드래프트</strong>
+              <span id="phaseDetail">오프닝 카드를 선택하세요</span>
+            </div>
+          </div>
+          <div class="match-metrics">
+            <div><span>PLY</span><strong id="plyValue">0</strong></div>
+            <div><span>행동</span><strong id="actionValue">1</strong></div>
+            <div><span>턴</span><strong id="turnValue">0 / 0</strong></div>
+          </div>
+        </div>
+
+        <div id="decisionPanel" class="decision-panel panel hidden" aria-live="polite"></div>
+
+        <div class="board-stage">
+          <div id="board" class="board" role="grid" aria-label="증강체스 보드"></div>
+        </div>
+
+        <div class="board-footer panel">
+          <div>
+            <span class="eyebrow">CURRENT INPUT</span>
+            <strong id="selectedHint">기물을 선택하세요.</strong>
+          </div>
+          <button id="cancelSelection" class="button ghost hidden" type="button">선택 취소</button>
+        </div>
+      </section>
+
+      <aside class="side-column info-column">
+        <section class="panel status-panel">
+          <div class="panel-heading compact">
+            <div>
+              <span class="eyebrow">MATCH STATE</span>
+              <h2>게임 상태</h2>
+            </div>
+            <span id="statusBadge" class="status-badge">진행 중</span>
+          </div>
+          <dl class="status-grid">
+            <div><dt>스냅숏</dt><dd id="rulesetValue">—</dd></div>
+            <div><dt>Fingerprint</dt><dd id="fingerprintValue">—</dd></div>
+            <div><dt>오버타임</dt><dd id="deathmatchValue">대기</dd></div>
+            <div><dt>발판</dt><dd id="platformValue">없음</dd></div>
+          </dl>
+          <div id="rulesList" class="tag-list"></div>
+        </section>
+
+        <section class="panel ability-panel">
+          <div class="panel-heading compact">
+            <div>
+              <span class="eyebrow">SPECIAL ACTIONS</span>
+              <h2>특수 행동</h2>
+            </div>
+          </div>
+          <div id="abilityList" class="ability-list empty-message">사용 가능한 특수 행동이 없습니다.</div>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-heading compact">
+            <div>
+              <span class="eyebrow">GAME LOG</span>
+              <h2>진행 기록</h2>
+            </div>
+          </div>
+          <ol id="eventLog" class="event-log"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <dialog id="actionDialog" class="action-dialog">
+      <div class="dialog-heading">
+        <div>
+          <span class="eyebrow">SELECT ACTION</span>
+          <h2 id="dialogTitle">행동 선택</h2>
+        </div>
+        <button id="dialogClose" class="icon-button" type="button" aria-label="닫기">×</button>
+      </div>
+      <div id="dialogOptions" class="dialog-options"></div>
+    </dialog>
+
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
