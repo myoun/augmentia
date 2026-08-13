@@ -1,0 +1,65 @@
+{
+  "id": "augment_chess_20260807",
+  "snapshot_date": "2026-08-07",
+  "schema_version": 1,
+  "engine_api_version": 1,
+  "source": {
+    "site": "https://augmentchess.org/",
+    "rules": "https://augmentchess.org/rules/",
+    "updates": "https://augmentchess.org/updates/"
+  },
+  "artifacts": {
+    "notation": "notation.json",
+    "notation_raw": "sources/raw/notation-legend.html"
+  },
+  "coverage": {
+    "status": "scaffold",
+    "target_card_count": 192,
+    "implemented_card_count": 0,
+    "notes": "기본 이동과 판정 스켈레톤만 구현됨. 전체 카드 데이터 수집 및 검증 필요."
+  },
+  "base_rules": {
+    "king_capture_wins": true,
+    "immobility_loses": true,
+    "repetition_count": 3,
+    "repetition_tiebreak": "lower_half_star_total",
+    "overtime_starts_at_move_count": 45,
+    "overtime_quiet_move_count": 10
+  },
+  "modes": [
+    {
+      "id": "standard",
+      "draft": {
+        "kind": "rounds",
+        "checkpoints": ["game_start", "move_count_10", "move_count_20"],
+        "bundle_count": 3,
+        "cards_per_bundle": 1,
+        "picks_per_round": 1
+      }
+    },
+    {
+      "id": "chaos",
+      "draft": {
+        "kind": "rounds",
+        "checkpoints": ["game_start", "move_count_10", "move_count_20"],
+        "bundle_count": 3,
+        "cards_per_bundle": 2,
+        "picks_per_round": 1
+      }
+    },
+    {
+      "id": "grand",
+      "draft": {
+        "kind": "shared_pool",
+        "pool_size": 28,
+        "opening_cards": 4,
+        "middle_cards": 10,
+        "piece_cards": 7,
+        "end_cards": 7,
+        "picks_per_player": 6,
+        "first_player": "white",
+        "has_midgame_drafts": false
+      }
+    }
+  ]
+}

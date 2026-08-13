@@ -1,0 +1,245 @@
+use std::fmt;
+use std::str::FromStr;
+
+pub const BOARD_FILES: u8 = 8;
+pub const BOARD_RANKS: u8 = 8;
+pub const BOARD_SQUARES: usize = 64;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Player {
+    White,
+    Black,
+}
+
+impl Player {
+    pub const fn opponent(self) -> Self {
+        match self {
+            Self::White => Self::Black,
+            Self::Black => Self::White,
+        }
+    }
+
+    pub const fn index(self) -> usize {
+        match self {
+            Self::White => 0,
+            Self::Black => 1,
+        }
+    }
+}
+
+impl fmt::Display for Player {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::White => f.write_str("white"),
+            Self::Black => f.write_str("black"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Square(u8);
+
+impl Square {
+    pub fn new(file: u8, rank: u8) -> Option<Self> {
+        (file < BOARD_FILES && rank < BOARD_RANKS).then_some(Self(rank * BOARD_FILES + file))
+    }
+
+    pub fn from_index(index: u8) -> Option<Self> {
+        (usize::from(index) < BOARD_SQUARES).then_some(Self(index))
+    }
+
+    pub const fn index(self) -> usize {
+        self.0 as usize
+    }
+
+    pub const fn file(self) -> u8 {
+        self.0 % BOARD_FILES
+    }
+
+    pub const fn rank(self) -> u8 {
+        self.0 / BOARD_FILES
+    }
+
+    pub fn offset(self, file_delta: i8, rank_delta: i8) -> Option<Self> {
+        let file = self.file() as i8 + file_delta;
+        let rank = self.rank() as i8 + rank_delta;
+        if (0..BOARD_FILES as i8).contains(&file) && (0..BOARD_RANKS as i8).contains(&rank) {
+            Self::new(file as u8, rank as u8)
+        } else {
+            None
+        }
+    }
+}
+
+impl fmt::Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let file = char::from(b'a' + self.file());
+        let rank = char::from(b'1' + self.rank());
+        write!(f, "{file}{rank}")
+    }
+}
+
+impl FromStr for Square {
+    type Err = SquareParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let bytes = value.as_bytes();
+        if bytes.len() != 2
+            || !(b'a'..=b'h').contains(&bytes[0])
+            || !(b'1'..=b'8').contains(&bytes[1])
+        {
+            return Err(SquareParseError(value.to_owned()));
+        }
+        Ok(Self((bytes[1] - b'1') * BOARD_FILES + (bytes[0] - b'a')))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SquareParseError(String);
+
+impl fmt::Display for SquareParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid square {:?}; expected a1 through h8", self.0)
+    }
+}
+
+impl std::error::Error for SquareParseError {}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum PieceKind {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
+}
+
+impl PieceKind {
+    pub const fn stable_code(self) -> u8 {
+        match self {
+            Self::Pawn => 1,
+            Self::Knight => 2,
+            Self::Bishop => 3,
+            Self::Rook => 4,
+            Self::Queen => 5,
+            Self::King => 6,
+        }
+    }
+
+    pub const fn is_valid_promotion(self) -> bool {
+        matches!(self, Self::Knight | Self::Bishop | Self::Rook | Self::Queen)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Piece {
+    pub owner: Player,
+    pub kind: PieceKind,
+}
+
+impl Piece {
+    pub const fn new(owner: Player, kind: PieceKind) -> Self {
+        Self { owner, kind }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Board {
+    cells: [Option<Piece>; BOARD_SQUARES],
+}
+
+impl Board {
+    pub const fn empty() -> Self {
+        Self {
+            cells: [None; BOARD_SQUARES],
+        }
+    }
+
+    pub fn standard() -> Self {
+        let mut board = Self::empty();
+        let back_rank = [
+            PieceKind::Rook,
+            PieceKind::Knight,
+            PieceKind::Bishop,
+            PieceKind::Queen,
+            PieceKind::King,
+            PieceKind::Bishop,
+            PieceKind::Knight,
+            PieceKind::Rook,
+        ];
+
+        for (file, kind) in back_rank.into_iter().enumerate() {
+            board.set(
+                Square::new(file as u8, 0).expect("standard board square"),
+                Some(Piece::new(Player::White, kind)),
+            );
+            board.set(
+                Square::new(file as u8, 1).expect("standard board square"),
+                Some(Piece::new(Player::White, PieceKind::Pawn)),
+            );
+            board.set(
+                Square::new(file as u8, 6).expect("standard board square"),
+                Some(Piece::new(Player::Black, PieceKind::Pawn)),
+            );
+            board.set(
+                Square::new(file as u8, 7).expect("standard board square"),
+                Some(Piece::new(Player::Black, kind)),
+            );
+        }
+        board
+    }
+
+    pub fn get(&self, square: Square) -> Option<Piece> {
+        self.cells[square.index()]
+    }
+
+    pub fn set(&mut self, square: Square, piece: Option<Piece>) -> Option<Piece> {
+        std::mem::replace(&mut self.cells[square.index()], piece)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Square, Piece)> + '_ {
+        self.cells.iter().enumerate().filter_map(|(index, piece)| {
+            piece.map(|piece| {
+                (
+                    Square::from_index(index as u8).expect("board index is always valid"),
+                    piece,
+                )
+            })
+        })
+    }
+
+    pub fn contains(&self, owner: Player, kind: PieceKind) -> bool {
+        self.iter()
+            .any(|(_, piece)| piece.owner == owner && piece.kind == kind)
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn algebraic_square_round_trip() {
+        for rank in 0..8 {
+            for file in 0..8 {
+                let square = Square::new(file, rank).unwrap();
+                assert_eq!(square.to_string().parse::<Square>().unwrap(), square);
+            }
+        }
+    }
+
+    #[test]
+    fn standard_board_has_32_pieces_and_two_kings() {
+        let board = Board::standard();
+        assert_eq!(board.iter().count(), 32);
+        assert!(board.contains(Player::White, PieceKind::King));
+        assert!(board.contains(Player::Black, PieceKind::King));
+    }
+}

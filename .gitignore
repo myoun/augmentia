@@ -1,0 +1,9 @@
+/target/
+*.profraw
+.DS_Store
+
+# Self-play and training outputs are reproducible artifacts, not source history.
+/artifacts/
+/runs/
+/checkpoints/
+/replay-buffers/
