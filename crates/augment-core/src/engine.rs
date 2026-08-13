@@ -153,13 +153,12 @@ impl Engine {
     fn draft_candidates(
         &self,
         state: &GameState,
-        player: Player,
+        _player: Player,
         phase: DraftPhase,
     ) -> Vec<String> {
         let owned: BTreeSet<_> = state
             .cards
             .iter()
-            .filter(|card| card.owner == player)
             .map(|card| card.definition_id.as_str())
             .collect();
 
@@ -168,7 +167,10 @@ impl Engine {
             .filter(|card| card.activation != CardActivation::Rule)
             .filter(|card| !owned.contains(card.id))
             .filter(|card| match phase {
-                DraftPhase::Opening => card.phase == CardPhase::Opening,
+                DraftPhase::Opening => matches!(
+                    card.phase,
+                    CardPhase::Opening | CardPhase::Middle | CardPhase::Piece
+                ),
                 DraftPhase::Middle => {
                     matches!(card.phase, CardPhase::Middle | CardPhase::Piece)
                 }
@@ -187,8 +189,22 @@ impl Engine {
         let mut candidates = self.draft_candidates(state, player, phase);
         let mut offers = Vec::new();
         while offers.len() < 3 && !candidates.is_empty() {
-            let (_, index) = state.rng_mut().web_choice_index(candidates.len());
-            offers.push(candidates.remove(index.expect("non-empty draft candidate list")));
+            let weights: Vec<_> = candidates
+                .iter()
+                .map(|candidate| draft_card_weight_units(candidate, phase))
+                .collect();
+            let total_weight: u64 = weights.iter().sum();
+            let roll = state.rng_mut().next_unit_53();
+            let scaled_roll = u128::from(roll) * u128::from(total_weight);
+            let mut cumulative_weight = 0_u64;
+            let index = weights
+                .iter()
+                .position(|weight| {
+                    cumulative_weight = cumulative_weight.saturating_add(*weight);
+                    scaled_roll <= u128::from(cumulative_weight) * (1_u128 << 53)
+                })
+                .unwrap_or(weights.len() - 1);
+            offers.push(candidates.remove(index));
         }
         offers
     }
@@ -314,50 +330,66 @@ impl Engine {
             let GamePhase::Draft(next_draft) = &next.phase else {
                 unreachable!("start_draft always installs a draft")
             };
-            events.push(Event::DraftStarted {
-                phase: next_draft.phase,
-                player: Player::Black,
-                offers: next_draft.offers.clone(),
-            });
-        } else {
-            next.completed_drafts[draft.phase.index()] = true;
-            next.phase = GamePhase::Playing;
-            next.turn = draft.resume_turn;
-            next.actions_remaining = 1;
-            next.cards_used_this_turn[draft.resume_turn.index()] = 0;
-            next.take_turn_end_request();
-            self.activate_cards_for_turn(&mut next, draft.resume_turn, &mut events);
-            events.push(Event::DraftCompleted {
-                phase: draft.phase,
-                resume_turn: draft.resume_turn,
-            });
-            events.push(Event::TurnChanged {
-                player: draft.resume_turn,
-            });
-            events.push(Event::TurnStarted {
-                player: draft.resume_turn,
-                actions_remaining: next.actions_remaining,
-            });
-            self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
-            self.resolve_missing_king(&mut next, &mut events);
-            if next.status != GameStatus::Ongoing {
-                self.push_game_ended(&next, &mut events);
-            } else if matches!(next.phase, GamePhase::Playing) {
-                if next.take_turn_end_request() {
-                    self.finish_turn(&mut next, draft.resume_turn, &mut events)?;
-                } else {
-                    self.resolve_no_action_loss(&mut next, draft.resume_turn, &mut events);
-                    if next.status == GameStatus::Ongoing {
-                        next.record_current_position();
-                    }
-                }
+            if next_draft.offers.is_empty() {
+                events.push(Event::DraftSkipped {
+                    phase: draft.phase,
+                    player: Player::Black,
+                });
+                self.complete_draft_phase(&mut next, draft.phase, draft.resume_turn, &mut events)?;
+            } else {
+                events.push(Event::DraftStarted {
+                    phase: next_draft.phase,
+                    player: Player::Black,
+                    offers: next_draft.offers.clone(),
+                });
             }
+        } else {
+            self.complete_draft_phase(&mut next, draft.phase, draft.resume_turn, &mut events)?;
         }
 
         Ok(Transition {
             state: next,
             events,
         })
+    }
+
+    fn complete_draft_phase(
+        &self,
+        state: &mut GameState,
+        phase: DraftPhase,
+        resume_turn: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        state.completed_drafts[phase.index()] = true;
+        state.phase = GamePhase::Playing;
+        state.turn = resume_turn;
+        state.actions_remaining = 1;
+        state.cards_used_this_turn[resume_turn.index()] = 0;
+        state.take_turn_end_request();
+        self.activate_cards_for_turn(state, resume_turn, events);
+        events.push(Event::DraftCompleted { phase, resume_turn });
+        events.push(Event::TurnChanged {
+            player: resume_turn,
+        });
+        events.push(Event::TurnStarted {
+            player: resume_turn,
+            actions_remaining: state.actions_remaining,
+        });
+        self.resolve_effect_queue_from(state, events, 0)?;
+        self.resolve_missing_king(state, events);
+        if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+        } else if matches!(state.phase, GamePhase::Playing) {
+            if state.take_turn_end_request() {
+                self.finish_turn(state, resume_turn, events)?;
+            } else {
+                self.resolve_no_action_loss(state, resume_turn, events);
+                if state.status == GameStatus::Ongoing {
+                    state.record_current_position();
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn legal_actions(&self, state: &GameState) -> Result<Vec<Action>, EngineError> {
@@ -1090,6 +1122,33 @@ impl Engine {
         let GamePhase::Draft(draft) = &state.phase else {
             unreachable!("start_draft always installs a draft")
         };
+        if draft.offers.is_empty() {
+            events.push(Event::DraftSkipped {
+                phase,
+                player: Player::White,
+            });
+            self.start_draft(state, phase, Player::Black, Some(resume_turn));
+            let GamePhase::Draft(black_draft) = &state.phase else {
+                unreachable!("start_draft always installs a draft")
+            };
+            if black_draft.offers.is_empty() {
+                events.push(Event::DraftSkipped {
+                    phase,
+                    player: Player::Black,
+                });
+                state.completed_drafts[phase.index()] = true;
+                state.phase = GamePhase::Playing;
+                state.turn = resume_turn;
+                events.push(Event::DraftCompleted { phase, resume_turn });
+                return false;
+            }
+            events.push(Event::DraftStarted {
+                phase,
+                player: Player::Black,
+                offers: black_draft.offers.clone(),
+            });
+            return true;
+        }
         events.push(Event::DraftStarted {
             phase,
             player: Player::White,
@@ -1662,6 +1721,28 @@ fn squares_are_adjacent(left: Square, right: Square) -> bool {
     file_delta <= 1 && rank_delta <= 1 && (file_delta != 0 || rank_delta != 0)
 }
 
+/// Integer form of the web bundle's draft weights. Base weights use eighths; OPENING cards in
+/// the first draft receive the bundle's 1.3 multiplier. The common denominator is irrelevant to
+/// weighted selection, so the returned units are exact (`base_eighths * 10` or `* 13`).
+fn draft_card_weight_units(definition_id: &str, draft_phase: DraftPhase) -> u64 {
+    let Some(card) = implemented_card(definition_id) else {
+        return 0;
+    };
+    let score = card.half_stars;
+    let base_eighths = if score <= 5 {
+        9
+    } else {
+        u64::from(14_u16.saturating_sub(score.clamp(6, 10)))
+    };
+    let phase_multiplier = if draft_phase == DraftPhase::Opening && card.phase == CardPhase::Opening
+    {
+        13
+    } else {
+        10
+    };
+    base_eighths * phase_multiplier
+}
+
 fn push_pawn_move(from: Square, to: Square, promotion_rank: u8, actions: &mut Vec<Action>) {
     if to.rank() == promotion_rank {
         for promotion in [
@@ -1776,8 +1857,14 @@ mod tests {
         };
         assert_eq!(draft.phase, DraftPhase::Opening);
         assert_eq!(state.turn, Player::White);
-        assert!(!draft.offers.is_empty());
-        assert!(draft.offers.len() <= 3);
+        assert_eq!(draft.offers.len(), 3);
+        assert_eq!(
+            draft.offers.iter().cloned().collect::<BTreeSet<_>>(),
+            [KING_OF_THE_HILL, GENEVA_CONVENTION, PARRY]
+                .into_iter()
+                .map(str::to_owned)
+                .collect()
+        );
         assert!(
             engine
                 .legal_actions(&state)
@@ -1788,15 +1875,63 @@ mod tests {
 
         let after_white = first_draft_pick(&engine, &state).state;
         assert_eq!(after_white.turn, Player::Black);
-        assert!(matches!(after_white.phase, GamePhase::Draft(_)));
+        let GamePhase::Draft(black_draft) = &after_white.phase else {
+            panic!("black must receive the second opening draft")
+        };
         assert_eq!(after_white.cards.len(), 1);
+        assert!(
+            !black_draft
+                .offers
+                .contains(&after_white.cards[0].definition_id)
+        );
 
         let after_black = first_draft_pick(&engine, &after_white).state;
         assert_eq!(after_black.turn, Player::White);
         assert_eq!(after_black.phase, GamePhase::Playing);
         assert!(after_black.completed_drafts[DraftPhase::Opening.index()]);
         assert_eq!(after_black.cards.len(), 2);
-        assert_eq!(engine.legal_actions(&after_black).unwrap().len(), 20);
+        assert_eq!(
+            engine
+                .legal_actions(&after_black)
+                .unwrap()
+                .iter()
+                .filter(|action| matches!(action, Action::Move(_)))
+                .count(),
+            20
+        );
+    }
+
+    #[test]
+    fn first_draft_uses_opening_middle_and_piece_but_not_end_or_rule_cards() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = standard_play_state(5);
+        let candidates: BTreeSet<_> = engine
+            .draft_candidates(&state, Player::White, DraftPhase::Opening)
+            .into_iter()
+            .collect();
+
+        assert!(candidates.contains(KING_OF_THE_HILL));
+        assert!(candidates.contains(GENEVA_CONVENTION));
+        assert!(candidates.contains(PARRY));
+        assert!(!candidates.contains(EMPTY_LUNCHBOX));
+        assert!(!candidates.contains(PLATFORM));
+    }
+
+    #[test]
+    fn first_draft_applies_the_web_opening_weight_boost() {
+        assert_eq!(
+            draft_card_weight_units(KING_OF_THE_HILL, DraftPhase::Opening),
+            117
+        );
+        assert_eq!(
+            draft_card_weight_units(GENEVA_CONVENTION, DraftPhase::Opening),
+            104
+        );
+        assert_eq!(draft_card_weight_units(PARRY, DraftPhase::Opening), 60);
+        assert_eq!(
+            draft_card_weight_units(KING_OF_THE_HILL, DraftPhase::Middle),
+            90
+        );
     }
 
     #[test]
@@ -1863,7 +1998,6 @@ mod tests {
         state.turns_taken = [10, 9];
         state = engine.apply(&state, movement("g8", "f6")).unwrap().state;
         state = first_draft_pick(&engine, &state).state;
-        state = first_draft_pick(&engine, &state).state;
 
         let white_card = state
             .cards
@@ -1892,6 +2026,38 @@ mod tests {
             .unwrap()
             .iter()
             .any(|action| matches!(action, Action::UseCard { instance_id, .. } if *instance_id == white_card.instance_id)));
+    }
+
+    #[test]
+    fn milestone_draft_skips_both_players_when_the_pool_is_exhausted() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(15);
+        state.completed_drafts[DraftPhase::Opening.index()] = true;
+        state.turn = Player::Black;
+        state.turns_taken = [10, 9];
+        state = engine
+            .grant_card(&state, 77, PARRY, Player::White)
+            .unwrap()
+            .state;
+
+        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        assert_eq!(transition.state.phase, GamePhase::Playing);
+        assert_eq!(transition.state.turn, Player::White);
+        assert!(transition.state.completed_drafts[DraftPhase::Middle.index()]);
+        assert_eq!(
+            transition
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event,
+                    Event::DraftSkipped {
+                        phase: DraftPhase::Middle,
+                        ..
+                    }
+                ))
+                .count(),
+            2
+        );
     }
 
     #[test]

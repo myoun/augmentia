@@ -320,6 +320,11 @@ fn render_events(output: &mut impl Write, events: &[Event]) -> io::Result<()> {
                 player_name(*player),
                 card_name(definition_id)
             )?,
+            Event::DraftSkipped { phase, player } => writeln!(
+                output,
+                "→ {}의 {phase:?} 드래프트를 건너뜁니다 (후보 없음).",
+                player_name(*player)
+            )?,
             Event::CardUsed {
                 owner,
                 definition_id,

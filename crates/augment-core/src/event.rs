@@ -13,6 +13,10 @@ pub enum Event {
         offer_index: u16,
         definition_id: String,
     },
+    DraftSkipped {
+        phase: DraftPhase,
+        player: Player,
+    },
     DraftCompleted {
         phase: DraftPhase,
         resume_turn: Player,
