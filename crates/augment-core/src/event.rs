@@ -1,8 +1,32 @@
-use crate::{Action, GameState, GameStatus, Piece, Player, Square};
+use crate::{Action, DraftPhase, GameState, GameStatus, Piece, Player, Square};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Event {
+    DraftStarted {
+        phase: DraftPhase,
+        player: Player,
+        offers: Vec<String>,
+    },
+    DraftPicked {
+        phase: DraftPhase,
+        player: Player,
+        offer_index: u16,
+        definition_id: String,
+    },
+    DraftCompleted {
+        phase: DraftPhase,
+        resume_turn: Player,
+    },
+    DeathmatchStarted {
+        shared_turn: u32,
+        interval_full_turns: u32,
+    },
     CardGranted {
+        owner: Player,
+        instance_id: u32,
+        definition_id: String,
+    },
+    CardActivated {
         owner: Player,
         instance_id: u32,
         definition_id: String,

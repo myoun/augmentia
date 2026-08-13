@@ -27,11 +27,32 @@ pub enum GamePhase {
         piece_id: u32,
         source: ForcedMoveSource,
     },
-    Draft {
-        round: u16,
-        offers: Vec<Vec<String>>,
-    },
+    Draft(DraftState),
     AwaitingChoice(PendingChoice),
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum DraftPhase {
+    Opening,
+    Middle,
+    End,
+}
+
+impl DraftPhase {
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Opening => 0,
+            Self::Middle => 1,
+            Self::End => 2,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DraftState {
+    pub phase: DraftPhase,
+    pub offers: Vec<String>,
+    pub resume_turn: Player,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -59,12 +80,14 @@ pub enum WinReason {
     KingCaptured,
     NoLegalActions,
     LowerStarsOnRepetition,
+    LowerStarsAfterDeathmatch,
     CardEffect(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DrawReason {
     EqualStarsOnRepetition,
+    EqualStarsAfterDeathmatch,
     CardEffect(String),
 }
 
@@ -76,6 +99,23 @@ pub struct CardInstance {
     /// Stars are stored in half-star units so all comparisons are integer-only.
     pub half_stars: u16,
     pub charges: u16,
+    /// MIDDLE and END draft cards unlock after their owner's first subsequent turn.
+    pub available_after_turn: Option<u32>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DeathmatchState {
+    pub started_at_shared_turn: u32,
+    pub quiet_full_turns: u32,
+    pub interval_full_turns: u32,
+    pub progress_this_round: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EnPassantState {
+    pub target: Square,
+    pub captured: Square,
+    pub pawn_owner: Player,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -115,10 +155,14 @@ pub struct GameState {
     pub cards: Vec<CardInstance>,
     pub half_star_totals: [u16; 2],
     pub turns_taken: [u32; 2],
+    pub completed_drafts: [bool; 3],
+    pub deathmatch: Option<DeathmatchState>,
+    pub en_passant: Option<EnPassantState>,
     pub applied_rules: Vec<String>,
     pub card_runtime: CardRuntimeState,
     rng: DeterministicRng,
     next_piece_id: u32,
+    next_card_instance_id: u32,
     repetitions: BTreeMap<u64, u8>,
 }
 
@@ -147,10 +191,14 @@ impl GameState {
             cards: Vec::new(),
             half_star_totals: [0, 0],
             turns_taken: [0, 0],
+            completed_drafts: [false; 3],
+            deathmatch: None,
+            en_passant: None,
             applied_rules: Vec::new(),
             card_runtime: CardRuntimeState::default(),
             rng: DeterministicRng::new(seed),
             next_piece_id,
+            next_card_instance_id: 1,
             repetitions: BTreeMap::new(),
         };
         state.record_current_position();
@@ -179,6 +227,31 @@ impl GameState {
         let id = self.next_piece_id.max(1);
         self.next_piece_id = id.saturating_add(1).max(1);
         id
+    }
+
+    pub(crate) fn allocate_card_instance_id(&mut self) -> u32 {
+        let after_existing = self
+            .cards
+            .iter()
+            .map(|card| card.instance_id)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1)
+            .max(1);
+        let id = self.next_card_instance_id.max(after_existing).max(1);
+        self.next_card_instance_id = id.saturating_add(1).max(1);
+        id
+    }
+
+    pub(crate) fn reset_repetition_history(&mut self) {
+        self.repetitions.clear();
+    }
+
+    pub(crate) fn mark_deathmatch_progress(&mut self) {
+        if let Some(deathmatch) = &mut self.deathmatch {
+            deathmatch.quiet_full_turns = 0;
+            deathmatch.progress_this_round = true;
+        }
     }
 
     pub fn shared_turn_count(&self) -> u32 {
@@ -212,6 +285,29 @@ impl GameState {
             hash.u8(card.owner.index() as u8);
             hash.u16(card.half_stars);
             hash.u16(card.charges);
+            hash.u32(card.available_after_turn.map_or(0, |turn| {
+                turn.saturating_sub(self.turns_taken[card.owner.index()])
+                    .saturating_add(1)
+            }));
+        }
+        for completed in self.completed_drafts {
+            hash.u8(u8::from(completed));
+        }
+        match self.deathmatch {
+            None => hash.u8(0),
+            Some(deathmatch) => {
+                hash.u8(1);
+                hash.u32(deathmatch.interval_full_turns);
+            }
+        }
+        match self.en_passant {
+            None => hash.u8(0),
+            Some(en_passant) => {
+                hash.u8(1);
+                hash.u8(en_passant.target.index() as u8);
+                hash.u8(en_passant.captured.index() as u8);
+                hash.u8(en_passant.pawn_owner.index() as u8);
+            }
         }
         for rule in &self.applied_rules {
             hash.bytes(rule.as_bytes());
@@ -258,14 +354,12 @@ impl GameState {
                     ForcedMoveSource::Platform => 0,
                 });
             }
-            GamePhase::Draft { round, offers } => {
+            GamePhase::Draft(draft) => {
                 hash.u8(2);
-                hash.u16(*round);
-                for bundle in offers {
-                    for card in bundle {
-                        hash.bytes(card.as_bytes());
-                    }
-                    hash.u8(0xff);
+                hash.u8(draft.phase.index() as u8);
+                hash.u8(draft.resume_turn.index() as u8);
+                for card in &draft.offers {
+                    hash.bytes(card.as_bytes());
                 }
             }
             GamePhase::AwaitingChoice(choice) => {
@@ -292,6 +386,7 @@ impl GameState {
         hash.u32(self.turns_taken[0]);
         hash.u32(self.turns_taken[1]);
         hash.u32(self.next_piece_id);
+        hash.u32(self.next_card_instance_id);
         for status in self.card_runtime.empty_lunchboxes.values() {
             hash.u32(status.deadline_turn);
         }
@@ -299,6 +394,11 @@ impl GameState {
             hash.u32(platform.spawned_at);
             hash.u32(platform.next_at);
             hash.u32(platform.nonce);
+        }
+        if let Some(deathmatch) = self.deathmatch {
+            hash.u32(deathmatch.started_at_shared_turn);
+            hash.u32(deathmatch.quiet_full_turns);
+            hash.u8(u8::from(deathmatch.progress_this_round));
         }
         match &self.status {
             GameStatus::Ongoing => hash.u8(0),

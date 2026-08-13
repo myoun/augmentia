@@ -35,7 +35,7 @@ ruleset/augment_chess_20260807-r2
 업데이트 날짜를 제공하지 않는 무통보 변경이라면 최초 관측 날짜를 사용하고 source
 metadata에 `upstream_date_unknown: true`를 남긴다.
 
-현재 `augment_chess_20260807`은 카드 coverage가 `scaffold`이므로 태그를 만들지 않는다.
+현재 `augment_chess_20260807`은 카드 coverage가 `partial`이므로 태그를 만들지 않는다.
 태그는 아래 release gate를 모두 통과한 뒤에만 생성한다.
 
 ## 웹 번들과 bug compatibility

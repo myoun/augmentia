@@ -27,8 +27,8 @@
     "immobility_loses": true,
     "repetition_count": 3,
     "repetition_tiebreak": "lower_half_star_total",
-    "overtime_starts_at_move_count": 45,
-    "overtime_quiet_move_count": 10
+    "deathmatch_starts_at_move_count": 45,
+    "deathmatch_quiet_move_count": 10
   },
   "modes": [
     {

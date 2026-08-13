@@ -69,6 +69,13 @@ impl RulesetManifest {
                 "repetition_count must be at least two".to_owned(),
             ));
         }
+        if self.base_rules.deathmatch_starts_at_move_count == 0
+            || self.base_rules.deathmatch_quiet_move_count == 0
+        {
+            return Err(RulesetError::InvalidManifest(
+                "deathmatch thresholds must be positive".to_owned(),
+            ));
+        }
         if self.base_rules.repetition_tiebreak != "lower_half_star_total" {
             return Err(RulesetError::InvalidManifest(format!(
                 "unsupported repetition_tiebreak {:?}",
@@ -131,8 +138,8 @@ pub struct BaseRules {
     pub immobility_loses: bool,
     pub repetition_count: u8,
     pub repetition_tiebreak: String,
-    pub overtime_starts_at_move_count: u32,
-    pub overtime_quiet_move_count: u32,
+    pub deathmatch_starts_at_move_count: u32,
+    pub deathmatch_quiet_move_count: u32,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -207,6 +214,8 @@ mod tests {
         assert_eq!(manifest.coverage.implemented_card_count, 5);
         assert_eq!(manifest.coverage.behavioral_slice_card_count, 5);
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
+        assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
+        assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);
         assert_eq!(
             manifest.artifacts.source_manifest,
             "sources/source-manifest.json"

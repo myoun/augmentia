@@ -11,12 +11,22 @@ pub enum CardActivation {
     Rule,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum CardPhase {
+    Opening,
+    Middle,
+    End,
+    Piece,
+    Rule,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ImplementedCardDefinition {
     pub id: &'static str,
     pub name_ko: &'static str,
     pub effect: &'static str,
     pub activation: CardActivation,
+    pub phase: CardPhase,
     pub half_stars: u16,
 }
 
@@ -26,6 +36,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         name_ko: "언덕의 왕",
         effect: "kingOfTheHill",
         activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
         half_stars: 5,
     },
     ImplementedCardDefinition {
@@ -33,6 +44,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         name_ko: "제네바 협약",
         effect: "genevaConvention",
         activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
         half_stars: 6,
     },
     ImplementedCardDefinition {
@@ -40,6 +52,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         name_ko: "패링",
         effect: "parry",
         activation: CardActivation::Active,
+        phase: CardPhase::Middle,
         half_stars: 8,
     },
     ImplementedCardDefinition {
@@ -47,6 +60,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         name_ko: "빈 찬합",
         effect: "emptyLunchbox",
         activation: CardActivation::Active,
+        phase: CardPhase::End,
         half_stars: 7,
     },
     ImplementedCardDefinition {
@@ -54,6 +68,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 5] = [
         name_ko: "발판",
         effect: "platformRule",
         activation: CardActivation::Rule,
+        phase: CardPhase::Rule,
         half_stars: 0,
     },
 ];
@@ -93,6 +108,16 @@ mod tests {
             assert_eq!(
                 snapshot["half_stars"].as_u64(),
                 Some(compiled.half_stars.into())
+            );
+            assert_eq!(
+                snapshot["phase"].as_str(),
+                Some(match compiled.phase {
+                    CardPhase::Opening => "OPENING",
+                    CardPhase::Middle => "MIDDLE",
+                    CardPhase::End => "END",
+                    CardPhase::Piece => "PIECE",
+                    CardPhase::Rule => "RULE",
+                })
             );
         }
     }

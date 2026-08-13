@@ -1,7 +1,8 @@
 use crate::{
-    Action, ActionTarget, CardActivation, CardInstance, DrawReason, EMPTY_LUNCHBOX, EffectCommand,
-    EffectRegistry, EmptyLunchboxStatus, Event, ForcedMoveSource, GENEVA_CONVENTION, GamePhase,
-    GameState, GameStatus, KING_OF_THE_HILL, Mode, MoveAction, PARRY, PLATFORM, Piece, PieceKind,
+    Action, ActionTarget, CardActivation, CardInstance, CardPhase, DeathmatchState, DraftPhase,
+    DraftState, DrawReason, EMPTY_LUNCHBOX, EffectCommand, EffectRegistry, EmptyLunchboxStatus,
+    EnPassantState, Event, ForcedMoveSource, GENEVA_CONVENTION, GamePhase, GameState, GameStatus,
+    IMPLEMENTED_CARDS, KING_OF_THE_HILL, Mode, MoveAction, PARRY, PLATFORM, Piece, PieceKind,
     PlatformRuleState, Player, RulesetManifest, Square, Transition, WinReason, implemented_card,
 };
 use std::collections::BTreeSet;
@@ -36,7 +37,14 @@ impl Engine {
         if self.ruleset.mode(mode.id()).is_none() {
             return Err(EngineError::UnknownMode(mode.id().to_owned()));
         }
-        Ok(GameState::standard(self.ruleset.id.clone(), mode, seed))
+        if mode != Mode::Standard {
+            return Err(EngineError::UnsupportedMode(mode.id().to_owned()));
+        }
+
+        let mut state = GameState::standard(self.ruleset.id.clone(), mode, seed);
+        state.reset_repetition_history();
+        self.start_draft(&mut state, DraftPhase::Opening, Player::White, None);
+        Ok(state)
     }
 
     /// Add a player-owned card as a draft/acquisition transition.
@@ -71,6 +79,7 @@ impl Engine {
             owner,
             half_stars: definition.half_stars,
             charges: u16::from(definition.activation == CardActivation::Active),
+            available_after_turn: None,
         });
         match definition_id {
             KING_OF_THE_HILL => next.card_runtime.hill_king[owner.index()] = true,
@@ -130,6 +139,196 @@ impl Engine {
         })
     }
 
+    fn draft_candidates(
+        &self,
+        state: &GameState,
+        player: Player,
+        phase: DraftPhase,
+    ) -> Vec<String> {
+        let owned: BTreeSet<_> = state
+            .cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .map(|card| card.definition_id.as_str())
+            .collect();
+
+        IMPLEMENTED_CARDS
+            .iter()
+            .filter(|card| card.activation != CardActivation::Rule)
+            .filter(|card| !owned.contains(card.id))
+            .filter(|card| match phase {
+                DraftPhase::Opening => card.phase == CardPhase::Opening,
+                DraftPhase::Middle => {
+                    matches!(card.phase, CardPhase::Middle | CardPhase::Piece)
+                }
+                DraftPhase::End => matches!(card.phase, CardPhase::Middle | CardPhase::End),
+            })
+            .map(|card| card.id.to_owned())
+            .collect()
+    }
+
+    fn draw_draft_offers(
+        &self,
+        state: &mut GameState,
+        player: Player,
+        phase: DraftPhase,
+    ) -> Vec<String> {
+        let mut candidates = self.draft_candidates(state, player, phase);
+        let mut offers = Vec::new();
+        while offers.len() < 3 && !candidates.is_empty() {
+            let (_, index) = state.rng_mut().web_choice_index(candidates.len());
+            offers.push(candidates.remove(index.expect("non-empty draft candidate list")));
+        }
+        offers
+    }
+
+    fn start_draft(
+        &self,
+        state: &mut GameState,
+        phase: DraftPhase,
+        player: Player,
+        resume_turn: Option<Player>,
+    ) {
+        let resume_turn = resume_turn.unwrap_or(Player::White);
+        let offers = self.draw_draft_offers(state, player, phase);
+        state.turn = player;
+        state.phase = GamePhase::Draft(DraftState {
+            phase,
+            offers,
+            resume_turn,
+        });
+    }
+
+    fn apply_card_definition(&self, state: &mut GameState, definition_id: &str, owner: Player) {
+        match definition_id {
+            KING_OF_THE_HILL => state.card_runtime.hill_king[owner.index()] = true,
+            GENEVA_CONVENTION => state.card_runtime.geneva_convention[owner.index()] = true,
+            _ => {}
+        }
+    }
+
+    fn activate_cards_for_turn(
+        &self,
+        state: &mut GameState,
+        player: Player,
+        events: &mut Vec<Event>,
+    ) {
+        let ready: Vec<_> = state
+            .cards
+            .iter()
+            .enumerate()
+            .filter(|(_, card)| card.owner == player)
+            .filter(|(_, card)| {
+                card.available_after_turn
+                    .is_some_and(|turn| state.turns_taken[player.index()] >= turn)
+            })
+            .map(|(index, card)| (index, card.instance_id, card.definition_id.clone()))
+            .collect();
+
+        for (index, instance_id, definition_id) in ready {
+            state.cards[index].available_after_turn = None;
+            if implemented_card(&definition_id)
+                .is_some_and(|definition| definition.activation == CardActivation::Passive)
+            {
+                self.apply_card_definition(state, &definition_id, player);
+            }
+            events.push(Event::CardActivated {
+                owner: player,
+                instance_id,
+                definition_id,
+            });
+        }
+    }
+
+    fn apply_draft_pick(
+        &self,
+        state: &GameState,
+        action: Action,
+        offer_index: u16,
+    ) -> Result<Transition, EngineError> {
+        let mut next = state.clone();
+        let actor = next.turn;
+        let draft = match &next.phase {
+            GamePhase::Draft(draft) => draft.clone(),
+            _ => {
+                return Err(EngineError::Invariant(
+                    "draft action outside draft".to_owned(),
+                ));
+            }
+        };
+        let definition_id = draft
+            .offers
+            .get(usize::from(offer_index))
+            .cloned()
+            .ok_or_else(|| EngineError::Invariant("legal draft index is missing".to_owned()))?;
+        let definition = implemented_card(&definition_id)
+            .ok_or_else(|| EngineError::UnknownCard(definition_id.clone()))?;
+        let instance_id = next.allocate_card_instance_id();
+        let delayed = draft.phase != DraftPhase::Opening;
+        next.add_card(CardInstance {
+            instance_id,
+            definition_id: definition_id.clone(),
+            owner: actor,
+            half_stars: definition.half_stars,
+            charges: u16::from(definition.activation == CardActivation::Active),
+            available_after_turn: delayed
+                .then(|| next.turns_taken[actor.index()].saturating_add(1)),
+        });
+        if !delayed && definition.activation == CardActivation::Passive {
+            self.apply_card_definition(&mut next, &definition_id, actor);
+        }
+
+        let mut events = vec![
+            Event::ActionApplied { actor, action },
+            Event::DraftPicked {
+                phase: draft.phase,
+                player: actor,
+                offer_index,
+                definition_id: definition_id.clone(),
+            },
+            Event::CardGranted {
+                owner: actor,
+                instance_id,
+                definition_id,
+            },
+        ];
+
+        if actor == Player::White {
+            self.start_draft(
+                &mut next,
+                draft.phase,
+                Player::Black,
+                Some(draft.resume_turn),
+            );
+            let GamePhase::Draft(next_draft) = &next.phase else {
+                unreachable!("start_draft always installs a draft")
+            };
+            events.push(Event::DraftStarted {
+                phase: next_draft.phase,
+                player: Player::Black,
+                offers: next_draft.offers.clone(),
+            });
+        } else {
+            next.completed_drafts[draft.phase.index()] = true;
+            next.phase = GamePhase::Playing;
+            next.turn = draft.resume_turn;
+            self.activate_cards_for_turn(&mut next, draft.resume_turn, &mut events);
+            next.record_current_position();
+            events.push(Event::DraftCompleted {
+                phase: draft.phase,
+                resume_turn: draft.resume_turn,
+            });
+            events.push(Event::TurnChanged {
+                player: draft.resume_turn,
+            });
+        }
+
+        Ok(Transition {
+            state: next,
+            events,
+        })
+    }
+
     pub fn legal_actions(&self, state: &GameState) -> Result<Vec<Action>, EngineError> {
         self.ensure_ruleset(state)?;
         if state.status != GameStatus::Ongoing {
@@ -146,7 +345,11 @@ impl Engine {
             GamePhase::ForcedMove { piece_id, .. } => {
                 Ok(self.generate_piece_move_actions(state, *piece_id))
             }
-            GamePhase::Draft { .. } => Err(EngineError::UnsupportedPhase("draft")),
+            GamePhase::Draft(draft) => Ok((0..draft.offers.len())
+                .map(|index| Action::DraftPick {
+                    offer_index: index as u16,
+                })
+                .collect()),
             GamePhase::AwaitingChoice(_) => Err(EngineError::UnsupportedPhase("choice")),
         }
     }
@@ -169,7 +372,8 @@ impl Engine {
                 instance_id,
                 target,
             } => self.apply_active_card(state, action, instance_id, target),
-            _ => Err(EngineError::UnsupportedPhase("non-move action")),
+            Action::DraftPick { offer_index } => self.apply_draft_pick(state, action, offer_index),
+            Action::ResolveChoice { .. } => Err(EngineError::UnsupportedPhase("choice")),
         }
     }
 
@@ -222,6 +426,7 @@ impl Engine {
             }
         }
         next.quiet_ply = 0;
+        next.mark_deathmatch_progress();
         let mut events = vec![
             Event::ActionApplied { actor, action },
             Event::CardUsed {
@@ -250,7 +455,30 @@ impl Engine {
             .board
             .get(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
-        let target_piece = next.board.get(movement.to);
+        let destination_piece = next.board.get(movement.to);
+        let en_passant_capture = (moving_piece.kind == PieceKind::Pawn
+            && destination_piece.is_none()
+            && movement.from.file() != movement.to.file())
+        .then_some(next.en_passant)
+        .flatten()
+        .filter(|en_passant| {
+            en_passant.target == movement.to
+                && en_passant.pawn_owner != actor
+                && en_passant.captured.rank() == movement.from.rank()
+                && en_passant.captured.file() == movement.to.file()
+        })
+        .and_then(|en_passant| {
+            next.board
+                .get(en_passant.captured)
+                .filter(|piece| {
+                    piece.kind == PieceKind::Pawn && piece.owner == en_passant.pawn_owner
+                })
+                .map(|piece| (en_passant.captured, piece))
+        });
+        let capture_square = en_passant_capture
+            .map(|(square, _)| square)
+            .unwrap_or(movement.to);
+        let target_piece = destination_piece.or(en_passant_capture.map(|(_, piece)| piece));
         let irreversible = moving_piece.kind == PieceKind::Pawn || target_piece.is_some();
         let mut moving_survived = true;
         let mut events = vec![Event::ActionApplied {
@@ -274,7 +502,7 @@ impl Engine {
         };
 
         if let Some(captured) = target_piece {
-            next.board.set(movement.to, None);
+            next.board.set(capture_square, None);
             if parry_triggered {
                 self.clear_removed_piece_statuses(&mut next, moving_piece.id);
                 let mut retaliator = captured;
@@ -301,7 +529,7 @@ impl Engine {
                 events.push(Event::PieceCaptured {
                     actor,
                     piece: captured,
-                    at: movement.to,
+                    at: capture_square,
                 });
             }
         } else {
@@ -312,12 +540,33 @@ impl Engine {
             next.board.set(movement.to, Some(placed_piece));
         }
 
+        let previous_en_passant = next.en_passant;
+        next.en_passant = if moving_piece.kind == PieceKind::Pawn
+            && movement.from.file() == movement.to.file()
+            && movement.from.rank().abs_diff(movement.to.rank()) == 2
+        {
+            Some(EnPassantState {
+                target: Square::new(
+                    movement.from.file(),
+                    (movement.from.rank() + movement.to.rank()) / 2,
+                )
+                .expect("midpoint of a legal pawn double-step is on board"),
+                captured: movement.to,
+                pawn_owner: actor,
+            })
+        } else {
+            previous_en_passant.filter(|en_passant| en_passant.pawn_owner == actor)
+        };
+
         next.ply = next.ply.saturating_add(1);
         next.quiet_ply = if irreversible {
             0
         } else {
             next.quiet_ply.saturating_add(1)
         };
+        if irreversible {
+            next.mark_deathmatch_progress();
+        }
 
         self.apply_card_reactions(&mut next, &mut events)?;
 
@@ -417,12 +666,14 @@ impl Engine {
                     spawned.id = state.allocate_piece_id();
                 }
                 state.board.set(*square, Some(spawned));
+                state.mark_deathmatch_progress();
             }
             EffectCommand::RemovePiece { square } => {
                 if let Some(removed) = state.board.get(*square) {
                     self.clear_removed_piece_statuses(state, removed.id);
                 }
                 state.board.set(*square, None);
+                state.mark_deathmatch_progress();
             }
             EffectCommand::Win { winner, reason } => {
                 state.status = GameStatus::Won {
@@ -461,6 +712,102 @@ impl Engine {
         }
     }
 
+    fn resolve_lower_stars_after_deathmatch(&self, state: &mut GameState) {
+        let [white, black] = state.half_star_totals;
+        state.status = match white.cmp(&black) {
+            std::cmp::Ordering::Less => GameStatus::Won {
+                winner: Player::White,
+                reason: WinReason::LowerStarsAfterDeathmatch,
+            },
+            std::cmp::Ordering::Greater => GameStatus::Won {
+                winner: Player::Black,
+                reason: WinReason::LowerStarsAfterDeathmatch,
+            },
+            std::cmp::Ordering::Equal => GameStatus::Draw {
+                reason: DrawReason::EqualStarsAfterDeathmatch,
+            },
+        };
+    }
+
+    fn tick_deathmatch_after_turn(&self, state: &mut GameState, actor: Player) -> bool {
+        if actor != Player::Black {
+            return false;
+        }
+        let Some(deathmatch) = &mut state.deathmatch else {
+            return false;
+        };
+        if deathmatch.progress_this_round {
+            deathmatch.quiet_full_turns = 0;
+            deathmatch.progress_this_round = false;
+            return false;
+        }
+        deathmatch.quiet_full_turns = deathmatch
+            .quiet_full_turns
+            .saturating_add(1)
+            .min(deathmatch.interval_full_turns);
+        if deathmatch.quiet_full_turns < deathmatch.interval_full_turns {
+            return false;
+        }
+        self.resolve_lower_stars_after_deathmatch(state);
+        true
+    }
+
+    fn start_deathmatch_if_due(&self, state: &mut GameState, events: &mut Vec<Event>) {
+        if state.deathmatch.is_some()
+            || state.shared_turn_count() < self.ruleset.base_rules.deathmatch_starts_at_move_count
+        {
+            return;
+        }
+        let shared_turn = state.shared_turn_count();
+        let interval_full_turns = self.ruleset.base_rules.deathmatch_quiet_move_count.max(1);
+        state.deathmatch = Some(DeathmatchState {
+            started_at_shared_turn: shared_turn,
+            quiet_full_turns: 0,
+            interval_full_turns,
+            progress_this_round: false,
+        });
+        events.push(Event::DeathmatchStarted {
+            shared_turn,
+            interval_full_turns,
+        });
+    }
+
+    fn start_due_milestone_draft(
+        &self,
+        state: &mut GameState,
+        resume_turn: Player,
+        events: &mut Vec<Event>,
+    ) -> bool {
+        if !state.completed_drafts[DraftPhase::Opening.index()] {
+            return false;
+        }
+        let shared_turn = state.shared_turn_count();
+        let phase = if !state.completed_drafts[DraftPhase::Middle.index()] && shared_turn >= 10 {
+            Some(DraftPhase::Middle)
+        } else if state.completed_drafts[DraftPhase::Middle.index()]
+            && !state.completed_drafts[DraftPhase::End.index()]
+            && shared_turn >= 20
+        {
+            Some(DraftPhase::End)
+        } else {
+            None
+        };
+        let Some(phase) = phase else {
+            return false;
+        };
+
+        self.start_draft(state, phase, Player::White, Some(resume_turn));
+        let GamePhase::Draft(draft) = &state.phase else {
+            unreachable!("start_draft always installs a draft")
+        };
+        events.push(Event::DraftStarted {
+            phase,
+            player: Player::White,
+            offers: draft.offers.clone(),
+        });
+        true
+    }
+
     fn finish_turn(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
@@ -474,10 +821,19 @@ impl Engine {
             return;
         }
         self.tick_platform_after_turn(state, events);
+        if self.tick_deathmatch_after_turn(state, actor) {
+            self.push_game_ended(state, events);
+            return;
+        }
+        self.start_deathmatch_if_due(state, events);
 
         let defender = actor.opponent();
         state.turn = defender;
         events.push(Event::TurnChanged { player: defender });
+        self.activate_cards_for_turn(state, defender, events);
+        if self.start_due_milestone_draft(state, defender, events) {
+            return;
+        }
         if self.ruleset.base_rules.immobility_loses && self.generate_move_actions(state).is_empty()
         {
             state.status = GameStatus::Won {
@@ -566,6 +922,7 @@ impl Engine {
             }
             state.board.set(square, None);
             self.clear_removed_piece_statuses(state, piece_id);
+            state.mark_deathmatch_progress();
             events.push(Event::PieceRemoved {
                 actor: status.by,
                 piece,
@@ -660,7 +1017,12 @@ impl Engine {
 
     fn generate_card_actions(&self, state: &GameState, actions: &mut Vec<Action>) {
         for card in &state.cards {
-            if card.owner != state.turn || card.charges == 0 {
+            if card.owner != state.turn
+                || card.charges == 0
+                || card
+                    .available_after_turn
+                    .is_some_and(|available| state.turns_taken[card.owner.index()] < available)
+            {
                 continue;
             }
             match card.definition_id.as_str() {
@@ -820,16 +1182,16 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
-        let (direction, start_rank, promotion_rank) = match piece.owner {
-            Player::White => (1, 1, 7),
-            Player::Black => (-1, 6, 0),
+        let (direction, double_step_ranks, promotion_rank) = match piece.owner {
+            Player::White => (1, [1, 0], 7),
+            Player::Black => (-1, [6, 7], 0),
         };
 
         if let Some(one_step) = from.offset(0, direction)
             && state.board.get(one_step).is_none()
         {
             push_pawn_move(from, one_step, promotion_rank, actions);
-            if from.rank() == start_rank
+            if double_step_ranks.contains(&from.rank())
                 && let Some(two_steps) = from.offset(0, direction * 2)
                 && state.board.get(two_steps).is_none()
             {
@@ -841,11 +1203,25 @@ impl Engine {
             let Some(target) = from.offset(file_delta, direction) else {
                 continue;
             };
-            if state
+            let regular_capture = state
                 .board
                 .get(target)
-                .is_some_and(|target_piece| self.can_capture(state, piece, target_piece))
-            {
+                .is_some_and(|target_piece| self.can_capture(state, piece, target_piece));
+            let en_passant_capture = state.en_passant.is_some_and(|en_passant| {
+                en_passant.target == target
+                    && en_passant.pawn_owner != piece.owner
+                    && en_passant.captured.rank() == from.rank()
+                    && en_passant.captured.file() == target.file()
+                    && state
+                        .board
+                        .get(en_passant.captured)
+                        .is_some_and(|captured| {
+                            captured.kind == PieceKind::Pawn
+                                && captured.owner == en_passant.pawn_owner
+                                && self.can_capture(state, piece, captured)
+                        })
+            });
+            if regular_capture || en_passant_capture {
                 push_pawn_move(from, target, promotion_rank, actions);
             }
         }
@@ -934,6 +1310,7 @@ fn push_pawn_move(from: Square, to: Square, promotion_rank: u8, actions: &mut Ve
 pub enum EngineError {
     RulesetMismatch { engine: String, state: String },
     UnknownMode(String),
+    UnsupportedMode(String),
     UnknownCard(String),
     CardIsRule(String),
     CardIsNotRule(String),
@@ -953,6 +1330,7 @@ impl fmt::Display for EngineError {
                 write!(f, "ruleset mismatch: engine={engine:?}, state={state:?}")
             }
             Self::UnknownMode(mode) => write!(f, "unknown mode {mode:?}"),
+            Self::UnsupportedMode(mode) => write!(f, "mode {mode:?} is not implemented yet"),
             Self::UnknownCard(card) => write!(f, "unknown or unimplemented card {card:?}"),
             Self::CardIsRule(card) => write!(f, "card {card:?} is a global RULE"),
             Self::CardIsNotRule(card) => write!(f, "card {card:?} is not a global RULE"),
@@ -1000,10 +1378,311 @@ mod tests {
         GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, turn, seed)
     }
 
+    fn standard_play_state(seed: u64) -> GameState {
+        GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, seed)
+    }
+
+    fn first_draft_pick(engine: &Engine, state: &GameState) -> Transition {
+        engine
+            .apply(state, Action::DraftPick { offer_index: 0 })
+            .unwrap()
+    }
+
+    #[test]
+    fn standard_game_runs_white_then_black_opening_draft_before_play() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = engine.new_game(Mode::Standard, 7).unwrap();
+        let GamePhase::Draft(draft) = &state.phase else {
+            panic!("standard game must start in the opening draft")
+        };
+        assert_eq!(draft.phase, DraftPhase::Opening);
+        assert_eq!(state.turn, Player::White);
+        assert!(!draft.offers.is_empty());
+        assert!(draft.offers.len() <= 3);
+        assert!(
+            engine
+                .legal_actions(&state)
+                .unwrap()
+                .iter()
+                .all(|action| matches!(action, Action::DraftPick { .. }))
+        );
+
+        let after_white = first_draft_pick(&engine, &state).state;
+        assert_eq!(after_white.turn, Player::Black);
+        assert!(matches!(after_white.phase, GamePhase::Draft(_)));
+        assert_eq!(after_white.cards.len(), 1);
+
+        let after_black = first_draft_pick(&engine, &after_white).state;
+        assert_eq!(after_black.turn, Player::White);
+        assert_eq!(after_black.phase, GamePhase::Playing);
+        assert!(after_black.completed_drafts[DraftPhase::Opening.index()]);
+        assert_eq!(after_black.cards.len(), 2);
+        assert_eq!(engine.legal_actions(&after_black).unwrap().len(), 20);
+    }
+
+    #[test]
+    fn chaos_and_grand_are_explicitly_out_of_scope() {
+        let engine = Engine::bundled_20260807().unwrap();
+        assert_eq!(
+            engine.new_game(Mode::Chaos, 1).unwrap_err(),
+            EngineError::UnsupportedMode("chaos".to_owned())
+        );
+        assert_eq!(
+            engine.new_game(Mode::Grand, 1).unwrap_err(),
+            EngineError::UnsupportedMode("grand".to_owned())
+        );
+    }
+
+    #[test]
+    fn middle_draft_starts_after_both_players_complete_ten_turns() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(11);
+        state.completed_drafts[DraftPhase::Opening.index()] = true;
+        state.turn = Player::Black;
+        state.turns_taken = [10, 9];
+
+        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        let GamePhase::Draft(draft) = &transition.state.phase else {
+            panic!("the 10-turn checkpoint must start a draft")
+        };
+        assert_eq!(draft.phase, DraftPhase::Middle);
+        assert_eq!(transition.state.turn, Player::White);
+        assert_eq!(draft.resume_turn, Player::White);
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::DraftStarted {
+                phase: DraftPhase::Middle,
+                player: Player::White,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn end_draft_starts_after_both_players_complete_twenty_turns() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(12);
+        state.completed_drafts[DraftPhase::Opening.index()] = true;
+        state.completed_drafts[DraftPhase::Middle.index()] = true;
+        state.turn = Player::Black;
+        state.turns_taken = [20, 19];
+
+        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        let GamePhase::Draft(draft) = &transition.state.phase else {
+            panic!("the 20-turn checkpoint must start a draft")
+        };
+        assert_eq!(draft.phase, DraftPhase::End);
+        assert_eq!(draft.resume_turn, Player::White);
+    }
+
+    #[test]
+    fn middle_draft_card_is_locked_for_its_owners_first_turn() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(13);
+        state.completed_drafts[DraftPhase::Opening.index()] = true;
+        state.turn = Player::Black;
+        state.turns_taken = [10, 9];
+        state = engine.apply(&state, movement("g8", "f6")).unwrap().state;
+        state = first_draft_pick(&engine, &state).state;
+        state = first_draft_pick(&engine, &state).state;
+
+        let white_card = state
+            .cards
+            .iter()
+            .find(|card| card.owner == Player::White && card.definition_id == PARRY)
+            .unwrap();
+        assert_eq!(white_card.available_after_turn, Some(11));
+        assert!(
+            !engine
+                .legal_actions(&state)
+                .unwrap()
+                .iter()
+                .any(|action| matches!(action, Action::UseCard { .. }))
+        );
+
+        state = engine.apply(&state, movement("g1", "f3")).unwrap().state;
+        state = engine.apply(&state, movement("f6", "g8")).unwrap().state;
+        let white_card = state
+            .cards
+            .iter()
+            .find(|card| card.owner == Player::White && card.definition_id == PARRY)
+            .unwrap();
+        assert_eq!(white_card.available_after_turn, None);
+        assert!(engine
+            .legal_actions(&state)
+            .unwrap()
+            .iter()
+            .any(|action| matches!(action, Action::UseCard { instance_id, .. } if *instance_id == white_card.instance_id)));
+    }
+
+    #[test]
+    fn deathmatch_starts_at_45_and_resolves_after_ten_quiet_full_turns() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine.ruleset.base_rules.repetition_count = u8::MAX;
+        let mut state = standard_play_state(17);
+        state.completed_drafts = [true; 3];
+        state.turn = Player::Black;
+        state.turns_taken = [45, 44];
+        state.half_star_totals = [2, 4];
+
+        let started = engine.apply(&state, movement("g8", "f6")).unwrap();
+        state = started.state;
+        assert!(started.events.iter().any(|event| matches!(
+            event,
+            Event::DeathmatchStarted {
+                shared_turn: 45,
+                interval_full_turns: 10
+            }
+        )));
+        assert_eq!(state.deathmatch.unwrap().quiet_full_turns, 0);
+
+        for round in 0..10 {
+            let white = if round % 2 == 0 {
+                ("g1", "f3")
+            } else {
+                ("f3", "g1")
+            };
+            let black = if round % 2 == 0 {
+                ("f6", "g8")
+            } else {
+                ("g8", "f6")
+            };
+            state = engine
+                .apply(&state, movement(white.0, white.1))
+                .unwrap()
+                .state;
+            state = engine
+                .apply(&state, movement(black.0, black.1))
+                .unwrap()
+                .state;
+        }
+        assert_eq!(
+            state.status,
+            GameStatus::Won {
+                winner: Player::White,
+                reason: WinReason::LowerStarsAfterDeathmatch,
+            }
+        );
+    }
+
+    #[test]
+    fn pawn_move_resets_the_deathmatch_quiet_window() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine.ruleset.base_rules.repetition_count = u8::MAX;
+        let mut state = standard_play_state(19);
+        state.completed_drafts = [true; 3];
+        state.turn = Player::Black;
+        state.turns_taken = [45, 44];
+        state = engine.apply(&state, movement("g8", "f6")).unwrap().state;
+
+        for round in 0..9 {
+            let white = if round % 2 == 0 {
+                ("g1", "f3")
+            } else {
+                ("f3", "g1")
+            };
+            let black = if round % 2 == 0 {
+                ("f6", "g8")
+            } else {
+                ("g8", "f6")
+            };
+            state = engine
+                .apply(&state, movement(white.0, white.1))
+                .unwrap()
+                .state;
+            state = engine
+                .apply(&state, movement(black.0, black.1))
+                .unwrap()
+                .state;
+        }
+        assert_eq!(state.deathmatch.unwrap().quiet_full_turns, 9);
+
+        state = engine.apply(&state, movement("e2", "e3")).unwrap().state;
+        state = engine.apply(&state, movement("g8", "f6")).unwrap().state;
+        assert_eq!(state.status, GameStatus::Ongoing);
+        assert_eq!(state.deathmatch.unwrap().quiet_full_turns, 0);
+    }
+
+    #[test]
+    fn en_passant_is_generated_applied_and_logged_as_a_capture() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(23);
+        for (from, to) in [("e2", "e4"), ("a7", "a6"), ("e4", "e5"), ("d7", "d5")] {
+            state = engine.apply(&state, movement(from, to)).unwrap().state;
+        }
+        assert_eq!(state.en_passant.unwrap().target, "d6".parse().unwrap());
+        assert!(
+            engine
+                .legal_actions(&state)
+                .unwrap()
+                .contains(&movement("e5", "d6"))
+        );
+
+        let transition = engine.apply(&state, movement("e5", "d6")).unwrap();
+        assert!(transition.state.board.get("d5".parse().unwrap()).is_none());
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("d6".parse().unwrap())
+                .unwrap()
+                .owner,
+            Player::White
+        );
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::PieceCaptured { at, piece, .. }
+                if *at == "d5".parse::<Square>().unwrap() && piece.kind == PieceKind::Pawn
+        )));
+    }
+
+    #[test]
+    fn en_passant_expires_after_the_opponents_next_move() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(29);
+        for (from, to) in [
+            ("e2", "e4"),
+            ("a7", "a6"),
+            ("e4", "e5"),
+            ("d7", "d5"),
+            ("g1", "f3"),
+        ] {
+            state = engine.apply(&state, movement(from, to)).unwrap().state;
+        }
+        assert!(state.en_passant.is_none());
+        state = engine.apply(&state, movement("a6", "a5")).unwrap().state;
+        assert!(
+            !engine
+                .legal_actions(&state)
+                .unwrap()
+                .contains(&movement("e5", "d6"))
+        );
+    }
+
+    #[test]
+    fn web_pawns_may_double_step_from_either_home_rank() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::Pawn),
+                ("h1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            31,
+        );
+        assert!(
+            engine
+                .legal_actions(&state)
+                .unwrap()
+                .contains(&movement("a1", "a3"))
+        );
+    }
+
     #[test]
     fn standard_position_has_twenty_ordered_actions() {
         let engine = Engine::bundled_20260807().unwrap();
-        let state = engine.new_game(Mode::Standard, 1).unwrap();
+        let state = standard_play_state(1);
         let actions = engine.legal_actions(&state).unwrap();
         assert_eq!(actions.len(), 20);
         assert!(actions.windows(2).all(|pair| pair[0] <= pair[1]));
@@ -1012,7 +1691,7 @@ mod tests {
     #[test]
     fn e2_e4_is_a_deterministic_pure_transition() {
         let engine = Engine::bundled_20260807().unwrap();
-        let state = engine.new_game(Mode::Standard, 99).unwrap();
+        let state = standard_play_state(99);
         let before = state.fingerprint();
         let left = engine.apply(&state, movement("e2", "e4")).unwrap();
         let right = engine.apply(&state, movement("e2", "e4")).unwrap();
@@ -1068,7 +1747,7 @@ mod tests {
     #[test]
     fn third_repetition_with_equal_stars_is_a_draw() {
         let engine = Engine::bundled_20260807().unwrap();
-        let mut state = engine.new_game(Mode::Standard, 1).unwrap();
+        let mut state = standard_play_state(1);
         let cycle = [("g1", "f3"), ("g8", "f6"), ("f3", "g1"), ("f6", "g8")];
         for _ in 0..2 {
             for (from, to) in cycle {
@@ -1086,7 +1765,7 @@ mod tests {
     #[test]
     fn lower_star_total_wins_on_third_repetition() {
         let engine = Engine::bundled_20260807().unwrap();
-        let mut state = engine.new_game(Mode::Standard, 1).unwrap();
+        let mut state = standard_play_state(1);
         state.half_star_totals = [2, 4];
         state.record_current_position();
         let cycle = [("g1", "f3"), ("g8", "f6"), ("f3", "g1"), ("f6", "g8")];
@@ -1261,7 +1940,7 @@ mod tests {
             } if purpose == "parry"
         )));
         assert_eq!(state.turn, Player::White);
-        assert_eq!(state.fingerprint(), 0x9cec_7a38_7f28_f764);
+        assert_eq!(state.fingerprint(), 0x743f_7f95_1140_d33b);
     }
 
     #[test]
@@ -1334,7 +2013,7 @@ mod tests {
         assert_eq!(state.board.get("a5".parse().unwrap()), None);
         assert!(state.card_runtime.empty_lunchboxes.is_empty());
         assert_eq!(state.turns_taken[Player::Black.index()], 3);
-        assert_eq!(state.fingerprint(), 0xa47c_6c3a_b134_050d);
+        assert_eq!(state.fingerprint(), 0xf08e_6da3_7b48_0c17);
     }
 
     #[test]
@@ -1461,7 +2140,7 @@ mod tests {
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
         assert_eq!(state.ply, 2);
-        assert_eq!(state.fingerprint(), 0xe4b2_93f4_30d7_1fb7);
+        assert_eq!(state.fingerprint(), 0xd81e_f859_987b_8d37);
     }
 
     #[test]
@@ -1552,6 +2231,7 @@ mod tests {
             owner: Player::White,
             half_stars: 0,
             charges: 0,
+            available_after_turn: None,
         });
         let result = engine.apply(&state, movement("a1", "a2")).unwrap();
         assert_eq!(result.state.half_star_totals, [1, 0]);
