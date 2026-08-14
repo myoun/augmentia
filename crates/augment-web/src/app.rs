@@ -310,6 +310,7 @@ fn cards_view(
                 "available": !indices.is_empty(),
                 "actionIndices": indices,
                 "locked": locked,
+                "openingAutoPending": state.card_runtime.opening_auto_card_ids.contains(&card.instance_id),
                 "availableAfterTurn": card.available_after_turn,
             })
         })
@@ -788,5 +789,21 @@ mod tests {
         ));
         let view = action_view(&state, 0, &action);
         assert_eq!(view["label"], "O-O · e1 → g1");
+    }
+
+    #[test]
+    fn opening_auto_card_is_shown_as_pending_and_not_clickable() {
+        let mut session = GameSession::new(DEFAULT_SEED).unwrap();
+        session.apply_index(0, None).unwrap();
+        let view = session.apply_index(0, None).unwrap();
+        let card = view["cards"]["white"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|card| card["id"] == "otherworld")
+            .unwrap();
+        assert_eq!(card["openingAutoPending"], true);
+        assert_eq!(card["available"], false);
+        assert!(card["actionIndices"].as_array().unwrap().is_empty());
     }
 }

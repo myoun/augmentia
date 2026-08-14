@@ -219,6 +219,9 @@ pub struct LargePieceStatus {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
+    /// Active OPENING cards acquired from the initial draft are forced after their owner's first
+    /// move instead of being exposed as manual card actions.
+    pub opening_auto_card_ids: BTreeSet<u32>,
     pub hill_king: [bool; 2],
     pub geneva_convention: [bool; 2],
     pub pawn_sprint: [bool; 2],
@@ -460,6 +463,9 @@ impl GameState {
         }
         for rule in &self.applied_rules {
             hash.bytes(rule.as_bytes());
+        }
+        for instance_id in &self.card_runtime.opening_auto_card_ids {
+            hash.u32(*instance_id);
         }
         for enabled in self.card_runtime.hill_king {
             hash.u8(u8::from(enabled));

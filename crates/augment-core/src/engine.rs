@@ -1339,6 +1339,13 @@ impl Engine {
             available_after_turn: delayed
                 .then(|| next.turns_taken[actor.index()].saturating_add(1)),
         });
+        if draft.phase == DraftPhase::Opening
+            && next.ply == 0
+            && definition.phase == CardPhase::Opening
+            && definition.activation == CardActivation::Active
+        {
+            next.card_runtime.opening_auto_card_ids.insert(instance_id);
+        }
         if !delayed && definition.activation == CardActivation::Passive {
             self.apply_card_definition(&mut next, &definition_id, actor);
         }
@@ -2126,6 +2133,151 @@ impl Engine {
         })
     }
 
+    fn choose_opening_auto_action(
+        &self,
+        state: &mut GameState,
+        instance_id: u32,
+        definition_id: &str,
+        events: &mut Vec<Event>,
+    ) -> Option<Action> {
+        let mut actions = Vec::new();
+        self.generate_card_actions_with_opening_auto(state, &mut actions, true);
+        let candidates = actions
+            .into_iter()
+            .filter(|action| {
+                matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
+            })
+            .collect::<Vec<_>>();
+        if candidates.is_empty() {
+            return None;
+        }
+        if matches!(
+            candidates.as_slice(),
+            [Action::UseCard {
+                target: ActionTarget::None,
+                ..
+            }]
+        ) {
+            return candidates.into_iter().next();
+        }
+        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+        events.push(Event::RandomSample {
+            purpose: format!("opening-auto-target:{definition_id}"),
+            roll_53: roll,
+        });
+        index.map(|index| candidates[index].clone())
+    }
+
+    fn apply_opening_auto_action(
+        &self,
+        state: &GameState,
+        action: Action,
+    ) -> Result<Transition, EngineError> {
+        let Action::UseCard {
+            instance_id,
+            target,
+        } = action.clone()
+        else {
+            return Err(EngineError::Invariant(
+                "opening auto action must use a card".to_owned(),
+            ));
+        };
+        let actions_remaining = state.actions_remaining;
+        let mut ready = state.clone();
+        ready
+            .card_runtime
+            .opening_auto_card_ids
+            .remove(&instance_id);
+        ready.actions_remaining = ready.actions_remaining.max(1);
+        let mut transition = self.apply_active_card(&ready, action, instance_id, target)?;
+        transition.state.actions_remaining = actions_remaining;
+        Ok(transition)
+    }
+
+    fn opening_move_rollback_state(
+        &self,
+        after_move: &GameState,
+        before_move: &GameState,
+    ) -> GameState {
+        let pending = after_move.card_runtime.opening_auto_card_ids.clone();
+        let mut rollback = after_move.clone();
+        rollback.board = before_move.board.clone();
+        rollback.en_passant = before_move.en_passant;
+        rollback.card_runtime = before_move.card_runtime.clone();
+        rollback.card_runtime.opening_auto_card_ids = pending;
+        rollback
+    }
+
+    fn resolve_opening_cards_after_first_move(
+        &self,
+        state: &mut GameState,
+        before_move: &GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) -> Result<bool, EngineError> {
+        if state.turns_taken[actor.index()] != 0 {
+            return Ok(false);
+        }
+        let pending = state
+            .cards
+            .iter()
+            .filter(|card| {
+                card.owner == actor
+                    && card.charges > 0
+                    && state
+                        .card_runtime
+                        .opening_auto_card_ids
+                        .contains(&card.instance_id)
+            })
+            .map(|card| (card.instance_id, card.definition_id.clone()))
+            .collect::<Vec<_>>();
+        let mut resolved_count = 0_usize;
+        let mut move_rolled_back = false;
+
+        for (instance_id, definition_id) in pending {
+            let action =
+                self.choose_opening_auto_action(state, instance_id, &definition_id, events);
+            if let Some(action) = action {
+                let transition = self.apply_opening_auto_action(state, action)?;
+                *state = transition.state;
+                events.extend(transition.events);
+                resolved_count += 1;
+                continue;
+            }
+
+            if resolved_count == 0 && !move_rolled_back {
+                let mut rollback = self.opening_move_rollback_state(state, before_move);
+                if let Some(action) = self.choose_opening_auto_action(
+                    &mut rollback,
+                    instance_id,
+                    &definition_id,
+                    events,
+                ) {
+                    let transition = self.apply_opening_auto_action(&rollback, action)?;
+                    *state = transition.state;
+                    events.push(Event::EffectApplied {
+                        source_card_instance: instance_id,
+                        command: format!("opening-auto-move-rollback:{definition_id}"),
+                    });
+                    events.extend(transition.events);
+                    resolved_count += 1;
+                    move_rolled_back = true;
+                    continue;
+                }
+            }
+
+            state
+                .card_runtime
+                .opening_auto_card_ids
+                .remove(&instance_id);
+            events.push(Event::EffectApplied {
+                source_card_instance: instance_id,
+                command: format!("opening-auto-failed:{definition_id}"),
+            });
+        }
+        Ok(move_rolled_back)
+    }
+
     fn apply_move(
         &self,
         state: &GameState,
@@ -2681,6 +2833,25 @@ impl Engine {
             });
         }
         if !matches!(next.phase, GamePhase::Playing) {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        let opening_move_rolled_back =
+            self.resolve_opening_cards_after_first_move(&mut next, state, actor, &mut events)?;
+        self.resolve_missing_king(&mut next, &mut events);
+        self.resolve_herald_victory(&mut next);
+        if next.status != GameStatus::Ongoing {
+            self.push_game_ended(&next, &mut events);
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if opening_move_rolled_back {
+            next.actions_remaining = 0;
+            self.finish_turn(&mut next, actor, &mut events)?;
             return Ok(Transition {
                 state: next,
                 events,
@@ -4029,10 +4200,24 @@ impl Engine {
     }
 
     fn generate_card_actions(&self, state: &GameState, actions: &mut Vec<Action>) {
+        self.generate_card_actions_with_opening_auto(state, actions, false);
+    }
+
+    fn generate_card_actions_with_opening_auto(
+        &self,
+        state: &GameState,
+        actions: &mut Vec<Action>,
+        include_opening_auto: bool,
+    ) {
         for card in &state.cards {
             let definition = implemented_card(&card.definition_id);
             if card.owner != state.turn
                 || card.charges == 0
+                || (!include_opening_auto
+                    && state
+                        .card_runtime
+                        .opening_auto_card_ids
+                        .contains(&card.instance_id))
                 || card
                     .available_after_turn
                     .is_some_and(|available| state.turns_taken[card.owner.index()] < available)
@@ -6262,6 +6447,11 @@ mod tests {
             .unwrap()
     }
 
+    fn grant_test_opening_auto_card(state: &mut GameState, definition_id: &str, instance_id: u32) {
+        grant_test_card(state, definition_id, instance_id);
+        state.card_runtime.opening_auto_card_ids.insert(instance_id);
+    }
+
     #[test]
     fn standard_game_runs_white_then_black_opening_draft_before_play() {
         let engine = Engine::bundled_20260807().unwrap();
@@ -6318,6 +6508,151 @@ mod tests {
                 .count(),
             20
         );
+    }
+
+    #[test]
+    fn initial_draft_opening_card_is_hidden_then_used_after_the_first_move() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = engine.new_game(Mode::Standard, 20_260_807).unwrap();
+        let GamePhase::Draft(draft) = &state.phase else {
+            panic!("new game must start in a draft")
+        };
+        assert_eq!(draft.offers[0], OTHERWORLD);
+        let state = first_draft_pick(&engine, &state).state;
+        let state = first_draft_pick(&engine, &state).state;
+        let card = state
+            .cards
+            .iter()
+            .find(|card| card.owner == Player::White && card.definition_id == OTHERWORLD)
+            .unwrap();
+        let instance_id = card.instance_id;
+        assert!(
+            state
+                .card_runtime
+                .opening_auto_card_ids
+                .contains(&instance_id)
+        );
+        assert!(engine.legal_actions(&state).unwrap().iter().all(|action| {
+            !matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
+        }));
+
+        let transition = engine.apply(&state, movement("e2", "e4")).unwrap();
+        let card = transition
+            .state
+            .cards
+            .iter()
+            .find(|card| card.instance_id == instance_id)
+            .unwrap();
+        assert_eq!(card.charges, 0);
+        assert!(
+            !transition
+                .state
+                .card_runtime
+                .opening_auto_card_ids
+                .contains(&instance_id)
+        );
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::CardUsed {
+                owner: Player::White,
+                instance_id: used,
+                definition_id,
+            } if *used == instance_id && definition_id == OTHERWORLD
+        )));
+        assert_eq!(transition.state.turn, Player::Black);
+    }
+
+    #[test]
+    fn targeted_opening_card_chooses_a_deterministic_target_after_the_first_move() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            30,
+        );
+        grant_test_opening_auto_card(&mut state, HOLDOUT, 90);
+        assert!(engine.legal_actions(&state).unwrap().iter().all(|action| {
+            !matches!(
+                action,
+                Action::UseCard {
+                    instance_id: 90,
+                    ..
+                }
+            )
+        }));
+
+        let left = engine.apply(&state, movement("h1", "g1")).unwrap();
+        let right = engine.apply(&state, movement("h1", "g1")).unwrap();
+        assert_eq!(left, right);
+        assert_eq!(left.state.card_runtime.holdout_promotions.len(), 1);
+        assert!(left.events.iter().any(|event| matches!(
+            event,
+            Event::RandomSample { purpose, .. } if purpose == "opening-auto-target:holdout"
+        )));
+        assert!(left.events.iter().any(|event| matches!(
+            event,
+            Event::CardUsed {
+                instance_id: 90,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn blocked_opening_card_rolls_back_the_first_move_before_auto_use() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(31);
+        grant_test_opening_auto_card(&mut state, ELEPHANT_ESCAPE, 91);
+
+        let transition = engine.apply(&state, movement("a2", "a3")).unwrap();
+        assert_eq!(transition.state.ply, 1, "the attempted move still counts");
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("a2".parse().unwrap())
+                .unwrap()
+                .kind,
+            PieceKind::Pawn
+        );
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("a3".parse().unwrap())
+                .unwrap()
+                .kind,
+            PieceKind::Alfil
+        );
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("h3".parse().unwrap())
+                .unwrap()
+                .kind,
+            PieceKind::Alfil
+        );
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::EffectApplied {
+                source_card_instance: 91,
+                command,
+            } if command == "opening-auto-move-rollback:elephant-escape"
+        )));
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::CardUsed {
+                instance_id: 91,
+                ..
+            }
+        )));
+        assert_eq!(transition.state.turn, Player::Black);
     }
 
     #[test]

@@ -383,7 +383,19 @@ fn render_cards(output: &mut impl Write, state: &GameState) -> io::Result<()> {
                 let lock = card
                     .available_after_turn
                     .map_or(String::new(), |turn| format!(", {turn}번째 턴 후 활성화"));
-                format!("{name}[#{}; 충전 {}{lock}]", card.instance_id, card.charges)
+                let automatic = if state
+                    .card_runtime
+                    .opening_auto_card_ids
+                    .contains(&card.instance_id)
+                {
+                    ", 첫 이동 후 자동 발동"
+                } else {
+                    ""
+                };
+                format!(
+                    "{name}[#{}; 충전 {}{lock}{automatic}]",
+                    card.instance_id, card.charges
+                )
             })
             .collect();
         if !cards.is_empty() {

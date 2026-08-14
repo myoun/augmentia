@@ -6,7 +6,7 @@
     "status": "behavioral_slice",
     "implemented_cards": 62,
     "site_parity_verified_cards": 0,
-    "notes": "Base-piece behavior, 20 special-piece cards, and 25 opening cards are implemented. Interactions with the remaining 130 cards are not yet parity-verified."
+    "notes": "Base-piece behavior, 20 special-piece cards, and 25 opening cards are implemented. Active OPENING cards drafted at move zero are forced automatically after their owner's first move. Interactions with the remaining 130 cards are not yet parity-verified."
   },
   "cards": [
     {

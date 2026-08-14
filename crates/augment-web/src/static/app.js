@@ -285,7 +285,9 @@ function renderCards(owner, container) {
     button.className = `card-button ${card.available ? "active" : ""}`;
     button.disabled = !card.available;
     button.dataset.instanceId = card.instanceId;
-    const stateLabel = card.locked
+    const stateLabel = card.openingAutoPending
+      ? "첫 이동 후 자동 발동"
+      : card.locked
       ? `${card.availableAfterTurn}턴까지 잠김`
       : card.charges === 0
         ? "사용 완료"
@@ -300,7 +302,9 @@ function renderCards(owner, container) {
     button.querySelector(".card-name").textContent = card.name;
     button.querySelector(".card-stars").textContent = `${card.stars} ★`;
     button.querySelector(".card-meta").textContent = stateLabel;
-    if (card.available) {
+    if (card.openingAutoPending) {
+      button.title = "자신의 첫 이동 직후 자동으로 발동합니다.";
+    } else if (card.available) {
       button.title = "사용할 카드를 선택합니다.";
       button.addEventListener("click", () => {
         const actions = actionsByIndices(card.actionIndices);
