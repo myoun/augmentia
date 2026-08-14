@@ -413,6 +413,14 @@ fn render_actions(
 fn action_description(state: &GameState, action: &Action) -> String {
     match action {
         Action::Move(movement) => {
+            if state
+                .board
+                .get(movement.from)
+                .is_some_and(|piece| piece.kind == PieceKind::King)
+                && let Some(notation) = castling_notation(movement)
+            {
+                return format!("캐슬링 {notation} ({}-{})", movement.from, movement.to);
+            }
             let promotion = movement
                 .promotion
                 .map_or(String::new(), |kind| format!("={}", kind_code(kind)));
@@ -477,6 +485,18 @@ fn action_description(state: &GameState, action: &Action) -> String {
             format!("선택: {option}")
         }
     }
+}
+
+fn castling_notation(movement: &MoveAction) -> Option<&'static str> {
+    (movement.from.file() == 4
+        && matches!(movement.from.rank(), 0 | 7)
+        && movement.from.rank() == movement.to.rank())
+    .then(|| match movement.to.file() {
+        6 => Some("O-O"),
+        2 => Some("O-O-O"),
+        _ => None,
+    })
+    .flatten()
 }
 
 fn render_events(output: &mut impl Write, events: &[Event]) -> io::Result<()> {

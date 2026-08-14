@@ -1,6 +1,6 @@
 use augment_core::{
     Action, ActionTarget, CardActivation, Engine, Event, GamePhase, GameState, GameStatus, Mode,
-    Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
+    MoveAction, Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -321,7 +321,7 @@ fn action_view(state: &GameState, index: usize, action: &Action) -> Value {
         Action::Move(movement) => json!({
             "index": index,
             "kind": "move",
-            "label": format!("{} → {}{}", movement.from, movement.to, movement.promotion.map_or_else(String::new, |kind| format!(" = {}", kind_name(kind)))),
+            "label": movement_label(state, movement),
             "from": movement.from.to_string(),
             "to": movement.to.to_string(),
             "targetSquares": [movement.to.to_string()],
@@ -544,6 +544,37 @@ fn target_kind(target: &ActionTarget) -> &'static str {
     }
 }
 
+fn movement_label(state: &GameState, movement: &MoveAction) -> String {
+    if state
+        .board
+        .get(movement.from)
+        .is_some_and(|piece| piece.kind == PieceKind::King)
+        && let Some(notation) = castling_notation(movement)
+    {
+        return format!("{notation} · {} → {}", movement.from, movement.to);
+    }
+    format!(
+        "{} → {}{}",
+        movement.from,
+        movement.to,
+        movement
+            .promotion
+            .map_or_else(String::new, |kind| format!(" = {}", kind_name(kind)))
+    )
+}
+
+fn castling_notation(movement: &MoveAction) -> Option<&'static str> {
+    (movement.from.file() == 4
+        && matches!(movement.from.rank(), 0 | 7)
+        && movement.from.rank() == movement.to.rank())
+    .then(|| match movement.to.file() {
+        6 => Some("O-O"),
+        2 => Some("O-O-O"),
+        _ => None,
+    })
+    .flatten()
+}
+
 fn target_squares(target: &ActionTarget) -> Vec<String> {
     match target {
         ActionTarget::None => Vec::new(),
@@ -745,5 +776,17 @@ mod tests {
     fn stale_action_is_rejected() {
         let mut session = GameSession::new(DEFAULT_SEED).unwrap();
         assert!(session.apply_index(0, Some("0000000000000000")).is_err());
+    }
+
+    #[test]
+    fn castling_action_uses_chess_notation_in_the_ui() {
+        let state = GameState::standard("test", Mode::Standard, 0);
+        let action = Action::Move(MoveAction::new(
+            "e1".parse().unwrap(),
+            "g1".parse().unwrap(),
+            None,
+        ));
+        let view = action_view(&state, 0, &action);
+        assert_eq!(view["label"], "O-O · e1 → g1");
     }
 }

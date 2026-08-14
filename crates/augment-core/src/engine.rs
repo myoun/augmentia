@@ -2153,6 +2153,7 @@ impl Engine {
             .board
             .get(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
+        let castling_rook = self.standard_castling_rook_plan(&next, moving_piece, movement);
         let idol_source = if moving_piece.kind == PieceKind::Idol {
             None
         } else {
@@ -2585,10 +2586,22 @@ impl Engine {
             }
             next.board.set(movement.to, Some(placed_piece));
         }
+        if let Some((rook_from, rook_to, rook)) = castling_rook {
+            next.board.set(rook_from, None);
+            next.board.set(rook_to, Some(rook));
+            next.card_runtime.moved_piece_ids.insert(rook.id);
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!(
+                    "castle:{}:{}:{}:{}",
+                    movement.from, movement.to, rook_from, rook_to
+                ),
+            });
+        }
         if moving_survived
             && matches!(
                 moving_piece.kind,
-                PieceKind::Pawn | PieceKind::StandardBearer
+                PieceKind::Pawn | PieceKind::StandardBearer | PieceKind::King | PieceKind::Rook
             )
         {
             next.card_runtime.moved_piece_ids.insert(moving_piece.id);
@@ -4478,6 +4491,7 @@ impl Engine {
                     ],
                     actions,
                 );
+                self.generate_castling_moves(state, from, piece, actions);
                 if state.card_runtime.hill_king[piece.owner.index()] && is_center_two_by_two(from) {
                     self.generate_slider_moves(
                         state,
@@ -5739,6 +5753,13 @@ impl Engine {
 
     fn is_square_attacked_by(&self, state: &GameState, square: Square, attacker: Player) -> bool {
         let mut probe = state.clone();
+        let king_ids = probe
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.kind == PieceKind::King)
+            .map(|(_, piece)| piece.id)
+            .collect::<Vec<_>>();
+        probe.card_runtime.moved_piece_ids.extend(king_ids);
         probe.board.set(
             square,
             Some(Piece::new(attacker.opponent(), PieceKind::Alibaba).with_id(u32::MAX)),
@@ -5757,6 +5778,89 @@ impl Engine {
             }
         }
         false
+    }
+
+    fn generate_castling_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        king: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        let home_rank = if king.owner == Player::White { 0 } else { 7 };
+        let home = Square::new(4, home_rank).expect("standard king home is on board");
+        if from != home
+            || state.card_runtime.moved_piece_ids.contains(&king.id)
+            || self.is_square_attacked_by(state, from, king.owner.opponent())
+        {
+            return;
+        }
+
+        const KING_SIDE_CLEAR: &[u8] = &[5, 6];
+        const QUEEN_SIDE_CLEAR: &[u8] = &[1, 2, 3];
+        const KING_SIDE_SAFE: &[u8] = &[5, 6];
+        const QUEEN_SIDE_SAFE: &[u8] = &[3, 2];
+        let sides = [
+            (7, 6, KING_SIDE_CLEAR, KING_SIDE_SAFE),
+            (0, 2, QUEEN_SIDE_CLEAR, QUEEN_SIDE_SAFE),
+        ];
+        for (rook_file, king_file, clear_files, safe_files) in sides {
+            let rook_square = Square::new(rook_file, home_rank).expect("castling rook square");
+            let Some(rook) = state.board.get(rook_square) else {
+                continue;
+            };
+            if rook.owner != king.owner
+                || rook.kind != PieceKind::Rook
+                || state.card_runtime.moved_piece_ids.contains(&rook.id)
+                || clear_files.iter().any(|file| {
+                    self.board_piece_at(
+                        state,
+                        Square::new(*file, home_rank).expect("castling path square"),
+                    )
+                    .is_some()
+                })
+                || safe_files.iter().any(|file| {
+                    self.is_square_attacked_by(
+                        state,
+                        Square::new(*file, home_rank).expect("castling safe square"),
+                        king.owner.opponent(),
+                    )
+                })
+            {
+                continue;
+            }
+            actions.push(Action::Move(MoveAction::new(
+                from,
+                Square::new(king_file, home_rank).expect("castling king destination"),
+                None,
+            )));
+        }
+    }
+
+    fn standard_castling_rook_plan(
+        &self,
+        state: &GameState,
+        king: Piece,
+        movement: MoveAction,
+    ) -> Option<(Square, Square, Piece)> {
+        let home_rank = if king.owner == Player::White { 0 } else { 7 };
+        if king.kind != PieceKind::King
+            || movement.from != Square::new(4, home_rank)?
+            || movement.to.rank() != home_rank
+            || !matches!(movement.to.file(), 2 | 6)
+        {
+            return None;
+        }
+        let (rook_file, rook_to_file) = if movement.to.file() > movement.from.file() {
+            (7, 5)
+        } else {
+            (0, 3)
+        };
+        let rook_from = Square::new(rook_file, movement.from.rank())?;
+        let rook_to = Square::new(rook_to_file, movement.from.rank())?;
+        let rook = state.board.get(rook_from)?;
+        (rook.owner == king.owner && rook.kind == PieceKind::Rook)
+            .then_some((rook_from, rook_to, rook))
     }
 
     fn can_capture(&self, state: &GameState, attacker: Piece, target: Piece) -> bool {
@@ -6651,6 +6755,141 @@ mod tests {
     }
 
     #[test]
+    fn standard_castling_moves_the_king_and_rook_for_both_colors() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let white = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("h1", Player::White, PieceKind::Rook),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            24,
+        );
+        assert!(has_move(&engine, &white, "e1", "g1"));
+        assert!(has_move(&engine, &white, "e1", "c1"));
+        let king_id = white.board.get("e1".parse().unwrap()).unwrap().id;
+        let rook_id = white.board.get("h1".parse().unwrap()).unwrap().id;
+        let transition = engine.apply(&white, movement("e1", "g1")).unwrap();
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("g1".parse().unwrap())
+                .unwrap()
+                .id,
+            king_id
+        );
+        assert_eq!(
+            transition
+                .state
+                .board
+                .get("f1".parse().unwrap())
+                .unwrap()
+                .id,
+            rook_id
+        );
+        assert!(transition.state.board.get("e1".parse().unwrap()).is_none());
+        assert!(transition.state.board.get("h1".parse().unwrap()).is_none());
+        assert!(
+            transition
+                .state
+                .card_runtime
+                .moved_piece_ids
+                .contains(&king_id)
+        );
+        assert!(
+            transition
+                .state
+                .card_runtime
+                .moved_piece_ids
+                .contains(&rook_id)
+        );
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::EffectApplied { command, .. } if command == "castle:e1:g1:h1:f1"
+        )));
+
+        let black = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("e8", Player::Black, PieceKind::King),
+                ("a8", Player::Black, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::Rook),
+            ],
+            Player::Black,
+            25,
+        );
+        assert!(has_move(&engine, &black, "e8", "g8"));
+        assert!(has_move(&engine, &black, "e8", "c8"));
+        let black = engine.apply(&black, movement("e8", "c8")).unwrap().state;
+        assert_eq!(
+            black.board.get("c8".parse().unwrap()).unwrap().kind,
+            PieceKind::King
+        );
+        assert_eq!(
+            black.board.get("d8".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+    }
+
+    #[test]
+    fn castling_requires_unmoved_clear_and_safe_king_and_rook() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut moved = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("h1", Player::White, PieceKind::Rook),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            26,
+        );
+        let king = moved.board.get("e1".parse().unwrap()).unwrap();
+        moved.card_runtime.moved_piece_ids.insert(king.id);
+        assert!(!has_move(&engine, &moved, "e1", "g1"));
+        assert!(!has_move(&engine, &moved, "e1", "c1"));
+
+        let blocked = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("h1", Player::White, PieceKind::Rook),
+                ("f1", Player::White, PieceKind::Bishop),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            27,
+        );
+        assert!(!has_move(&engine, &blocked, "e1", "g1"));
+
+        let through_check = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("h1", Player::White, PieceKind::Rook),
+                ("a8", Player::Black, PieceKind::King),
+                ("f8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            28,
+        );
+        assert!(!has_move(&engine, &through_check, "e1", "g1"));
+
+        let in_check = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("h1", Player::White, PieceKind::Rook),
+                ("a8", Player::Black, PieceKind::King),
+                ("e8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            29,
+        );
+        assert!(!has_move(&engine, &in_check, "e1", "g1"));
+    }
+
+    #[test]
     fn en_passant_expires_after_the_opponents_next_move() {
         let engine = Engine::bundled_20260807().unwrap();
         let mut state = standard_play_state(29);
@@ -7430,7 +7669,7 @@ mod tests {
             } if purpose == "parry"
         )));
         assert_eq!(state.turn, Player::White);
-        assert_eq!(state.fingerprint(), 0xfd63_60ab_8f2b_0fa5);
+        assert_eq!(state.fingerprint(), 0x4ed3_d2a9_263a_3cde);
     }
 
     #[test]
@@ -7503,7 +7742,7 @@ mod tests {
         assert_eq!(state.board.get("a5".parse().unwrap()), None);
         assert!(state.card_runtime.empty_lunchboxes.is_empty());
         assert_eq!(state.turns_taken[Player::Black.index()], 3);
-        assert_eq!(state.fingerprint(), 0x4583_11fa_48c0_da39);
+        assert_eq!(state.fingerprint(), 0xb183_f5ad_df75_a821);
     }
 
     #[test]
@@ -7631,7 +7870,7 @@ mod tests {
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
         assert_eq!(state.ply, 2);
-        assert_eq!(state.fingerprint(), 0xbbdd_9fd1_c078_7e08);
+        assert_eq!(state.fingerprint(), 0xdf77_fec3_bf7f_318a);
     }
 
     #[test]

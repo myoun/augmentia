@@ -165,7 +165,7 @@ primitive와 의존성을 기준으로 나눈다. 특수 기물과 일반 효과
 
 ### 03-D — 다중 선택·예약 행동 (13장)
 
-- `castling` — 캐슬링
+- `castling` — 캐슬링 (기본 캐슬링과 별개인 원거리 즉시 캐슬링 카드)
 - `emergency-evacuation` — 긴급 피난
 - `gale` — 강풍
 - `panic` — 패닉
