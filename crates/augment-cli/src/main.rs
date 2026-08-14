@@ -261,6 +261,59 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
             .iter()
             .map(|(piece_id, remaining)| (*piece_id, *remaining)),
     )?;
+    for (label, statuses) in [
+        ("빙판", &state.card_runtime.ice_sheet),
+        ("절단", &state.card_runtime.severed),
+        ("희생 보호", &state.card_runtime.sacrifice_protection),
+        ("마녀재판", &state.card_runtime.witch_trials),
+    ] {
+        render_piece_status_map(
+            output,
+            state,
+            label,
+            statuses
+                .iter()
+                .map(|(piece_id, status)| (*piece_id, status.remaining_turns)),
+        )?;
+    }
+    let marked = [
+        ("회피", &state.card_runtime.evasion_piece_ids),
+        ("고스트", &state.card_runtime.ghost_piece_ids),
+        ("관성", &state.card_runtime.inertia_piece_ids),
+        ("은신", &state.card_runtime.stealth_piece_ids),
+        ("잠복", &state.card_runtime.submerged_piece_ids),
+        ("독", &state.card_runtime.poisoned_piece_ids),
+        ("자폭", &state.card_runtime.explosive_piece_ids),
+        ("트로이", &state.card_runtime.trojan_piece_ids),
+    ];
+    for (label, piece_ids) in marked {
+        let squares = piece_ids
+            .iter()
+            .filter_map(|piece_id| {
+                state
+                    .board
+                    .find_by_id(*piece_id)
+                    .map(|(square, _)| square.to_string())
+            })
+            .collect::<Vec<_>>();
+        if !squares.is_empty() {
+            writeln!(output, "{label}: {}", squares.join(", "))?;
+        }
+    }
+    for pending in &state.card_runtime.pending_scarecrows {
+        writeln!(
+            output,
+            "허수아비 예약: {} ({} ply)",
+            pending.square, pending.remaining_ply
+        )?;
+    }
+    if !state.card_runtime.pending_premoves.is_empty() {
+        writeln!(
+            output,
+            "프리 무브 예약: {}개",
+            state.card_runtime.pending_premoves.len()
+        )?;
+    }
     if let Some(status) = state.card_runtime.reposition
         && let Some((square, _)) = state.board.find_by_id(status.piece_id)
     {
@@ -316,6 +369,20 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
             )?;
         }
     }
+    for (piece_id, ready) in &state.card_runtime.baby_bear_grow_turns {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(
+                output,
+                "아기곰: {square} 성장까지 {}수",
+                ready.saturating_sub(state.shared_turn_count())
+            )?;
+        }
+    }
+    for (piece_id, remaining) in &state.card_runtime.bear_retaliations {
+        if let Some((square, _)) = state.board.find_by_id(*piece_id) {
+            writeln!(output, "곰: {square} 역습 {remaining}회")?;
+        }
+    }
     for pending in &state.card_runtime.pending_otherworld {
         writeln!(
             output,
@@ -335,20 +402,34 @@ fn render_statuses(output: &mut impl Write, state: &GameState) -> io::Result<()>
 }
 
 fn display_piece_at(state: &GameState, square: Square) -> Option<augment_core::Piece> {
-    state.board.get(square).or_else(|| {
-        state
-            .card_runtime
-            .large_pieces
-            .iter()
-            .find(|(_, status)| {
-                let anchor = status.anchor;
-                square.file() >= anchor.file()
-                    && square.file() <= anchor.file().saturating_add(1)
-                    && square.rank() <= anchor.rank()
-                    && square.rank().saturating_add(1) >= anchor.rank()
-            })
-            .and_then(|(piece_id, _)| state.board.find_by_id(*piece_id).map(|(_, piece)| piece))
-    })
+    state
+        .board
+        .get(square)
+        .or_else(|| {
+            state
+                .card_runtime
+                .large_pieces
+                .iter()
+                .find(|(_, status)| {
+                    let anchor = status.anchor;
+                    square.file() >= anchor.file()
+                        && square.file() <= anchor.file().saturating_add(1)
+                        && square.rank() <= anchor.rank()
+                        && square.rank().saturating_add(1) >= anchor.rank()
+                })
+                .and_then(|(piece_id, _)| state.board.find_by_id(*piece_id).map(|(_, piece)| piece))
+        })
+        .or_else(|| {
+            state
+                .card_runtime
+                .quantum_positions
+                .iter()
+                .find_map(|(piece_id, position)| {
+                    (*position == square)
+                        .then(|| state.board.find_by_id(*piece_id).map(|(_, piece)| piece))
+                        .flatten()
+                })
+        })
 }
 
 fn render_piece_status_map(
@@ -676,6 +757,15 @@ fn kind_code(kind: PieceKind) -> &'static str {
         PieceKind::RoyalKnight => "RN",
         PieceKind::Man => "MN",
         PieceKind::Merchant => "M",
+        PieceKind::DarkWizard => "DW",
+        PieceKind::Monster => "MO",
+        PieceKind::Scarecrow => "S",
+        PieceKind::Camel => "C",
+        PieceKind::Ferz => "FZ",
+        PieceKind::Bat => "BT",
+        PieceKind::BabyBear => "BB",
+        PieceKind::Lobster => "LB",
+        PieceKind::Bear => "BE",
     }
 }
 
@@ -720,6 +810,15 @@ fn kind_name(kind: PieceKind) -> &'static str {
         PieceKind::RoyalKnight => "로얄 나이트",
         PieceKind::Man => "만",
         PieceKind::Merchant => "상인",
+        PieceKind::DarkWizard => "흑마법사",
+        PieceKind::Monster => "괴물",
+        PieceKind::Scarecrow => "허수아비",
+        PieceKind::Camel => "낙타",
+        PieceKind::Ferz => "페르즈",
+        PieceKind::Bat => "박쥐",
+        PieceKind::BabyBear => "아기곰",
+        PieceKind::Lobster => "랍스터",
+        PieceKind::Bear => "곰",
     }
 }
 

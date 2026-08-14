@@ -60,6 +60,68 @@ pub const QUEEN_CAVALRY: &str = "queen-cavalry";
 pub const QUEENS_GAMBIT: &str = "queens-gambit";
 pub const QXE1: &str = "qxe1";
 pub const SUMMON_COLOSSUS: &str = "summon-colossus";
+pub const BACKWARD_KNIGHT: &str = "backward-knight";
+pub const BASIC_TRAINING: &str = "basic-training";
+pub const BREAKTHROUGH_ORDER: &str = "breakthrough-order";
+pub const CORNER_KICK: &str = "corner-kick";
+pub const EN_PASSANT_BANG: &str = "en-passant-bang";
+pub const FILE_SURGE: &str = "file-surge";
+pub const HORSE_RIDING: &str = "horse-riding";
+pub const INJURY: &str = "injury";
+pub const LEAP: &str = "leap";
+pub const PROMOTION_RUSH: &str = "promotion-rush";
+pub const RADICAL_CHARGE: &str = "radical-charge";
+pub const RETREAT: &str = "retreat";
+pub const ROOK_LIFT: &str = "rook-lift";
+pub const ARMISTICE: &str = "armistice";
+pub const ENCOURAGEMENT: &str = "encouragement";
+pub const EVASION: &str = "evasion";
+pub const EXHAUSTION: &str = "exhaustion";
+pub const GHOST: &str = "ghost";
+pub const ICE_SHEET: &str = "ice-sheet";
+pub const INERTIA: &str = "inertia";
+pub const OVERWHELM: &str = "overwhelm";
+pub const ROYAL_COMMAND: &str = "royal-command";
+pub const ROYAL_SHIELD: &str = "royal-shield";
+pub const SEVERANCE: &str = "severance";
+pub const SOCIALISM: &str = "socialism";
+pub const TAUNT: &str = "taunt";
+pub const ALEKHINE_MACHINE_GUN: &str = "alekhine-machine-gun";
+pub const CHAMELEON_MUTATION: &str = "chameleon-mutation";
+pub const CHIMERA: &str = "chimera";
+pub const FEUDAL_CONTRACT: &str = "feudal-contract";
+pub const IMPERIAL_STUDIES: &str = "imperial-studies";
+pub const MAD_HORSE: &str = "mad-horse";
+pub const MISTAKE_CARD: &str = "mistake-card";
+pub const POISONED_PAWN: &str = "poisoned-pawn";
+pub const QUEEN_AFTERIMAGE: &str = "queen-afterimage";
+pub const SACRIFICE: &str = "sacrifice";
+pub const SNIPE: &str = "snipe";
+pub const SUICIDE_BOMBER: &str = "suicide-bomber";
+pub const TROJAN_HORSE: &str = "trojan-horse";
+pub const CASTLING: &str = "castling";
+pub const EMERGENCY_EVACUATION: &str = "emergency-evacuation";
+pub const GALE: &str = "gale";
+pub const PANIC: &str = "panic";
+pub const PAWN_STORM: &str = "pawn-storm";
+pub const PREMOVE: &str = "premove";
+pub const QUANTUM_MECHANICS: &str = "quantum-mechanics";
+pub const SCARECROW: &str = "scarecrow";
+pub const SCHRODINGER_PAWNS: &str = "schrodinger-pawns";
+pub const STEALTH: &str = "stealth";
+pub const SUBMERGE: &str = "submerge";
+pub const SUBSTITUTION: &str = "substitution";
+pub const TWINS: &str = "twins";
+pub const BLACK_MAGIC: &str = "black-magic";
+pub const CONVERSION: &str = "conversion";
+pub const FANATICAL_RITUAL: &str = "fanatical-ritual";
+pub const MONGOLIAN_GAMBIT: &str = "mongolian-gambit";
+pub const RANDOM_ROULETTE: &str = "random-roulette";
+pub const RELIGIOUS_VICTORY: &str = "religious-victory";
+pub const SWITCHEROO: &str = "switcheroo";
+pub const TROLLEY: &str = "trolley";
+pub const VORTEX: &str = "vortex";
+pub const WITCH_TRIAL: &str = "witch-trial";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
@@ -89,7 +151,28 @@ pub struct ImplementedCardDefinition {
     pub turn_exclusive: bool,
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 62] = [
+const fn middle_card(
+    id: &'static str,
+    name_ko: &'static str,
+    effect: &'static str,
+    half_stars: u16,
+    activation: CardActivation,
+    ends_turn: bool,
+    turn_exclusive: bool,
+) -> ImplementedCardDefinition {
+    ImplementedCardDefinition {
+        id,
+        name_ko,
+        effect,
+        activation,
+        phase: CardPhase::Middle,
+        half_stars,
+        ends_turn,
+        turn_exclusive,
+    }
+}
+
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 124] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -710,6 +793,564 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 62] = [
         ends_turn: false,
         turn_exclusive: false,
     },
+    middle_card(
+        BACKWARD_KNIGHT,
+        "뒤로 가는 나이트",
+        "backwardKnight",
+        5,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        BASIC_TRAINING,
+        "기초 교습",
+        "basicTraining",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        BREAKTHROUGH_ORDER,
+        "돌파",
+        "breakthroughOrder",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        CORNER_KICK,
+        "코너킥",
+        "cornerKick",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        EN_PASSANT_BANG,
+        "앙파상",
+        "enPassantBang",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        FILE_SURGE,
+        "급수",
+        "fileSurge",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        HORSE_RIDING,
+        "승마",
+        "horseRiding",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        INJURY,
+        "부상",
+        "injury",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        LEAP,
+        "도약",
+        "pawnLeap",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        PROMOTION_RUSH,
+        "승진 체험",
+        "promotionRush",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        RADICAL_CHARGE,
+        "난폭한 돌진",
+        "radicalCharge",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        RETREAT,
+        "퇴각",
+        "retreat",
+        5,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        ROOK_LIFT,
+        "룩 리프트",
+        "rookLift",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        ARMISTICE,
+        "휴전",
+        "armistice",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        ENCOURAGEMENT,
+        "독려",
+        "encouragement",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        EVASION,
+        "회피",
+        "evasion",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        EXHAUSTION,
+        "탈진",
+        "exhaustion",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        GHOST,
+        "고스트",
+        "ghost",
+        9,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        ICE_SHEET,
+        "빙판",
+        "iceSheet",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        INERTIA,
+        "관성",
+        "inertia",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        OVERWHELM,
+        "압도",
+        "overwhelm",
+        9,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        ROYAL_COMMAND,
+        "왕명",
+        "royalCommand",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        ROYAL_SHIELD,
+        "가호",
+        "royalShield",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SEVERANCE,
+        "절단",
+        "severance",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SOCIALISM,
+        "사회주의",
+        "socialism",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        TAUNT,
+        "도발",
+        "taunt",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        ALEKHINE_MACHINE_GUN,
+        "알레킨의 머신건",
+        "alekhineMachineGun",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        CHAMELEON_MUTATION,
+        "카멜레온 변이",
+        "chameleonMutation",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        CHIMERA,
+        "키메라",
+        "chimera",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        FEUDAL_CONTRACT,
+        "봉건 계약",
+        "feudalContract",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        IMPERIAL_STUDIES,
+        "제왕학",
+        "imperialStudies",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        MAD_HORSE,
+        "광마",
+        "madHorse",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        MISTAKE_CARD,
+        "실수",
+        "mistakeCard",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        POISONED_PAWN,
+        "독이 든 폰",
+        "poisonedPawn",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        QUEEN_AFTERIMAGE,
+        "잔상",
+        "queenAfterimage",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        SACRIFICE,
+        "희생",
+        "sacrifice",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SNIPE,
+        "저격",
+        "bishopSnipe",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SUICIDE_BOMBER,
+        "자폭병",
+        "suicideBomber",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        TROJAN_HORSE,
+        "트로이 목마",
+        "trojanHorse",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        CASTLING,
+        "캐슬링",
+        "freeCastling",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        EMERGENCY_EVACUATION,
+        "긴급 피난",
+        "emergencyEvacuation",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        GALE,
+        "강풍",
+        "gale",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        PANIC,
+        "패닉",
+        "panic",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        PAWN_STORM,
+        "폰 스톰",
+        "pawnStorm",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        PREMOVE,
+        "프리 무브",
+        "freeMove",
+        6,
+        CardActivation::Active,
+        true,
+        true,
+    ),
+    middle_card(
+        QUANTUM_MECHANICS,
+        "양자 역학",
+        "quantumMechanics",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SCARECROW,
+        "허수아비",
+        "scarecrow",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SCHRODINGER_PAWNS,
+        "슈뢰딩거의 폰",
+        "schrodingerPawns",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        STEALTH,
+        "은신",
+        "stealth",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SUBMERGE,
+        "잠복",
+        "submerge",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SUBSTITUTION,
+        "치환",
+        "substitution",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        TWINS,
+        "환상의 콤비",
+        "twins",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        BLACK_MAGIC,
+        "흑마법",
+        "blackMagic",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        CONVERSION,
+        "기도",
+        "conversion",
+        5,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        FANATICAL_RITUAL,
+        "광신적 의식",
+        "fanaticalRitual",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        MONGOLIAN_GAMBIT,
+        "몽골리안 갬빗",
+        "mongolianGambit",
+        10,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        RANDOM_ROULETTE,
+        "랜덤룰렛",
+        "randomRoulette",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        RELIGIOUS_VICTORY,
+        "종교 승리",
+        "religiousVictory",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        SWITCHEROO,
+        "바꿔치기",
+        "switcheroo",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        TROLLEY,
+        "트롤리",
+        "trolley",
+        10,
+        CardActivation::Active,
+        true,
+        true,
+    ),
+    middle_card(
+        VORTEX,
+        "소용돌이",
+        "vortex",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        WITCH_TRIAL,
+        "마녀재판",
+        "witchTrial",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
 ];
 
 pub fn implemented_card(id: &str) -> Option<&'static ImplementedCardDefinition> {

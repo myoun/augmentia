@@ -1,4 +1,4 @@
-use crate::{Board, DeterministicRng, PieceKind, Player, Square};
+use crate::{Board, DeterministicRng, MoveAction, PieceKind, Player, Square};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -217,6 +217,58 @@ pub struct LargePieceStatus {
     pub max_hp: u8,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TimedPieceStatus {
+    pub by: Player,
+    pub remaining_turns: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RoyalCommandStatus {
+    pub starts_at_turn: u32,
+    pub expires_at_turn: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FeudalContract {
+    pub owner: Player,
+    pub pawn_id: u32,
+    pub guardian_id: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingPanic {
+    pub owner: Player,
+    pub piece_ids: Vec<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingPremove {
+    pub owner: Player,
+    pub trigger_player: Player,
+    pub trigger_turn: u32,
+    pub moves: Vec<MoveAction>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingScarecrow {
+    pub owner: Player,
+    pub square: Square,
+    pub remaining_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TwinBond {
+    pub first_id: u32,
+    pub second_id: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TrolleyDilemma {
+    pub by: Player,
+    pub bundles: [Vec<u32>; 2],
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
@@ -261,6 +313,132 @@ pub struct CardRuntimeState {
     pub fianchetto: [bool; 2],
     pub iron_monarch: [bool; 2],
     pub pawn_conversion: [bool; 2],
+    pub backward_knight: [bool; 2],
+    pub breakthrough_pawns: [bool; 2],
+    pub corner_kick: [bool; 2],
+    pub en_passant_frenzy: [bool; 2],
+    pub file_surge: [bool; 2],
+    pub horse_riding: [bool; 2],
+    pub knight_injury: [bool; 2],
+    pub pawn_leap: [bool; 2],
+    pub radical_charge: [bool; 2],
+    pub retreat: [bool; 2],
+    pub rook_lift: [bool; 2],
+    pub encouragement: [bool; 2],
+    pub exhaustion: [bool; 2],
+    pub overwhelm: [bool; 2],
+    pub imperial_studies: [bool; 2],
+    pub mad_horse: [bool; 2],
+    pub queen_afterimage: [bool; 2],
+    pub religious_victory: [bool; 2],
+    pub basic_training_piece_ids: BTreeSet<u32>,
+    pub promotion_rush_piece_ids: BTreeSet<u32>,
+    pub evasion_piece_ids: BTreeSet<u32>,
+    pub ghost_piece_ids: BTreeSet<u32>,
+    pub inertia_piece_ids: BTreeSet<u32>,
+    pub ice_sheet: BTreeMap<u32, TimedPieceStatus>,
+    pub severed: BTreeMap<u32, TimedPieceStatus>,
+    pub royal_command: [Option<RoyalCommandStatus>; 2],
+    pub socialism: [u32; 2],
+    pub taunt: [u32; 2],
+    pub armistice_remaining_ply: u32,
+    pub exhaustion_last_piece: [Option<u32>; 2],
+    pub exhaustion_count: [u8; 2],
+    pub chameleon_piece_ids: BTreeSet<u32>,
+    pub chimera_piece_ids: BTreeSet<u32>,
+    pub imperial_moves: BTreeMap<u32, BTreeSet<PieceKind>>,
+    pub mistake_card: [bool; 2],
+    pub poisoned_piece_ids: BTreeSet<u32>,
+    pub sacrifice_protection: BTreeMap<u32, TimedPieceStatus>,
+    pub bishop_snipe: [bool; 2],
+    pub explosive_piece_ids: BTreeSet<u32>,
+    pub trojan_piece_ids: BTreeSet<u32>,
+    pub feudal_contracts: Vec<FeudalContract>,
+    pub gale_due_turns: [Vec<u32>; 2],
+    pub pending_panic: Vec<PendingPanic>,
+    pub pending_premoves: Vec<PendingPremove>,
+    pub pending_scarecrows: Vec<PendingScarecrow>,
+    pub quantum_pending: [bool; 2],
+    pub quantum_positions: BTreeMap<u32, Square>,
+    pub stealth_piece_ids: BTreeSet<u32>,
+    pub submerged_piece_ids: BTreeSet<u32>,
+    pub substitution: [bool; 2],
+    pub switcheroo: [bool; 2],
+    pub twin_bonds: Vec<TwinBond>,
+    pub witch_trials: BTreeMap<u32, TimedPieceStatus>,
+    pub pending_trolley_by: [Option<Player>; 2],
+    pub active_trolley: Option<TrolleyDilemma>,
+    pub baby_bear_grow_turns: BTreeMap<u32, u32>,
+    pub bear_retaliations: BTreeMap<u32, u8>,
+}
+
+impl CardRuntimeState {
+    fn has_middle_state(&self) -> bool {
+        [
+            self.backward_knight,
+            self.breakthrough_pawns,
+            self.corner_kick,
+            self.en_passant_frenzy,
+            self.file_surge,
+            self.horse_riding,
+            self.knight_injury,
+            self.pawn_leap,
+            self.radical_charge,
+            self.retreat,
+            self.rook_lift,
+            self.encouragement,
+            self.exhaustion,
+            self.overwhelm,
+            self.imperial_studies,
+            self.mad_horse,
+            self.queen_afterimage,
+            self.religious_victory,
+            self.mistake_card,
+            self.bishop_snipe,
+            self.quantum_pending,
+            self.substitution,
+            self.switcheroo,
+        ]
+        .into_iter()
+        .any(|flags| flags != [false, false])
+            || !self.basic_training_piece_ids.is_empty()
+            || !self.promotion_rush_piece_ids.is_empty()
+            || !self.evasion_piece_ids.is_empty()
+            || !self.ghost_piece_ids.is_empty()
+            || !self.inertia_piece_ids.is_empty()
+            || !self.ice_sheet.is_empty()
+            || !self.severed.is_empty()
+            || self.royal_command != [None, None]
+            || self.socialism != [0, 0]
+            || self.taunt != [0, 0]
+            || self.armistice_remaining_ply != 0
+            || self.exhaustion_last_piece != [None, None]
+            || self.exhaustion_count != [0, 0]
+            || !self.chameleon_piece_ids.is_empty()
+            || !self.chimera_piece_ids.is_empty()
+            || !self.imperial_moves.is_empty()
+            || !self.poisoned_piece_ids.is_empty()
+            || !self.sacrifice_protection.is_empty()
+            || !self.explosive_piece_ids.is_empty()
+            || !self.trojan_piece_ids.is_empty()
+            || !self.feudal_contracts.is_empty()
+            || self
+                .gale_due_turns
+                .iter()
+                .any(|entries| !entries.is_empty())
+            || !self.pending_panic.is_empty()
+            || !self.pending_premoves.is_empty()
+            || !self.pending_scarecrows.is_empty()
+            || !self.quantum_positions.is_empty()
+            || !self.stealth_piece_ids.is_empty()
+            || !self.submerged_piece_ids.is_empty()
+            || !self.twin_bonds.is_empty()
+            || !self.witch_trials.is_empty()
+            || self.pending_trolley_by != [None, None]
+            || self.active_trolley.is_some()
+            || !self.baby_bear_grow_turns.is_empty()
+            || !self.bear_retaliations.is_empty()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -628,6 +806,138 @@ impl GameState {
         for (piece_id, gold) in &self.card_runtime.merchant_gold {
             hash.u32(*piece_id);
             hash.u16(*gold);
+        }
+        // Middle-card state participates in repetition identity. BTree-backed collections have a
+        // stable debug order; absolute turn deadlines are normalized separately below. Keeping
+        // the empty case byte-for-byte unchanged preserves pre-middle snapshot position keys.
+        if self.card_runtime.has_middle_state() {
+            hash.bytes(b"middle-runtime-v1");
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        self.card_runtime.backward_knight,
+                        self.card_runtime.breakthrough_pawns,
+                        self.card_runtime.corner_kick,
+                        self.card_runtime.en_passant_frenzy,
+                        self.card_runtime.file_surge,
+                        self.card_runtime.horse_riding,
+                        self.card_runtime.knight_injury,
+                        self.card_runtime.pawn_leap,
+                        self.card_runtime.radical_charge,
+                        self.card_runtime.retreat,
+                        self.card_runtime.rook_lift,
+                        self.card_runtime.encouragement,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        self.card_runtime.exhaustion,
+                        self.card_runtime.overwhelm,
+                        self.card_runtime.imperial_studies,
+                        self.card_runtime.mad_horse,
+                        self.card_runtime.queen_afterimage,
+                        self.card_runtime.religious_victory,
+                        &self.card_runtime.basic_training_piece_ids,
+                        &self.card_runtime.promotion_rush_piece_ids,
+                        &self.card_runtime.evasion_piece_ids,
+                        &self.card_runtime.ghost_piece_ids,
+                        &self.card_runtime.inertia_piece_ids,
+                        &self.card_runtime.ice_sheet,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        &self.card_runtime.severed,
+                        self.card_runtime.socialism,
+                        self.card_runtime.taunt,
+                        self.card_runtime.armistice_remaining_ply,
+                        self.card_runtime.exhaustion_last_piece,
+                        self.card_runtime.exhaustion_count,
+                        &self.card_runtime.chameleon_piece_ids,
+                        &self.card_runtime.chimera_piece_ids,
+                        &self.card_runtime.imperial_moves,
+                        self.card_runtime.mistake_card,
+                        &self.card_runtime.poisoned_piece_ids,
+                        &self.card_runtime.sacrifice_protection,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        self.card_runtime.bishop_snipe,
+                        &self.card_runtime.explosive_piece_ids,
+                        &self.card_runtime.trojan_piece_ids,
+                        &self.card_runtime.feudal_contracts,
+                        &self.card_runtime.pending_panic,
+                        &self.card_runtime.pending_scarecrows,
+                        self.card_runtime.quantum_pending,
+                        &self.card_runtime.quantum_positions,
+                        &self.card_runtime.stealth_piece_ids,
+                        &self.card_runtime.submerged_piece_ids,
+                        self.card_runtime.substitution,
+                        self.card_runtime.switcheroo,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        &self.card_runtime.twin_bonds,
+                        &self.card_runtime.witch_trials,
+                        self.card_runtime.pending_trolley_by,
+                        &self.card_runtime.active_trolley,
+                        &self.card_runtime.bear_retaliations,
+                    )
+                )
+                .as_bytes(),
+            );
+            for player in [Player::White, Player::Black] {
+                if let Some(status) = self.card_runtime.royal_command[player.index()] {
+                    hash.u8(player.index() as u8);
+                    hash.u32(
+                        status
+                            .starts_at_turn
+                            .saturating_sub(self.turns_taken[player.index()]),
+                    );
+                    hash.u32(
+                        status
+                            .expires_at_turn
+                            .saturating_sub(self.turns_taken[player.index()]),
+                    );
+                }
+                for due in &self.card_runtime.gale_due_turns[player.index()] {
+                    hash.u8(player.index() as u8);
+                    hash.u32(due.saturating_sub(self.turns_taken[player.index()]));
+                }
+            }
+            for pending in &self.card_runtime.pending_premoves {
+                hash.u8(pending.owner.index() as u8);
+                hash.u8(pending.trigger_player.index() as u8);
+                hash.u32(
+                    pending
+                        .trigger_turn
+                        .saturating_sub(self.turns_taken[pending.trigger_player.index()]),
+                );
+                hash.bytes(format!("{:?}", pending.moves).as_bytes());
+            }
+            for (piece_id, due) in &self.card_runtime.baby_bear_grow_turns {
+                hash.u32(*piece_id);
+                hash.u32(due.saturating_sub(self.shared_turn_count()));
+            }
         }
         for (index, flags) in [
             self.card_runtime.democracy,

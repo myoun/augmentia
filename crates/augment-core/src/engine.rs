@@ -19,6 +19,14 @@ use crate::{
 use std::collections::BTreeSet;
 use std::fmt;
 
+mod middle;
+
+use crate::{
+    BACKWARD_KNIGHT, CONVERSION, CORNER_KICK, ENCOURAGEMENT, EXHAUSTION, FILE_SURGE, GHOST,
+    HORSE_RIDING, IMPERIAL_STUDIES, INJURY, LEAP, MAD_HORSE, MONGOLIAN_GAMBIT, OVERWHELM,
+    QUEEN_AFTERIMAGE, RADICAL_CHARGE, RELIGIOUS_VICTORY, RETREAT, ROOK_LIFT,
+};
+
 pub struct Engine {
     ruleset: RulesetManifest,
     effects: EffectRegistry,
@@ -906,7 +914,10 @@ impl Engine {
 
     fn is_royal_piece(&self, state: &GameState, piece: Piece) -> bool {
         piece.kind == PieceKind::King
-            || matches!(piece.kind, PieceKind::RoyalKnight | PieceKind::Merchant)
+            || matches!(
+                piece.kind,
+                PieceKind::RoyalKnight | PieceKind::Merchant | PieceKind::DarkWizard
+            )
             || state.card_runtime.royal_piece_ids.contains(&piece.id)
     }
 
@@ -1267,6 +1278,61 @@ impl Engine {
                     start_turn: state.turns_taken[target.index()],
                     limit: 10,
                 });
+            }
+            BACKWARD_KNIGHT => state.card_runtime.backward_knight[owner.index()] = true,
+            CORNER_KICK => state.card_runtime.corner_kick[owner.index()] = true,
+            FILE_SURGE => state.card_runtime.file_surge[owner.index()] = true,
+            HORSE_RIDING => state.card_runtime.horse_riding[owner.index()] = true,
+            INJURY => state.card_runtime.knight_injury[owner.opponent().index()] = true,
+            LEAP => state.card_runtime.pawn_leap[owner.index()] = true,
+            RADICAL_CHARGE => state.card_runtime.radical_charge[owner.index()] = true,
+            RETREAT => state.card_runtime.retreat[owner.index()] = true,
+            ROOK_LIFT => state.card_runtime.rook_lift[owner.index()] = true,
+            ENCOURAGEMENT => state.card_runtime.encouragement[owner.index()] = true,
+            EXHAUSTION => state.card_runtime.exhaustion[owner.opponent().index()] = true,
+            GHOST => {
+                for (_, piece) in state.board.iter() {
+                    if piece.owner == owner && piece.kind == PieceKind::Pawn {
+                        state.card_runtime.ghost_piece_ids.insert(piece.id);
+                    }
+                }
+            }
+            OVERWHELM => state.card_runtime.overwhelm[owner.index()] = true,
+            IMPERIAL_STUDIES => state.card_runtime.imperial_studies[owner.index()] = true,
+            MAD_HORSE => state.card_runtime.mad_horse[owner.index()] = true,
+            QUEEN_AFTERIMAGE => state.card_runtime.queen_afterimage[owner.index()] = true,
+            RELIGIOUS_VICTORY => {
+                state.card_runtime.religious_victory[owner.index()] = true;
+                self.resolve_religious_victory(state);
+            }
+            CONVERSION => {
+                let knights = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == owner && piece.kind == PieceKind::Knight)
+                    .collect::<Vec<_>>();
+                for (square, mut piece) in knights {
+                    piece.kind = PieceKind::Bishop;
+                    state.board.set(square, Some(piece));
+                    state.card_runtime.moved_piece_ids.insert(piece.id);
+                }
+            }
+            MONGOLIAN_GAMBIT => {
+                let pieces = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == owner
+                            && !self.is_royal_piece(state, *piece)
+                            && piece.kind != PieceKind::Merchant
+                    })
+                    .collect::<Vec<_>>();
+                for (square, mut piece) in pieces {
+                    self.clear_piece_kind_runtime(state, piece.id);
+                    piece.kind = PieceKind::Knight;
+                    state.board.set(square, Some(piece));
+                    state.card_runtime.moved_piece_ids.insert(piece.id);
+                }
             }
             _ => {}
         }
@@ -2041,9 +2107,17 @@ impl Engine {
                 self.break_initiative_by_capture(&mut next, victim_piece.owner, actor);
             }
             _ => {
-                return Err(EngineError::Invariant(format!(
-                    "unsupported active card {definition_id:?} was legal"
-                )));
+                if !self.apply_middle_active_card(
+                    &mut next,
+                    actor,
+                    &definition_id,
+                    &target,
+                    &mut events,
+                )? {
+                    return Err(EngineError::Invariant(format!(
+                        "unsupported active card {definition_id:?} was legal"
+                    )));
+                }
             }
         }
         next.quiet_ply = 0;
@@ -2087,6 +2161,27 @@ impl Engine {
             return Err(EngineError::Invariant(
                 "legal choice action does not match pending choice".to_owned(),
             ));
+        }
+        if choice.handler_id == middle::TROLLEY_CHOICE_HANDLER {
+            next.phase = GamePhase::Playing;
+            let mut events = vec![
+                Event::ActionApplied { actor, action },
+                Event::ChoiceResolved {
+                    choice_id,
+                    owner: actor,
+                    option_index,
+                },
+            ];
+            self.resolve_middle_trolley_choice(&mut next, usize::from(option_index), &mut events)?;
+            if next.status != GameStatus::Ongoing {
+                self.push_game_ended(&next, &mut events);
+            } else {
+                self.resolve_no_action_loss(&mut next, actor, &mut events);
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
         }
         let handler = self.choices.get(&choice.handler_id).ok_or_else(|| {
             EngineError::Invariant(format!(
@@ -2312,8 +2407,8 @@ impl Engine {
             self.available_adjacent_idol(&next, movement.from, moving_piece.owner)
         };
         let destination_entry = self.board_piece_entry_at(&next, movement.to);
-        let destination_piece = destination_entry.map(|(_, piece)| piece);
-        let en_passant_capture = (moving_piece.kind == PieceKind::Pawn
+        let mut destination_piece = destination_entry.map(|(_, piece)| piece);
+        let mut en_passant_capture = (moving_piece.kind == PieceKind::Pawn
             && destination_piece.is_none()
             && movement.from.file() != movement.to.file())
         .then_some(next.en_passant)
@@ -2332,17 +2427,174 @@ impl Engine {
                 })
                 .map(|piece| (en_passant.captured, piece))
         });
-        let capture_square = en_passant_capture
+        if en_passant_capture.is_none()
+            && moving_piece.kind == PieceKind::Pawn
+            && destination_piece.is_none()
+            && next.card_runtime.en_passant_frenzy[actor.index()]
+            && movement.from.file() != movement.to.file()
+            && let Some(adjacent) = Square::new(movement.to.file(), movement.from.rank())
+            && let Some(target) = next.board.get(adjacent)
+            && self.can_capture(&next, moving_piece, target)
+        {
+            en_passant_capture = Some((adjacent, target));
+        }
+        let mut capture_square = en_passant_capture
             .map(|(square, _)| square)
             .or_else(|| destination_entry.map(|(square, _)| square))
             .unwrap_or(movement.to);
-        let target_piece = destination_piece.or(en_passant_capture.map(|(_, piece)| piece));
+        let mut target_piece = destination_piece.or(en_passant_capture.map(|(_, piece)| piece));
         let irreversible = moving_piece.kind == PieceKind::Pawn || target_piece.is_some();
         let mut moving_survived = true;
         let mut events = vec![Event::ActionApplied {
             actor,
             action: action.clone(),
         }];
+
+        let substitution_swap = next.card_runtime.substitution[actor.index()]
+            && destination_piece
+                .is_some_and(|target| target.owner != actor && target.kind == moving_piece.kind);
+        let switcheroo_swap = next.card_runtime.switcheroo[actor.index()]
+            && moving_piece.kind == PieceKind::King
+            && destination_piece
+                .is_some_and(|target| target.owner == actor && target.kind == PieceKind::Pawn);
+        if substitution_swap || switcheroo_swap {
+            let swapped = destination_piece.expect("swap destination was checked");
+            next.board.set(movement.from, Some(swapped));
+            next.board.set(movement.to, Some(moving_piece));
+            next.card_runtime.substitution[actor.index()] = false;
+            next.card_runtime.switcheroo[actor.index()] = false;
+            next.card_runtime.moved_piece_ids.insert(moving_piece.id);
+            next.card_runtime.moved_piece_ids.insert(swapped.id);
+            next.en_passant = None;
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.note_middle_piece_moved(&mut next, moving_piece);
+            self.resolve_after_counted_move(&mut next, &mut events);
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!(
+                    "{}:{}:{}",
+                    if substitution_swap {
+                        "substitution"
+                    } else {
+                        "switcheroo"
+                    },
+                    movement.from,
+                    movement.to
+                ),
+            });
+            self.finish_turn(&mut next, actor, &mut events)?;
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+
+        if let Some(target) = target_piece
+            && target.owner != actor
+            && next.card_runtime.evasion_piece_ids.contains(&target.id)
+        {
+            let candidates = self.middle_evasion_destinations(&next, capture_square, movement.to);
+            let (roll, selected) = next.rng_mut().web_choice_index(candidates.len());
+            events.push(Event::RandomSample {
+                purpose: "evasion-capture".to_owned(),
+                roll_53: roll,
+            });
+            if let Some(selected) = selected {
+                let destination = candidates[selected];
+                next.board.set(capture_square, None);
+                next.board.set(destination, Some(target));
+                next.card_runtime.evasion_piece_ids.remove(&target.id);
+                next.card_runtime.moved_piece_ids.insert(target.id);
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("evasion:{}:{}->{}", target.id, capture_square, destination),
+                });
+                destination_piece = None;
+                target_piece = None;
+                capture_square = movement.to;
+            }
+        }
+
+        if let Some(counter) = target_piece
+            && counter.owner != actor
+            && next.card_runtime.mistake_card[actor.index()]
+        {
+            let (roll, reversed) = next.rng_mut().web_probability(1, 2);
+            events.push(Event::RandomSample {
+                purpose: "mistake-card".to_owned(),
+                roll_53: roll,
+            });
+            if reversed {
+                next.board.set(movement.from, None);
+                next.board.set(capture_square, None);
+                let mut counter = counter;
+                counter.capture_count = counter.capture_count.saturating_add(1);
+                next.board.set(movement.from, Some(counter));
+                self.clear_removed_piece_statuses(&mut next, moving_piece.id);
+                events.push(Event::PieceCaptured {
+                    actor: counter.owner,
+                    piece: moving_piece,
+                    at: movement.from,
+                });
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("mistake-reverse:{}:{}", counter.id, moving_piece.id),
+                });
+                next.ply = next.ply.saturating_add(1);
+                next.quiet_ply = 0;
+                next.mark_deathmatch_progress();
+                self.resolve_after_counted_move(&mut next, &mut events);
+                self.resolve_missing_king(&mut next, &mut events);
+                if next.status == GameStatus::Ongoing {
+                    self.finish_turn(&mut next, actor, &mut events)?;
+                } else {
+                    self.push_game_ended(&next, &mut events);
+                }
+                return Ok(Transition {
+                    state: next,
+                    events,
+                });
+            }
+        }
+        if let Some(bear) = target_piece
+            && bear.owner != actor
+            && next
+                .card_runtime
+                .bear_retaliations
+                .get(&bear.id)
+                .is_some_and(|remaining| *remaining > 0)
+        {
+            if let Some(remaining) = next.card_runtime.bear_retaliations.get_mut(&bear.id) {
+                *remaining = remaining.saturating_sub(1);
+            }
+            next.board.set(movement.from, None);
+            self.clear_removed_piece_statuses(&mut next, moving_piece.id);
+            events.push(Event::PieceCaptured {
+                actor: bear.owner,
+                piece: moving_piece,
+                at: movement.from,
+            });
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("bear-retaliation:{}:{}", bear.id, moving_piece.id),
+            });
+            next.ply = next.ply.saturating_add(1);
+            next.quiet_ply = 0;
+            next.mark_deathmatch_progress();
+            self.resolve_after_counted_move(&mut next, &mut events);
+            self.resolve_missing_king(&mut next, &mut events);
+            if next.status == GameStatus::Ongoing {
+                self.finish_turn(&mut next, actor, &mut events)?;
+            } else {
+                self.push_game_ended(&next, &mut events);
+            }
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        let middle_capture = target_piece.map(|target| self.middle_capture_context(&next, target));
 
         if matches!(moving_piece.kind, PieceKind::BigRook | PieceKind::Colossus) {
             let targets = self.large_landing_targets(&next, moving_piece, movement.to);
@@ -2375,6 +2627,7 @@ impl Engine {
                 next.quiet_ply.saturating_add(1)
             };
             next.mark_deathmatch_progress();
+            self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             self.resolve_missing_king(&mut next, &mut events);
             if next.status == GameStatus::Ongoing {
@@ -2402,6 +2655,7 @@ impl Engine {
             next.card_runtime.moved_piece_ids.insert(moving_piece.id);
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
@@ -2428,6 +2682,7 @@ impl Engine {
             next.en_passant = None;
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = next.quiet_ply.saturating_add(1);
+            self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
@@ -2523,6 +2778,7 @@ impl Engine {
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = 0;
             next.mark_deathmatch_progress();
+            self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
@@ -2622,6 +2878,7 @@ impl Engine {
                 next.quiet_ply.saturating_add(1)
             };
             next.mark_deathmatch_progress();
+            self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             self.resolve_missing_king(&mut next, &mut events);
             if next.status != GameStatus::Ongoing {
@@ -2788,11 +3045,22 @@ impl Engine {
             };
         }
         if moving_survived {
+            moving_survived = self.resolve_middle_after_move(
+                &mut next,
+                moving_piece,
+                movement,
+                target_piece.map(|target| (capture_square, target)),
+                middle_capture,
+                &mut events,
+            );
+        }
+        if moving_survived {
             self.apply_idol_encore(&mut next, idol_source, moving_piece.id);
         }
 
         let previous_en_passant = next.en_passant;
-        next.en_passant = if moving_piece.kind == PieceKind::Pawn
+        next.en_passant = if moving_survived
+            && moving_piece.kind == PieceKind::Pawn
             && movement.from.file() == movement.to.file()
             && movement.from.rank().abs_diff(movement.to.rank()) == 2
         {
@@ -3369,6 +3637,57 @@ impl Engine {
         state.card_runtime.merchant_gold.remove(&piece_id);
         state.card_runtime.large_pieces.remove(&piece_id);
         state.card_runtime.piece_origins.remove(&piece_id);
+        state
+            .card_runtime
+            .basic_training_piece_ids
+            .remove(&piece_id);
+        state
+            .card_runtime
+            .promotion_rush_piece_ids
+            .remove(&piece_id);
+        state.card_runtime.evasion_piece_ids.remove(&piece_id);
+        state.card_runtime.ghost_piece_ids.remove(&piece_id);
+        state.card_runtime.inertia_piece_ids.remove(&piece_id);
+        state.card_runtime.ice_sheet.remove(&piece_id);
+        state.card_runtime.severed.remove(&piece_id);
+        state.card_runtime.chameleon_piece_ids.remove(&piece_id);
+        state.card_runtime.chimera_piece_ids.remove(&piece_id);
+        state.card_runtime.imperial_moves.remove(&piece_id);
+        state.card_runtime.poisoned_piece_ids.remove(&piece_id);
+        state.card_runtime.sacrifice_protection.remove(&piece_id);
+        state.card_runtime.explosive_piece_ids.remove(&piece_id);
+        state.card_runtime.trojan_piece_ids.remove(&piece_id);
+        state.card_runtime.quantum_positions.remove(&piece_id);
+        state.card_runtime.stealth_piece_ids.remove(&piece_id);
+        state.card_runtime.submerged_piece_ids.remove(&piece_id);
+        state.card_runtime.witch_trials.remove(&piece_id);
+        state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
+        state.card_runtime.bear_retaliations.remove(&piece_id);
+        state
+            .card_runtime
+            .feudal_contracts
+            .retain(|contract| contract.pawn_id != piece_id && contract.guardian_id != piece_id);
+        state
+            .card_runtime
+            .twin_bonds
+            .retain(|bond| bond.first_id != piece_id && bond.second_id != piece_id);
+    }
+
+    /// Drops state that belongs to a piece's concrete type while retaining generic
+    /// card statuses that remain attached to the physical piece after a transform.
+    fn clear_piece_kind_runtime(&self, state: &mut GameState, piece_id: u32) {
+        state
+            .card_runtime
+            .herald_jump_locked_until
+            .remove(&piece_id);
+        state.card_runtime.windmill_modes.remove(&piece_id);
+        state.card_runtime.log_statuses.remove(&piece_id);
+        state.card_runtime.wizard_mana.remove(&piece_id);
+        state.card_runtime.reaper_souls.remove(&piece_id);
+        state.card_runtime.merchant_gold.remove(&piece_id);
+        state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
+        state.card_runtime.bear_retaliations.remove(&piece_id);
     }
 
     fn resolve_calling_card_capture(
@@ -3519,7 +3838,12 @@ impl Engine {
                 !state.board.iter().any(|(_, piece)| {
                     piece.owner == player
                         && (piece.kind == PieceKind::King
-                            || matches!(piece.kind, PieceKind::RoyalKnight | PieceKind::Merchant)
+                            || matches!(
+                                piece.kind,
+                                PieceKind::RoyalKnight
+                                    | PieceKind::Merchant
+                                    | PieceKind::DarkWizard
+                            )
                             || state.card_runtime.royal_piece_ids.contains(&piece.id))
                 })
             }
@@ -3842,6 +4166,8 @@ impl Engine {
         }
         self.tick_platform_after_turn(state, events);
         self.tick_card_statuses_after_turn(state, actor);
+        self.tick_middle_statuses_after_turn(state, actor, events);
+        self.resolve_due_premoves_after_turn(state, actor, events);
         if self.tick_deathmatch_after_turn(state, actor) {
             self.push_game_ended(state, events);
             return Ok(());
@@ -3876,6 +4202,7 @@ impl Engine {
             player: next_player,
             actions_remaining: state.actions_remaining,
         });
+        self.resolve_middle_turn_start(state, next_player, events);
         self.resolve_effect_queue_from(state, events, next_turn_event_start)?;
         self.resolve_missing_king(state, events);
         if state.status != GameStatus::Ongoing {
@@ -4549,7 +4876,9 @@ impl Engine {
                         }
                     }
                 }
-                _ => {}
+                _ => {
+                    self.generate_middle_card_actions(state, card, actions);
+                }
             }
         }
     }
@@ -4578,6 +4907,18 @@ impl Engine {
             }
             self.generate_moves_for_piece(state, from, piece, &mut actions);
         }
+        let scarecrow_captures = actions
+            .iter()
+            .filter(|action| {
+                matches!(action, Action::Move(movement) if state.board.get(movement.to).is_some_and(|target| {
+                    target.owner != state.turn && target.kind == PieceKind::Scarecrow
+                }))
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if !scarecrow_captures.is_empty() {
+            return scarecrow_captures;
+        }
         actions.sort();
         actions.dedup();
         actions
@@ -4600,13 +4941,26 @@ impl Engine {
         state: &GameState,
         from: Square,
         piece: Piece,
-        actions: &mut Vec<Action>,
+        all_actions: &mut Vec<Action>,
     ) {
         if state.card_runtime.frozen.contains_key(&piece.id)
             || state.card_runtime.idol_rest_piece_ids.contains(&piece.id)
             || state.card_runtime.dice_locks[piece.owner.index()]
                 .is_some_and(|lock| lock.remaining_turns > 0 && lock.kind == piece.kind)
         {
+            return;
+        }
+        if self.middle_piece_is_exhausted(state, piece) {
+            return;
+        }
+        let mut generated = Vec::new();
+        let actions = &mut generated;
+        if state.card_runtime.socialism[piece.owner.index()] > 0
+            && !self.is_royal_piece(state, piece)
+        {
+            self.generate_socialism_moves(state, from, piece, actions);
+            self.filter_middle_moves(state, from, piece, actions);
+            all_actions.extend(generated);
             return;
         }
         match piece.kind {
@@ -4916,8 +5270,87 @@ impl Engine {
             PieceKind::BigRook => self.generate_big_rook_moves(state, from, piece, actions),
             PieceKind::Colossus => self.generate_large_step_moves(state, from, piece, actions),
             PieceKind::Merchant => {}
+            PieceKind::DarkWizard => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                actions,
+            ),
+            PieceKind::Camel => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-3, -1),
+                    (-3, 1),
+                    (-1, -3),
+                    (-1, 3),
+                    (1, -3),
+                    (1, 3),
+                    (3, -1),
+                    (3, 1),
+                ],
+                actions,
+            ),
+            PieceKind::Ferz => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                actions,
+            ),
+            PieceKind::Bat => {
+                for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                    let mut cursor = from;
+                    for _ in 0..2 {
+                        let Some(target) = cursor.offset(file_delta, rank_delta) else {
+                            break;
+                        };
+                        match self.board_piece_at(state, target) {
+                            None => actions.push(Action::Move(MoveAction::new(from, target, None))),
+                            Some(target_piece) if self.can_capture(state, piece, target_piece) => {
+                                actions.push(Action::Move(MoveAction::new(from, target, None)));
+                                break;
+                            }
+                            Some(_) => break,
+                        }
+                        cursor = target;
+                    }
+                }
+            }
+            PieceKind::Lobster => {
+                let direction = if piece.owner == Player::White { 1 } else { -1 };
+                self.generate_leaper_moves(
+                    state,
+                    from,
+                    piece,
+                    &[(-1, direction), (0, direction), (1, direction)],
+                    actions,
+                );
+            }
+            PieceKind::Bear => self.generate_slider_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-1, -1),
+                    (-1, 1),
+                    (1, -1),
+                    (1, 1),
+                    (-1, 0),
+                    (1, 0),
+                    (0, -1),
+                    (0, 1),
+                ],
+                actions,
+            ),
+            PieceKind::Monster | PieceKind::Scarecrow | PieceKind::BabyBear => {}
         }
         self.generate_loyalist_moves(state, from, piece, actions);
+        self.augment_middle_moves(state, from, piece, actions);
+        self.filter_middle_moves(state, from, piece, actions);
+        all_actions.extend(generated);
     }
 
     fn generate_pawn_moves(
@@ -5349,6 +5782,17 @@ impl Engine {
                             .flatten()
                     })
             })
+            .or_else(|| {
+                state
+                    .card_runtime
+                    .quantum_positions
+                    .iter()
+                    .find_map(|(piece_id, position)| {
+                        (*position == square)
+                            .then(|| state.board.find_by_id(*piece_id))
+                            .flatten()
+                    })
+            })
     }
 
     fn fianchetto_destination_blocked(
@@ -5430,6 +5874,16 @@ impl Engine {
                             actions.push(Action::Move(MoveAction::new(from, target, None)));
                         }
                         break;
+                    }
+                    Some(target_piece)
+                        if target_piece.owner == piece.owner
+                            && state
+                                .card_runtime
+                                .ghost_piece_ids
+                                .contains(&target_piece.id) =>
+                    {
+                        cursor = target;
+                        continue;
                     }
                     Some(_) => break,
                 }
@@ -6080,8 +6534,16 @@ impl Engine {
         attacker: Piece,
         target: Piece,
     ) -> bool {
-        attacker.owner != target.owner
+        (target.kind == PieceKind::Monster || attacker.owner != target.owner)
+            && state.card_runtime.armistice_remaining_ply == 0
             && !state.card_runtime.frozen.contains_key(&target.id)
+            && !self.middle_submerged_protects(state, target)
+            && (!state.card_runtime.stealth_piece_ids.contains(&target.id)
+                || self.is_royal_piece(state, attacker))
+            && !(state.card_runtime.overwhelm[target.owner.index()]
+                && self.is_royal_piece(state, attacker)
+                && (target.kind == PieceKind::Queen || self.is_royal_piece(state, target)))
+            && !self.middle_encouragement_protects(state, target)
             && target.kind != PieceKind::Guard
             && !matches!(
                 attacker.kind,
@@ -6233,6 +6695,12 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         | PieceKind::Unicorn
         | PieceKind::Missionary => 4,
         PieceKind::Alibaba => 3,
+        PieceKind::DarkWizard => 6,
+        PieceKind::Camel | PieceKind::Bat => 3,
+        PieceKind::Ferz | PieceKind::Lobster => 2,
+        PieceKind::BabyBear => 1,
+        PieceKind::Bear => 9,
+        PieceKind::Monster | PieceKind::Scarecrow => 0,
     }
 }
 
@@ -6513,17 +6981,31 @@ mod tests {
     #[test]
     fn initial_draft_opening_card_is_hidden_then_used_after_the_first_move() {
         let engine = Engine::bundled_20260807().unwrap();
-        let state = engine.new_game(Mode::Standard, 20_260_807).unwrap();
-        let GamePhase::Draft(draft) = &state.phase else {
-            panic!("new game must start in a draft")
-        };
-        assert_eq!(draft.offers[0], OTHERWORLD);
-        let state = first_draft_pick(&engine, &state).state;
+        let (state, offer_index, opening_id) = (0..1_000)
+            .find_map(|seed| {
+                let state = engine.new_game(Mode::Standard, seed).ok()?;
+                let GamePhase::Draft(draft) = &state.phase else {
+                    return None;
+                };
+                draft.offers.iter().enumerate().find_map(|(index, id)| {
+                    implemented_card(id)
+                        .is_some_and(|card| {
+                            card.phase == CardPhase::Opening
+                                && card.activation == CardActivation::Active
+                        })
+                        .then(|| (state.clone(), index as u16, id.clone()))
+                })
+            })
+            .expect("a bounded seed search must find an active OPENING offer");
+        let state = engine
+            .apply(&state, Action::DraftPick { offer_index })
+            .unwrap()
+            .state;
         let state = first_draft_pick(&engine, &state).state;
         let card = state
             .cards
             .iter()
-            .find(|card| card.owner == Player::White && card.definition_id == OTHERWORLD)
+            .find(|card| card.owner == Player::White && card.definition_id == opening_id)
             .unwrap();
         let instance_id = card.instance_id;
         assert!(
@@ -6536,7 +7018,13 @@ mod tests {
             !matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
         }));
 
-        let transition = engine.apply(&state, movement("e2", "e4")).unwrap();
+        let first_move = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(_)))
+            .expect("standard opening must have a legal move");
+        let transition = engine.apply(&state, first_move).unwrap();
         let card = transition
             .state
             .cards
@@ -6557,7 +7045,7 @@ mod tests {
                 owner: Player::White,
                 instance_id: used,
                 definition_id,
-            } if *used == instance_id && definition_id == OTHERWORLD
+            } if *used == instance_id && definition_id == &opening_id
         )));
         assert_eq!(transition.state.turn, Player::Black);
     }
@@ -6834,7 +7322,13 @@ mod tests {
         state.turn = Player::Black;
         state.turns_taken = [10, 9];
 
-        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        let action = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(_)))
+            .expect("the transformed test position must still have a legal move");
+        let transition = engine.apply(&state, action).unwrap();
         let GamePhase::Draft(draft) = &transition.state.phase else {
             panic!("the 10-turn checkpoint must start a draft")
         };
@@ -6860,7 +7354,13 @@ mod tests {
         state.turn = Player::Black;
         state.turns_taken = [20, 19];
 
-        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        let action = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(_)))
+            .expect("the exhausted draft-pool position must have a legal move");
+        let transition = engine.apply(&state, action).unwrap();
         let GamePhase::Draft(draft) = &transition.state.phase else {
             panic!("the 20-turn checkpoint must start a draft")
         };
@@ -6948,7 +7448,13 @@ mod tests {
                 .state;
         }
 
-        let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
+        let action = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(_)))
+            .expect("the exhausted middle-pool position must have a legal move");
+        let transition = engine.apply(&state, action).unwrap();
         assert_eq!(transition.state.phase, GamePhase::Playing);
         assert_eq!(transition.state.turn, Player::White);
         assert!(transition.state.completed_drafts[DraftPhase::Middle.index()]);
@@ -9802,5 +10308,160 @@ mod tests {
         let mut events = Vec::new();
         engine.resolve_calling_card_capture(&mut calling, rook, None, &mut events);
         assert!(calling.board.get("b8".parse().unwrap()).is_none());
+    }
+
+    #[test]
+    fn every_active_middle_card_exposes_and_executes_a_legal_action() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut pieces = vec![
+            ("e1", Player::White, PieceKind::King),
+            ("d1", Player::White, PieceKind::Queen),
+            ("a1", Player::White, PieceKind::Rook),
+            ("h1", Player::White, PieceKind::Rook),
+            ("c3", Player::White, PieceKind::Bishop),
+            ("f3", Player::White, PieceKind::Bishop),
+            ("b3", Player::White, PieceKind::Knight),
+            ("g3", Player::White, PieceKind::Knight),
+            ("e8", Player::Black, PieceKind::King),
+            ("d8", Player::Black, PieceKind::Queen),
+            ("a8", Player::Black, PieceKind::Rook),
+            ("h8", Player::Black, PieceKind::Rook),
+            ("c6", Player::Black, PieceKind::Bishop),
+            ("f6", Player::Black, PieceKind::Bishop),
+            ("b6", Player::Black, PieceKind::Knight),
+            ("g6", Player::Black, PieceKind::Knight),
+        ];
+        for square in ["a4", "b4", "c4", "d4"] {
+            pieces.push((square, Player::White, PieceKind::Pawn));
+        }
+        for square in ["e5", "f5", "g5", "h5"] {
+            pieces.push((square, Player::Black, PieceKind::Pawn));
+        }
+        let base = minimal_state(&pieces, Player::White, 20_260_807);
+
+        for definition in IMPLEMENTED_CARDS.iter().filter(|definition| {
+            definition.phase == CardPhase::Middle && definition.activation == CardActivation::Active
+        }) {
+            let mut state = base.clone();
+            grant_test_card(&mut state, definition.id, 9_000);
+            let action = engine
+                .legal_actions(&state)
+                .unwrap_or_else(|error| {
+                    panic!("{} action generation failed: {error}", definition.id)
+                })
+                .into_iter()
+                .find(|action| {
+                    matches!(
+                        action,
+                        Action::UseCard {
+                            instance_id: 9_000,
+                            ..
+                        }
+                    )
+                })
+                .unwrap_or_else(|| panic!("{} exposed no card action", definition.id));
+            engine
+                .apply(&state, action)
+                .unwrap_or_else(|error| panic!("{} failed to execute: {error}", definition.id));
+        }
+    }
+
+    #[test]
+    fn middle_move_providers_and_capture_filters_change_legal_moves() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut leap = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1,
+        );
+        engine.apply_card_definition(&mut leap, LEAP, Player::White);
+        assert!(has_move(&engine, &leap, "a2", "b4"));
+
+        let pawn = leap.board.get("a2".parse().unwrap()).unwrap();
+        leap.board.set(
+            "a1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Rook)),
+        );
+        leap.card_runtime.ghost_piece_ids.insert(pawn.id);
+        assert!(has_move(&engine, &leap, "a1", "a3"));
+
+        let mut armistice = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("a8", Player::Black, PieceKind::Queen),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            2,
+        );
+        assert!(has_move(&engine, &armistice, "a1", "a8"));
+        armistice.card_runtime.armistice_remaining_ply = 4;
+        assert!(!has_move(&engine, &armistice, "a1", "a8"));
+    }
+
+    #[test]
+    fn poisoned_pawn_stuns_its_capturer_for_two_future_turns() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("a7", Player::Black, PieceKind::Pawn),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            3,
+        );
+        let pawn = state.board.get("a7".parse().unwrap()).unwrap();
+        let rook = state.board.get("a1".parse().unwrap()).unwrap();
+        state.card_runtime.poisoned_piece_ids.insert(pawn.id);
+        let state = engine.apply(&state, movement("a1", "a7")).unwrap().state;
+        assert_eq!(
+            state
+                .card_runtime
+                .frozen
+                .get(&rook.id)
+                .map(|status| status.remaining_turns),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn black_magic_keeps_the_dark_wizard_as_the_royal_piece() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(4);
+        let rook = state.board.get("a1".parse().unwrap()).unwrap();
+        state.card_runtime.large_pieces.insert(
+            rook.id,
+            LargePieceStatus {
+                anchor: "a1".parse().unwrap(),
+                hp: 2,
+                max_hp: 2,
+            },
+        );
+        grant_test_card(&mut state, crate::BLACK_MAGIC, 1);
+        let state = engine
+            .apply(&state, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(state.status, GameStatus::Ongoing);
+        assert!(state.board.contains(Player::White, PieceKind::DarkWizard));
+        assert!(!state.board.contains(Player::White, PieceKind::King));
+        assert!(!state.card_runtime.large_pieces.contains_key(&rook.id));
+        assert_eq!(
+            state
+                .board
+                .iter()
+                .filter(
+                    |(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Monster
+                )
+                .count(),
+            15
+        );
     }
 }

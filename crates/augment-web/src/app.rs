@@ -206,6 +206,11 @@ fn board_view(state: &GameState) -> Vec<Value> {
             cells.insert(square, (piece, square == status.anchor, status.anchor));
         }
     }
+    for (piece_id, position) in &state.card_runtime.quantum_positions {
+        if let Some((_, piece)) = state.board.find_by_id(*piece_id) {
+            cells.entry(*position).or_insert((piece, true, *position));
+        }
+    }
 
     (0..64u8)
         .map(|index| {
@@ -240,6 +245,68 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     if let Some(turn) = state.card_runtime.disarmed.get(&piece.id) {
         statuses.push(format!("무장해제 ~{turn}턴"));
     }
+    for (label, status) in [
+        ("빙판", state.card_runtime.ice_sheet.get(&piece.id)),
+        ("절단", state.card_runtime.severed.get(&piece.id)),
+        (
+            "희생 보호",
+            state.card_runtime.sacrifice_protection.get(&piece.id),
+        ),
+        ("마녀재판", state.card_runtime.witch_trials.get(&piece.id)),
+    ] {
+        if let Some(status) = status {
+            statuses.push(format!("{label} {}턴", status.remaining_turns));
+        }
+    }
+    for (label, active) in [
+        (
+            "회피",
+            state.card_runtime.evasion_piece_ids.contains(&piece.id),
+        ),
+        (
+            "고스트",
+            state.card_runtime.ghost_piece_ids.contains(&piece.id),
+        ),
+        (
+            "관성",
+            state.card_runtime.inertia_piece_ids.contains(&piece.id),
+        ),
+        (
+            "은신",
+            state.card_runtime.stealth_piece_ids.contains(&piece.id),
+        ),
+        (
+            "잠복",
+            state.card_runtime.submerged_piece_ids.contains(&piece.id),
+        ),
+        (
+            "독",
+            state.card_runtime.poisoned_piece_ids.contains(&piece.id),
+        ),
+        (
+            "자폭",
+            state.card_runtime.explosive_piece_ids.contains(&piece.id),
+        ),
+        (
+            "트로이",
+            state.card_runtime.trojan_piece_ids.contains(&piece.id),
+        ),
+        (
+            "키메라",
+            state.card_runtime.chimera_piece_ids.contains(&piece.id),
+        ),
+        (
+            "카멜레온",
+            state.card_runtime.chameleon_piece_ids.contains(&piece.id),
+        ),
+    ] {
+        if active {
+            statuses.push(label.to_owned());
+        }
+    }
+    if let Some(square) = state.card_runtime.quantum_positions.get(&piece.id) {
+        statuses.push(format!("양자 위치 {square}"));
+    }
     if let Some(status) = state.card_runtime.large_pieces.get(&piece.id) {
         statuses.push(format!("HP {}/{}", status.hp, status.max_hp));
     }
@@ -251,6 +318,15 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     }
     if let Some(gold) = state.card_runtime.merchant_gold.get(&piece.id) {
         statuses.push(format!("골드 {gold}"));
+    }
+    if let Some(ready) = state.card_runtime.baby_bear_grow_turns.get(&piece.id) {
+        statuses.push(format!(
+            "성장까지 {}수",
+            ready.saturating_sub(state.shared_turn_count())
+        ));
+    }
+    if let Some(remaining) = state.card_runtime.bear_retaliations.get(&piece.id) {
+        statuses.push(format!("역습 {remaining}회"));
     }
     if state.card_runtime.loyalist_piece_ids.contains(&piece.id) {
         statuses.push("충신".to_owned());
@@ -715,6 +791,15 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::RoyalKnight => ("royal_knight", "로얄 나이트", "RN"),
         PieceKind::Man => ("man", "만", "MN"),
         PieceKind::Merchant => ("merchant", "상인", "M"),
+        PieceKind::DarkWizard => ("dark_wizard", "흑마법사", "DW"),
+        PieceKind::Monster => ("monster", "괴물", "MO"),
+        PieceKind::Scarecrow => ("scarecrow", "허수아비", "S"),
+        PieceKind::Camel => ("camel", "낙타", "C"),
+        PieceKind::Ferz => ("ferz", "페르즈", "FZ"),
+        PieceKind::Bat => ("bat", "박쥐", "BT"),
+        PieceKind::BabyBear => ("baby_bear", "아기곰", "BB"),
+        PieceKind::Lobster => ("lobster", "랍스터", "LB"),
+        PieceKind::Bear => ("bear", "곰", "BE"),
         PieceKind::Pawn
         | PieceKind::Knight
         | PieceKind::Bishop
@@ -793,14 +878,28 @@ mod tests {
 
     #[test]
     fn opening_auto_card_is_shown_as_pending_and_not_clickable() {
-        let mut session = GameSession::new(DEFAULT_SEED).unwrap();
-        session.apply_index(0, None).unwrap();
+        let (mut session, offer_index) = (0..1_000)
+            .find_map(|seed| {
+                let session = GameSession::new(seed).ok()?;
+                let GamePhase::Draft(draft) = &session.state.phase else {
+                    return None;
+                };
+                let index = draft.offers.iter().position(|id| {
+                    implemented_card(id).is_some_and(|card| {
+                        card.phase == augment_core::CardPhase::Opening
+                            && card.activation == CardActivation::Active
+                    })
+                })?;
+                Some((session, index))
+            })
+            .expect("a bounded seed search must find an active OPENING offer");
+        session.apply_index(offer_index, None).unwrap();
         let view = session.apply_index(0, None).unwrap();
         let card = view["cards"]["white"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|card| card["id"] == "otherworld")
+            .find(|card| card["openingAutoPending"] == true)
             .unwrap();
         assert_eq!(card["openingAutoPending"], true);
         assert_eq!(card["available"], false);

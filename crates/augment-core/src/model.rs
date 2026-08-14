@@ -146,6 +146,15 @@ pub enum PieceKind {
     RoyalKnight,
     Man,
     Merchant,
+    DarkWizard,
+    Monster,
+    Scarecrow,
+    Camel,
+    Ferz,
+    Bat,
+    BabyBear,
+    Lobster,
+    Bear,
 }
 
 impl PieceKind {
@@ -190,6 +199,15 @@ impl PieceKind {
             Self::RoyalKnight => 37,
             Self::Man => 38,
             Self::Merchant => 39,
+            Self::DarkWizard => 40,
+            Self::Monster => 41,
+            Self::Scarecrow => 42,
+            Self::Camel => 43,
+            Self::Ferz => 44,
+            Self::Bat => 45,
+            Self::BabyBear => 46,
+            Self::Lobster => 47,
+            Self::Bear => 48,
         }
     }
 
