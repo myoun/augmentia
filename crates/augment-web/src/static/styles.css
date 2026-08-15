@@ -189,6 +189,19 @@ h2 {
   font-weight: 750;
 }
 
+.button.primary {
+  border: 1px solid rgba(141, 124, 243, 0.45);
+  color: #ffffff;
+  background: linear-gradient(145deg, #7b68ee, #5a45d2);
+  box-shadow: 0 4px 14px rgba(123, 104, 238, 0.28);
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.button.primary:hover {
+  background: linear-gradient(145deg, #8d7cf3, #6752df);
+  transform: translateY(-1px);
+}
+
 .button.secondary {
   border: 1px solid rgba(217, 184, 105, 0.34);
   color: var(--gold-bright);

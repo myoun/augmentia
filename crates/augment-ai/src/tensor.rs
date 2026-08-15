@@ -4,7 +4,7 @@ pub const SPATIAL_CHANNELS: usize = 64;
 pub const SPATIAL_SIZE: usize = SPATIAL_CHANNELS * 8 * 8; // 4,096 f32s
 pub const GLOBAL_FEATURES_SIZE: usize = 128; // 128 f32s
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct EncodedState {
     pub spatial: Vec<f32>,
     pub global: Vec<f32>,

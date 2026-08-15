@@ -131,6 +131,14 @@ fn handle_connection(
                 Err(error) => write_json(stream, 400, &json!({ "error": error })),
             }
         }
+        ("POST", "/api/bot-move") => {
+            let payload = parse_json_body(&request)?;
+            let sims = payload.get("sims").and_then(Value::as_u64).unwrap_or(100) as usize;
+            match session.bot_move(sims) {
+                Ok(view) => write_json(stream, 200, &view),
+                Err(error) => write_json(stream, 400, &json!({ "error": error })),
+            }
+        }
         ("POST", "/api/action") => {
             let payload = parse_json_body(&request)?;
             let Some(index) = payload.get("index").and_then(Value::as_u64) else {

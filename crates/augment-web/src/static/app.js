@@ -1,6 +1,7 @@
 const elements = {
   board: document.querySelector("#board"),
   seedInput: document.querySelector("#seedInput"),
+  aiMoveButton: document.querySelector("#aiMoveButton"),
   newGameButton: document.querySelector("#newGameButton"),
   connectionState: document.querySelector("#connectionState"),
   turnPill: document.querySelector("#turnPill"),
@@ -537,6 +538,27 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("visible"), 4200);
 }
 
+async function botMove() {
+  if (busy || !game || game.status.kind !== "ongoing") return;
+  setBusy(true);
+  try {
+    game = await request("/api/bot-move", {
+      method: "POST",
+      body: JSON.stringify({ sims: 100 }),
+    });
+    clearInteraction();
+    render();
+  } catch (error) {
+    showToast(error.message);
+    await loadState();
+  } finally {
+    setBusy(false);
+  }
+}
+
+if (elements.aiMoveButton) {
+  elements.aiMoveButton.addEventListener("click", botMove);
+}
 elements.newGameButton.addEventListener("click", newGame);
 elements.cancelSelection.addEventListener("click", () => {
   clearInteraction();

@@ -1,3 +1,4 @@
+use augment_ai::{HeuristicEvaluator, MctsConfig, MctsTree};
 use augment_core::{
     Action, ActionTarget, CardActivation, Engine, Event, GamePhase, GameState, GameStatus, Mode,
     MoveAction, Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
@@ -81,6 +82,29 @@ impl GameSession {
             .map_err(|error| error.to_string())?;
         self.record_events(&transition.events);
         self.state = transition.state;
+        self.view()
+    }
+
+    pub fn bot_move(&mut self, simulations: usize) -> Result<Value, String> {
+        if self.state.status != GameStatus::Ongoing {
+            return self.view();
+        }
+        let evaluator = HeuristicEvaluator::new();
+        let config = MctsConfig {
+            c_puct: 2.0,
+            num_simulations: simulations.clamp(10, 1000),
+            temperature: 0.5,
+        };
+        let mut tree = MctsTree::new(config);
+        let search_result = tree.search(&self.state, &self.engine, &evaluator);
+        if let Some((chosen_action, _, _)) = search_result {
+            let transition = self
+                .engine
+                .apply(&self.state, chosen_action)
+                .map_err(|error| error.to_string())?;
+            self.record_events(&transition.events);
+            self.state = transition.state;
+        }
         self.view()
     }
 

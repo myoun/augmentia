@@ -7,3 +7,6 @@ publish = false
 
 [dependencies]
 augment-core = { path = "../augment-core" }
+augment-ai = { path = "../augment-ai" }
+serde = { workspace = true }
+serde_json = { workspace = true }

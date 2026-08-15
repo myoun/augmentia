@@ -22,7 +22,7 @@ pub const MULTI_SQ_OFFSET: usize = CHOICE_OFFSET + CHOICE_COUNT;
 
 pub type ActionIndex = u16;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ActionMask {
     bits: Vec<u64>,
 }

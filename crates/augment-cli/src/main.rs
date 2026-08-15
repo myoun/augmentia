@@ -1,36 +1,92 @@
+use augment_ai::{HeuristicEvaluator, MctsConfig, SelfPlayWorker};
 use augment_core::{
     Action, ActionTarget, Engine, Event, GamePhase, GameState, GameStatus, Mode, MoveAction,
     PieceKind, Player, Square, implemented_card,
 };
 use std::error::Error;
-use std::io::{self, BufRead, Write};
+use std::fs::File;
+use std::io::{self, BufRead, BufWriter, Write};
 
 const DEFAULT_SEED: u64 = 20_260_807;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let seed = parse_seed(std::env::args().skip(1))?;
+    let mut args = std::env::args().skip(1);
     let engine = Engine::bundled_20260807()?;
-    let stdin = io::stdin();
-    let stdout = io::stdout();
-    play_hotseat(&engine, seed, stdin.lock(), stdout.lock())
-}
-
-fn parse_seed(mut args: impl Iterator<Item = String>) -> Result<u64, Box<dyn Error>> {
-    let mut seed = DEFAULT_SEED;
-    while let Some(argument) = args.next() {
-        match argument.as_str() {
-            "--seed" => {
-                let value = args.next().ok_or("--seed 뒤에 정수가 필요합니다")?;
-                seed = value.parse()?;
-            }
-            "--help" | "-h" => {
-                println!("사용법: cargo run -p augment-cli -- [--seed 정수]");
-                std::process::exit(0);
-            }
-            _ => return Err(format!("알 수 없는 인자: {argument}").into()),
+    let subcmd = args.next();
+    match subcmd.as_deref() {
+        Some("selfplay") => run_selfplay(&engine, args),
+        Some("--seed") => {
+            let seed: u64 = args.next().ok_or("--seed requires value")?.parse()?;
+            let stdin = io::stdin();
+            let stdout = io::stdout();
+            play_hotseat(&engine, seed, stdin.lock(), stdout.lock())
+        }
+        Some("--help") | Some("-h") => {
+            println!(
+                "사용법: cargo run -p augment-cli -- [selfplay --games N --sims M --out dataset.jsonl | --seed N]"
+            );
+            Ok(())
+        }
+        Some(other) => Err(format!("알 수 없는 인자: {other}").into()),
+        None => {
+            let stdin = io::stdin();
+            let stdout = io::stdout();
+            play_hotseat(&engine, DEFAULT_SEED, stdin.lock(), stdout.lock())
         }
     }
-    Ok(seed)
+}
+
+fn run_selfplay(
+    engine: &Engine,
+    mut args: impl Iterator<Item = String>,
+) -> Result<(), Box<dyn Error>> {
+    let mut games = 10usize;
+    let mut sims = 50usize;
+    let mut out_path = "dataset.jsonl".to_owned();
+    let mut seed = DEFAULT_SEED;
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--games" | "-g" => games = args.next().ok_or("--games requires value")?.parse()?,
+            "--sims" | "-s" => sims = args.next().ok_or("--sims requires value")?.parse()?,
+            "--out" | "-o" => out_path = args.next().ok_or("--out requires value")?,
+            "--seed" => seed = args.next().ok_or("--seed requires value")?.parse()?,
+            _ => return Err(format!("unknown selfplay option: {arg}").into()),
+        }
+    }
+
+    println!("[Self-Play] Generating {games} games with {sims} MCTS simulations -> {out_path}");
+    let file = File::create(&out_path)?;
+    let mut writer = BufWriter::new(file);
+    let evaluator = HeuristicEvaluator::new();
+    let config = MctsConfig {
+        c_puct: 2.0,
+        num_simulations: sims,
+        temperature: 1.0,
+    };
+
+    let mut total_samples = 0usize;
+    for g in 0..games {
+        let game_seed = seed.wrapping_add(g as u64);
+        let result = SelfPlayWorker::play_game(engine, &evaluator, config, game_seed, 80);
+        let samples = result.to_training_samples();
+        for sample in &samples {
+            serde_json::to_writer(&mut writer, sample)?;
+            writer.write_all(b"\n")?;
+        }
+        total_samples += samples.len();
+        println!(
+            "  Game {}/{} completed ({} plies, {} samples, winner: {:?})",
+            g + 1,
+            games,
+            result.total_plies,
+            samples.len(),
+            result.winner
+        );
+    }
+    writer.flush()?;
+    println!("[Self-Play] Finished! Total samples written: {total_samples}");
+    Ok(())
 }
 
 fn play_hotseat<R: BufRead, W: Write>(

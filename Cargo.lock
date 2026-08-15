@@ -15,7 +15,10 @@ dependencies = [
 name = "augment-cli"
 version = "0.1.0"
 dependencies = [
+ "augment-ai",
  "augment-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -39,6 +42,7 @@ dependencies = [
 name = "augment-web"
 version = "0.1.0"
 dependencies = [
+ "augment-ai",
  "augment-core",
  "serde_json",
 ]

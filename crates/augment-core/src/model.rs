@@ -5,7 +5,9 @@ pub const BOARD_FILES: u8 = 8;
 pub const BOARD_RANKS: u8 = 8;
 pub const BOARD_SQUARES: usize = 64;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
 pub enum Player {
     White,
     Black,

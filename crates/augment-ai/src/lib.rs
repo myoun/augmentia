@@ -12,7 +12,7 @@ pub use mcts::{MctsConfig, MctsNode, MctsTree};
 pub use tensor::{
     EncodedState, GLOBAL_FEATURES_SIZE, SPATIAL_CHANNELS, SPATIAL_SIZE, encode_state,
 };
-pub use worker::{SelfPlayGameResult, SelfPlayStep, SelfPlayWorker};
+pub use worker::{SelfPlayGameResult, SelfPlayStep, SelfPlayWorker, TrainingSample};
 
 #[cfg(test)]
 mod tests;

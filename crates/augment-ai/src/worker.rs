@@ -3,8 +3,9 @@ use super::evaluator::Evaluator;
 use super::mcts::{MctsConfig, MctsTree};
 use super::tensor::{EncodedState, encode_state};
 use augment_core::{Engine, GameStatus, Mode, Player};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SelfPlayStep {
     pub state_encoded: EncodedState,
     pub action_mask: ActionMask,
@@ -12,11 +13,50 @@ pub struct SelfPlayStep {
     pub player: Player,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SelfPlayGameResult {
     pub steps: Vec<SelfPlayStep>,
     pub winner: Option<Player>,
     pub total_plies: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TrainingSample {
+    pub spatial: Vec<f32>,
+    pub global: Vec<f32>,
+    pub mask: Vec<usize>,
+    pub policy: Vec<(ActionIndex, f32)>,
+    pub value: f32,
+}
+
+impl SelfPlayGameResult {
+    pub fn to_training_samples(&self) -> Vec<TrainingSample> {
+        self.steps
+            .iter()
+            .map(|step| {
+                let val = match self.winner {
+                    Some(w) => {
+                        if w == step.player {
+                            1.0
+                        } else {
+                            -1.0
+                        }
+                    }
+                    None => 0.0,
+                };
+                let mask_indices = (0..super::action_space::ACTION_SPACE_SIZE)
+                    .filter(|&i| step.action_mask.is_set(i))
+                    .collect();
+                TrainingSample {
+                    spatial: step.state_encoded.spatial.clone(),
+                    global: step.state_encoded.global.clone(),
+                    mask: mask_indices,
+                    policy: step.policy_target.clone(),
+                    value: val,
+                }
+            })
+            .collect()
+    }
 }
 
 pub struct SelfPlayWorker;
