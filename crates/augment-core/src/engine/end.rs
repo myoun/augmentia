@@ -363,6 +363,17 @@ impl Engine {
             VANISH => {
                 state.card_runtime.vanish[actor.index()] = true;
             }
+            CLONE => {
+                state.card_runtime.coronation[actor.index()] = true;
+            }
+            JOKER => {
+                for card in &mut state.cards {
+                    if card.owner == actor && card.charges == 0 {
+                        card.charges = 1;
+                        break;
+                    }
+                }
+            }
             _ => return Ok(false),
         }
         Ok(true)
@@ -416,7 +427,7 @@ impl Engine {
             CORONATION | HALLUCINATION | MOVING | REVERSE_PAWNS | UNDERPROMOTION | CONSCRIPTION
             | COLLAPSE | PALACE | UNDERGROUND_BUNKER | ZUGZWANG | BLUE_JEANS | FINAL_WEAPON
             | FLEETING_DREAM | PROPHECY | RACING_KING | BINA_MATE | TRAITOR | ULTIMATUM
-            | VANISH => {
+            | VANISH | CLONE | JOKER => {
                 push_none(actions);
             }
             LAST_RESISTANCE => {

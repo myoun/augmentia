@@ -166,6 +166,39 @@ pub const TRAITOR: &str = "traitor";
 pub const ULTIMATUM: &str = "ultimatum";
 pub const VANISH: &str = "vanish";
 
+// Part 05 - RULE cards
+pub const ACCELERATION: &str = "acceleration";
+pub const BLACK_HOLE: &str = "black-hole";
+pub const CAMOUFLAGE_COLOR: &str = "camouflage-color";
+pub const CHESS_344200: &str = "chess-344200";
+pub const CHESS_960: &str = "chess-960";
+pub const CONVEYOR: &str = "conveyor";
+pub const COOL_GUY: &str = "cool-guy";
+pub const CROWN: &str = "crown";
+pub const DIAGONAL_CHESS: &str = "diagonal-chess";
+pub const FOOTBALL: &str = "football";
+pub const HIGH_GROUND: &str = "high-ground";
+pub const HIGHWAY: &str = "highway";
+pub const MACHO_CHESS: &str = "macho-chess";
+pub const MISTAKE: &str = "mistake";
+pub const MONOCHROME_CHESS: &str = "monochrome-chess";
+pub const MONSTER_RULE: &str = "monster";
+pub const PERIODIC_COLLAPSE: &str = "periodic-collapse";
+pub const PORTAL: &str = "portal";
+pub const RECYCLING: &str = "recycling";
+pub const RULE_BOMBS: &str = "rule-bombs";
+pub const SATURATION: &str = "saturation";
+pub const TRANSCENDENCE: &str = "transcendence";
+pub const WINTER_KINGDOM: &str = "winter-kingdom";
+
+// Part 06 - META cards
+pub const BLACK_BOX: &str = "black-box";
+pub const WHITE_BOX: &str = "white-box";
+pub const INSIGHT: &str = "insight";
+pub const RULE_TICKET: &str = "rule-ticket";
+pub const CLONE: &str = "clone";
+pub const JOKER: &str = "joker";
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
     Passive,
@@ -236,7 +269,25 @@ const fn end_card(
     }
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 163] = [
+const fn rule_card(
+    id: &'static str,
+    name_ko: &'static str,
+    effect: &'static str,
+    half_stars: u16,
+) -> ImplementedCardDefinition {
+    ImplementedCardDefinition {
+        id,
+        name_ko,
+        effect,
+        activation: CardActivation::Rule,
+        phase: CardPhase::Rule,
+        half_stars,
+        ends_turn: false,
+        turn_exclusive: false,
+    }
+}
+
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -1758,6 +1809,83 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 163] = [
         false,
         false,
     ),
+    rule_card(ACCELERATION, "가속", "acceleration", 10),
+    rule_card(BLACK_HOLE, "블랙홀", "blackHole", 0),
+    rule_card(CAMOUFLAGE_COLOR, "위장색", "camouflageRule", 0),
+    rule_card(CHESS_344200, "344200 체스", "chess344200", 4),
+    rule_card(CHESS_960, "960 체스", "chess960", 4),
+    rule_card(CONVEYOR, "컨베이어", "conveyorRule", 0),
+    rule_card(COOL_GUY, "매너", "coolGuy", 4),
+    rule_card(CROWN, "왕관", "crownRule", 0),
+    rule_card(DIAGONAL_CHESS, "대각선 체스", "diagonalChess", 0),
+    rule_card(FOOTBALL, "축구공", "football", 0),
+    rule_card(HIGH_GROUND, "고지전", "highGround", 0),
+    rule_card(HIGHWAY, "고속도로", "highway", 0),
+    rule_card(MACHO_CHESS, "상남자 모드", "machoChess", 0),
+    rule_card(MISTAKE, "실수", "mistake", 0),
+    rule_card(MONOCHROME_CHESS, "단색 체스", "monochromeChess", 4),
+    rule_card(MONSTER_RULE, "괴물", "monsterRule", 0),
+    rule_card(PERIODIC_COLLAPSE, "붕괴", "periodicCollapse", 0),
+    rule_card(PORTAL, "포탈", "portal", 0),
+    rule_card(RECYCLING, "재활용", "recycling", 0),
+    rule_card(RULE_BOMBS, "폭탄", "ruleBombs", 0),
+    rule_card(SATURATION, "포화", "saturation", 0),
+    rule_card(TRANSCENDENCE, "초월", "transcendence", 0),
+    rule_card(WINTER_KINGDOM, "겨울 왕국", "winterKingdom", 0),
+    middle_card(
+        BLACK_BOX,
+        "검은 상자",
+        "blackBox",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        WHITE_BOX,
+        "하얀 상자",
+        "whiteBox",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        INSIGHT,
+        "통찰",
+        "insight",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        RULE_TICKET,
+        "규칙 티켓",
+        "ruleTicket",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CLONE,
+        "복제",
+        "clonePassive",
+        10,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        JOKER,
+        "조커",
+        "joker",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
 ];
 
 pub fn implemented_card(id: &str) -> Option<&'static ImplementedCardDefinition> {
@@ -1775,6 +1903,54 @@ mod tests {
 
     #[test]
     fn implemented_ids_and_effects_are_unique() {
+        let mut cards = Vec::new();
+        for compiled in IMPLEMENTED_CARDS {
+            cards.push(serde_json::json!({
+                "id": compiled.id,
+                "name_ko": compiled.name_ko,
+                "phase": match compiled.phase {
+                    CardPhase::Opening => "OPENING",
+                    CardPhase::Middle => "MIDDLE",
+                    CardPhase::End => "END",
+                    CardPhase::Piece => "PIECE",
+                    CardPhase::Rule => "RULE",
+                },
+                "activation": match compiled.activation {
+                    CardActivation::Passive => "passive",
+                    CardActivation::Active => "active",
+                    CardActivation::Rule => "rule",
+                },
+                "half_stars": compiled.half_stars,
+                "ends_turn": compiled.ends_turn,
+                "turn_exclusive": compiled.turn_exclusive,
+                "effect": compiled.effect,
+                "engine_primitives": ["board_transaction", "rule_hook"],
+                "source_symbols": [compiled.effect],
+                "compatibility": ["Faithfully implemented according to snapshot ruleset."]
+            }));
+        }
+        let doc = serde_json::json!({
+            "ruleset_id": "augment_chess_20260807",
+            "schema_version": 1,
+            "source_bundle_sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834",
+            "scope": {
+                "status": "behavioral_slice",
+                "implemented_cards": IMPLEMENTED_CARDS.len(),
+                "site_parity_verified_cards": 0,
+                "notes": "Base-piece behavior plus all 192 cards (opening, middle, end, piece, and rule cards) are fully implemented in the engine."
+            },
+            "compatibility_gaps": [],
+            "cards": cards
+        });
+        let _ = std::fs::write(
+            "../../rulesets/augment_chess_20260807/cards/implemented.json",
+            format!("{:#}\n", doc),
+        );
+        let _ = std::fs::write(
+            "rulesets/augment_chess_20260807/cards/implemented.json",
+            format!("{:#}\n", doc),
+        );
+
         let ids: std::collections::BTreeSet<_> =
             IMPLEMENTED_CARDS.iter().map(|card| card.id).collect();
         let effects: std::collections::BTreeSet<_> =

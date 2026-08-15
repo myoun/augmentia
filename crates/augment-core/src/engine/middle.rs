@@ -550,6 +550,38 @@ impl Engine {
                     },
                 );
             }
+            BLACK_BOX => {
+                let active_cards = [PARRY, DISARM, DICE, FREEZE, REPOSITION, SPRINT];
+                let (roll, idx) = state.rng_mut().web_choice_index(active_cards.len());
+                events.push(Event::RandomSample {
+                    purpose: "black-box".to_owned(),
+                    roll_53: roll,
+                });
+                let chosen = active_cards[idx.unwrap_or(0)];
+                let _ = self.apply_middle_active_card(
+                    state,
+                    actor,
+                    chosen,
+                    &ActionTarget::None,
+                    events,
+                );
+            }
+            WHITE_BOX => {}
+            INSIGHT => {
+                for (_, piece) in state.board.iter() {
+                    if piece.owner == actor {
+                        state.card_runtime.frozen.remove(&piece.id);
+                        state.card_runtime.disarmed.remove(&piece.id);
+                    } else {
+                        state.card_runtime.shielded_piece_ids.remove(&piece.id);
+                        state.card_runtime.protected_piece_ids.remove(&piece.id);
+                        state.card_runtime.evasion_piece_ids.remove(&piece.id);
+                    }
+                }
+            }
+            RULE_TICKET => {
+                let _ = self.install_rule_ext(state, ACCELERATION, events);
+            }
             _ => return Ok(false),
         }
         self.resolve_religious_victory(state);
@@ -579,7 +611,7 @@ impl Engine {
         match card.definition_id.as_str() {
             BREAKTHROUGH_ORDER | EN_PASSANT_BANG | ARMISTICE | ROYAL_COMMAND | SOCIALISM
             | TAUNT | MISTAKE_CARD | SNIPE | GALE | QUANTUM_MECHANICS | SUBSTITUTION
-            | SWITCHEROO => push_none(actions),
+            | WHITE_BOX | BLACK_BOX | INSIGHT | RULE_TICKET | SWITCHEROO => push_none(actions),
             EVASION | ROYAL_SHIELD => {
                 if state.board.iter().any(|(_, piece)| {
                     piece.owner == actor

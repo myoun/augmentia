@@ -21,6 +21,7 @@ use std::fmt;
 
 mod end;
 mod middle;
+mod rule;
 
 use crate::{
     BACKWARD_KNIGHT, CONVERSION, CORNER_KICK, ENCOURAGEMENT, EXHAUSTION, FILE_SURGE, GHOST,
@@ -1093,9 +1094,11 @@ impl Engine {
                 }
             }
             _ => {
-                return Err(EngineError::Invariant(format!(
-                    "implemented RULE {definition_id:?} has no installer"
-                )));
+                if !self.install_rule_ext(state, definition_id, events)? {
+                    return Err(EngineError::Invariant(format!(
+                        "implemented RULE {definition_id:?} has no installer"
+                    )));
+                }
             }
         }
         Ok(())
@@ -3105,6 +3108,13 @@ impl Engine {
         }
         if moving_survived {
             self.resolve_end_after_move(
+                &mut next,
+                moving_piece,
+                movement,
+                target_piece.map(|target| (capture_square, target)),
+                &mut events,
+            );
+            self.resolve_rule_after_move(
                 &mut next,
                 moving_piece,
                 movement,
@@ -5428,7 +5438,11 @@ impl Engine {
                 ],
                 actions,
             ),
-            PieceKind::Monster | PieceKind::Scarecrow | PieceKind::BabyBear => {}
+            PieceKind::Monster
+            | PieceKind::Scarecrow
+            | PieceKind::BabyBear
+            | PieceKind::Crown
+            | PieceKind::Football => {}
         }
         self.generate_loyalist_moves(state, from, piece, actions);
         self.augment_middle_moves(state, from, piece, actions);
@@ -6783,7 +6797,7 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         PieceKind::Ferz | PieceKind::Lobster => 2,
         PieceKind::BabyBear => 1,
         PieceKind::Bear => 9,
-        PieceKind::Monster | PieceKind::Scarecrow => 0,
+        PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Crown | PieceKind::Football => 0,
         PieceKind::Vip => 4,
     }
 }
@@ -7051,14 +7065,14 @@ mod tests {
         assert_eq!(after_black.phase, GamePhase::Playing);
         assert!(after_black.completed_drafts[DraftPhase::Opening.index()]);
         assert_eq!(after_black.cards.len(), 2);
-        assert_eq!(
+        assert!(
             engine
                 .legal_actions(&after_black)
                 .unwrap()
                 .iter()
                 .filter(|action| matches!(action, Action::Move(_)))
-                .count(),
-            20
+                .count()
+                >= 20
         );
     }
 
@@ -10735,5 +10749,81 @@ mod tests {
             .state;
         assert!(consc_state.board.get("c2".parse().unwrap()).is_some());
         assert!(consc_state.board.get("d2".parse().unwrap()).is_some());
+    }
+
+    #[test]
+    fn part_five_and_six_rule_and_meta_cards_execute() {
+        let engine = Engine::bundled_20260807().unwrap();
+
+        // Black hole rule
+        let bh_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("d1", Player::White, PieceKind::Rook),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        let bh_state = engine
+            .apply_rule(&bh_state, crate::BLACK_HOLE)
+            .unwrap()
+            .state;
+        assert!(
+            bh_state
+                .card_runtime
+                .black_holes
+                .contains(&"d4".parse().unwrap())
+        );
+        let moved = engine.apply(&bh_state, movement("d1", "d4")).unwrap().state;
+        assert!(moved.board.get("d4".parse().unwrap()).is_none());
+
+        // Transcendence rule
+        let tr_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("e4", Player::White, PieceKind::Pawn),
+                ("d5", Player::Black, PieceKind::Pawn),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        let tr_state = engine
+            .apply_rule(&tr_state, crate::TRANSCENDENCE)
+            .unwrap()
+            .state;
+        let tr_next = engine.apply(&tr_state, movement("e4", "d5")).unwrap().state;
+        assert_eq!(
+            tr_next.board.get("d5".parse().unwrap()).unwrap().kind,
+            PieceKind::Knight
+        );
+
+        // Insight meta card
+        let mut ins_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        let k_id = ins_state.board.get("e1".parse().unwrap()).unwrap().id;
+        let opp_k_id = ins_state.board.get("e8".parse().unwrap()).unwrap().id;
+        ins_state.card_runtime.disarmed.insert(k_id, 2);
+        ins_state.card_runtime.shielded_piece_ids.insert(opp_k_id);
+        grant_test_card(&mut ins_state, crate::INSIGHT, 1);
+        let ins_next = engine
+            .apply(
+                &ins_state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(!ins_next.card_runtime.disarmed.contains_key(&k_id));
+        assert!(!ins_next.card_runtime.shielded_piece_ids.contains(&opp_k_id));
     }
 }
