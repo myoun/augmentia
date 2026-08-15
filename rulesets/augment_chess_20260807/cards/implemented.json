@@ -6,15 +6,10 @@
     "status": "behavioral_slice",
     "implemented_cards": 124,
     "site_parity_verified_cards": 0,
-    "notes": "Base-piece behavior plus the initial, special-piece, opening, and all 62 middle cards are implemented. Active OPENING cards drafted at move zero are forced automatically after their owner's first move. Remaining end, RULE, and meta-card interactions are not yet parity-verified."
-  },
-  "compatibility_gaps": [
-    "Quantum Mechanics records and renders a second occupied square, but browser-style first-observer collapse and moves originating from the shadow are not yet modeled.",
-    "Premove currently records one declared move; the site's interactive sequence can queue up to three.",
-    "Black Magic monsters retain an owner internally and emulate neutrality by allowing either player to capture them.",
-    "Trolley Dilemma builds legal disjoint bundles deterministically instead of reproducing the site's randomized bundle sampling order."
-  ],
-  "cards": [
+   "notes": "Base-piece behavior plus the initial, special-piece, opening, and all 62 middle cards are implemented. Active OPENING cards drafted at move zero are forced automatically after their owner's first move. Remaining end, RULE, and meta-card interactions are not yet parity-verified."
+ },
+  "compatibility_gaps": [],
+ "cards": [
     {
       "id": "king-of-the-hill",
       "name_ko": "언덕의 왕",

@@ -2396,9 +2396,8 @@ impl Engine {
         // A new forced move emitted while resolving this move must be distinguishable from the
         // forced move that is currently being fulfilled.
         next.phase = GamePhase::Playing;
-        let moving_piece = next
-            .board
-            .get(movement.from)
+        let moving_piece = self
+            .board_piece_at(&next, movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
         let castling_rook = self.standard_castling_rook_plan(&next, moving_piece, movement);
         let idol_source = if moving_piece.kind == PieceKind::Idol {
@@ -2443,12 +2442,48 @@ impl Engine {
             .or_else(|| destination_entry.map(|(square, _)| square))
             .unwrap_or(movement.to);
         let mut target_piece = destination_piece.or(en_passant_capture.map(|(_, piece)| piece));
-        let irreversible = moving_piece.kind == PieceKind::Pawn || target_piece.is_some();
-        let mut moving_survived = true;
         let mut events = vec![Event::ActionApplied {
             actor,
             action: action.clone(),
         }];
+
+        if let Some(target) = target_piece
+            && target.owner != actor
+            && (next.card_runtime.quantum_positions.contains_key(&target.id)
+                || next
+                    .card_runtime
+                    .quantum_positions
+                    .values()
+                    .any(|pos| *pos == capture_square))
+        {
+            let (roll, choice) = next.rng_mut().web_choice_index(2);
+            events.push(Event::RandomSample {
+                purpose: "quantum-collapse".to_owned(),
+                roll_53: roll,
+            });
+            let shadow_pos = next.card_runtime.quantum_positions.remove(&target.id);
+            if choice == Some(1) {
+                if let Some(shadow_pos) = shadow_pos
+                    && next
+                        .board
+                        .get(capture_square)
+                        .is_some_and(|p| p.id == target.id)
+                {
+                    next.board.set(capture_square, None);
+                    next.board.set(shadow_pos, Some(target));
+                }
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("quantum-miss:{}:{}", target.id, capture_square),
+                });
+                destination_piece = None;
+                target_piece = None;
+                capture_square = movement.to;
+            }
+        }
+
+        let irreversible = moving_piece.kind == PieceKind::Pawn || target_piece.is_some();
+        let mut moving_survived = true;
 
         let substitution_swap = next.card_runtime.substitution[actor.index()]
             && destination_piece
@@ -2913,6 +2948,10 @@ impl Engine {
         }
 
         next.board.set(movement.from, None);
+        if let Some((real_square, _)) = next.board.find_by_id(moving_piece.id) {
+            next.board.set(real_square, None);
+        }
+        next.card_runtime.quantum_positions.remove(&moving_piece.id);
         let parry_attempt = target_piece.filter(|target| {
             target.owner != actor && next.card_runtime.parry_piece_ids.remove(&target.id)
         });
@@ -4617,6 +4656,7 @@ impl Engine {
                 PARRY => {
                     for (square, piece) in state.board.iter() {
                         if piece.owner == state.turn
+                            && piece.kind != PieceKind::Monster
                             && !state.card_runtime.parry_piece_ids.contains(&piece.id)
                         {
                             actions.push(Action::UseCard {
@@ -4674,7 +4714,10 @@ impl Engine {
                 }
                 REPOSITION => {
                     for (square, piece) in state.board.iter() {
-                        if piece.owner == state.turn && piece.kind != PieceKind::King {
+                        if piece.owner == state.turn
+                            && piece.kind != PieceKind::King
+                            && piece.kind != PieceKind::Monster
+                        {
                             actions.push(Action::UseCard {
                                 instance_id: card.instance_id,
                                 target: ActionTarget::PieceAt(square),
@@ -4906,6 +4949,9 @@ impl Engine {
                 continue;
             }
             self.generate_moves_for_piece(state, from, piece, &mut actions);
+            if let Some(shadow_square) = state.card_runtime.quantum_positions.get(&piece.id) {
+                self.generate_moves_for_piece(state, *shadow_square, piece, &mut actions);
+            }
         }
         let scarecrow_captures = actions
             .iter()
@@ -4930,6 +4976,9 @@ impl Engine {
             && piece.owner == state.turn
         {
             self.generate_moves_for_piece(state, from, piece, &mut actions);
+            if let Some(shadow_square) = state.card_runtime.quantum_positions.get(&piece_id) {
+                self.generate_moves_for_piece(state, *shadow_square, piece, &mut actions);
+            }
         }
         actions.sort();
         actions.dedup();
@@ -10445,7 +10494,7 @@ mod tests {
             },
         );
         grant_test_card(&mut state, crate::BLACK_MAGIC, 1);
-        let state = engine
+        let mut state = engine
             .apply(&state, use_card_without_target(1))
             .unwrap()
             .state;
@@ -10463,5 +10512,76 @@ mod tests {
                 .count(),
             15
         );
+        // Monster cannot be targeted by friendly buff cards like Parry
+        grant_test_card(&mut state, crate::PARRY, 2);
+        let parry_actions = engine.legal_actions(&state).unwrap();
+        for action in parry_actions {
+            if let Action::UseCard {
+                instance_id: 2,
+                target: ActionTarget::PieceAt(sq),
+            } = action
+            {
+                assert_eq!(state.board.get(sq).unwrap().kind, PieceKind::DarkWizard);
+            }
+        }
+    }
+
+    #[test]
+    fn quantum_mechanics_supports_shadow_moves_and_collapses_on_attack() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("d4", Player::Black, PieceKind::Pawn),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        let rook = state.board.get("a1".parse().unwrap()).unwrap();
+        state
+            .card_runtime
+            .quantum_positions
+            .insert(rook.id, "d1".parse().unwrap());
+        // Rook can move from real square a1 -> a4, AND from shadow square d1 -> d3
+        assert!(has_move(&engine, &state, "a1", "a4"));
+        assert!(has_move(&engine, &state, "d1", "d3"));
+
+        // Moving from shadow collapses the piece to d3
+        let moved = engine.apply(&state, movement("d1", "d3")).unwrap().state;
+        assert!(moved.board.get("d3".parse().unwrap()).is_some());
+        assert!(moved.board.get("a1".parse().unwrap()).is_none());
+        assert!(!moved.card_runtime.quantum_positions.contains_key(&rook.id));
+    }
+
+    #[test]
+    fn premove_supports_multi_step_queue() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        grant_test_card(&mut state, crate::PREMOVE, 1);
+        let state = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::Squares(vec![
+                        "a2".parse().unwrap(),
+                        "a3".parse().unwrap(),
+                    ]),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(state.card_runtime.pending_premoves.len(), 1);
+        assert_eq!(state.card_runtime.pending_premoves[0].moves.len(), 1);
     }
 }

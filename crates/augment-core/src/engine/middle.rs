@@ -259,16 +259,20 @@ impl Engine {
             }
             PREMOVE => {
                 let squares = squares_target(target)?;
-                if squares.len() != 2 {
+                if squares.len() < 2 || squares.len() > 6 || squares.len() % 2 != 0 {
                     return Err(EngineError::Invariant(
-                        "premove needs from and to".to_owned(),
+                        "premove needs 1 to 3 move square pairs".to_owned(),
                     ));
+                }
+                let mut moves = Vec::new();
+                for chunk in squares.chunks_exact(2) {
+                    moves.push(MoveAction::new(chunk[0], chunk[1], None));
                 }
                 state.card_runtime.pending_premoves.push(PendingPremove {
                     owner: actor,
                     trigger_player: opponent,
                     trigger_turn: state.turns_taken[opponent.index()].saturating_add(1),
-                    moves: vec![MoveAction::new(squares[0], squares[1], None)],
+                    moves,
                 });
             }
             QUANTUM_MECHANICS => state.card_runtime.quantum_pending[actor.index()] = true,
@@ -937,7 +941,7 @@ impl Engine {
                 }
             }
             TROLLEY => {
-                if self.middle_trolley_bundle_pair(state, opponent).is_some() {
+                if self.has_trolley_bundle_pair(state, opponent) {
                     push_none(actions);
                 }
             }
@@ -1900,7 +1904,7 @@ impl Engine {
         }
 
         if let Some(by) = state.card_runtime.pending_trolley_by[player.index()].take()
-            && let Some(bundles) = self.middle_trolley_bundle_pair(state, player)
+            && let Some(bundles) = self.sample_middle_trolley_bundle_pair(state, player, events)
         {
             let labels = bundles.each_ref().map(|bundle| {
                 let pieces = bundle
@@ -1955,11 +1959,7 @@ impl Engine {
         Ok(())
     }
 
-    fn middle_trolley_bundle_pair(
-        &self,
-        state: &GameState,
-        player: Player,
-    ) -> Option<[Vec<u32>; 2]> {
+    fn has_trolley_bundle_pair(&self, state: &GameState, player: Player) -> bool {
         let pieces = state
             .board
             .iter()
@@ -1981,13 +1981,58 @@ impl Engine {
                         if (low_score != high_score || first.as_ptr() != second.as_ptr())
                             && first.iter().all(|piece_id| !second.contains(piece_id))
                         {
-                            return Some([first.clone(), (*second).clone()]);
+                            return true;
                         }
                     }
                 }
             }
         }
-        None
+        false
+    }
+
+    fn sample_middle_trolley_bundle_pair(
+        &self,
+        state: &mut GameState,
+        player: Player,
+        events: &mut Vec<Event>,
+    ) -> Option<[Vec<u32>; 2]> {
+        let pieces = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == player && !self.is_royal_piece(state, *piece))
+            .map(|(_, piece)| (piece.id, middle_piece_value(piece.kind)))
+            .collect::<Vec<_>>();
+        let mut by_score = std::collections::BTreeMap::<u8, Vec<Vec<u32>>>::new();
+        collect_trolley_bundles(&pieces, 0, &mut Vec::new(), 0, &mut by_score);
+        let mut pairs = Vec::new();
+        for low_score in 2..=8 {
+            for high_score in low_score..=u8::min(10, low_score + 2) {
+                let left = by_score.get(&low_score).into_iter().flatten();
+                let right = by_score
+                    .get(&high_score)
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>();
+                for first in left {
+                    for second in &right {
+                        if (low_score != high_score || first.as_ptr() != second.as_ptr())
+                            && first.iter().all(|piece_id| !second.contains(piece_id))
+                        {
+                            pairs.push([first.clone(), (*second).clone()]);
+                        }
+                    }
+                }
+            }
+        }
+        if pairs.is_empty() {
+            return None;
+        }
+        let (roll, index) = state.rng_mut().web_choice_index(pairs.len());
+        events.push(Event::RandomSample {
+            purpose: "trolley-bundles".to_owned(),
+            roll_53: roll,
+        });
+        Some(pairs[index.unwrap_or(0)].clone())
     }
 
     pub(super) fn resolve_due_premoves_after_turn(
@@ -2014,10 +2059,10 @@ impl Engine {
                             .contains(&Action::Move(movement))
                 });
                 if !legal {
-                    continue;
+                    break;
                 }
                 let Some(mut piece) = state.board.get(movement.from) else {
-                    continue;
+                    break;
                 };
                 if let Some(captured) = state.board.get(movement.to) {
                     self.remove_piece_for_card(
