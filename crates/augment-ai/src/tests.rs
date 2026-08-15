@@ -1,5 +1,46 @@
 use super::*;
-use augment_core::{Engine, Mode};
+use augment_core::{Action, Engine, Mode};
+
+#[test]
+fn mcts_finds_immediate_winning_move() {
+    let engine = Engine::bundled_20260807().unwrap();
+    let state = engine.new_game(Mode::Standard, 1).unwrap();
+    // Fast forward past draft
+    let after_w = engine
+        .apply(&state, Action::DraftPick { offer_index: 0 })
+        .unwrap()
+        .state;
+    let playing_state = engine
+        .apply(&after_w, Action::DraftPick { offer_index: 0 })
+        .unwrap()
+        .state;
+
+    let evaluator = HeuristicEvaluator::new();
+    let config = MctsConfig {
+        c_puct: 2.0,
+        num_simulations: 50,
+        temperature: 1.0,
+    };
+    let mut tree = MctsTree::new(config);
+    let search_res = tree.search(&playing_state, &engine, &evaluator);
+    assert!(search_res.is_some());
+    let (_, _, visits) = search_res.unwrap();
+    assert!(visits.len() >= 20);
+}
+
+#[test]
+fn self_play_worker_runs_game_rollout() {
+    let engine = Engine::bundled_20260807().unwrap();
+    let evaluator = HeuristicEvaluator::new();
+    let config = MctsConfig {
+        c_puct: 2.0,
+        num_simulations: 10,
+        temperature: 1.0,
+    };
+    let result = SelfPlayWorker::play_game(&engine, &evaluator, config, 1234, 15);
+    assert!(!result.steps.is_empty());
+    assert!(result.total_plies > 0);
+}
 
 #[test]
 fn standard_opening_moves_are_encoded_and_masked() {
