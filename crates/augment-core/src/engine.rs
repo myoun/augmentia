@@ -19,6 +19,7 @@ use crate::{
 use std::collections::BTreeSet;
 use std::fmt;
 
+mod end;
 mod middle;
 
 use crate::{
@@ -2113,6 +2114,12 @@ impl Engine {
                     &definition_id,
                     &target,
                     &mut events,
+                )? && !self.apply_end_active_card(
+                    &mut next,
+                    actor,
+                    &definition_id,
+                    &target,
+                    &mut events,
                 )? {
                     return Err(EngineError::Invariant(format!(
                         "unsupported active card {definition_id:?} was legal"
@@ -3095,6 +3102,15 @@ impl Engine {
         }
         if moving_survived {
             self.apply_idol_encore(&mut next, idol_source, moving_piece.id);
+        }
+        if moving_survived {
+            self.resolve_end_after_move(
+                &mut next,
+                moving_piece,
+                movement,
+                target_piece.map(|target| (capture_square, target)),
+                &mut events,
+            );
         }
 
         let previous_en_passant = next.en_passant;
@@ -4206,6 +4222,7 @@ impl Engine {
         self.tick_platform_after_turn(state, events);
         self.tick_card_statuses_after_turn(state, actor);
         self.tick_middle_statuses_after_turn(state, actor, events);
+        self.tick_end_statuses_after_turn(state, actor, events);
         self.resolve_due_premoves_after_turn(state, actor, events);
         if self.tick_deathmatch_after_turn(state, actor) {
             self.push_game_ended(state, events);
@@ -4921,6 +4938,7 @@ impl Engine {
                 }
                 _ => {
                     self.generate_middle_card_actions(state, card, actions);
+                    self.generate_end_card_actions(state, card, card.owner, actions);
                 }
             }
         }
@@ -5391,6 +5409,22 @@ impl Engine {
                     (1, 0),
                     (0, -1),
                     (0, 1),
+                ],
+                actions,
+            ),
+            PieceKind::Vip => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (0, -1),
+                    (0, 1),
+                    (1, -1),
+                    (1, 0),
+                    (1, 1),
                 ],
                 actions,
             ),
@@ -6750,6 +6784,7 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         PieceKind::BabyBear => 1,
         PieceKind::Bear => 9,
         PieceKind::Monster | PieceKind::Scarecrow => 0,
+        PieceKind::Vip => 4,
     }
 }
 
@@ -10583,5 +10618,122 @@ mod tests {
             .state;
         assert_eq!(state.card_runtime.pending_premoves.len(), 1);
         assert_eq!(state.card_runtime.pending_premoves[0].moves.len(), 1);
+    }
+
+    #[test]
+    fn part_four_end_cards_execute_and_modify_state() {
+        let engine = Engine::bundled_20260807().unwrap();
+
+        // Baby Bear
+        let mut bb_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("d1", Player::White, PieceKind::Queen),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        grant_test_card(&mut bb_state, crate::BABY_BEAR, 1);
+        let bb_state = engine
+            .apply(
+                &bb_state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::PieceAt("d1".parse().unwrap()),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            bb_state.board.get("d1".parse().unwrap()).unwrap().kind,
+            PieceKind::BabyBear
+        );
+
+        // Bribe
+        let mut bribe_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("b1", Player::White, PieceKind::Knight),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        grant_test_card(&mut bribe_state, crate::BRIBE, 2);
+        let bribe_state = engine
+            .apply(
+                &bribe_state,
+                Action::UseCard {
+                    instance_id: 2,
+                    target: ActionTarget::PieceAt("b1".parse().unwrap()),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            bribe_state.board.get("b1".parse().unwrap()).unwrap().kind,
+            PieceKind::Amazon
+        );
+
+        // Racing King
+        let mut rk_state = minimal_state(
+            &[
+                ("e7", Player::White, PieceKind::King),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        rk_state.card_runtime.racing_king[Player::White.index()] = true;
+        let rk_next = engine.apply(&rk_state, movement("e7", "d8")).unwrap().state;
+        assert!(matches!(
+            rk_next.status,
+            GameStatus::Won {
+                winner: Player::White,
+                ..
+            }
+        ));
+
+        // Lobster spawn
+        let mut lob_state = standard_play_state(4);
+        grant_test_card(&mut lob_state, crate::LOBSTER, 3);
+        let lob_state = engine
+            .apply(
+                &lob_state,
+                Action::UseCard {
+                    instance_id: 3,
+                    target: ActionTarget::Square("d4".parse().unwrap()),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            lob_state.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Lobster
+        );
+
+        // Conscription
+        let mut consc_state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("e8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            4,
+        );
+        grant_test_card(&mut consc_state, crate::CONSCRIPTION, 4);
+        let consc_state = engine
+            .apply(
+                &consc_state,
+                Action::UseCard {
+                    instance_id: 4,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(consc_state.board.get("c2".parse().unwrap()).is_some());
+        assert!(consc_state.board.get("d2".parse().unwrap()).is_some());
     }
 }

@@ -123,6 +123,49 @@ pub const TROLLEY: &str = "trolley";
 pub const VORTEX: &str = "vortex";
 pub const WITCH_TRIAL: &str = "witch-trial";
 
+// Part 04 - END cards
+pub const BABY_BEAR: &str = "baby-bear";
+pub const BRIBE: &str = "bribe";
+pub const CHARGE: &str = "charge";
+pub const CORONATION: &str = "coronation";
+pub const FRENZY: &str = "frenzy";
+pub const HALLUCINATION: &str = "hallucination";
+pub const LAST_RESISTANCE: &str = "last-resistance";
+pub const MOVING: &str = "moving";
+pub const NECROMANCY: &str = "necromancy";
+pub const REVERSE_PAWNS: &str = "reverse-pawns";
+pub const STAKE: &str = "stake";
+pub const UNDERPROMOTION: &str = "underpromotion";
+pub const VIP: &str = "vip";
+
+pub const BARRICADE: &str = "barricade";
+pub const CANCELING: &str = "canceling";
+pub const CHAIN: &str = "chain";
+pub const CONSCRIPTION: &str = "conscription";
+pub const COLLAPSE: &str = "collapse";
+pub const DESPERADO: &str = "desperado";
+pub const EXILE: &str = "exile";
+pub const HOMECOMING: &str = "homecoming";
+pub const LOBSTER: &str = "lobster";
+pub const PALACE: &str = "palace";
+pub const PORTAL_GUN: &str = "portal-gun";
+pub const UNDERGROUND_BUNKER: &str = "underground-bunker";
+pub const ZUGZWANG: &str = "zugzwang";
+
+pub const BINA_MATE: &str = "bina-mate";
+pub const BLUE_JEANS: &str = "blue-jeans";
+pub const DEATH_SQUAD: &str = "death-squad";
+pub const FINAL_WEAPON: &str = "final-weapon";
+pub const FLEETING_DREAM: &str = "fleeting-dream";
+pub const ICBM: &str = "icbm";
+pub const OTHELLO: &str = "othello";
+pub const PROPHECY: &str = "prophecy";
+pub const RACING_KING: &str = "racing-king";
+pub const SPY: &str = "spy";
+pub const TRAITOR: &str = "traitor";
+pub const ULTIMATUM: &str = "ultimatum";
+pub const VANISH: &str = "vanish";
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
     Passive,
@@ -172,7 +215,28 @@ const fn middle_card(
     }
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 124] = [
+const fn end_card(
+    id: &'static str,
+    name_ko: &'static str,
+    effect: &'static str,
+    half_stars: u16,
+    activation: CardActivation,
+    ends_turn: bool,
+    turn_exclusive: bool,
+) -> ImplementedCardDefinition {
+    ImplementedCardDefinition {
+        id,
+        name_ko,
+        effect,
+        activation,
+        phase: CardPhase::End,
+        half_stars,
+        ends_turn,
+        turn_exclusive,
+    }
+}
+
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 163] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -1347,6 +1411,349 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 124] = [
         "마녀재판",
         "witchTrial",
         8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        BABY_BEAR,
+        "아기곰",
+        "babyBear",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        BRIBE,
+        "삼일천하",
+        "bribe",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CHARGE,
+        "마지막 질주",
+        "charge",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CORONATION,
+        "대관식",
+        "coronation",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        FRENZY,
+        "광란",
+        "frenzy",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        HALLUCINATION,
+        "환각",
+        "hallucination",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        LAST_RESISTANCE,
+        "마지막 저항",
+        "lastResistance",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        MOVING,
+        "무빙",
+        "moving",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        NECROMANCY,
+        "빙의",
+        "necromancy",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        REVERSE_PAWNS,
+        "폰 방향 반전",
+        "reversePawns",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        STAKE,
+        "말뚝",
+        "stake",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        UNDERPROMOTION,
+        "언더프로모션",
+        "underpromotion",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(VIP, "귀빈", "vip", 6, CardActivation::Active, false, false),
+    end_card(
+        BARRICADE,
+        "엄폐물 설치",
+        "barricade",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CANCELING,
+        "캔슬링",
+        "canceling",
+        10,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CHAIN,
+        "사슬",
+        "chain",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        CONSCRIPTION,
+        "징집",
+        "conscription",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        COLLAPSE,
+        "붕괴",
+        "collapse",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        DESPERADO,
+        "데스페라도",
+        "desperado",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        EXILE,
+        "유배",
+        "exile",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        HOMECOMING,
+        "귀환",
+        "homecoming",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        LOBSTER,
+        "랍스터",
+        "lobster",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        PALACE,
+        "궁성",
+        "palace",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        PORTAL_GUN,
+        "포탈 건",
+        "portalGun",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        UNDERGROUND_BUNKER,
+        "지하벙커",
+        "undergroundBunker",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        ZUGZWANG,
+        "추크츠방",
+        "zugzwang",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        BINA_MATE,
+        "더블 체크",
+        "binaMate",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        BLUE_JEANS,
+        "청바지",
+        "blueJeans",
+        10,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        DEATH_SQUAD,
+        "결사대",
+        "deathSquad",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        FINAL_WEAPON,
+        "최종병기",
+        "finalWeapon",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        FLEETING_DREAM,
+        "일장춘몽",
+        "fleetingDream",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        ICBM,
+        "ICBM",
+        "icbm",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        OTHELLO,
+        "오델로",
+        "othello",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        PROPHECY,
+        "종전",
+        "prophecy",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        RACING_KING,
+        "레이싱 킹",
+        "racingKing",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        SPY,
+        "스파이",
+        "spy",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        TRAITOR,
+        "변절자",
+        "traitor",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        ULTIMATUM,
+        "최후 통첩",
+        "ultimatum",
+        9,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        VANISH,
+        "소멸",
+        "vanish",
+        9,
         CardActivation::Active,
         false,
         false,

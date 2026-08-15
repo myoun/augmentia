@@ -155,6 +155,7 @@ pub enum PieceKind {
     BabyBear,
     Lobster,
     Bear,
+    Vip,
 }
 
 impl PieceKind {
@@ -208,6 +209,7 @@ impl PieceKind {
             Self::BabyBear => 46,
             Self::Lobster => 47,
             Self::Bear => 48,
+            Self::Vip => 49,
         }
     }
 

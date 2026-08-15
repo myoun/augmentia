@@ -269,6 +269,32 @@ pub struct TrolleyDilemma {
     pub bundles: [Vec<u32>; 2],
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BribeRevert {
+    pub piece_id: u32,
+    pub due_turn: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NecromancyRevert {
+    pub piece_id: u32,
+    pub due_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingVip {
+    pub piece_id: u32,
+    pub owner: Player,
+    pub due_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingIcbm {
+    pub queen_id: u32,
+    pub owner: Player,
+    pub due_turn: u32,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
@@ -370,6 +396,34 @@ pub struct CardRuntimeState {
     pub active_trolley: Option<TrolleyDilemma>,
     pub baby_bear_grow_turns: BTreeMap<u32, u32>,
     pub bear_retaliations: BTreeMap<u32, u8>,
+    pub bribe_reverts: Vec<BribeRevert>,
+    pub charge_pawns: BTreeSet<u32>,
+    pub coronation: [bool; 2],
+    pub frenzy_pawns: BTreeSet<u32>,
+    pub hallucination_until_ply: [Option<u32>; 2],
+    pub moving: [bool; 2],
+    pub moving_consecutive: [(Option<u32>, u8); 2],
+    pub necromancy_reverts: Vec<NecromancyRevert>,
+    pub reverse_pawns_charges: [u8; 2],
+    pub stake_statuses: BTreeMap<u32, u32>,
+    pub underpromotion: [bool; 2],
+    pub vip_pending: Vec<PendingVip>,
+    pub barricades: BTreeSet<Square>,
+    pub chains: Vec<[u32; 2]>,
+    pub collapsed_files_ranks: bool,
+    pub desperado_pieces: BTreeSet<u32>,
+    pub palaces: BTreeMap<Player, [Square; 2]>,
+    pub portals: Option<[Square; 2]>,
+    pub bunkers: BTreeMap<u32, u8>,
+    pub zugzwang: [bool; 2],
+    pub bina_mate: [bool; 2],
+    pub final_weapon: [bool; 2],
+    pub icbm_pending: Vec<PendingIcbm>,
+    pub prophecy: [Option<u32>; 2],
+    pub racing_king: [bool; 2],
+    pub spies: BTreeMap<u32, Player>,
+    pub ultimatum: Option<u32>,
+    pub vanish: [bool; 2],
 }
 
 impl CardRuntimeState {
@@ -438,6 +492,37 @@ impl CardRuntimeState {
             || self.active_trolley.is_some()
             || !self.baby_bear_grow_turns.is_empty()
             || !self.bear_retaliations.is_empty()
+    }
+
+    fn has_end_state(&self) -> bool {
+        !self.bribe_reverts.is_empty()
+            || !self.charge_pawns.is_empty()
+            || self.coronation != [false, false]
+            || !self.frenzy_pawns.is_empty()
+            || self.hallucination_until_ply != [None, None]
+            || self.moving != [false, false]
+            || self.moving_consecutive != [(None, 0), (None, 0)]
+            || !self.necromancy_reverts.is_empty()
+            || self.reverse_pawns_charges != [0, 0]
+            || !self.stake_statuses.is_empty()
+            || self.underpromotion != [false, false]
+            || !self.vip_pending.is_empty()
+            || !self.barricades.is_empty()
+            || !self.chains.is_empty()
+            || self.collapsed_files_ranks
+            || !self.desperado_pieces.is_empty()
+            || !self.palaces.is_empty()
+            || self.portals.is_some()
+            || !self.bunkers.is_empty()
+            || self.zugzwang != [false, false]
+            || self.bina_mate != [false, false]
+            || self.final_weapon != [false, false]
+            || !self.icbm_pending.is_empty()
+            || self.prophecy != [None, None]
+            || self.racing_king != [false, false]
+            || !self.spies.is_empty()
+            || self.ultimatum.is_some()
+            || self.vanish != [false, false]
     }
 }
 
@@ -938,6 +1023,69 @@ impl GameState {
                 hash.u32(*piece_id);
                 hash.u32(due.saturating_sub(self.shared_turn_count()));
             }
+        }
+        if self.card_runtime.has_end_state() {
+            hash.bytes(b"end-runtime-v1");
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        &self.card_runtime.bribe_reverts,
+                        &self.card_runtime.charge_pawns,
+                        self.card_runtime.coronation,
+                        &self.card_runtime.frenzy_pawns,
+                        self.card_runtime.hallucination_until_ply,
+                        self.card_runtime.moving,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        self.card_runtime.moving_consecutive,
+                        &self.card_runtime.necromancy_reverts,
+                        self.card_runtime.reverse_pawns_charges,
+                        &self.card_runtime.stake_statuses,
+                        self.card_runtime.underpromotion,
+                        &self.card_runtime.vip_pending,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        &self.card_runtime.barricades,
+                        &self.card_runtime.chains,
+                        self.card_runtime.collapsed_files_ranks,
+                        &self.card_runtime.desperado_pieces,
+                        &self.card_runtime.palaces,
+                        self.card_runtime.portals,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        &self.card_runtime.bunkers,
+                        self.card_runtime.zugzwang,
+                        self.card_runtime.bina_mate,
+                        self.card_runtime.final_weapon,
+                        &self.card_runtime.icbm_pending,
+                        self.card_runtime.prophecy,
+                        self.card_runtime.racing_king,
+                        &self.card_runtime.spies,
+                        self.card_runtime.ultimatum,
+                        self.card_runtime.vanish,
+                    )
+                )
+                .as_bytes(),
+            );
         }
         for (index, flags) in [
             self.card_runtime.democracy,

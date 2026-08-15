@@ -766,6 +766,7 @@ fn kind_code(kind: PieceKind) -> &'static str {
         PieceKind::BabyBear => "BB",
         PieceKind::Lobster => "LB",
         PieceKind::Bear => "BE",
+        PieceKind::Vip => "VP",
     }
 }
 
@@ -819,6 +820,7 @@ fn kind_name(kind: PieceKind) -> &'static str {
         PieceKind::BabyBear => "아기곰",
         PieceKind::Lobster => "랍스터",
         PieceKind::Bear => "곰",
+        PieceKind::Vip => "귀빈",
     }
 }
 

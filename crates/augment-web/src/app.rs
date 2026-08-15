@@ -800,6 +800,7 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::BabyBear => ("baby_bear", "아기곰", "BB"),
         PieceKind::Lobster => ("lobster", "랍스터", "LB"),
         PieceKind::Bear => ("bear", "곰", "BE"),
+        PieceKind::Vip => ("vip", "귀빈", "VP"),
         PieceKind::Pawn
         | PieceKind::Knight
         | PieceKind::Bishop
