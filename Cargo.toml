@@ -4,6 +4,7 @@ members = [
     "crates/augment-cli",
     "crates/augment-snapshot",
     "crates/augment-web",
+    "crates/augment-ai",
 ]
 resolver = "2"
 

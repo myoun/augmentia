@@ -1,0 +1,11 @@
+[package]
+name = "augment-ai"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+augment-core = { path = "../augment-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
