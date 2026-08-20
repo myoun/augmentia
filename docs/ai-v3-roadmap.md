@@ -139,9 +139,29 @@ Transformer를 도입하지 않는다.
 메타데이터에 포함한다. 체크포인트 보존 한도와 candidate/champion 수명주기를
 설정하며, ONNX export 뒤 Python과 Rust 출력 동등성을 검사한다.
 
+학습 재개는 마지막 epoch부터 대략 이어가는 방식이 아니라 마지막으로 완료된 optimizer
+step부터 재현 가능해야 한다. checkpoint는 임시 파일에 완전히 기록한 뒤 atomic rename으로
+공개하며, 기록 도중 중단된 파일은 `latest`로 인정하지 않는다. 각 checkpoint에는 다음을
+함께 저장한다.
+
+- model, optimizer, learning-rate scheduler와 AMP gradient scaler 상태;
+- global optimizer step, epoch, gradient accumulation 경계와 deterministic sampler cursor;
+- Python, NumPy, PyTorch CPU/CUDA RNG 상태와 data-loader shuffle seed;
+- dataset manifest ID/hash, shard 목록, ruleset/schema ID, 학습 설정과 코드 commit;
+- run ID, 누적 sample 수와 직전 검증 지표.
+
+재개 시 dataset, schema, 모델 구조 또는 핵심 학습 설정이 checkpoint와 다르면 조용히
+이어가지 않고 실패한다. 의도적인 변경은 새 run으로 fork하고 부모 checkpoint를 provenance로
+남긴다. 정상 종료 요청에는 즉시 checkpoint를 만들고, 강제 종료에서는 마지막 주기 checkpoint
+이후의 step만 다시 실행한다.
+
 완료 조건:
 
 - 고정 seed 학습 smoke test가 재현된다.
+- 동일 seed에서 연속 학습과 중단·재개 학습의 batch 순서, loss, parameter와 optimizer
+  상태가 허용 오차 안에서 일치한다.
+- 손상되거나 절반만 기록된 checkpoint를 무시하고 직전 정상 checkpoint로 재개한다.
+- checkpoint와 다른 dataset/schema/config로 재개하려 하면 명시적으로 실패한다.
 - NaN, 불법 행동 확률, 스키마 불일치를 자동 검출한다.
 - ONNX 수치 동등성 테스트가 통과한다.
 
