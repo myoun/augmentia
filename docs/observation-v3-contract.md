@@ -1,6 +1,6 @@
 # ObservationV3 의미 계약
 
-상태: 확정 (`2026-08-21`)
+상태: 의미 계약 및 Rust 인코더 구현 완료 (`2026-08-21`)
 
 스키마 ID: `augmentia.observation.v3`
 
@@ -194,3 +194,47 @@ V2 Gen2 audit generator에도 이 필드를 추가해 새 데이터가 출처 �
 - 공개 범위, 관점 변환, deadline 기준 또는 ID 의미가 바뀌면 새 schema ID를 만든다.
 - 3단계 구현은 18개 `GameState` 필드, 147개 runtime 필드와 2개 파생값에 대한
   coverage test를 제공해야 한다.
+
+## 11. Rust 물리 레이아웃
+
+구현은 `crates/augment-ai/src/encoder_v3.rs`의 `encode_observation_v3()`다. 현재 V2
+ONNX와 MCTS 입력은 아직 교체하지 않았으며, V3 학습·모델 경로가 준비될 때까지 두
+인코더를 병행한다.
+
+고정 dense 입력:
+
+- `spatial`: `f32[102, 8, 8]`, 총 6,528개 값, 범위 `[0, 1]`;
+- plane 0~50: self의 `PieceKind::stable_code() - 1`;
+- plane 51~101: opponent의 `PieceKind::stable_code() - 1`;
+- `global`: `f32[32]`, 범위 `[0, 1]`;
+- count의 dense 사본은 `x / (x + 1)`을 사용하고 exact integer는 typed state에 함께
+  보존한다.
+
+`global` index:
+
+| index | 의미 |
+| --- | --- |
+| 0~8 | 행동 수, ply, quiet ply, 양쪽 카드 사용·별·완료 turn count |
+| 9~11 | opening/middle/end draft 완료 boolean |
+| 12~16 | deathmatch와 en-passant presence/progress |
+| 17~21 | 양쪽 card 수, rule 수, shared turn, 현재 repetition count |
+| 22~25 | playing/forced/draft/choice one-hot |
+| 26~29 | standard/chaos/grand/campaign one-hot |
+| 30~31 | acceleration/revelation global switch |
+
+정확한 board piece는 `BoardPieceV3`, 카드는 `CardRecordV3`, phase는 `PhaseV3`, 전역
+정수와 terminal metadata는 `GlobalStateV3`에 보존한다. `CardRuntimeState`는 항상
+147개의 `RuntimeFeatureV3`를 source 순서대로 내보내며 field ID는 1~147이다. 값은
+`None`, boolean, signed/unsigned integer, relative player, local piece/card reference,
+exact piece kind, canonical square, exact text, list, named record 중 하나다. 가변 목록에는
+고정 길이 truncation이나 padding을 적용하지 않는다.
+
+검증은 다음을 고정한다.
+
+- dense shape, finite 여부와 `[0, 1]` 범위;
+- 147/147 runtime field 이름과 ID 순서;
+- 51종 기물 plane의 비충돌;
+- 192개 card definition ID의 무손실 보존;
+- raw piece/card ID와 RNG state 비노출;
+- 색 교환·rank mirror 시 board, card와 대표 runtime relation의 동일 관측;
+- 서로 다른 runtime 의미가 같은 관측으로 축약되지 않음.

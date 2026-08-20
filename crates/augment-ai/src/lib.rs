@@ -1,5 +1,6 @@
 pub mod action_space;
 pub mod evaluator;
+pub mod encoder_v3;
 pub mod mcts;
 pub mod observation_v3;
 pub mod quiescence;
@@ -9,6 +10,11 @@ pub use action_space::{
     ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
 };
 pub use evaluator::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator};
+pub use encoder_v3::{
+    BoardPieceV3, CardRecordV3, GlobalStateV3, NamedRuntimeValueV3, ObservationV3, PhaseV3,
+    RelativePlayerV3, RuntimeFeatureV3, RuntimeValueV3, OBSERVATION_V3_GLOBAL_FEATURES,
+    OBSERVATION_V3_SPATIAL_PLANES, OBSERVATION_V3_SPATIAL_SIZE, encode_observation_v3,
+};
 pub use mcts::{
     MctsConfig, MctsNode, MctsTree, RootActionDiagnostics, RootNoiseConfig, SearchDiagnostics,
 };

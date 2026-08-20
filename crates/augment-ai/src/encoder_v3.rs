@@ -1,0 +1,2064 @@
+use crate::observation_v3::{CARD_RUNTIME_SOURCE_FIELDS, OBSERVATION_V3_SCHEMA_ID};
+use augment_core::{
+    BribeRevert, CardRuntimeState, ChoiceContinuation, DelayedHazard, DelayedHazardKind,
+    DiceLockStatus, DraftPhase, EmptyLunchboxStatus, FeudalContract, ForcedMoveContinuation,
+    ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus, InitiativeStatus,
+    LargePieceStatus, LogStatus, Mode, MoveAction, NecromancyRevert, PendingIcbm,
+    PendingOtherworld, PendingPanic, PendingPremove, PendingScarecrow, PendingVip, PieceKind,
+    PlatformRuleState, Player, RepositionStatus, RoyalCommandStatus, Square, TimedPieceStatus,
+    TrolleyDilemma, TwinBond, WindmillMode,
+};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+
+pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 102;
+pub const OBSERVATION_V3_SPATIAL_SIZE: usize = OBSERVATION_V3_SPATIAL_PLANES * 64;
+pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RelativePlayerV3 {
+    SelfPlayer,
+    Opponent,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ObservationV3 {
+    pub schema_id: String,
+    pub ruleset_id: String,
+    pub spatial_shape: [usize; 3],
+    pub spatial: Vec<f32>,
+    pub global_shape: [usize; 1],
+    pub global: Vec<f32>,
+    pub state: GlobalStateV3,
+    pub pieces: Vec<BoardPieceV3>,
+    pub cards: Vec<CardRecordV3>,
+    pub phase: PhaseV3,
+    pub runtime: Vec<RuntimeFeatureV3>,
+    pub piece_slot_count: u32,
+    pub card_slot_count: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct GlobalStateV3 {
+    pub mode_id: String,
+    pub ply: u32,
+    pub quiet_ply: u32,
+    pub actions_remaining: u16,
+    pub cards_used_this_turn: [u16; 2],
+    pub half_star_totals: [u16; 2],
+    pub turns_taken: [u32; 2],
+    pub completed_drafts: [bool; 3],
+    pub shared_turn_count: u32,
+    pub current_repetition_count: u8,
+    pub status: StatusV3,
+    pub deathmatch: Option<DeathmatchV3>,
+    pub en_passant: Option<EnPassantV3>,
+    pub applied_rules: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum StatusV3 {
+    Ongoing,
+    Won {
+        winner: RelativePlayerV3,
+        reason: String,
+        detail: Option<String>,
+    },
+    Draw {
+        reason: String,
+        detail: Option<String>,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DeathmatchV3 {
+    pub age_shared_turns: u32,
+    pub quiet_full_turns: u32,
+    pub interval_full_turns: u32,
+    pub progress_this_round: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EnPassantV3 {
+    pub target: u8,
+    pub captured: u8,
+    pub pawn_owner: RelativePlayerV3,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BoardPieceV3 {
+    pub slot: u32,
+    pub square: u8,
+    pub owner: RelativePlayerV3,
+    pub kind_code: u8,
+    pub capture_count: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CardRecordV3 {
+    pub slot: u32,
+    pub definition_id: String,
+    pub owner: RelativePlayerV3,
+    pub half_stars: u16,
+    pub charges: u16,
+    pub available_in_owner_turns: Option<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PhaseV3 {
+    Playing,
+    ForcedMove {
+        piece: u32,
+        source_kind: String,
+        source_id: Option<String>,
+        continuation: String,
+    },
+    Draft {
+        draft_phase: String,
+        offers: Vec<String>,
+        resume_turn: RelativePlayerV3,
+    },
+    AwaitingChoice {
+        choice_slot: u32,
+        owner: RelativePlayerV3,
+        source_card: u32,
+        handler_id: String,
+        options: Vec<String>,
+        continuation: String,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RuntimeFeatureV3 {
+    pub field_id: u16,
+    pub value: RuntimeValueV3,
+}
+
+impl RuntimeFeatureV3 {
+    pub fn field_name(&self) -> Option<&'static str> {
+        self.field_id
+            .checked_sub(1)
+            .and_then(|index| CARD_RUNTIME_SOURCE_FIELDS.get(usize::from(index)))
+            .copied()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NamedRuntimeValueV3 {
+    pub name: String,
+    pub value: RuntimeValueV3,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum RuntimeValueV3 {
+    None,
+    Bool(bool),
+    Unsigned(u64),
+    Signed(i64),
+    Player(RelativePlayerV3),
+    Piece(u32),
+    Card(u32),
+    PieceKind(u8),
+    Square(u8),
+    Text(String),
+    List(Vec<RuntimeValueV3>),
+    Record(Vec<NamedRuntimeValueV3>),
+}
+
+#[derive(Default)]
+struct LocalIds {
+    pieces: BTreeMap<u32, u32>,
+    cards: BTreeMap<u32, u32>,
+}
+
+impl LocalIds {
+    fn new(state: &GameState) -> Self {
+        let mut ids = Self::default();
+        let mut board_pieces = state
+            .board
+            .iter()
+            .map(|(square, piece)| (canonical_square(square, state.turn).index(), piece.id))
+            .collect::<Vec<_>>();
+        board_pieces.sort_unstable();
+        for (_, piece_id) in board_pieces {
+            ids.piece(piece_id);
+        }
+
+        let mut cards = state.cards.iter().collect::<Vec<_>>();
+        cards.sort_by_key(|card| {
+            (
+                relative_player(card.owner, state.turn) as u8,
+                card.definition_id.as_str(),
+                card.half_stars,
+                card.charges,
+                card.available_after_turn,
+                card.instance_id,
+            )
+        });
+        for card in cards {
+            ids.card(card.instance_id);
+        }
+        ids
+    }
+
+    fn piece(&mut self, raw: u32) -> u32 {
+        let next = self.pieces.len() as u32;
+        *self.pieces.entry(raw).or_insert(next)
+    }
+
+    fn card(&mut self, raw: u32) -> u32 {
+        let next = self.cards.len() as u32;
+        *self.cards.entry(raw).or_insert(next)
+    }
+}
+
+pub fn encode_observation_v3(state: &GameState) -> ObservationV3 {
+    let mut ids = LocalIds::new(state);
+    let pieces = encode_pieces(state, &mut ids);
+    let cards = encode_cards(state, &mut ids);
+    let phase = encode_phase(state, &mut ids);
+    let runtime = encode_runtime(state, &mut ids);
+    let global_state = encode_global_state(state);
+    let spatial = encode_spatial(&pieces);
+    let global = encode_global_dense(state, &global_state);
+
+    debug_assert_eq!(runtime.len(), CARD_RUNTIME_SOURCE_FIELDS.len());
+    debug_assert!(spatial.iter().all(|value| (0.0..=1.0).contains(value)));
+    debug_assert!(global.iter().all(|value| (0.0..=1.0).contains(value)));
+
+    ObservationV3 {
+        schema_id: OBSERVATION_V3_SCHEMA_ID.to_owned(),
+        ruleset_id: state.ruleset_id.clone(),
+        spatial_shape: [OBSERVATION_V3_SPATIAL_PLANES, 8, 8],
+        spatial,
+        global_shape: [OBSERVATION_V3_GLOBAL_FEATURES],
+        global,
+        state: global_state,
+        pieces,
+        cards,
+        phase,
+        runtime,
+        piece_slot_count: ids.pieces.len() as u32,
+        card_slot_count: ids.cards.len() as u32,
+    }
+}
+
+fn encode_pieces(state: &GameState, ids: &mut LocalIds) -> Vec<BoardPieceV3> {
+    let mut pieces = state
+        .board
+        .iter()
+        .map(|(square, piece)| BoardPieceV3 {
+            slot: ids.piece(piece.id),
+            square: square_value(square, state.turn),
+            owner: relative_player(piece.owner, state.turn),
+            kind_code: piece.kind.stable_code(),
+            capture_count: piece.capture_count,
+        })
+        .collect::<Vec<_>>();
+    pieces.sort_by_key(|piece| piece.square);
+    pieces
+}
+
+fn encode_cards(state: &GameState, ids: &mut LocalIds) -> Vec<CardRecordV3> {
+    let mut cards = state
+        .cards
+        .iter()
+        .map(|card| CardRecordV3 {
+            slot: ids.card(card.instance_id),
+            definition_id: card.definition_id.clone(),
+            owner: relative_player(card.owner, state.turn),
+            half_stars: card.half_stars,
+            charges: card.charges,
+            available_in_owner_turns: card
+                .available_after_turn
+                .map(|turn| turn.saturating_sub(state.turns_taken[card.owner.index()])),
+        })
+        .collect::<Vec<_>>();
+    cards.sort_by_key(|card| card.slot);
+    cards
+}
+
+fn encode_phase(state: &GameState, ids: &mut LocalIds) -> PhaseV3 {
+    match &state.phase {
+        GamePhase::Playing => PhaseV3::Playing,
+        GamePhase::ForcedMove {
+            piece_id,
+            source,
+            continuation,
+        } => {
+            let (source_kind, source_id) = match source {
+                ForcedMoveSource::Platform => ("platform".to_owned(), None),
+                ForcedMoveSource::Effect(id) => ("effect".to_owned(), Some(id.clone())),
+            };
+            PhaseV3::ForcedMove {
+                piece: ids.piece(*piece_id),
+                source_kind,
+                source_id,
+                continuation: match continuation {
+                    ForcedMoveContinuation::ResumeTurn => "resume_turn",
+                    ForcedMoveContinuation::FinishTurn => "finish_turn",
+                }
+                .to_owned(),
+            }
+        }
+        GamePhase::Draft(draft) => PhaseV3::Draft {
+            draft_phase: match draft.phase {
+                DraftPhase::Opening => "opening",
+                DraftPhase::Middle => "middle",
+                DraftPhase::End => "end",
+            }
+            .to_owned(),
+            offers: draft.offers.clone(),
+            resume_turn: relative_player(draft.resume_turn, state.turn),
+        },
+        GamePhase::AwaitingChoice(choice) => PhaseV3::AwaitingChoice {
+            choice_slot: 0,
+            owner: relative_player(choice.owner, state.turn),
+            source_card: ids.card(choice.source_card_instance),
+            handler_id: choice.handler_id.clone(),
+            options: choice.options.clone(),
+            continuation: match choice.continuation {
+                ChoiceContinuation::ResumeTurn => "resume_turn",
+                ChoiceContinuation::FinishTurn => "finish_turn",
+            }
+            .to_owned(),
+        },
+    }
+}
+
+fn encode_global_state(state: &GameState) -> GlobalStateV3 {
+    let [self_index, opponent_index] = relative_indices(state.turn);
+    GlobalStateV3 {
+        mode_id: match &state.mode {
+            Mode::Standard => "standard".to_owned(),
+            Mode::Chaos => "chaos".to_owned(),
+            Mode::Grand => "grand".to_owned(),
+            Mode::Campaign(id) => format!("campaign:{id}"),
+        },
+        ply: state.ply,
+        quiet_ply: state.quiet_ply,
+        actions_remaining: state.actions_remaining,
+        cards_used_this_turn: [
+            state.cards_used_this_turn[self_index],
+            state.cards_used_this_turn[opponent_index],
+        ],
+        half_star_totals: [
+            state.half_star_totals[self_index],
+            state.half_star_totals[opponent_index],
+        ],
+        turns_taken: [
+            state.turns_taken[self_index],
+            state.turns_taken[opponent_index],
+        ],
+        completed_drafts: state.completed_drafts,
+        shared_turn_count: state.shared_turn_count(),
+        current_repetition_count: state.current_repetition_count(),
+        status: encode_status(&state.status, state.turn),
+        deathmatch: state.deathmatch.map(|deathmatch| DeathmatchV3 {
+            age_shared_turns: state
+                .shared_turn_count()
+                .saturating_sub(deathmatch.started_at_shared_turn),
+            quiet_full_turns: deathmatch.quiet_full_turns,
+            interval_full_turns: deathmatch.interval_full_turns,
+            progress_this_round: deathmatch.progress_this_round,
+        }),
+        en_passant: state.en_passant.map(|en_passant| EnPassantV3 {
+            target: square_value(en_passant.target, state.turn),
+            captured: square_value(en_passant.captured, state.turn),
+            pawn_owner: relative_player(en_passant.pawn_owner, state.turn),
+        }),
+        applied_rules: state.applied_rules.clone(),
+    }
+}
+
+fn encode_status(status: &GameStatus, perspective: Player) -> StatusV3 {
+    match status {
+        GameStatus::Ongoing => StatusV3::Ongoing,
+        GameStatus::Won { winner, reason } => {
+            let (reason, detail) = match reason {
+                augment_core::WinReason::KingCaptured => ("king_captured", None),
+                augment_core::WinReason::NoLegalActions => ("no_legal_actions", None),
+                augment_core::WinReason::LowerStarsOnRepetition => {
+                    ("lower_stars_on_repetition", None)
+                }
+                augment_core::WinReason::LowerStarsAfterDeathmatch => {
+                    ("lower_stars_after_deathmatch", None)
+                }
+                augment_core::WinReason::CardEffect(id) => ("card_effect", Some(id.clone())),
+            };
+            StatusV3::Won {
+                winner: relative_player(*winner, perspective),
+                reason: reason.to_owned(),
+                detail,
+            }
+        }
+        GameStatus::Draw { reason } => {
+            let (reason, detail) = match reason {
+                augment_core::DrawReason::EqualStarsOnRepetition => {
+                    ("equal_stars_on_repetition", None)
+                }
+                augment_core::DrawReason::EqualStarsAfterDeathmatch => {
+                    ("equal_stars_after_deathmatch", None)
+                }
+                augment_core::DrawReason::CardEffect(id) => ("card_effect", Some(id.clone())),
+            };
+            StatusV3::Draw {
+                reason: reason.to_owned(),
+                detail,
+            }
+        }
+    }
+}
+
+fn encode_spatial(pieces: &[BoardPieceV3]) -> Vec<f32> {
+    let mut spatial = vec![0.0; OBSERVATION_V3_SPATIAL_SIZE];
+    for piece in pieces {
+        let owner_offset = match piece.owner {
+            RelativePlayerV3::SelfPlayer => 0,
+            RelativePlayerV3::Opponent => 51,
+        };
+        let plane = owner_offset + usize::from(piece.kind_code - 1);
+        spatial[plane * 64 + usize::from(piece.square)] = 1.0;
+    }
+    spatial
+}
+
+fn encode_global_dense(state: &GameState, exact: &GlobalStateV3) -> Vec<f32> {
+    let mut global = vec![0.0; OBSERVATION_V3_GLOBAL_FEATURES];
+    global[0] = unit_count(u64::from(exact.actions_remaining));
+    global[1] = unit_count(u64::from(exact.ply));
+    global[2] = unit_count(u64::from(exact.quiet_ply));
+    global[3] = unit_count(u64::from(exact.cards_used_this_turn[0]));
+    global[4] = unit_count(u64::from(exact.cards_used_this_turn[1]));
+    global[5] = unit_count(u64::from(exact.half_star_totals[0]));
+    global[6] = unit_count(u64::from(exact.half_star_totals[1]));
+    global[7] = unit_count(u64::from(exact.turns_taken[0]));
+    global[8] = unit_count(u64::from(exact.turns_taken[1]));
+    for (offset, completed) in exact.completed_drafts.into_iter().enumerate() {
+        global[9 + offset] = f32::from(completed);
+    }
+    if let Some(deathmatch) = exact.deathmatch {
+        global[12] = 1.0;
+        global[13] = unit_count(u64::from(deathmatch.quiet_full_turns));
+        global[14] = unit_count(u64::from(deathmatch.interval_full_turns));
+        global[15] = f32::from(deathmatch.progress_this_round);
+    }
+    global[16] = f32::from(exact.en_passant.is_some());
+    global[17] = unit_count(
+        state
+            .cards
+            .iter()
+            .filter(|card| card.owner == state.turn)
+            .count() as u64,
+    );
+    global[18] = unit_count(
+        state
+            .cards
+            .iter()
+            .filter(|card| card.owner != state.turn)
+            .count() as u64,
+    );
+    global[19] = unit_count(exact.applied_rules.len() as u64);
+    global[20] = unit_count(u64::from(exact.shared_turn_count));
+    global[21] = unit_count(u64::from(exact.current_repetition_count));
+    global[match state.phase {
+        GamePhase::Playing => 22,
+        GamePhase::ForcedMove { .. } => 23,
+        GamePhase::Draft(_) => 24,
+        GamePhase::AwaitingChoice(_) => 25,
+    }] = 1.0;
+    global[match state.mode {
+        Mode::Standard => 26,
+        Mode::Chaos => 27,
+        Mode::Grand => 28,
+        Mode::Campaign(_) => 29,
+    }] = 1.0;
+    global[30] = f32::from(state.card_runtime.acceleration);
+    global[31] = f32::from(state.card_runtime.revelation);
+    global
+}
+
+fn unit_count(value: u64) -> f32 {
+    let value = value as f64;
+    (value / (value + 1.0)) as f32
+}
+
+fn canonical_square(square: Square, perspective: Player) -> Square {
+    match perspective {
+        Player::White => square,
+        Player::Black => Square::new(square.file(), 7 - square.rank()).expect("mirrored square"),
+    }
+}
+
+fn square_value(square: Square, perspective: Player) -> u8 {
+    canonical_square(square, perspective).index() as u8
+}
+
+fn relative_player(player: Player, perspective: Player) -> RelativePlayerV3 {
+    if player == perspective {
+        RelativePlayerV3::SelfPlayer
+    } else {
+        RelativePlayerV3::Opponent
+    }
+}
+
+fn relative_indices(perspective: Player) -> [usize; 2] {
+    [perspective.index(), perspective.opponent().index()]
+}
+
+fn encode_runtime(state: &GameState, ids: &mut LocalIds) -> Vec<RuntimeFeatureV3> {
+    encode_runtime_fields(state, &state.card_runtime, ids)
+}
+
+// Implemented below in source-field order. Keeping this function separate makes the contract
+// reviewable and lets tests compare every emitted field directly with CARD_RUNTIME_SOURCE_FIELDS.
+fn encode_runtime_fields(
+    state: &GameState,
+    runtime: &CardRuntimeState,
+    ids: &mut LocalIds,
+) -> Vec<RuntimeFeatureV3> {
+    let mut fields = Vec::with_capacity(CARD_RUNTIME_SOURCE_FIELDS.len());
+    macro_rules! push {
+        ($name:literal, $value:expr) => {{
+            let index = fields.len();
+            assert_eq!(CARD_RUNTIME_SOURCE_FIELDS[index], $name);
+            fields.push(RuntimeFeatureV3 {
+                field_id: (index + 1) as u16,
+                value: $value,
+            });
+        }};
+    }
+
+    push!(
+        "opening_auto_card_ids",
+        card_set(&runtime.opening_auto_card_ids, ids)
+    );
+    push!("hill_king", bool_pair(runtime.hill_king, state.turn));
+    push!(
+        "geneva_convention",
+        bool_pair(runtime.geneva_convention, state.turn)
+    );
+    push!("pawn_sprint", bool_pair(runtime.pawn_sprint, state.turn));
+    push!(
+        "early_promotion",
+        bool_pair(runtime.early_promotion, state.turn)
+    );
+    push!(
+        "initiative",
+        pair_with(&runtime.initiative, state.turn, |status| match status {
+            None => RuntimeValueV3::None,
+            Some(status) => initiative_value(status, state),
+        })
+    );
+    push!(
+        "dice_locks",
+        pair_with(&runtime.dice_locks, state.turn, |status| match status {
+            None => RuntimeValueV3::None,
+            Some(status) => dice_lock_value(status),
+        })
+    );
+    push!("moved_piece_ids", piece_set(&runtime.moved_piece_ids, ids));
+    push!(
+        "fresh_no_capture_until",
+        piece_map(
+            &runtime.fresh_no_capture_until,
+            ids,
+            |piece_id, deadline, _| {
+                RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(
+                    state, piece_id, *deadline,
+                )))
+            }
+        )
+    );
+    push!(
+        "disarmed",
+        piece_map(&runtime.disarmed, ids, |_, remaining, _| {
+            RuntimeValueV3::Unsigned(u64::from(*remaining))
+        })
+    );
+    push!(
+        "frozen",
+        piece_map(&runtime.frozen, ids, |_, status, _| {
+            frozen_value(status, state.turn)
+        })
+    );
+    push!(
+        "reposition",
+        match runtime.reposition {
+            None => RuntimeValueV3::None,
+            Some(status) => reposition_value(&status, ids),
+        }
+    );
+    push!("revelation", RuntimeValueV3::Bool(runtime.revelation));
+    push!("parry_piece_ids", piece_set(&runtime.parry_piece_ids, ids));
+    push!(
+        "empty_lunchboxes",
+        piece_map(&runtime.empty_lunchboxes, ids, |piece_id, status, _| {
+            lunchbox_value(piece_id, status, state)
+        })
+    );
+    push!(
+        "platform",
+        match &runtime.platform {
+            None => RuntimeValueV3::None,
+            Some(platform) => platform_value(platform, state, ids),
+        }
+    );
+    push!(
+        "herald_jump_locked_until",
+        piece_map(
+            &runtime.herald_jump_locked_until,
+            ids,
+            |piece_id, deadline, _| RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(
+                state, piece_id, *deadline
+            )))
+        )
+    );
+    push!(
+        "windmill_modes",
+        piece_map(&runtime.windmill_modes, ids, |_, mode, _| {
+            RuntimeValueV3::Text(
+                match mode {
+                    WindmillMode::Bishop => "bishop",
+                    WindmillMode::Rook => "rook",
+                }
+                .to_owned(),
+            )
+        })
+    );
+    push!(
+        "log_statuses",
+        piece_map(&runtime.log_statuses, ids, |piece_id, status, _| {
+            log_status_value(piece_id, status, state)
+        })
+    );
+    push!(
+        "wizard_mana",
+        piece_map(&runtime.wizard_mana, ids, |_, mana, _| {
+            RuntimeValueV3::Unsigned(u64::from(*mana))
+        })
+    );
+    push!(
+        "reaper_souls",
+        piece_map(&runtime.reaper_souls, ids, |_, souls, _| {
+            RuntimeValueV3::Unsigned(u64::from(*souls))
+        })
+    );
+    push!(
+        "shielded_piece_ids",
+        piece_set(&runtime.shielded_piece_ids, ids)
+    );
+    push!(
+        "protected_piece_ids",
+        piece_set(&runtime.protected_piece_ids, ids)
+    );
+    push!(
+        "idol_used_turn",
+        piece_map(&runtime.idol_used_turn, ids, |piece_id, used_turn, _| {
+            let owner = piece_owner(state, piece_id);
+            RuntimeValueV3::Unsigned(u64::from(
+                state.turns_taken[owner.index()].saturating_sub(*used_turn),
+            ))
+        })
+    );
+    push!(
+        "idol_rest_piece_ids",
+        piece_set(&runtime.idol_rest_piece_ids, ids)
+    );
+    push!(
+        "delayed_hazards",
+        RuntimeValueV3::List(
+            runtime
+                .delayed_hazards
+                .iter()
+                .map(|hazard| hazard_value(hazard, state.turn))
+                .collect(),
+        )
+    );
+    push!("skip_turns", bool_pair(runtime.skip_turns, state.turn));
+    push!(
+        "piece_origins",
+        piece_map(&runtime.piece_origins, ids, |_, square, _| {
+            RuntimeValueV3::Square(square_value(*square, state.turn))
+        })
+    );
+    push!(
+        "large_pieces",
+        piece_map(&runtime.large_pieces, ids, |_, status, _| {
+            large_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "loyalist_piece_ids",
+        piece_set(&runtime.loyalist_piece_ids, ids)
+    );
+    push!("royal_piece_ids", piece_set(&runtime.royal_piece_ids, ids));
+    push!(
+        "calling_cards",
+        piece_map(&runtime.calling_cards, ids, |_, player, _| {
+            RuntimeValueV3::Player(relative_player(*player, state.turn))
+        })
+    );
+    push!(
+        "holdout_promotions",
+        piece_map(&runtime.holdout_promotions, ids, |piece_id, deadline, _| {
+            RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(state, piece_id, *deadline)))
+        })
+    );
+    push!(
+        "pending_otherworld",
+        RuntimeValueV3::List(
+            runtime
+                .pending_otherworld
+                .iter()
+                .map(|pending| otherworld_value(pending, state, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "merchant_gold",
+        piece_map(&runtime.merchant_gold, ids, |_, gold, _| {
+            RuntimeValueV3::Unsigned(u64::from(*gold))
+        })
+    );
+
+    for (name, values) in [
+        ("democracy", runtime.democracy),
+        ("fast_growth", runtime.fast_growth),
+        ("fianchetto", runtime.fianchetto),
+        ("iron_monarch", runtime.iron_monarch),
+        ("pawn_conversion", runtime.pawn_conversion),
+        ("backward_knight", runtime.backward_knight),
+        ("breakthrough_pawns", runtime.breakthrough_pawns),
+        ("corner_kick", runtime.corner_kick),
+        ("en_passant_frenzy", runtime.en_passant_frenzy),
+        ("file_surge", runtime.file_surge),
+        ("horse_riding", runtime.horse_riding),
+        ("knight_injury", runtime.knight_injury),
+        ("pawn_leap", runtime.pawn_leap),
+        ("radical_charge", runtime.radical_charge),
+        ("retreat", runtime.retreat),
+        ("rook_lift", runtime.rook_lift),
+        ("encouragement", runtime.encouragement),
+        ("exhaustion", runtime.exhaustion),
+        ("overwhelm", runtime.overwhelm),
+        ("imperial_studies", runtime.imperial_studies),
+        ("mad_horse", runtime.mad_horse),
+        ("queen_afterimage", runtime.queen_afterimage),
+        ("religious_victory", runtime.religious_victory),
+    ] {
+        let index = fields.len();
+        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS[index], name);
+        fields.push(RuntimeFeatureV3 {
+            field_id: (index + 1) as u16,
+            value: bool_pair(values, state.turn),
+        });
+    }
+
+    push!(
+        "basic_training_piece_ids",
+        piece_set(&runtime.basic_training_piece_ids, ids)
+    );
+    push!(
+        "promotion_rush_piece_ids",
+        piece_set(&runtime.promotion_rush_piece_ids, ids)
+    );
+    push!(
+        "evasion_piece_ids",
+        piece_set(&runtime.evasion_piece_ids, ids)
+    );
+    push!("ghost_piece_ids", piece_set(&runtime.ghost_piece_ids, ids));
+    push!(
+        "inertia_piece_ids",
+        piece_set(&runtime.inertia_piece_ids, ids)
+    );
+    push!(
+        "ice_sheet",
+        piece_map(&runtime.ice_sheet, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "severed",
+        piece_map(&runtime.severed, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "royal_command",
+        pair_with_player(
+            &runtime.royal_command,
+            state.turn,
+            |player, status| match status {
+                None => RuntimeValueV3::None,
+                Some(status) => royal_command_value(status, state, player),
+            }
+        )
+    );
+    push!("socialism", u32_pair(runtime.socialism, state.turn));
+    push!("taunt", u32_pair(runtime.taunt, state.turn));
+    push!(
+        "armistice_remaining_ply",
+        RuntimeValueV3::Unsigned(u64::from(runtime.armistice_remaining_ply))
+    );
+    push!(
+        "exhaustion_last_piece",
+        pair_with(
+            &runtime.exhaustion_last_piece,
+            state.turn,
+            |piece| match piece {
+                None => RuntimeValueV3::None,
+                Some(piece_id) => RuntimeValueV3::Piece(ids.piece(*piece_id)),
+            }
+        )
+    );
+    push!(
+        "exhaustion_count",
+        u8_pair(runtime.exhaustion_count, state.turn)
+    );
+    push!(
+        "chameleon_piece_ids",
+        piece_set(&runtime.chameleon_piece_ids, ids)
+    );
+    push!(
+        "chimera_piece_ids",
+        piece_set(&runtime.chimera_piece_ids, ids)
+    );
+    push!(
+        "imperial_moves",
+        piece_map(&runtime.imperial_moves, ids, |_, kinds, _| {
+            kind_set(kinds)
+        })
+    );
+    push!("mistake_card", bool_pair(runtime.mistake_card, state.turn));
+    push!(
+        "poisoned_piece_ids",
+        piece_set(&runtime.poisoned_piece_ids, ids)
+    );
+    push!(
+        "sacrifice_protection",
+        piece_map(&runtime.sacrifice_protection, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
+        })
+    );
+    push!("bishop_snipe", bool_pair(runtime.bishop_snipe, state.turn));
+    push!(
+        "explosive_piece_ids",
+        piece_set(&runtime.explosive_piece_ids, ids)
+    );
+    push!(
+        "trojan_piece_ids",
+        piece_set(&runtime.trojan_piece_ids, ids)
+    );
+    push!(
+        "feudal_contracts",
+        RuntimeValueV3::List(
+            runtime
+                .feudal_contracts
+                .iter()
+                .map(|contract| feudal_value(contract, state.turn, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "gale_due_turns",
+        pair_with_player(&runtime.gale_due_turns, state.turn, |player, deadlines| {
+            RuntimeValueV3::List(
+                deadlines
+                    .iter()
+                    .map(|deadline| {
+                        RuntimeValueV3::Unsigned(u64::from(
+                            deadline.saturating_sub(state.turns_taken[player.index()]),
+                        ))
+                    })
+                    .collect(),
+            )
+        })
+    );
+    push!(
+        "pending_panic",
+        RuntimeValueV3::List(
+            runtime
+                .pending_panic
+                .iter()
+                .map(|pending| panic_value(pending, state.turn, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "pending_premoves",
+        RuntimeValueV3::List(
+            runtime
+                .pending_premoves
+                .iter()
+                .map(|pending| premove_value(pending, state))
+                .collect(),
+        )
+    );
+    push!(
+        "pending_scarecrows",
+        RuntimeValueV3::List(
+            runtime
+                .pending_scarecrows
+                .iter()
+                .map(|pending| scarecrow_value(pending, state.turn))
+                .collect(),
+        )
+    );
+    push!(
+        "quantum_pending",
+        bool_pair(runtime.quantum_pending, state.turn)
+    );
+    push!(
+        "quantum_positions",
+        piece_map(&runtime.quantum_positions, ids, |_, square, _| {
+            RuntimeValueV3::Square(square_value(*square, state.turn))
+        })
+    );
+    push!(
+        "stealth_piece_ids",
+        piece_set(&runtime.stealth_piece_ids, ids)
+    );
+    push!(
+        "submerged_piece_ids",
+        piece_set(&runtime.submerged_piece_ids, ids)
+    );
+    push!("substitution", bool_pair(runtime.substitution, state.turn));
+    push!("switcheroo", bool_pair(runtime.switcheroo, state.turn));
+    push!(
+        "twin_bonds",
+        RuntimeValueV3::List(
+            runtime
+                .twin_bonds
+                .iter()
+                .map(|bond| twin_value(bond, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "witch_trials",
+        piece_map(&runtime.witch_trials, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "pending_trolley_by",
+        pair_with(
+            &runtime.pending_trolley_by,
+            state.turn,
+            |player| match player {
+                None => RuntimeValueV3::None,
+                Some(player) => RuntimeValueV3::Player(relative_player(*player, state.turn)),
+            }
+        )
+    );
+    push!(
+        "active_trolley",
+        match &runtime.active_trolley {
+            None => RuntimeValueV3::None,
+            Some(trolley) => trolley_value(trolley, state.turn, ids),
+        }
+    );
+    push!(
+        "baby_bear_grow_turns",
+        piece_map(&runtime.baby_bear_grow_turns, ids, |_, deadline, _| {
+            RuntimeValueV3::Unsigned(u64::from(
+                deadline.saturating_sub(state.shared_turn_count()),
+            ))
+        })
+    );
+    push!(
+        "bear_retaliations",
+        piece_map(&runtime.bear_retaliations, ids, |_, remaining, _| {
+            RuntimeValueV3::Unsigned(u64::from(*remaining))
+        })
+    );
+    push!(
+        "bribe_reverts",
+        RuntimeValueV3::List(
+            runtime
+                .bribe_reverts
+                .iter()
+                .map(|revert| bribe_value(revert, state, ids))
+                .collect(),
+        )
+    );
+    push!("charge_pawns", piece_set(&runtime.charge_pawns, ids));
+    push!("coronation", bool_pair(runtime.coronation, state.turn));
+    push!("frenzy_pawns", piece_set(&runtime.frenzy_pawns, ids));
+    push!(
+        "hallucination_until_ply",
+        pair_with(&runtime.hallucination_until_ply, state.turn, |deadline| {
+            deadline.map_or(RuntimeValueV3::None, |deadline| {
+                RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+            })
+        })
+    );
+    push!("moving", bool_pair(runtime.moving, state.turn));
+    push!(
+        "moving_consecutive",
+        pair_with(&runtime.moving_consecutive, state.turn, |(piece, count)| {
+            record(vec![
+                (
+                    "piece",
+                    piece.map_or(RuntimeValueV3::None, |piece_id| {
+                        RuntimeValueV3::Piece(ids.piece(piece_id))
+                    }),
+                ),
+                ("count", RuntimeValueV3::Unsigned(u64::from(*count))),
+            ])
+        })
+    );
+    push!(
+        "necromancy_reverts",
+        RuntimeValueV3::List(
+            runtime
+                .necromancy_reverts
+                .iter()
+                .map(|revert| necromancy_value(revert, state, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "reverse_pawns_charges",
+        u8_pair(runtime.reverse_pawns_charges, state.turn)
+    );
+    push!(
+        "stake_statuses",
+        piece_map(&runtime.stake_statuses, ids, |_, deadline, _| {
+            RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+        })
+    );
+    push!(
+        "underpromotion",
+        bool_pair(runtime.underpromotion, state.turn)
+    );
+    push!(
+        "vip_pending",
+        RuntimeValueV3::List(
+            runtime
+                .vip_pending
+                .iter()
+                .map(|pending| vip_value(pending, state, ids))
+                .collect(),
+        )
+    );
+    push!("barricades", square_set(&runtime.barricades, state.turn));
+    push!(
+        "chains",
+        RuntimeValueV3::List(
+            runtime
+                .chains
+                .iter()
+                .map(|chain| {
+                    RuntimeValueV3::List(
+                        chain
+                            .iter()
+                            .map(|piece_id| RuntimeValueV3::Piece(ids.piece(*piece_id)))
+                            .collect(),
+                    )
+                })
+                .collect(),
+        )
+    );
+    push!(
+        "collapsed_files_ranks",
+        RuntimeValueV3::Bool(runtime.collapsed_files_ranks)
+    );
+    push!(
+        "desperado_pieces",
+        piece_set(&runtime.desperado_pieces, ids)
+    );
+    push!("palaces", player_square_map(&runtime.palaces, state.turn));
+    push!("portals", optional_square_pair(runtime.portals, state.turn));
+    push!(
+        "bunkers",
+        piece_map(&runtime.bunkers, ids, |_, hp, _| {
+            RuntimeValueV3::Unsigned(u64::from(*hp))
+        })
+    );
+    push!("zugzwang", bool_pair(runtime.zugzwang, state.turn));
+    push!("bina_mate", bool_pair(runtime.bina_mate, state.turn));
+    push!("final_weapon", bool_pair(runtime.final_weapon, state.turn));
+    push!(
+        "icbm_pending",
+        RuntimeValueV3::List(
+            runtime
+                .icbm_pending
+                .iter()
+                .map(|pending| icbm_value(pending, state, ids))
+                .collect(),
+        )
+    );
+    push!(
+        "prophecy",
+        pair_with(&runtime.prophecy, state.turn, |deadline| {
+            deadline.map_or(RuntimeValueV3::None, |deadline| {
+                RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+            })
+        })
+    );
+    push!("racing_king", bool_pair(runtime.racing_king, state.turn));
+    push!(
+        "spies",
+        piece_map(&runtime.spies, ids, |_, player, _| {
+            RuntimeValueV3::Player(relative_player(*player, state.turn))
+        })
+    );
+    push!(
+        "ultimatum",
+        runtime.ultimatum.map_or(RuntimeValueV3::None, |deadline| {
+            RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+        })
+    );
+    push!("vanish", bool_pair(runtime.vanish, state.turn));
+    push!("acceleration", RuntimeValueV3::Bool(runtime.acceleration));
+    push!("black_holes", square_set(&runtime.black_holes, state.turn));
+    push!(
+        "camouflage_color",
+        RuntimeValueV3::Bool(runtime.camouflage_color)
+    );
+    push!("conveyor", RuntimeValueV3::Bool(runtime.conveyor));
+    push!("cool_guy_pieces", piece_set(&runtime.cool_guy_pieces, ids));
+    push!("crown_pos", optional_square(runtime.crown_pos, state.turn));
+    push!(
+        "crown_holder",
+        runtime
+            .crown_holder
+            .map_or(RuntimeValueV3::None, |(player, piece_id)| {
+                record(vec![
+                    (
+                        "player",
+                        RuntimeValueV3::Player(relative_player(player, state.turn)),
+                    ),
+                    ("piece", RuntimeValueV3::Piece(ids.piece(piece_id))),
+                ])
+            })
+    );
+    push!(
+        "football_pos",
+        optional_square(runtime.football_pos, state.turn)
+    );
+    push!(
+        "high_ground_squares",
+        square_set(&runtime.high_ground_squares, state.turn)
+    );
+    push!(
+        "highways",
+        RuntimeValueV3::List(
+            runtime
+                .highways
+                .iter()
+                .map(|file| RuntimeValueV3::Unsigned(u64::from(*file)))
+                .collect(),
+        )
+    );
+    push!("macho_chess", RuntimeValueV3::Bool(runtime.macho_chess));
+    push!("mistake_rule", RuntimeValueV3::Bool(runtime.mistake_rule));
+    push!(
+        "monochrome_chess",
+        RuntimeValueV3::Bool(runtime.monochrome_chess)
+    );
+    push!(
+        "monster_rule",
+        runtime
+            .monster_rule
+            .map_or(RuntimeValueV3::None, |piece_id| {
+                RuntimeValueV3::Piece(ids.piece(piece_id))
+            })
+    );
+    push!(
+        "periodic_collapse_next",
+        runtime
+            .periodic_collapse_next
+            .map_or(RuntimeValueV3::None, |deadline| {
+                RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+            })
+    );
+    push!(
+        "rule_portals",
+        optional_square_pair(runtime.rule_portals, state.turn)
+    );
+    push!("recycling", RuntimeValueV3::Bool(runtime.recycling));
+    push!("rule_bombs", square_set(&runtime.rule_bombs, state.turn));
+    push!(
+        "saturation_rule",
+        RuntimeValueV3::Bool(runtime.saturation_rule)
+    );
+    push!("transcendence", RuntimeValueV3::Bool(runtime.transcendence));
+    push!(
+        "winter_kingdom_next",
+        runtime
+            .winter_kingdom_next
+            .map_or(RuntimeValueV3::None, |deadline| {
+                record(vec![
+                    (
+                        "clock_owner",
+                        RuntimeValueV3::Player(relative_player(Player::White, state.turn)),
+                    ),
+                    (
+                        "remaining_turns",
+                        RuntimeValueV3::Unsigned(u64::from(
+                            deadline.saturating_sub(state.turns_taken[Player::White.index()]),
+                        )),
+                    ),
+                ])
+            })
+    );
+    push!(
+        "cloned_passives",
+        pair_with(&runtime.cloned_passives, state.turn, |passives| {
+            RuntimeValueV3::List(passives.iter().cloned().map(RuntimeValueV3::Text).collect())
+        })
+    );
+
+    assert_eq!(fields.len(), CARD_RUNTIME_SOURCE_FIELDS.len());
+    fields
+}
+
+fn named(name: &str, value: RuntimeValueV3) -> NamedRuntimeValueV3 {
+    NamedRuntimeValueV3 {
+        name: name.to_owned(),
+        value,
+    }
+}
+
+fn record(fields: Vec<(&str, RuntimeValueV3)>) -> RuntimeValueV3 {
+    RuntimeValueV3::Record(
+        fields
+            .into_iter()
+            .map(|(name, value)| named(name, value))
+            .collect(),
+    )
+}
+
+fn pair_with<T>(
+    values: &[T; 2],
+    perspective: Player,
+    mut encode: impl FnMut(&T) -> RuntimeValueV3,
+) -> RuntimeValueV3 {
+    pair_with_player(values, perspective, |_, value| encode(value))
+}
+
+fn pair_with_player<T>(
+    values: &[T; 2],
+    perspective: Player,
+    mut encode: impl FnMut(Player, &T) -> RuntimeValueV3,
+) -> RuntimeValueV3 {
+    let [self_index, opponent_index] = relative_indices(perspective);
+    RuntimeValueV3::List(vec![
+        encode(perspective, &values[self_index]),
+        encode(perspective.opponent(), &values[opponent_index]),
+    ])
+}
+
+fn bool_pair(values: [bool; 2], perspective: Player) -> RuntimeValueV3 {
+    pair_with(&values, perspective, |value| RuntimeValueV3::Bool(*value))
+}
+
+fn u32_pair(values: [u32; 2], perspective: Player) -> RuntimeValueV3 {
+    pair_with(&values, perspective, |value| {
+        RuntimeValueV3::Unsigned(u64::from(*value))
+    })
+}
+
+fn u8_pair(values: [u8; 2], perspective: Player) -> RuntimeValueV3 {
+    pair_with(&values, perspective, |value| {
+        RuntimeValueV3::Unsigned(u64::from(*value))
+    })
+}
+
+fn piece_set(values: &BTreeSet<u32>, ids: &mut LocalIds) -> RuntimeValueV3 {
+    let mut slots = values.iter().map(|id| ids.piece(*id)).collect::<Vec<_>>();
+    slots.sort_unstable();
+    RuntimeValueV3::List(slots.into_iter().map(RuntimeValueV3::Piece).collect())
+}
+
+fn card_set(values: &BTreeSet<u32>, ids: &mut LocalIds) -> RuntimeValueV3 {
+    let mut slots = values.iter().map(|id| ids.card(*id)).collect::<Vec<_>>();
+    slots.sort_unstable();
+    RuntimeValueV3::List(slots.into_iter().map(RuntimeValueV3::Card).collect())
+}
+
+fn square_set(values: &BTreeSet<Square>, perspective: Player) -> RuntimeValueV3 {
+    let mut squares = values
+        .iter()
+        .map(|square| square_value(*square, perspective))
+        .collect::<Vec<_>>();
+    squares.sort_unstable();
+    RuntimeValueV3::List(squares.into_iter().map(RuntimeValueV3::Square).collect())
+}
+
+fn kind_set(values: &BTreeSet<PieceKind>) -> RuntimeValueV3 {
+    RuntimeValueV3::List(
+        values
+            .iter()
+            .map(|kind| RuntimeValueV3::PieceKind(kind.stable_code()))
+            .collect(),
+    )
+}
+
+fn piece_map<T>(
+    values: &BTreeMap<u32, T>,
+    ids: &mut LocalIds,
+    mut encode: impl FnMut(u32, &T, &mut LocalIds) -> RuntimeValueV3,
+) -> RuntimeValueV3 {
+    let mut entries = Vec::with_capacity(values.len());
+    for (piece_id, value) in values {
+        let slot = ids.piece(*piece_id);
+        let value = encode(*piece_id, value, ids);
+        entries.push((slot, value));
+    }
+    entries.sort_by_key(|(slot, _)| *slot);
+    RuntimeValueV3::List(
+        entries
+            .into_iter()
+            .map(|(slot, value)| {
+                record(vec![
+                    ("piece", RuntimeValueV3::Piece(slot)),
+                    ("value", value),
+                ])
+            })
+            .collect(),
+    )
+}
+
+fn optional_square(value: Option<Square>, perspective: Player) -> RuntimeValueV3 {
+    value.map_or(RuntimeValueV3::None, |square| {
+        RuntimeValueV3::Square(square_value(square, perspective))
+    })
+}
+
+fn optional_square_pair(value: Option<[Square; 2]>, perspective: Player) -> RuntimeValueV3 {
+    value.map_or(RuntimeValueV3::None, |squares| {
+        RuntimeValueV3::List(
+            squares
+                .into_iter()
+                .map(|square| RuntimeValueV3::Square(square_value(square, perspective)))
+                .collect(),
+        )
+    })
+}
+
+fn player_square_map(
+    values: &BTreeMap<Player, [Square; 2]>,
+    perspective: Player,
+) -> RuntimeValueV3 {
+    RuntimeValueV3::List(
+        [perspective, perspective.opponent()]
+            .into_iter()
+            .filter_map(|player| {
+                values.get(&player).map(|squares| {
+                    record(vec![
+                        (
+                            "player",
+                            RuntimeValueV3::Player(relative_player(player, perspective)),
+                        ),
+                        (
+                            "squares",
+                            RuntimeValueV3::List(
+                                squares
+                                    .iter()
+                                    .map(|square| {
+                                        RuntimeValueV3::Square(square_value(*square, perspective))
+                                    })
+                                    .collect(),
+                            ),
+                        ),
+                    ])
+                })
+            })
+            .collect(),
+    )
+}
+
+fn piece_owner(state: &GameState, piece_id: u32) -> Player {
+    state
+        .board
+        .find_by_id(piece_id)
+        .map_or(state.turn, |(_, piece)| piece.owner)
+}
+
+fn remaining_piece_turn(state: &GameState, piece_id: u32, deadline: u32) -> u32 {
+    let owner = piece_owner(state, piece_id);
+    deadline.saturating_sub(state.turns_taken[owner.index()])
+}
+
+fn initiative_value(status: &InitiativeStatus, state: &GameState) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "by",
+            RuntimeValueV3::Player(relative_player(status.by, state.turn)),
+        ),
+        (
+            "elapsed_turns",
+            RuntimeValueV3::Unsigned(u64::from(
+                state.turns_taken[status.by.index()].saturating_sub(status.start_turn),
+            )),
+        ),
+        ("limit", RuntimeValueV3::Unsigned(u64::from(status.limit))),
+    ])
+}
+
+fn dice_lock_value(status: &DiceLockStatus) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "piece_kind",
+            RuntimeValueV3::PieceKind(status.kind.stable_code()),
+        ),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(status.remaining_turns)),
+        ),
+    ])
+}
+
+fn frozen_value(status: &FrozenStatus, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "source",
+            RuntimeValueV3::Player(relative_player(status.source, perspective)),
+        ),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(status.remaining_turns)),
+        ),
+    ])
+}
+
+fn reposition_value(status: &RepositionStatus, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(status.piece_id))),
+        ("used", RuntimeValueV3::Bool(status.used)),
+    ])
+}
+
+fn lunchbox_value(
+    piece_id: u32,
+    status: &EmptyLunchboxStatus,
+    state: &GameState,
+) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "by",
+            RuntimeValueV3::Player(relative_player(status.by, state.turn)),
+        ),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(
+                state,
+                piece_id,
+                status.deadline_turn,
+            ))),
+        ),
+    ])
+}
+
+fn platform_value(
+    status: &PlatformRuleState,
+    state: &GameState,
+    ids: &mut LocalIds,
+) -> RuntimeValueV3 {
+    record(vec![
+        ("cell", optional_square(status.cell, state.turn)),
+        (
+            "age_shared_turns",
+            RuntimeValueV3::Unsigned(u64::from(
+                state.shared_turn_count().saturating_sub(status.spawned_at),
+            )),
+        ),
+        (
+            "next_in_shared_turns",
+            RuntimeValueV3::Unsigned(u64::from(
+                status.next_at.saturating_sub(state.shared_turn_count()),
+            )),
+        ),
+        (
+            "triggered_pieces",
+            piece_set(&status.triggered_piece_ids, ids),
+        ),
+        ("nonce", RuntimeValueV3::Unsigned(u64::from(status.nonce))),
+    ])
+}
+
+fn log_status_value(piece_id: u32, status: &LogStatus, state: &GameState) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "file_delta",
+            RuntimeValueV3::Signed(i64::from(status.file_delta)),
+        ),
+        (
+            "rank_delta",
+            RuntimeValueV3::Signed(i64::from(status.rank_delta)),
+        ),
+        (
+            "roll_in_owner_turns",
+            RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(
+                state,
+                piece_id,
+                status.roll_after_turn,
+            ))),
+        ),
+    ])
+}
+
+fn hazard_value(status: &DelayedHazard, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "kind",
+            RuntimeValueV3::Text(
+                match status.kind {
+                    DelayedHazardKind::Lightning => "lightning",
+                    DelayedHazardKind::Meteor => "meteor",
+                }
+                .to_owned(),
+            ),
+        ),
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, perspective)),
+        ),
+        (
+            "trigger_after",
+            RuntimeValueV3::Player(relative_player(status.trigger_after, perspective)),
+        ),
+        (
+            "squares",
+            RuntimeValueV3::List(
+                status
+                    .squares
+                    .iter()
+                    .map(|square| RuntimeValueV3::Square(square_value(*square, perspective)))
+                    .collect(),
+            ),
+        ),
+    ])
+}
+
+fn otherworld_value(
+    status: &PendingOtherworld,
+    state: &GameState,
+    ids: &mut LocalIds,
+) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(status.piece_id))),
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, state.turn)),
+        ),
+        (
+            "square",
+            RuntimeValueV3::Square(square_value(status.square, state.turn)),
+        ),
+        (
+            "origin",
+            RuntimeValueV3::Square(square_value(status.origin, state.turn)),
+        ),
+        (
+            "remaining_ply",
+            RuntimeValueV3::Unsigned(u64::from(status.due_ply.saturating_sub(state.ply))),
+        ),
+    ])
+}
+
+fn large_piece_value(status: &LargePieceStatus, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "anchor",
+            RuntimeValueV3::Square(square_value(status.anchor, perspective)),
+        ),
+        ("hp", RuntimeValueV3::Unsigned(u64::from(status.hp))),
+        ("max_hp", RuntimeValueV3::Unsigned(u64::from(status.max_hp))),
+    ])
+}
+
+fn timed_piece_value(status: &TimedPieceStatus, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "by",
+            RuntimeValueV3::Player(relative_player(status.by, perspective)),
+        ),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(status.remaining_turns)),
+        ),
+    ])
+}
+
+fn royal_command_value(
+    status: &RoyalCommandStatus,
+    state: &GameState,
+    clock_owner: Player,
+) -> RuntimeValueV3 {
+    let clock = state.turns_taken[clock_owner.index()];
+    record(vec![
+        (
+            "starts_in_turns",
+            RuntimeValueV3::Unsigned(u64::from(status.starts_at_turn.saturating_sub(clock))),
+        ),
+        (
+            "expires_in_turns",
+            RuntimeValueV3::Unsigned(u64::from(status.expires_at_turn.saturating_sub(clock))),
+        ),
+    ])
+}
+
+fn feudal_value(
+    status: &FeudalContract,
+    perspective: Player,
+    ids: &mut LocalIds,
+) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, perspective)),
+        ),
+        ("pawn", RuntimeValueV3::Piece(ids.piece(status.pawn_id))),
+        (
+            "guardian",
+            RuntimeValueV3::Piece(ids.piece(status.guardian_id)),
+        ),
+    ])
+}
+
+fn panic_value(status: &PendingPanic, perspective: Player, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, perspective)),
+        ),
+        (
+            "pieces",
+            RuntimeValueV3::List(
+                status
+                    .piece_ids
+                    .iter()
+                    .map(|piece_id| RuntimeValueV3::Piece(ids.piece(*piece_id)))
+                    .collect(),
+            ),
+        ),
+    ])
+}
+
+fn premove_value(status: &PendingPremove, state: &GameState) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, state.turn)),
+        ),
+        (
+            "trigger_player",
+            RuntimeValueV3::Player(relative_player(status.trigger_player, state.turn)),
+        ),
+        (
+            "trigger_in_turns",
+            RuntimeValueV3::Unsigned(u64::from(
+                status
+                    .trigger_turn
+                    .saturating_sub(state.turns_taken[status.trigger_player.index()]),
+            )),
+        ),
+        (
+            "moves",
+            RuntimeValueV3::List(
+                status
+                    .moves
+                    .iter()
+                    .map(|movement| move_value(movement, state.turn))
+                    .collect(),
+            ),
+        ),
+    ])
+}
+
+fn move_value(movement: &MoveAction, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "from",
+            RuntimeValueV3::Square(square_value(movement.from, perspective)),
+        ),
+        (
+            "to",
+            RuntimeValueV3::Square(square_value(movement.to, perspective)),
+        ),
+        (
+            "promotion",
+            movement.promotion.map_or(RuntimeValueV3::None, |kind| {
+                RuntimeValueV3::PieceKind(kind.stable_code())
+            }),
+        ),
+    ])
+}
+
+fn scarecrow_value(status: &PendingScarecrow, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, perspective)),
+        ),
+        (
+            "square",
+            RuntimeValueV3::Square(square_value(status.square, perspective)),
+        ),
+        (
+            "remaining_ply",
+            RuntimeValueV3::Unsigned(u64::from(status.remaining_ply)),
+        ),
+    ])
+}
+
+fn twin_value(status: &TwinBond, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        ("first", RuntimeValueV3::Piece(ids.piece(status.first_id))),
+        ("second", RuntimeValueV3::Piece(ids.piece(status.second_id))),
+    ])
+}
+
+fn trolley_value(
+    status: &TrolleyDilemma,
+    perspective: Player,
+    ids: &mut LocalIds,
+) -> RuntimeValueV3 {
+    record(vec![
+        (
+            "by",
+            RuntimeValueV3::Player(relative_player(status.by, perspective)),
+        ),
+        (
+            "bundles",
+            RuntimeValueV3::List(
+                status
+                    .bundles
+                    .iter()
+                    .map(|bundle| {
+                        RuntimeValueV3::List(
+                            bundle
+                                .iter()
+                                .map(|piece_id| RuntimeValueV3::Piece(ids.piece(*piece_id)))
+                                .collect(),
+                        )
+                    })
+                    .collect(),
+            ),
+        ),
+    ])
+}
+
+fn bribe_value(status: &BribeRevert, state: &GameState, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(status.piece_id))),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(remaining_piece_turn(
+                state,
+                status.piece_id,
+                status.due_turn,
+            ))),
+        ),
+    ])
+}
+
+fn necromancy_value(
+    status: &NecromancyRevert,
+    state: &GameState,
+    ids: &mut LocalIds,
+) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(status.piece_id))),
+        (
+            "remaining_ply",
+            RuntimeValueV3::Unsigned(u64::from(status.due_ply.saturating_sub(state.ply))),
+        ),
+    ])
+}
+
+fn vip_value(status: &PendingVip, state: &GameState, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(status.piece_id))),
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, state.turn)),
+        ),
+        (
+            "remaining_ply",
+            RuntimeValueV3::Unsigned(u64::from(status.due_ply.saturating_sub(state.ply))),
+        ),
+    ])
+}
+
+fn icbm_value(status: &PendingIcbm, state: &GameState, ids: &mut LocalIds) -> RuntimeValueV3 {
+    record(vec![
+        ("queen", RuntimeValueV3::Piece(ids.piece(status.queen_id))),
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(status.owner, state.turn)),
+        ),
+        (
+            "remaining_turns",
+            RuntimeValueV3::Unsigned(u64::from(
+                status
+                    .due_turn
+                    .saturating_sub(state.turns_taken[status.owner.index()]),
+            )),
+        ),
+    ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::observation_v3::PIECE_KIND_VOCABULARY;
+    use augment_core::{BUNDLED_RULESET_ID, Board, CardInstance, Engine, IMPLEMENTED_CARDS, Piece};
+
+    fn playing_state(board: Board, turn: Player, seed: u64) -> GameState {
+        let mut state =
+            GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, turn, seed);
+        state.phase = GamePhase::Playing;
+        state
+    }
+
+    fn piece_with_captures(owner: Player, kind: PieceKind, id: u32, capture_count: u16) -> Piece {
+        let mut piece = Piece::new(owner, kind).with_id(id);
+        piece.capture_count = capture_count;
+        piece
+    }
+
+    #[test]
+    fn dense_shapes_ranges_and_runtime_coverage_are_fixed() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = engine.new_game(Mode::Standard, 42).unwrap();
+        let observation = encode_observation_v3(&state);
+
+        assert_eq!(observation.schema_id, OBSERVATION_V3_SCHEMA_ID);
+        assert_eq!(observation.spatial_shape, [102, 8, 8]);
+        assert_eq!(observation.spatial.len(), OBSERVATION_V3_SPATIAL_SIZE);
+        assert_eq!(observation.global_shape, [32]);
+        assert_eq!(observation.global.len(), OBSERVATION_V3_GLOBAL_FEATURES);
+        assert!(
+            observation
+                .spatial
+                .iter()
+                .chain(&observation.global)
+                .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
+        );
+        assert_eq!(observation.runtime.len(), 147);
+        assert_eq!(
+            observation
+                .runtime
+                .iter()
+                .map(|field| field.field_name().unwrap())
+                .collect::<Vec<_>>(),
+            CARD_RUNTIME_SOURCE_FIELDS
+        );
+        assert!(
+            observation
+                .runtime
+                .iter()
+                .enumerate()
+                .all(|(index, field)| field.field_id == (index + 1) as u16)
+        );
+    }
+
+    #[test]
+    fn all_51_piece_kinds_have_distinct_self_planes() {
+        let mut board = Board::empty();
+        for (index, (_, kind)) in PIECE_KIND_VOCABULARY.iter().enumerate() {
+            let square = Square::from_index(index as u8).unwrap();
+            board.set(
+                square,
+                Some(Piece::new(Player::White, *kind).with_id(index as u32 + 10)),
+            );
+        }
+        let observation = encode_observation_v3(&playing_state(board, Player::White, 1));
+
+        for plane in 0..51 {
+            let values = &observation.spatial[plane * 64..(plane + 1) * 64];
+            assert_eq!(values.iter().filter(|value| **value == 1.0).count(), 1);
+        }
+        assert_eq!(
+            observation
+                .pieces
+                .iter()
+                .map(|piece| piece.kind_code)
+                .collect::<BTreeSet<_>>()
+                .len(),
+            51
+        );
+    }
+
+    #[test]
+    fn all_192_card_ids_survive_without_hashing_or_truncation() {
+        let mut state = playing_state(Board::empty(), Player::White, 3);
+        for (index, definition) in IMPLEMENTED_CARDS.iter().enumerate() {
+            state.add_card(CardInstance {
+                instance_id: index as u32 + 100,
+                definition_id: definition.id.to_owned(),
+                owner: if index % 2 == 0 {
+                    Player::White
+                } else {
+                    Player::Black
+                },
+                half_stars: definition.half_stars,
+                charges: 1,
+                available_after_turn: None,
+            });
+        }
+
+        let observation = encode_observation_v3(&state);
+        let observed_ids = observation
+            .cards
+            .iter()
+            .map(|card| card.definition_id.as_str())
+            .collect::<BTreeSet<_>>();
+        let expected_ids = IMPLEMENTED_CARDS
+            .iter()
+            .map(|definition| definition.id)
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(observation.cards.len(), 192);
+        assert_eq!(observation.card_slot_count, 192);
+        assert_eq!(observed_ids, expected_ids);
+    }
+
+    #[test]
+    fn raw_ids_and_rng_state_do_not_change_the_observation() {
+        let make_board = |pawn_id, dragon_id| {
+            let mut board = Board::empty();
+            board.set(
+                "b2".parse().unwrap(),
+                Some(Piece::new(Player::White, PieceKind::Pawn).with_id(pawn_id)),
+            );
+            board.set(
+                "g7".parse().unwrap(),
+                Some(Piece::new(Player::Black, PieceKind::Dragon).with_id(dragon_id)),
+            );
+            board
+        };
+        let left = playing_state(make_board(10, 20), Player::White, 1);
+        let right = playing_state(make_board(10_000, 90_000), Player::White, 999);
+
+        assert_ne!(left.fingerprint(), right.fingerprint());
+        assert_eq!(encode_observation_v3(&left), encode_observation_v3(&right));
+    }
+
+    #[test]
+    fn color_swap_and_rank_mirror_are_canonical() {
+        let mut white_board = Board::empty();
+        white_board.set(
+            "b2".parse().unwrap(),
+            Some(piece_with_captures(Player::White, PieceKind::Pawn, 100, 2)),
+        );
+        white_board.set(
+            "g7".parse().unwrap(),
+            Some(piece_with_captures(
+                Player::Black,
+                PieceKind::Dragon,
+                900,
+                3,
+            )),
+        );
+
+        let mut black_board = Board::empty();
+        black_board.set(
+            "b7".parse().unwrap(),
+            Some(piece_with_captures(Player::Black, PieceKind::Pawn, 11, 2)),
+        );
+        black_board.set(
+            "g2".parse().unwrap(),
+            Some(piece_with_captures(Player::White, PieceKind::Dragon, 12, 3)),
+        );
+
+        let white = playing_state(white_board, Player::White, 5);
+        let black = playing_state(black_board, Player::Black, 6);
+        assert_eq!(encode_observation_v3(&white), encode_observation_v3(&black));
+    }
+
+    #[test]
+    fn representative_cards_and_runtime_relations_are_canonical() {
+        let mut white_board = Board::empty();
+        white_board.set(
+            "b2".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Wizard).with_id(100)),
+        );
+        white_board.set(
+            "g7".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::King).with_id(900)),
+        );
+        let mut black_board = Board::empty();
+        black_board.set(
+            "b7".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::Wizard).with_id(11)),
+        );
+        black_board.set(
+            "g2".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::King).with_id(12)),
+        );
+
+        let mut white = playing_state(white_board, Player::White, 5);
+        let mut black = playing_state(black_board, Player::Black, 6);
+        white.card_runtime.hill_king = [true, false];
+        black.card_runtime.hill_king = [false, true];
+        white.card_runtime.wizard_mana.insert(100, 3);
+        black.card_runtime.wizard_mana.insert(11, 3);
+        white.card_runtime.black_holes.insert("c3".parse().unwrap());
+        black.card_runtime.black_holes.insert("c6".parse().unwrap());
+        white.card_runtime.delayed_hazards.push(DelayedHazard {
+            kind: DelayedHazardKind::Meteor,
+            owner: Player::White,
+            trigger_after: Player::Black,
+            squares: vec!["d4".parse().unwrap(), "e5".parse().unwrap()],
+        });
+        black.card_runtime.delayed_hazards.push(DelayedHazard {
+            kind: DelayedHazardKind::Meteor,
+            owner: Player::Black,
+            trigger_after: Player::White,
+            squares: vec!["d5".parse().unwrap(), "e4".parse().unwrap()],
+        });
+        white.add_card(CardInstance {
+            instance_id: 700,
+            definition_id: "sprint".to_owned(),
+            owner: Player::White,
+            half_stars: 4,
+            charges: 1,
+            available_after_turn: Some(2),
+        });
+        black.add_card(CardInstance {
+            instance_id: 8,
+            definition_id: "sprint".to_owned(),
+            owner: Player::Black,
+            half_stars: 4,
+            charges: 1,
+            available_after_turn: Some(2),
+        });
+
+        assert_eq!(encode_observation_v3(&white), encode_observation_v3(&black));
+    }
+
+    #[test]
+    fn distinct_runtime_meanings_do_not_collapse() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut base = engine.new_game(Mode::Standard, 4).unwrap();
+        base.phase = GamePhase::Playing;
+        let before = encode_observation_v3(&base);
+
+        base.card_runtime.hill_king[base.turn.index()] = true;
+        let after = encode_observation_v3(&base);
+        assert_ne!(before, after);
+        let field = after
+            .runtime
+            .iter()
+            .find(|field| field.field_name() == Some("hill_king"))
+            .unwrap();
+        assert_eq!(
+            field.value,
+            RuntimeValueV3::List(vec![
+                RuntimeValueV3::Bool(true),
+                RuntimeValueV3::Bool(false),
+            ])
+        );
+    }
+}
