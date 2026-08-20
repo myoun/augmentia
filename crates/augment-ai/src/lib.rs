@@ -1,3 +1,4 @@
+pub mod action_v3;
 pub mod action_space;
 pub mod evaluator;
 pub mod encoder_v3;
@@ -6,6 +7,10 @@ pub mod observation_v3;
 pub mod quiescence;
 pub mod tensor;
 
+pub use action_v3::{
+    ACTION_V3_SCHEMA_ID, ActionDescriptorV3, ActionTargetV3, ActionV3Error, LegalActionSetV3,
+    PieceAbilityV3, decode_action_v3, encode_action_v3,
+};
 pub use action_space::{
     ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
 };

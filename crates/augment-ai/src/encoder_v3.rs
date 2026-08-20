@@ -170,13 +170,13 @@ pub enum RuntimeValueV3 {
 }
 
 #[derive(Default)]
-struct LocalIds {
+pub(crate) struct LocalIds {
     pieces: BTreeMap<u32, u32>,
     cards: BTreeMap<u32, u32>,
 }
 
 impl LocalIds {
-    fn new(state: &GameState) -> Self {
+    pub(crate) fn new(state: &GameState) -> Self {
         let mut ids = Self::default();
         let mut board_pieces = state
             .board
@@ -213,6 +213,26 @@ impl LocalIds {
     fn card(&mut self, raw: u32) -> u32 {
         let next = self.cards.len() as u32;
         *self.cards.entry(raw).or_insert(next)
+    }
+
+    pub(crate) fn piece_slot(&self, raw: u32) -> Option<u32> {
+        self.pieces.get(&raw).copied()
+    }
+
+    pub(crate) fn card_slot(&self, raw: u32) -> Option<u32> {
+        self.cards.get(&raw).copied()
+    }
+
+    pub(crate) fn raw_piece(&self, slot: u32) -> Option<u32> {
+        self.pieces
+            .iter()
+            .find_map(|(raw, candidate)| (*candidate == slot).then_some(*raw))
+    }
+
+    pub(crate) fn raw_card(&self, slot: u32) -> Option<u32> {
+        self.cards
+            .iter()
+            .find_map(|(raw, candidate)| (*candidate == slot).then_some(*raw))
     }
 }
 
