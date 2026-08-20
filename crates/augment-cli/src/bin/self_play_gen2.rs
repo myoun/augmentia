@@ -1,7 +1,10 @@
 use augment_ai::action_space::generate_action_mask;
 use augment_ai::tensor::encode_state;
-use augment_ai::{MctsConfig, MctsTree, OnnxNeuralEvaluator, RootNoiseConfig, SearchDiagnostics};
-use augment_core::{Action, Engine, GameState, GameStatus, Mode, PieceKind};
+use augment_ai::{
+    ACTION_V2_SCHEMA_ID, MctsConfig, MctsTree, OBSERVATION_V2_SCHEMA_ID, OnnxNeuralEvaluator,
+    RootNoiseConfig, SELF_PLAY_V2_RECORD_SCHEMA_ID, SearchDiagnostics, V2_BASELINE_MODEL_ID,
+};
+use augment_core::{Action, BUNDLED_RULESET_ID, Engine, GameState, GameStatus, Mode, PieceKind};
 use rayon::prelude::*;
 use serde::Serialize;
 use std::fs::{File, OpenOptions};
@@ -44,6 +47,10 @@ struct RootSearchTelemetry {
 #[derive(Serialize)]
 struct SelfPlaySample {
     schema_version: &'static str,
+    ruleset_id: &'static str,
+    observation_schema_id: &'static str,
+    action_schema_id: &'static str,
+    model_id: &'static str,
     game_id: usize,
     ply: usize,
     seed: u64,
@@ -335,7 +342,11 @@ fn main() {
                         .map(|(index, _)| index)
                         .collect();
                     let sample = SelfPlaySample {
-                        schema_version: "canonical_v2_selfplay_gen2_trace_v1",
+                        schema_version: SELF_PLAY_V2_RECORD_SCHEMA_ID,
+                        ruleset_id: BUNDLED_RULESET_ID,
+                        observation_schema_id: OBSERVATION_V2_SCHEMA_ID,
+                        action_schema_id: ACTION_V2_SCHEMA_ID,
+                        model_id: V2_BASELINE_MODEL_ID,
                         game_id,
                         ply: step_idx + 1,
                         seed,
@@ -391,4 +402,50 @@ fn main() {
     )
     .unwrap();
     log_file.flush().unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn audit_sample_always_carries_schema_provenance() {
+        let sample = SelfPlaySample {
+            schema_version: SELF_PLAY_V2_RECORD_SCHEMA_ID,
+            ruleset_id: BUNDLED_RULESET_ID,
+            observation_schema_id: OBSERVATION_V2_SCHEMA_ID,
+            action_schema_id: ACTION_V2_SCHEMA_ID,
+            model_id: V2_BASELINE_MODEL_ID,
+            game_id: 0,
+            ply: 1,
+            seed: 7,
+            spatial: Vec::new(),
+            global: Vec::new(),
+            mask: Vec::new(),
+            policy: Vec::new(),
+            value: 0.0,
+            outcome_is_terminal: true,
+            outcome_source: "terminal_draw",
+            root_search: RootSearchTelemetry {
+                root_raw_value: 0.0,
+                legal_action_count: 0,
+                visited_action_count: 0,
+                root_visit_entropy: 0.0,
+                top1_visit_fraction: 0.0,
+                effective_branching_factor: 0.0,
+                low_prior_visit_rate: 0.0,
+                max_search_depth: 0,
+                dirichlet_alpha: 0.0,
+                dirichlet_epsilon: 0.0,
+                noise_seed: 0,
+                actions: Vec::new(),
+            },
+        };
+
+        let value = serde_json::to_value(sample).unwrap();
+        assert_eq!(value["ruleset_id"], BUNDLED_RULESET_ID);
+        assert_eq!(value["observation_schema_id"], OBSERVATION_V2_SCHEMA_ID);
+        assert_eq!(value["action_schema_id"], ACTION_V2_SCHEMA_ID);
+        assert_eq!(value["model_id"], V2_BASELINE_MODEL_ID);
+    }
 }

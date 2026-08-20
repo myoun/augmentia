@@ -1313,6 +1313,36 @@ mod tests {
     use crate::BUNDLED_RULESET_ID;
 
     #[test]
+    fn observation_v3_review_gate_covers_every_game_state_field() {
+        let state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
+        let GameState {
+            ruleset_id: _,
+            mode: _,
+            board: _,
+            turn: _,
+            ply: _,
+            quiet_ply: _,
+            actions_remaining: _,
+            cards_used_this_turn: _,
+            phase: _,
+            status: _,
+            cards: _,
+            half_star_totals: _,
+            turns_taken: _,
+            completed_drafts: _,
+            deathmatch: _,
+            en_passant: _,
+            applied_rules: _,
+            card_runtime: _,
+            rng: _,
+            next_piece_id: _,
+            next_card_instance_id: _,
+            next_choice_id: _,
+            turn_end_requested: _,
+            repetitions: _,
+        } = state;
+    }
+    #[test]
     fn same_seed_and_position_have_same_fingerprint() {
         let left = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
         let right = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);

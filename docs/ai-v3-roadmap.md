@@ -5,9 +5,10 @@ AI로 교체하는 작업 순서와 각 단계의 완료 조건을 고정한다.
 바뀔 수 있지만, 앞 단계의 계약과 검증을 통과하지 않은 채 뒤 단계로 넘어가지는
 않는다.
 
-현재 진행 상태(2026-08-21): 1단계 완료. 다음 작업은 2단계
-`ObservationV3` 의미 계약 확정이다. 1단계는
-`ai/v2-baseline-before-observation-v3` 태그로 고정한다.
+현재 진행 상태(2026-08-21): 1~2단계 완료. 다음 작업은 3단계 Rust
+`ObservationV3` 인코더 구현이다. 1단계는
+`ai/v2-baseline-before-observation-v3` 태그로 고정했고, 2단계 계약은
+`observation-v3-contract.md`와 `augment-ai::observation_v3`에 고정했다.
 
 ## 핵심 원칙
 
