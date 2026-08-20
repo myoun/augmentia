@@ -8,5 +8,8 @@ rust-version.workspace = true
 augment-core = { path = "../augment-core" }
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic", "std", "ndarray"] }
 serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+zstd = "0.13"
 rand = "0.8"
 rand_distr = "0.4"

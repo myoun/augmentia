@@ -62,6 +62,7 @@ docs/ai-v3-roadmap.md                AI V3 전환 1~14단계와 단계별 완료
 docs/observation-v3-contract.md       ObservationV3의 의미·공개 범위·안정 ID 계약
 docs/action-v3-contract.md            ActionDescriptorV3와 가변 policy 계약
 docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 계약
+docs/data-v3-format.md                V3 대국·독립 decision·shard·manifest 포맷
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```
 

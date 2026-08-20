@@ -1,5 +1,6 @@
 pub mod action_v3;
 pub mod action_space;
+pub mod data_v3;
 pub mod evaluator;
 pub mod encoder_v3;
 pub mod mcts;
@@ -13,6 +14,12 @@ pub use action_v3::{
 };
 pub use action_space::{
     ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
+};
+pub use data_v3::{
+    DATASET_MANIFEST_V3_SCHEMA_ID, DECISION_RECORD_V3_SCHEMA_ID, DataRecordV3, DatasetManifestV3,
+    DecisionRecordV3, GAME_RECORD_V3_SCHEMA_ID, GameRecordV3, ReplayDataV3Error, ShardSummaryV3,
+    read_jsonl_zstd_shard, validate_manifest, verify_manifest_files, verify_manifest_replays,
+    write_jsonl_zstd_shard,
 };
 pub use evaluator::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator};
 pub use encoder_v3::{

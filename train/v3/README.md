@@ -19,3 +19,7 @@ uv run python -m unittest discover -s v3 -p "test_*.py"
 The Rust workspace test compares the checked-in bytes with a freshly generated suite. Any change
 to ObservationV3, ActionDescriptorV3, representative states, or serialization therefore requires
 an explicit fixture regeneration and Python validation.
+
+Full-game and independent-decision training data use the Rust-authored `GameRecordV3` and
+`DecisionRecordV3` contracts documented in `docs/data-v3-format.md`. Compressed replay shards are
+external artifacts and are not checked into Git.
