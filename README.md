@@ -61,6 +61,7 @@ docs/ai-v2-baseline.md               V3 전환을 위한 V2 AI 기준선과 보�
 docs/ai-v3-roadmap.md                AI V3 전환 1~14단계와 단계별 완료 조건
 docs/observation-v3-contract.md       ObservationV3의 의미·공개 범위·안정 ID 계약
 docs/action-v3-contract.md            ActionDescriptorV3와 가변 policy 계약
+docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 계약
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```
 

@@ -17,3 +17,6 @@ terminal-aware outcomes, and engine-native legal actions. Do not extend the V2
 JSONL or 32,768-action format.
 
 See `docs/ai-v2-baseline.md` for the preserved baseline and migration policy.
+
+The new `v3/` package contains the Rust-authored ObservationV3/ActionV3 golden fixture and the
+strict Python schema validator. It is the only supported starting point for new V3 training code.
