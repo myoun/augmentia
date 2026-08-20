@@ -5,9 +5,10 @@ AI로 교체하는 작업 순서와 각 단계의 완료 조건을 고정한다.
 바뀔 수 있지만, 앞 단계의 계약과 검증을 통과하지 않은 채 뒤 단계로 넘어가지는
 않는다.
 
-현재 진행 상태(2026-08-21): 1~6단계 완료. 7단계 생성기 구현과 회귀 pilot은 완료했고,
-실제 학습 규모 corpus는 외부 PGN의 출처·license·용량을 정한 뒤 생성한다. 8단계 모델
-구현 전에는 그 pilot의 coverage와 처리량을 검토한다. 1단계는
+현재 진행 상태(2026-08-21): 1~7단계 완료. 7단계는 Lichess `.pgn.zst` streaming,
+품질 필터, bounded-memory shard 출력과 50,000-position 실데이터 pilot까지 검증했다.
+실제 학습 규모 corpus는 9단계 loader가 확정된 뒤 같은 설정으로 확대한다. 다음 작업은
+8단계 첫 V3 네트워크 구현이다. 1단계는
 `ai/v2-baseline-before-observation-v3` 태그로 고정했고, 2단계 계약은
 `observation-v3-contract.md`와 `augment-ai::observation_v3`에 고정했다. 3단계 Rust
 인코더는 `augment-ai::encoder_v3`에 구현했다.
@@ -119,6 +120,7 @@ ActionV3와 실제 엔진 전이만 사용하는 bounded solver가 강제승리�
 - proven tactical record의 최적 행동과 value가 engine-only solver에서 재현된다.
 - schema/checksum/split 검증과 action/phase/piece/card coverage 보고서가 생성된다.
 - 알려진 coverage 공백을 숨기거나 heuristic label로 채우지 않는다.
+- Lichess 압축 PGN을 평문으로 풀지 않고 처리하며 품질 필터 사유와 처리량을 기록한다.
 
 ### 8. 첫 V3 네트워크 구현
 

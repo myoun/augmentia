@@ -26,6 +26,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Read, Write};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 const COVERAGE_SCHEMA_ID: &str = "augmentia.bootstrap.coverage.v3";
 const TACTICAL_INPUT_SCHEMA_ID: &str = "augmentia.bootstrap.tactical-input.v1";
@@ -38,6 +39,7 @@ fn main() {
 }
 
 fn run(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    let started_at = Instant::now();
     let config = Config::parse(&args)?;
     let engine = Engine::bundled_20260807()?;
     let ruleset = RulesetRefV3 {
@@ -52,15 +54,27 @@ fn run(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let mut records = Vec::new();
     let mut coverage = BootstrapCoverageV3::new(&config);
+    let split_policy = SplitPolicyV3 {
+        algorithm: SPLIT_POLICY_V3_ALGORITHM.to_owned(),
+        salt: config.split_salt.clone(),
+        train_basis_points: 9_000,
+        validation_basis_points: 500,
+        holdout_basis_points: 500,
+    };
+    let mut writer = BootstrapShardWriter::new(
+        &config.output_dir,
+        split_policy.clone(),
+        config.shard_records,
+        config.compression_level,
+    );
     if let Some(pgn_path) = &config.pgn {
         import_pgn(
             pgn_path,
             &config,
             &ruleset,
             &engine,
-            &mut records,
+            &mut writer,
             &mut coverage,
         )?;
     }
@@ -70,39 +84,21 @@ fn run(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
             &config,
             &ruleset,
             &engine,
-            &mut records,
+            &mut writer,
             &mut coverage,
         )?;
     }
-    records = deduplicate_records(records, &mut coverage)?;
-    if records.is_empty() {
+    if writer.total_records() == 0 {
         return Err("no valid bootstrap records were generated".into());
     }
-
-    let split_policy = SplitPolicyV3 {
-        algorithm: SPLIT_POLICY_V3_ALGORITHM.to_owned(),
-        salt: config.split_salt.clone(),
-        train_basis_points: 9_000,
-        validation_basis_points: 500,
-        holdout_basis_points: 500,
-    };
-    let mut by_split = BTreeMap::<DatasetSplitV3, Vec<DataRecordV3>>::new();
-    for record in records {
-        let split = split_policy.assign(&record.split_group_key())?;
-        by_split.entry(split).or_default().push(record);
-    }
-
-    let mut shards = Vec::new();
-    for (split, records) in by_split {
-        let relative = format!("shards/{}/decision-00000.jsonl.zst", split_name(split));
-        let summary = write_jsonl_zstd_shard(
-            config.output_dir.join(Path::new(&relative)),
-            &records,
-            config.compression_level,
-        )?;
-        shards.push(summary.to_manifest_entry(relative, split));
-    }
-    shards.sort_by_key(|shard| shard.split);
+    let shards = writer.finish()?;
+    coverage.output_shards = shards.len() as u64;
+    coverage.output_compressed_bytes = shards.iter().map(|shard| shard.compressed_bytes).sum();
+    coverage.generation_elapsed_ms = started_at.elapsed().as_millis() as u64;
+    coverage.records_per_second = manifest_rate(
+        coverage.board_pretraining_records + coverage.proven_tactical_records,
+        started_at.elapsed().as_secs_f64(),
+    );
     let totals = totals_from_shards(&shards);
     let manifest = DatasetManifestV3 {
         manifest_schema_id: DATASET_MANIFEST_V3_SCHEMA_ID.to_owned(),
@@ -119,9 +115,9 @@ fn run(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
         totals,
     };
     validate_manifest(&manifest)?;
-    write_new_json(&config.output_dir.join("manifest.json"), &manifest)?;
     write_new_json(&config.output_dir.join("coverage.json"), &coverage)?;
     verify_manifest_files(&config.output_dir, &manifest)?;
+    write_new_json(&config.output_dir.join("manifest.json"), &manifest)?;
     println!(
         "COMPLETE dataset={} records={} board_pretraining={} proven_tactics={} skipped={}",
         manifest.dataset_id,
@@ -147,6 +143,12 @@ struct Config {
     split_salt: String,
     max_games: usize,
     max_records: usize,
+    shard_records: usize,
+    min_rating: u32,
+    allowed_speeds: BTreeSet<String>,
+    rated_only: bool,
+    normal_termination_only: bool,
+    min_game_plies: usize,
     tactical_depth: u8,
     tactical_nodes: u64,
     compression_level: i32,
@@ -180,6 +182,18 @@ impl Config {
             Some(_) => Some(required_arg(args, "--tactics-license")?),
             None => None,
         };
+        let max_games = parse_arg(args, "--max-games", 1_000usize)?;
+        let max_records = parse_arg(args, "--max-records", 100_000usize)?;
+        let shard_records = parse_arg(args, "--shard-records", 10_000usize)?;
+        if max_games == 0 || max_records == 0 || shard_records == 0 {
+            return Err(
+                "--max-games, --max-records and --shard-records must be positive".to_owned(),
+            );
+        }
+        let allowed_speeds = optional_arg(args, "--speeds")
+            .map(|value| parse_speeds(&value))
+            .transpose()?
+            .unwrap_or_default();
         Ok(Self {
             pgn,
             tactics,
@@ -195,8 +209,14 @@ impl Config {
             ),
             split_salt: optional_arg(args, "--split-salt")
                 .unwrap_or_else(|| "augmentia-bootstrap-v3".to_owned()),
-            max_games: parse_arg(args, "--max-games", 1_000usize)?,
-            max_records: parse_arg(args, "--max-records", 100_000usize)?,
+            max_games,
+            max_records,
+            shard_records,
+            min_rating: parse_arg(args, "--min-rating", 0u32)?,
+            allowed_speeds,
+            rated_only: has_flag(args, "--rated-only"),
+            normal_termination_only: has_flag(args, "--normal-termination-only"),
+            min_game_plies: parse_arg(args, "--min-game-plies", 1usize)?,
             tactical_depth: parse_arg(args, "--tactical-depth", 3u8)?,
             tactical_nodes: parse_arg(args, "--tactical-nodes", 100_000u64)?,
             compression_level: parse_arg(args, "--compression-level", 3i32)?,
@@ -209,68 +229,64 @@ fn import_pgn(
     config: &Config,
     ruleset: &RulesetRefV3,
     engine: &Engine,
-    records: &mut Vec<DataRecordV3>,
+    writer: &mut BootstrapShardWriter<'_>,
     coverage: &mut BootstrapCoverageV3,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let source_sha256 = sha256_file(path)?;
     coverage.pgn_sha256 = Some(source_sha256.clone());
-    let file = File::open(path)?;
-    let mut reader = Reader::new(BufReader::new(file));
+    coverage.pgn_input_bytes = Some(std::fs::metadata(path)?.len());
+    coverage.pgn_compression = Some(if is_zstd_path(path) {
+        "zstd".to_owned()
+    } else {
+        "none".to_owned()
+    });
+    let mut reader = Reader::new(BufReader::new(open_pgn_input(path)?));
     let mut visitor = MainlineVisitor;
     let mut game_index = 0usize;
 
-    while game_index < config.max_games && records.len() < config.max_records {
+    while coverage.games_accepted < config.max_games as u64
+        && writer.total_records() < config.max_records as u64
+    {
         let Some(game) = reader.read_game(&mut visitor)? else {
             break;
         };
         coverage.games_read += 1;
         match game {
-            Ok(plies) => {
-                for (ply_index, ply) in plies.into_iter().enumerate() {
-                    if records.len() >= config.max_records {
+            Ok(game) => {
+                if let Some(reason) = pgn_filter_rejection(&game, config) {
+                    coverage.observe_filtered_game(reason);
+                    game_index += 1;
+                    continue;
+                }
+                coverage.games_accepted += 1;
+                let game_key = game
+                    .site
+                    .as_deref()
+                    .filter(|site| !site.trim().is_empty())
+                    .map_or_else(|| format!("index:{game_index}"), ToOwned::to_owned);
+                let split_group_id = format!("standard:{source_sha256}:game:{game_key}");
+                for (ply_index, ply) in game.plies.into_iter().enumerate() {
+                    if writer.total_records() >= config.max_records as u64 {
                         break;
                     }
                     coverage.positions_seen += 1;
-                    let source_id =
-                        format!("pgn:{source_sha256}:game:{game_index}:ply:{ply_index}");
-                    let split_group_id = format!("standard:{source_sha256}:game:{game_index}");
+                    let source_id = format!("pgn:{source_sha256}:game:{game_key}:ply:{ply_index}");
                     let state = standard_position_to_augment_state(&ply.position)?;
                     if let Some(record) = board_pretraining_record(
                         &state,
                         &ply.position,
                         &ply.played_move,
                         SourcePositionRef {
-                            source_id: source_id.clone(),
+                            source_id,
                             split_group_id: split_group_id.clone(),
                         },
                         config,
                         ruleset,
                         engine,
                     )? {
-                        records.push(DataRecordV3::Decision(Box::new(record)));
+                        emit_record(DataRecordV3::Decision(Box::new(record)), writer, coverage)?;
                     } else {
                         coverage.skipped_positions += 1;
-                    }
-                    if records.len() >= config.max_records {
-                        break;
-                    }
-                    match proven_tactical_record(
-                        &state,
-                        format!("{source_id}:augment-proof"),
-                        split_group_id,
-                        config.pgn_license.clone().expect("required with --pgn"),
-                        config,
-                        ruleset,
-                        engine,
-                    ) {
-                        Ok(Some(record)) => {
-                            records.push(DataRecordV3::Decision(Box::new(record)));
-                        }
-                        Ok(None) => coverage.unproven_tactical_positions += 1,
-                        Err(ForcedWinErrorV3::NodeBudgetExceeded { .. }) => {
-                            coverage.tactical_budget_exceeded += 1;
-                        }
-                        Err(error) => return Err(error.into()),
                     }
                 }
             }
@@ -286,7 +302,7 @@ fn import_tactical_scenarios(
     config: &Config,
     ruleset: &RulesetRefV3,
     engine: &Engine,
-    records: &mut Vec<DataRecordV3>,
+    writer: &mut BootstrapShardWriter<'_>,
     coverage: &mut BootstrapCoverageV3,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let bytes = std::fs::read(path)?;
@@ -296,8 +312,9 @@ fn import_tactical_scenarios(
     }
     let source_sha256 = sha256_bytes(&bytes);
     coverage.tactical_input_sha256 = Some(source_sha256.clone());
+    let mut seen_training_content = BTreeSet::new();
     for scenario in input.scenarios {
-        if records.len() >= config.max_records {
+        if writer.total_records() >= config.max_records as u64 {
             break;
         }
         coverage.positions_seen += 1;
@@ -316,7 +333,11 @@ fn import_tactical_scenarios(
             engine,
         ) {
             Ok(Some(record)) => {
-                records.push(DataRecordV3::Decision(Box::new(record)));
+                if seen_training_content.insert(decision_training_digest(&record)?) {
+                    emit_record(DataRecordV3::Decision(Box::new(record)), writer, coverage)?;
+                } else {
+                    coverage.duplicates_removed += 1;
+                }
             }
             Ok(None) => coverage.unproven_tactical_positions += 1,
             Err(ForcedWinErrorV3::NodeBudgetExceeded { .. }) => {
@@ -484,15 +505,42 @@ struct PgnPly {
     played_move: ChessMove,
 }
 
+#[derive(Default)]
+struct PgnTags {
+    start_position: Option<Chess>,
+    event: Option<String>,
+    site: Option<String>,
+    variant: Option<String>,
+    termination: Option<String>,
+    white_elo: Option<u32>,
+    black_elo: Option<u32>,
+}
+
+struct PgnMovetext {
+    tags: PgnTags,
+    position: Chess,
+    plies: Vec<PgnPly>,
+}
+
+struct ParsedPgnGame {
+    event: Option<String>,
+    site: Option<String>,
+    variant: Option<String>,
+    termination: Option<String>,
+    white_elo: Option<u32>,
+    black_elo: Option<u32>,
+    plies: Vec<PgnPly>,
+}
+
 struct MainlineVisitor;
 
 impl Visitor for MainlineVisitor {
-    type Tags = Option<Chess>;
-    type Movetext = (Chess, Vec<PgnPly>);
-    type Output = Result<Vec<PgnPly>, String>;
+    type Tags = PgnTags;
+    type Movetext = PgnMovetext;
+    type Output = Result<ParsedPgnGame, String>;
 
     fn begin_tags(&mut self) -> ControlFlow<Self::Output, Self::Tags> {
-        ControlFlow::Continue(None)
+        ControlFlow::Continue(PgnTags::default())
     }
 
     fn tag(
@@ -501,21 +549,38 @@ impl Visitor for MainlineVisitor {
         name: &[u8],
         value: RawTag<'_>,
     ) -> ControlFlow<Self::Output> {
-        if name == b"FEN" {
-            let fen = match Fen::from_ascii(value.as_bytes()) {
-                Ok(fen) => fen,
-                Err(error) => return ControlFlow::Break(Err(error.to_string())),
-            };
-            match fen.into_position(CastlingMode::Standard) {
-                Ok(position) => *tags = Some(position),
-                Err(error) => return ControlFlow::Break(Err(error.to_string())),
+        let bytes = value.as_bytes();
+        match name {
+            b"FEN" => {
+                let fen = match Fen::from_ascii(bytes) {
+                    Ok(fen) => fen,
+                    Err(error) => return ControlFlow::Break(Err(error.to_string())),
+                };
+                match fen.into_position(CastlingMode::Standard) {
+                    Ok(position) => tags.start_position = Some(position),
+                    Err(error) => return ControlFlow::Break(Err(error.to_string())),
+                }
             }
+            b"Event" => tags.event = Some(String::from_utf8_lossy(bytes).into_owned()),
+            b"Site" => tags.site = Some(String::from_utf8_lossy(bytes).into_owned()),
+            b"Variant" => tags.variant = Some(String::from_utf8_lossy(bytes).into_owned()),
+            b"Termination" => {
+                tags.termination = Some(String::from_utf8_lossy(bytes).into_owned());
+            }
+            b"WhiteElo" => tags.white_elo = parse_ascii_u32(bytes),
+            b"BlackElo" => tags.black_elo = parse_ascii_u32(bytes),
+            _ => {}
         }
         ControlFlow::Continue(())
     }
 
     fn begin_movetext(&mut self, tags: Self::Tags) -> ControlFlow<Self::Output, Self::Movetext> {
-        ControlFlow::Continue((tags.unwrap_or_default(), Vec::new()))
+        let position = tags.start_position.clone().unwrap_or_default();
+        ControlFlow::Continue(PgnMovetext {
+            tags,
+            position,
+            plies: Vec::new(),
+        })
     }
 
     fn san(
@@ -523,21 +588,92 @@ impl Visitor for MainlineVisitor {
         movetext: &mut Self::Movetext,
         san_plus: SanPlus,
     ) -> ControlFlow<Self::Output> {
-        let played_move = match san_plus.san.to_move(&movetext.0) {
+        let played_move = match san_plus.san.to_move(&movetext.position) {
             Ok(played_move) => played_move,
             Err(error) => return ControlFlow::Break(Err(error.to_string())),
         };
-        movetext.1.push(PgnPly {
-            position: movetext.0.clone(),
+        movetext.plies.push(PgnPly {
+            position: movetext.position.clone(),
             played_move,
         });
-        movetext.0.play_unchecked(played_move);
+        movetext.position.play_unchecked(played_move);
         ControlFlow::Continue(())
     }
 
     fn end_game(&mut self, movetext: Self::Movetext) -> Self::Output {
-        Ok(movetext.1)
+        Ok(ParsedPgnGame {
+            event: movetext.tags.event,
+            site: movetext.tags.site,
+            variant: movetext.tags.variant,
+            termination: movetext.tags.termination,
+            white_elo: movetext.tags.white_elo,
+            black_elo: movetext.tags.black_elo,
+            plies: movetext.plies,
+        })
     }
+}
+
+fn parse_ascii_u32(bytes: &[u8]) -> Option<u32> {
+    std::str::from_utf8(bytes).ok()?.parse().ok()
+}
+
+fn pgn_filter_rejection(game: &ParsedPgnGame, config: &Config) -> Option<&'static str> {
+    if game
+        .variant
+        .as_deref()
+        .is_some_and(|variant| !variant.eq_ignore_ascii_case("standard"))
+    {
+        return Some("non_standard_variant");
+    }
+    if config.rated_only
+        && !game
+            .event
+            .as_deref()
+            .is_some_and(|event| event.to_ascii_lowercase().contains("rated"))
+    {
+        return Some("not_rated");
+    }
+    if config.min_rating > 0
+        && (game
+            .white_elo
+            .is_none_or(|rating| rating < config.min_rating)
+            || game
+                .black_elo
+                .is_none_or(|rating| rating < config.min_rating))
+    {
+        return Some("rating_below_minimum_or_missing");
+    }
+    if !config.allowed_speeds.is_empty() {
+        let speed = game.event.as_deref().and_then(lichess_speed_from_event);
+        if speed.is_none_or(|speed| !config.allowed_speeds.contains(&speed)) {
+            return Some("speed_not_allowed_or_missing");
+        }
+    }
+    if config.normal_termination_only
+        && !game
+            .termination
+            .as_deref()
+            .is_some_and(|termination| termination.eq_ignore_ascii_case("normal"))
+    {
+        return Some("termination_not_normal_or_missing");
+    }
+    if game.plies.len() < config.min_game_plies {
+        return Some("game_too_short");
+    }
+    None
+}
+
+fn lichess_speed_from_event(event: &str) -> Option<String> {
+    event
+        .split(|character: char| !character.is_ascii_alphanumeric())
+        .find_map(|word| {
+            let word = word.to_ascii_lowercase();
+            matches!(
+                word.as_str(),
+                "ultrabullet" | "bullet" | "blitz" | "rapid" | "classical" | "correspondence"
+            )
+            .then_some(word)
+        })
 }
 
 fn standard_position_to_augment_state(
@@ -712,8 +848,13 @@ struct BootstrapCoverageV3 {
     schema_id: &'static str,
     dataset_id: String,
     pgn_sha256: Option<String>,
+    pgn_input_bytes: Option<u64>,
+    pgn_compression: Option<String>,
     tactical_input_sha256: Option<String>,
     games_read: u64,
+    games_accepted: u64,
+    games_filtered: u64,
+    game_filter_reasons: BTreeMap<String, u64>,
     invalid_games: u64,
     positions_seen: u64,
     board_pretraining_records: u64,
@@ -722,6 +863,10 @@ struct BootstrapCoverageV3 {
     tactical_budget_exceeded: u64,
     skipped_positions: u64,
     duplicates_removed: u64,
+    output_shards: u64,
+    output_compressed_bytes: u64,
+    generation_elapsed_ms: u64,
+    records_per_second: f64,
     action_kinds: BTreeMap<String, u64>,
     phase_kinds: BTreeMap<String, u64>,
     piece_kind_codes: BTreeMap<u8, u64>,
@@ -735,8 +880,13 @@ impl BootstrapCoverageV3 {
             schema_id: COVERAGE_SCHEMA_ID,
             dataset_id: config.dataset_id.clone(),
             pgn_sha256: None,
+            pgn_input_bytes: None,
+            pgn_compression: None,
             tactical_input_sha256: None,
             games_read: 0,
+            games_accepted: 0,
+            games_filtered: 0,
+            game_filter_reasons: BTreeMap::new(),
             invalid_games: 0,
             positions_seen: 0,
             board_pretraining_records: 0,
@@ -745,16 +895,30 @@ impl BootstrapCoverageV3 {
             tactical_budget_exceeded: 0,
             skipped_positions: 0,
             duplicates_removed: 0,
+            output_shards: 0,
+            output_compressed_bytes: 0,
+            generation_elapsed_ms: 0,
+            records_per_second: 0.0,
             action_kinds: BTreeMap::new(),
             phase_kinds: BTreeMap::new(),
             piece_kind_codes: BTreeMap::new(),
             card_definition_ids: BTreeMap::new(),
             limitations: vec![
                 "standard chess records supervise board_pretraining only",
+                "standard chess behavior frequency is preserved by repeated one-hot samples",
+                "PGN positions are not scanned by the Augmentia forced-win solver",
                 "tactical-input.v1 represents board pieces but not cards or runtime state",
                 "zero card coverage is reported, never inferred",
             ],
         }
+    }
+
+    fn observe_filtered_game(&mut self, reason: &str) {
+        self.games_filtered += 1;
+        *self
+            .game_filter_reasons
+            .entry(reason.to_owned())
+            .or_default() += 1;
     }
 
     fn observe_record(&mut self, record: &DecisionRecordV3) {
@@ -787,10 +951,107 @@ impl BootstrapCoverageV3 {
     }
 }
 
-fn deduplicate_records(
-    records: Vec<DataRecordV3>,
+struct BootstrapShardWriter<'a> {
+    output_dir: &'a Path,
+    split_policy: SplitPolicyV3,
+    shard_records: usize,
+    compression_level: i32,
+    buffers: BTreeMap<DatasetSplitV3, Vec<DataRecordV3>>,
+    next_shard: BTreeMap<DatasetSplitV3, u32>,
+    shards: Vec<ShardManifestV3>,
+    total_records: u64,
+}
+
+impl<'a> BootstrapShardWriter<'a> {
+    fn new(
+        output_dir: &'a Path,
+        split_policy: SplitPolicyV3,
+        shard_records: usize,
+        compression_level: i32,
+    ) -> Self {
+        Self {
+            output_dir,
+            split_policy,
+            shard_records,
+            compression_level,
+            buffers: BTreeMap::new(),
+            next_shard: BTreeMap::new(),
+            shards: Vec::new(),
+            total_records: 0,
+        }
+    }
+
+    fn total_records(&self) -> u64 {
+        self.total_records
+    }
+
+    fn push(&mut self, record: DataRecordV3) -> Result<(), Box<dyn std::error::Error>> {
+        let split = self.split_policy.assign(&record.split_group_key())?;
+        let should_flush = {
+            let buffer = self.buffers.entry(split).or_default();
+            buffer.push(record);
+            buffer.len() >= self.shard_records
+        };
+        self.total_records += 1;
+        if should_flush {
+            self.flush_split(split)?;
+        }
+        Ok(())
+    }
+
+    fn finish(mut self) -> Result<Vec<ShardManifestV3>, Box<dyn std::error::Error>> {
+        for split in [
+            DatasetSplitV3::Train,
+            DatasetSplitV3::Validation,
+            DatasetSplitV3::Holdout,
+        ] {
+            self.flush_split(split)?;
+        }
+        self.shards
+            .sort_by_key(|shard| (shard.split, shard.path.clone()));
+        Ok(self.shards)
+    }
+
+    fn flush_split(&mut self, split: DatasetSplitV3) -> Result<(), Box<dyn std::error::Error>> {
+        let Some(records) = self.buffers.get_mut(&split) else {
+            return Ok(());
+        };
+        if records.is_empty() {
+            return Ok(());
+        }
+        let shard_index = self.next_shard.entry(split).or_default();
+        let relative = format!(
+            "shards/{}/decision-{shard_index:05}.jsonl.zst",
+            split_name(split)
+        );
+        let summary = write_jsonl_zstd_shard(
+            self.output_dir.join(Path::new(&relative)),
+            records,
+            self.compression_level,
+        )?;
+        self.shards.push(summary.to_manifest_entry(relative, split));
+        records.clear();
+        *shard_index += 1;
+        Ok(())
+    }
+}
+
+fn emit_record(
+    record: DataRecordV3,
+    writer: &mut BootstrapShardWriter<'_>,
     coverage: &mut BootstrapCoverageV3,
-) -> Result<Vec<DataRecordV3>, serde_json::Error> {
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let DataRecordV3::Decision(decision) = &record {
+        match decision.provenance.source_domain {
+            SourceDomainV3::StandardChess => coverage.board_pretraining_records += 1,
+            SourceDomainV3::AugmentChess => coverage.proven_tactical_records += 1,
+        }
+        coverage.observe_record(decision);
+    }
+    writer.push(record)
+}
+
+fn decision_training_digest(record: &DecisionRecordV3) -> Result<String, serde_json::Error> {
     #[derive(Serialize)]
     struct DecisionContent<'a> {
         ruleset: &'a RulesetRefV3,
@@ -802,43 +1063,16 @@ fn deduplicate_records(
         targets: &'a DecisionTargetsV3,
     }
 
-    let mut seen = BTreeSet::new();
-    let mut unique = Vec::with_capacity(records.len());
-    for record in records {
-        let content = match &record {
-            DataRecordV3::Decision(decision) => serde_json::to_vec(&DecisionContent {
-                ruleset: &decision.ruleset,
-                observation_schema_id: &decision.observation_schema_id,
-                action_schema_id: &decision.action_schema_id,
-                actor: decision.actor,
-                observation: &decision.observation,
-                legal_actions: &decision.legal_actions,
-                targets: &decision.targets,
-            })?,
-            DataRecordV3::Game(game) => serde_json::to_vec(game)?,
-        };
-        if seen.insert(sha256_bytes(&content)) {
-            unique.push(record);
-        } else {
-            coverage.duplicates_removed += 1;
-        }
-    }
-    coverage.board_pretraining_records = 0;
-    coverage.proven_tactical_records = 0;
-    coverage.action_kinds.clear();
-    coverage.phase_kinds.clear();
-    coverage.piece_kind_codes.clear();
-    coverage.card_definition_ids.clear();
-    for record in &unique {
-        if let DataRecordV3::Decision(decision) = record {
-            match decision.provenance.source_domain {
-                SourceDomainV3::StandardChess => coverage.board_pretraining_records += 1,
-                SourceDomainV3::AugmentChess => coverage.proven_tactical_records += 1,
-            }
-            coverage.observe_record(decision);
-        }
-    }
-    Ok(unique)
+    serde_json::to_vec(&DecisionContent {
+        ruleset: &record.ruleset,
+        observation_schema_id: &record.observation_schema_id,
+        action_schema_id: &record.action_schema_id,
+        actor: record.actor,
+        observation: &record.observation,
+        legal_actions: &record.legal_actions,
+        targets: &record.targets,
+    })
+    .map(|bytes| sha256_bytes(&bytes))
 }
 
 fn totals_from_shards(shards: &[ShardManifestV3]) -> DatasetTotalsV3 {
@@ -855,6 +1089,10 @@ fn totals_from_shards(shards: &[ShardManifestV3]) -> DatasetTotalsV3 {
         totals.value_eligible_decisions += shard.value_eligible_decisions;
     }
     totals
+}
+
+fn manifest_rate(records: u64, elapsed_seconds: f64) -> f64 {
+    records as f64 / elapsed_seconds.max(f64::EPSILON)
 }
 
 fn split_name(split: DatasetSplitV3) -> &'static str {
@@ -888,6 +1126,21 @@ fn write_new_json(path: &Path, value: &impl Serialize) -> Result<(), Box<dyn std
     file.write_all(b"\n")?;
     file.sync_all()?;
     Ok(())
+}
+
+fn is_zstd_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("zst"))
+}
+
+fn open_pgn_input(path: &Path) -> Result<Box<dyn Read>, Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
+    if is_zstd_path(path) {
+        Ok(Box::new(zstd::stream::read::Decoder::new(file)?))
+    } else {
+        Ok(Box::new(file))
+    }
 }
 
 fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
@@ -927,6 +1180,27 @@ fn optional_arg(args: &[String], name: &str) -> Option<String> {
         .map(|pair| pair[1].clone())
 }
 
+fn has_flag(args: &[String], name: &str) -> bool {
+    args.iter().any(|argument| argument == name)
+}
+
+fn parse_speeds(value: &str) -> Result<BTreeSet<String>, String> {
+    let mut speeds = BTreeSet::new();
+    for speed in value.split(',') {
+        let speed = speed.trim().to_ascii_lowercase();
+        if !matches!(
+            speed.as_str(),
+            "ultrabullet" | "bullet" | "blitz" | "rapid" | "classical" | "correspondence"
+        ) {
+            return Err(format!(
+                "invalid --speeds value {speed}; expected comma-separated Lichess speed names"
+            ));
+        }
+        speeds.insert(speed);
+    }
+    Ok(speeds)
+}
+
 fn parse_arg<T>(args: &[String], name: &str, default: T) -> Result<T, String>
 where
     T: std::str::FromStr,
@@ -957,12 +1231,13 @@ mod tests {
         let root = temp_dir("bootstrap-pgn");
         std::fs::create_dir_all(&root).unwrap();
         let pgn = root.join("tiny.pgn");
+        let fixture = include_str!("../../../../train/v3/fixtures/bootstrap_standard_v1.pgn");
         std::fs::write(
             &pgn,
             format!(
                 "{}\n{}",
-                include_str!("../../../../train/v3/fixtures/bootstrap_standard_v1.pgn"),
-                include_str!("../../../../train/v3/fixtures/bootstrap_standard_v1.pgn")
+                fixture,
+                fixture.replace("[Site \"local\"]", "[Site \"local-2\"]")
             ),
         )
         .unwrap();
@@ -991,8 +1266,8 @@ mod tests {
 
         let coverage: serde_json::Value =
             serde_json::from_slice(&std::fs::read(output.join("coverage.json")).unwrap()).unwrap();
-        assert_eq!(coverage["board_pretraining_records"], 5);
-        assert_eq!(coverage["duplicates_removed"], 5);
+        assert_eq!(coverage["board_pretraining_records"], 10);
+        assert_eq!(coverage["duplicates_removed"], 0);
         let manifest: DatasetManifestV3 =
             serde_json::from_slice(&std::fs::read(output.join("manifest.json")).unwrap()).unwrap();
         for shard in manifest.shards {
@@ -1018,15 +1293,103 @@ mod tests {
     }
 
     #[test]
+    fn streams_zstd_pgn_and_applies_lichess_quality_filters() {
+        let root = temp_dir("bootstrap-lichess-zstd");
+        std::fs::create_dir_all(&root).unwrap();
+        let pgn = root.join("lichess.pgn.zst");
+        let games = r#"[Event "rated rapid game"]
+[Site "https://lichess.org/highrated"]
+[Result "*"]
+[WhiteElo "2250"]
+[BlackElo "2100"]
+[Variant "Standard"]
+[Termination "Normal"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+[Event "rated rapid game"]
+[Site "https://lichess.org/lowrated"]
+[Result "*"]
+[WhiteElo "1900"]
+[BlackElo "2200"]
+[Variant "Standard"]
+[Termination "Normal"]
+
+1. d4 d5 2. c4 e6 3. Nc3 *
+"#;
+        std::fs::write(&pgn, zstd::stream::encode_all(games.as_bytes(), 1).unwrap()).unwrap();
+        let ruleset_manifest = root.join("ruleset.json");
+        std::fs::write(&ruleset_manifest, "{}\n").unwrap();
+        let output = root.join("dataset");
+        run(vec![
+            "--pgn".to_owned(),
+            pgn.display().to_string(),
+            "--out".to_owned(),
+            output.display().to_string(),
+            "--dataset-id".to_owned(),
+            "test-lichess-zstd".to_owned(),
+            "--created-at-utc".to_owned(),
+            "2026-08-21T00:00:00Z".to_owned(),
+            "--engine-commit".to_owned(),
+            "c".repeat(40),
+            "--pgn-license".to_owned(),
+            "CC0-1.0".to_owned(),
+            "--ruleset-manifest".to_owned(),
+            ruleset_manifest.display().to_string(),
+            "--min-rating".to_owned(),
+            "2000".to_owned(),
+            "--speeds".to_owned(),
+            "rapid,classical".to_owned(),
+            "--rated-only".to_owned(),
+            "--normal-termination-only".to_owned(),
+            "--min-game-plies".to_owned(),
+            "5".to_owned(),
+            "--shard-records".to_owned(),
+            "2".to_owned(),
+        ])
+        .unwrap();
+
+        let coverage: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(output.join("coverage.json")).unwrap()).unwrap();
+        assert_eq!(coverage["pgn_compression"], "zstd");
+        assert_eq!(coverage["games_read"], 2);
+        assert_eq!(coverage["games_accepted"], 1);
+        assert_eq!(coverage["games_filtered"], 1);
+        assert_eq!(
+            coverage["game_filter_reasons"]["rating_below_minimum_or_missing"],
+            1
+        );
+        assert_eq!(coverage["board_pretraining_records"], 5);
+        assert_eq!(coverage["unproven_tactical_positions"], 0);
+        assert_eq!(coverage["output_shards"], 3);
+        assert!(coverage["output_compressed_bytes"].as_u64().unwrap() > 0);
+        assert!(coverage["records_per_second"].as_f64().unwrap() > 0.0);
+
+        let manifest: DatasetManifestV3 =
+            serde_json::from_slice(&std::fs::read(output.join("manifest.json")).unwrap()).unwrap();
+        assert_eq!(manifest.totals.records, 5);
+        assert_eq!(manifest.shards.len(), 3);
+        assert!(manifest.shards.iter().all(|shard| shard.records <= 2));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn emits_only_engine_proven_tactical_scenarios() {
         let root = temp_dir("bootstrap-tactics");
         std::fs::create_dir_all(&root).unwrap();
         let tactics = root.join("tactics.json");
-        std::fs::write(
-            &tactics,
-            include_str!("../../../../train/v3/fixtures/bootstrap_tactics_v1.json"),
-        )
+        let mut tactical_input: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../train/v3/fixtures/bootstrap_tactics_v1.json"
+        ))
         .unwrap();
+        let mut duplicate = tactical_input["scenarios"][0].clone();
+        duplicate["id"] = "duplicate-proven-position".into();
+        duplicate["group_id"] = "duplicate-group".into();
+        tactical_input["scenarios"]
+            .as_array_mut()
+            .unwrap()
+            .push(duplicate);
+        std::fs::write(&tactics, serde_json::to_vec(&tactical_input).unwrap()).unwrap();
         let ruleset_manifest = root.join("ruleset.json");
         std::fs::write(&ruleset_manifest, "{}\n").unwrap();
         let output = root.join("dataset");
@@ -1053,6 +1416,7 @@ mod tests {
             serde_json::from_slice(&std::fs::read(output.join("coverage.json")).unwrap()).unwrap();
         assert_eq!(coverage["proven_tactical_records"], 1);
         assert_eq!(coverage["board_pretraining_records"], 0);
+        assert_eq!(coverage["duplicates_removed"], 1);
         std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -13,7 +13,8 @@
 
 ## 일반 체스 PGN
 
-`bootstrap_v3_data`는 PGN을 mainline 단위로 streaming parsing한다. 각 착수 전 위치에서
+`bootstrap_v3_data`는 일반 `.pgn`과 `.pgn.zst`를 mainline 단위로 streaming parsing한다.
+압축 파일 전체를 메모리나 별도 평문 파일로 풀지 않는다. 각 착수 전 위치에서
 일반 체스와 현재 Augmentia 엔진 양쪽에 존재하는 board move만 후보로 남기고, 실제 PGN
 착수를 one-hot behavior distribution으로 기록한다.
 
@@ -28,6 +29,23 @@ PGN의 결과, 체크메이트와 value는 복사하지 않는다. 일반 체스
 Augmentia의 킹 포획 규칙이 다르기 때문이다. en passant와 castling을 포함해 선택한 착수가
 두 도메인의 후보 행동 교집합에 없으면 해당 위치는 건너뛴다. 원본 파일 SHA-256, 게임과
 ply 위치, 사용자가 지정한 license 문자열을 provenance에 남긴다.
+
+같은 위치·같은 착수를 단순 중복 제거하지 않는다. 반복 one-hot sample의 cross-entropy
+합은 착수 횟수를 합산한 behavior distribution과 같으므로 인간 착수 빈도를 보존하며,
+각 sample을 원래 대국 단위 split에 남겨 provenance와 split 경계를 유지한다. PGN 위치에는
+강제승리 solver를 실행하지 않는다. 일반 체스 전체 corpus를 Augmentia 전술 탐색에 넣는
+비용과 도메인 혼합을 피하고, solver는 아래 tactical input에만 적용한다.
+
+Lichess 입력에는 다음 선택 필터를 조합한다.
+
+- `--min-rating`: 양쪽 플레이어가 모두 만족해야 하는 최소 레이팅;
+- `--speeds`: `bullet,blitz,rapid,classical,correspondence` 등의 허용 속도 목록;
+- `--rated-only`: PGN Event가 rated game인 대국만 허용;
+- `--normal-termination-only`: time forfeit와 비정상 종료 제외;
+- `--min-game-plies`: 너무 짧은 대국 제외.
+
+`--max-games`는 필터를 통과한 대국 수이고 `--max-records`는 실제 출력 sample 수다.
+출력은 메모리에 모두 쌓지 않고 split별 `--shard-records`개마다 새 shard로 기록한다.
 
 ## 증명된 Augmentia 전술
 
@@ -50,22 +68,26 @@ board-only tactical input v1은 작은 수작업·회귀 fixture용이다. 카�
 ```powershell
 $commit = git rev-parse HEAD
 cargo run -p augment-cli --bin bootstrap_v3_data -- `
-  --pgn C:\data\games.pgn `
-  --tactics train\v3\fixtures\bootstrap_tactics_v1.json `
-  --out replay-buffers\v3\bootstrap-pilot `
-  --dataset-id bootstrap-pilot-v1 `
+  --pgn C:\data\lichess_db_standard_rated_2026-07.pgn.zst `
+  --out replay-buffers\v3\lichess-pilot `
+  --dataset-id lichess-standard-pilot-v1 `
   --created-at-utc 2026-08-21T00:00:00Z `
   --engine-commit $commit `
-  --pgn-license "<PGN source license>" `
-  --tactics-license "<tactical source license>" `
+  --pgn-license CC0-1.0 `
+  --min-rating 2000 `
+  --speeds rapid,classical `
+  --rated-only `
+  --normal-termination-only `
+  --min-game-plies 20 `
   --max-games 1000 `
   --max-records 100000 `
-  --tactical-depth 3 `
-  --tactical-nodes 100000
+  --shard-records 10000
 ```
 
 `--created-at-utc`와 `--engine-commit`은 필수다. `--pgn`을 사용하면 `--pgn-license`,
-`--tactics`를 사용하면 `--tactics-license`도 각각 필수다. 서로 다른 출처에 하나의 license를
+`--tactics`를 사용하면 `--tactics-license`도 각각 필수다. 전술 입력은 별도 실행에서
+`--tactics`, `--tactics-license`, `--tactical-depth`, `--tactical-nodes`를 지정한다.
+서로 다른 출처에 하나의 license를
 잘못 붙이지 않는다. 출력 디렉터리에 기존 manifest가 있으면 덮어쓰지 않는다.
 
 PGN importer는 GPL-3.0-or-later인 `pgn-reader 0.28`에 의존한다. 이 CLI를 바이너리로
@@ -78,17 +100,18 @@ PGN importer는 GPL-3.0-or-later인 `pgn-reader 0.28`에 의존한다. 이 CLI�
 replay-buffers/v3/bootstrap-pilot/
 |-- manifest.json
 |-- coverage.json
-`-- shards/<split>/decision-00000.jsonl.zst
+`-- shards/<split>/decision-NNNNN.jsonl.zst
 ```
 
 `manifest.json`과 shard는 6단계 validator를 통과한 뒤에만 완료된다. `coverage.json`은 다음을
 보고한다.
 
-- 읽은 게임, 위치, 잘못된 게임, 건너뛴 위치와 제거한 중복 수;
+- 읽은/허용/필터된 게임, 필터 사유, 위치와 건너뛴 위치 수;
 - board-pretraining과 proven tactical record 수;
 - 증명 실패와 node budget 초과 수;
 - action/phase/piece/card coverage;
 - 입력 PGN과 tactical JSON SHA-256;
+- 입력/압축 출력 byte, shard 수, 생성 시간과 records/sec;
 - 현재 입력 포맷의 알려진 한계.
 
 ## 대량 생성 전 gate
@@ -104,3 +127,22 @@ replay-buffers/v3/bootstrap-pilot/
 
 현재 fixture는 파이프라인 회귀 검증용이며 학습 규모의 corpus가 아니다. 실제 corpus의 크기,
 출처와 license는 별도 pilot 실행 결과와 함께 기록한다.
+
+## Lichess 실데이터 pilot
+
+2026-08-21에 [Lichess Open Database](https://database.lichess.org/)의
+`lichess_db_standard_rated_2026-07.pgn.zst` 앞 128 MiB를 HTTP range로 받아 실제 경로를
+검증했다. 부분 파일 SHA-256은
+`18ae821fcf490743e04e8b68628e934de271778989562986a4162a10166750b3`이다. 위 필터와
+`max_records=50000`, `shard_records=10000`을 사용한 결과는 다음과 같다.
+
+- 102,063 games scanned, 649 accepted, 50,000 board-pretraining records;
+- 7 shards, 17,026,083 compressed shard bytes, 모든 manifest/checksum/schema 검증 통과;
+- warm release와 로컬 cache 기준 생성 14.9초(3,351 records/sec), 전체 validation 24.4초;
+- value, proven tactic, card coverage는 모두 0으로 명시됨;
+- 같은 비율이면 5백만 position은 압축 약 1.7 GB이며 생성 약 25분으로 추정됨. 전체 파일
+  SHA-256 scan과 실제 저장 장치 속도는 별도 비용이다.
+
+이는 처리량과 데이터 계약을 검증한 pilot이지 학습 corpus가 아니다. 부분 원본과 생성물은
+재생성 가능한 대용량 산출물이므로 Git에 넣지 않고 측정 후 삭제한다. 본 corpus를 만들 때는
+부분 파일이 아니라 Lichess가 제공한 전체 파일과 공식 SHA-256을 사용한다.
