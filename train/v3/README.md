@@ -23,3 +23,7 @@ an explicit fixture regeneration and Python validation.
 Full-game and independent-decision training data use the Rust-authored `GameRecordV3` and
 `DecisionRecordV3` contracts documented in `docs/data-v3-format.md`. Compressed replay shards are
 external artifacts and are not checked into Git.
+
+The checked-in `bootstrap_standard_v1.pgn` and `bootstrap_tactics_v1.json` inputs exercise the
+stage-7 board-pretraining importer and exact Augmentia forced-win solver. They are regression
+fixtures, not a training corpus. See `docs/bootstrap-v3-data.md` before importing larger sources.

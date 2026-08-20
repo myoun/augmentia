@@ -11,3 +11,5 @@ augment-ai = { path = "../augment-ai" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rayon = "1.12.0"
+pgn-reader = "0.28"
+sha2 = { workspace = true }

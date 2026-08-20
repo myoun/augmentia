@@ -1,5 +1,6 @@
 pub mod action_v3;
 pub mod action_space;
+pub mod bootstrap_v3;
 pub mod data_v3;
 pub mod evaluator;
 pub mod encoder_v3;
@@ -14,6 +15,9 @@ pub use action_v3::{
 };
 pub use action_space::{
     ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
+};
+pub use bootstrap_v3::{
+    ForcedWinConfigV3, ForcedWinErrorV3, ForcedWinSolutionV3, solve_forced_win_v3,
 };
 pub use data_v3::{
     DATASET_MANIFEST_V3_SCHEMA_ID, DECISION_RECORD_V3_SCHEMA_ID, DataRecordV3, DatasetManifestV3,

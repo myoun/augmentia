@@ -5,8 +5,9 @@ AI로 교체하는 작업 순서와 각 단계의 완료 조건을 고정한다.
 바뀔 수 있지만, 앞 단계의 계약과 검증을 통과하지 않은 채 뒤 단계로 넘어가지는
 않는다.
 
-현재 진행 상태(2026-08-21): 1~6단계 완료. 다음 작업은 7단계 부트스트랩 데이터
-생성이다. 1단계는
+현재 진행 상태(2026-08-21): 1~6단계 완료. 7단계 생성기 구현과 회귀 pilot은 완료했고,
+실제 학습 규모 corpus는 외부 PGN의 출처·license·용량을 정한 뒤 생성한다. 8단계 모델
+구현 전에는 그 pilot의 coverage와 처리량을 검토한다. 1단계는
 `ai/v2-baseline-before-observation-v3` 태그로 고정했고, 2단계 계약은
 `observation-v3-contract.md`와 `augment-ai::observation_v3`에 고정했다. 3단계 Rust
 인코더는 `augment-ai::encoder_v3`에 구현했다.
@@ -105,16 +106,19 @@ ply, 합법 행동, 탐색 방문 분포, 최종 결과와 종료 사유를 저�
 
 ### 7. 부트스트랩 데이터 생성
 
-일반 체스 기보를 증강체스 정답으로 변환하지 않는다. 대신 무작위 합법 플레이,
-규칙 기반 플레이어, 얕은 탐색과 V2를 다양하게 섞어 증강체스 상태 공간을 넓게
-수집한다. 일반 체스 기보는 기본 기물 이동 표현 사전학습이나 보조 과제로만 별도
-표시해 선택적으로 사용한다.
+일반 체스 기보는 양쪽 도메인에 공통인 board move만 `board_pretraining` behavior로
+가져오며 증강체스 policy/value 정답으로 변환하지 않는다. Augmentia policy/value는
+ActionV3와 실제 엔진 전이만 사용하는 bounded solver가 강제승리를 증명한 상태에만
+부여한다. 현재 material heuristic, V2 policy/value와 제한 깊이에서 증명하지 못한 결과는
+정답으로 저장하지 않는다. 모델의 랜덤 초기화는 8단계에서 다룬다.
 
 완료 조건:
 
-- 모든 카드군, 특수 기물, 드래프트와 후속 선택 상태에 최소 커버리지 기준이 있다.
-- 생성 주체별 편향과 중복률 보고서가 만들어진다.
-- 봉인된 평가 대국은 학습 데이터와 분리된다.
+- PGN SHA-256, 원본 위치와 license가 모든 imported record에서 역추적된다.
+- standard-chess record는 board-pretraining 범위만 가지며 V3 value가 없다.
+- proven tactical record의 최적 행동과 value가 engine-only solver에서 재현된다.
+- schema/checksum/split 검증과 action/phase/piece/card coverage 보고서가 생성된다.
+- 알려진 coverage 공백을 숨기거나 heuristic label로 채우지 않는다.
 
 ### 8. 첫 V3 네트워크 구현
 

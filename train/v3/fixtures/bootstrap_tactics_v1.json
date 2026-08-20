@@ -1,0 +1,26 @@
+{
+  "schema_id": "augmentia.bootstrap.tactical-input.v1",
+  "scenarios": [
+    {
+      "id": "immediate-rook-king-capture",
+      "group_id": "immediate-king-capture",
+      "seed_hex": "0000000000000001",
+      "turn": "white",
+      "pieces": [
+        { "square": "a1", "owner": "white", "kind_code": 6 },
+        { "square": "h1", "owner": "white", "kind_code": 4 },
+        { "square": "h8", "owner": "black", "kind_code": 6 }
+      ]
+    },
+    {
+      "id": "quiet-position-without-proof",
+      "group_id": "negative-control",
+      "seed_hex": "0000000000000002",
+      "turn": "white",
+      "pieces": [
+        { "square": "e1", "owner": "white", "kind_code": 6 },
+        { "square": "e8", "owner": "black", "kind_code": 6 }
+      ]
+    }
+  ]
+}

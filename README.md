@@ -63,6 +63,7 @@ docs/observation-v3-contract.md       ObservationV3의 의미·공개 범위·�
 docs/action-v3-contract.md            ActionDescriptorV3와 가변 policy 계약
 docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 계약
 docs/data-v3-format.md                V3 대국·독립 decision·shard·manifest 포맷
+docs/bootstrap-v3-data.md             PGN board-pretraining과 proven 전술 생성 계약
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```
 
