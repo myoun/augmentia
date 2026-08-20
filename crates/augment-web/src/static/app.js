@@ -2,6 +2,7 @@ const elements = {
   board: document.querySelector("#board"),
   seedInput: document.querySelector("#seedInput"),
   aiMoveButton: document.querySelector("#aiMoveButton"),
+  autoPlayButton: document.querySelector("#autoPlayButton"),
   newGameButton: document.querySelector("#newGameButton"),
   connectionState: document.querySelector("#connectionState"),
   turnPill: document.querySelector("#turnPill"),
@@ -30,6 +31,10 @@ const elements = {
   dialogOptions: document.querySelector("#dialogOptions"),
   dialogClose: document.querySelector("#dialogClose"),
   toast: document.querySelector("#toast"),
+  evalBarFill: document.querySelector("#evalBarFill"),
+  evalScoreWhite: document.querySelector("#evalScoreWhite"),
+  evalScoreBlack: document.querySelector("#evalScoreBlack"),
+  evalBadge: document.querySelector("#evalBadge"),
 };
 
 let game = null;
@@ -37,6 +42,8 @@ let selectedSquare = null;
 let targeting = null;
 let busy = false;
 let toastTimer = null;
+let autoPlay = false;
+let autoPlayTimer = null;
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -87,6 +94,7 @@ async function applyAction(index) {
 
 async function newGame() {
   if (busy) return;
+  setAutoPlay(false);
   const seed = Number(elements.seedInput.value.trim());
   if (!Number.isSafeInteger(seed) || seed < 0) {
     showToast("seed는 0 이상의 정수여야 합니다.");
@@ -413,6 +421,34 @@ function renderAbilities() {
 }
 
 function renderStatus() {
+  if (game.eval) {
+    if (elements.evalBarFill) {
+      elements.evalBarFill.style.height = (game.eval.whiteRatio || 50) + "%";
+    }
+    if (elements.evalScoreWhite) {
+      elements.evalScoreWhite.textContent = game.eval.whitePercent;
+    }
+    if (elements.evalScoreBlack) {
+      elements.evalScoreBlack.textContent = game.eval.blackPercent;
+    }
+    if (elements.evalBadge) {
+      elements.evalBadge.textContent = game.eval.score;
+    }
+  }
+  if (game.eval) {
+    if (elements.evalBarFill) {
+      elements.evalBarFill.style.height = (game.eval.whiteRatio || 50) + "%";
+    }
+    if (elements.evalScoreWhite) {
+      elements.evalScoreWhite.textContent = game.eval.whitePercent;
+    }
+    if (elements.evalScoreBlack) {
+      elements.evalScoreBlack.textContent = game.eval.blackPercent;
+    }
+    if (elements.evalBadge) {
+      elements.evalBadge.textContent = game.eval.score;
+    }
+  }
   elements.statusBadge.textContent = game.status.label;
   elements.statusBadge.className = `status-badge ${game.status.kind === "ongoing" ? "" : "finished"}`;
   elements.rulesetValue.textContent = game.ruleset;
@@ -524,6 +560,7 @@ function setBusy(value) {
   busy = value;
   document.body.classList.toggle("busy", value);
   elements.newGameButton.disabled = value;
+  if (elements.aiMoveButton) elements.aiMoveButton.disabled = value;
 }
 
 function setConnection(state, label) {
@@ -544,20 +581,85 @@ async function botMove() {
   try {
     game = await request("/api/bot-move", {
       method: "POST",
-      body: JSON.stringify({ sims: 100 }),
+      body: JSON.stringify({ sims: 150 }),
     });
     clearInteraction();
     render();
+    return game;
   } catch (error) {
     showToast(error.message);
     await loadState();
+    throw error;
   } finally {
     setBusy(false);
   }
 }
 
+function setAutoPlay(active) {
+  autoPlay = active;
+  if (elements.autoPlayButton) {
+    elements.autoPlayButton.classList.toggle("active", active);
+    const icon = elements.autoPlayButton.querySelector(".auto-play-icon");
+    const label = elements.autoPlayButton.querySelector(".auto-play-label");
+    if (icon) icon.textContent = active ? "⏸" : "▶";
+    if (label) label.textContent = active ? "중지" : "자동 진행";
+  }
+  if (active) {
+    runAutoPlayLoop();
+  } else {
+    if (autoPlayTimer) {
+      clearTimeout(autoPlayTimer);
+      autoPlayTimer = null;
+    }
+  }
+}
+
+function toggleAutoPlay() {
+  if (autoPlay) {
+    setAutoPlay(false);
+  } else {
+    if (!game || game.status.kind !== "ongoing") {
+      showToast("진행 중인 게임이 없습니다.");
+      return;
+    }
+    setAutoPlay(true);
+  }
+}
+
+async function runAutoPlayLoop() {
+  if (!autoPlay) return;
+  if (!game || game.status.kind !== "ongoing") {
+    setAutoPlay(false);
+    if (game && game.status.kind !== "ongoing") {
+      showToast(`게임 종료: ${game.status.label}`);
+    }
+    return;
+  }
+  if (busy) {
+    autoPlayTimer = setTimeout(runAutoPlayLoop, 300);
+    return;
+  }
+
+  try {
+    await botMove();
+  } catch (err) {
+    setAutoPlay(false);
+    return;
+  }
+
+  if (autoPlay && game && game.status.kind === "ongoing") {
+    autoPlayTimer = setTimeout(runAutoPlayLoop, 500);
+  } else if (autoPlay) {
+    setAutoPlay(false);
+    showToast(`게임 종료: ${game?.status.label || "완료"}`);
+  }
+}
+
 if (elements.aiMoveButton) {
   elements.aiMoveButton.addEventListener("click", botMove);
+}
+if (elements.autoPlayButton) {
+  elements.autoPlayButton.addEventListener("click", toggleAutoPlay);
 }
 elements.newGameButton.addEventListener("click", newGame);
 elements.cancelSelection.addEventListener("click", () => {

@@ -62,7 +62,7 @@ class AugmentNet(nn.Module):
         p = F.relu(self.policy_bn(self.policy_conv(x))).view(B, -1)
         logits = self.policy_fc(p)
         if mask is not None:
-            logits = logits.masked_fill(~mask, -1e9)
+            logits = logits.masked_fill(~mask, -1e4)
         policy = F.softmax(logits, dim=-1)
         
         # Value output

@@ -1,0 +1,18 @@
+[project]
+name = "augmentia-train"
+version = "0.1.0"
+description = "Augment Chess RL Training Pipeline"
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "torch",
+    "torchvision",
+    "onnx>=1.16.0",
+    "onnxruntime-gpu>=1.18.0",
+    "numpy>=1.24.0",
+    "onnxscript>=0.7.1",
+    "chess>=1.11.2",
+]
+
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cu128"]
+environments = ["sys_platform == 'win32'"]

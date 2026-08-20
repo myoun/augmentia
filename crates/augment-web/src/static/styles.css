@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: dark;
   --bg: #0c0e12;
   --surface: rgba(24, 27, 34, 0.88);
@@ -200,6 +200,40 @@ h2 {
 .button.primary:hover {
   background: linear-gradient(145deg, #8d7cf3, #6752df);
   transform: translateY(-1px);
+}
+
+.button.auto-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(111, 207, 151, 0.4);
+  color: #8be4b0;
+  background: rgba(111, 207, 151, 0.12);
+  box-shadow: 0 4px 14px rgba(111, 207, 151, 0.15);
+  transition: all 150ms ease;
+}
+
+.button.auto-play:hover {
+  border-color: rgba(111, 207, 151, 0.7);
+  background: rgba(111, 207, 151, 0.22);
+  transform: translateY(-1px);
+}
+
+.button.auto-play.active {
+  border-color: rgba(231, 121, 114, 0.6);
+  color: #ffffff;
+  background: linear-gradient(145deg, #e77972, #c74d45);
+  box-shadow: 0 0 16px rgba(231, 121, 114, 0.45);
+  animation: auto-play-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes auto-play-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(231, 121, 114, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(231, 121, 114, 0.75);
+  }
 }
 
 .button.secondary {
@@ -1051,5 +1085,122 @@ h2 {
 
   .piece.code {
     font-size: clamp(9px, 4.2vw, 19px);
+  }
+}
+
+/* ================= Eval Bar & Responsive Layout ================= */
+.board-arena {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.eval-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 28px;
+  background: #14161b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 2px;
+  position: relative;
+  user-select: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.eval-score-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  z-index: 2;
+}
+
+.eval-score-tag.top {
+  color: #9ba0aa;
+}
+
+.eval-score-tag.bottom {
+  color: #111;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.eval-bar-track {
+  position: relative;
+  width: 10px;
+  flex: 1;
+  background: #252830;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.eval-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(180deg, #ffffff 0%, #d8d5cf 100%);
+  transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 -2px 6px rgba(255, 255, 255, 0.25);
+}
+
+.eval-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(12, 14, 18, 0.92);
+  border: 1px solid rgba(217, 184, 105, 0.6);
+  color: var(--gold-bright);
+  font-size: 9px;
+  font-weight: 900;
+  padding: 1px 3px;
+  border-radius: 3px;
+  z-index: 3;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  body {
+    min-height: 100vh;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(220px, 260px) minmax(460px, 660px) minmax(240px, 300px);
+    gap: 16px;
+    width: min(1440px, calc(100% - 24px));
+    margin: 12px auto;
+  }
+
+  .board-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .board-stage {
+    flex: 1;
+    width: 100%;
+    max-width: min(100%, calc(100vh - 250px));
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+  }
+
+  .side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .event-log {
+    max-height: 220px;
+    overflow-y: auto;
   }
 }

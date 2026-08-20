@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
@@ -25,6 +25,10 @@
           <input id="seedInput" inputmode="numeric" value="20260807" aria-label="게임 seed" />
         </label>
         <button id="aiMoveButton" class="button primary" type="button">AI 착수</button>
+        <button id="autoPlayButton" class="button auto-play" type="button">
+          <span class="auto-play-icon">▶</span>
+          <span class="auto-play-label">자동 진행</span>
+        </button>
         <button id="newGameButton" class="button secondary" type="button">새 게임</button>
         <div id="connectionState" class="connection" data-state="loading">
           <span class="connection-dot"></span>
@@ -76,8 +80,18 @@
 
         <div id="decisionPanel" class="decision-panel panel hidden" aria-live="polite"></div>
 
-        <div class="board-stage">
-          <div id="board" class="board" role="grid" aria-label="증강체스 보드"></div>
+        <div class="board-arena">
+          <div class="eval-bar-container" title="AI 실시간 형세 평가">
+            <div class="eval-score-tag top" id="evalScoreBlack">50%</div>
+            <div class="eval-bar-track">
+              <div id="evalBarFill" class="eval-bar-fill" style="height: 50%;"></div>
+            </div>
+            <div class="eval-score-tag bottom" id="evalScoreWhite">50%</div>
+            <div id="evalBadge" class="eval-badge">0.0</div>
+          </div>
+          <div class="board-stage">
+            <div id="board" class="board" role="grid" aria-label="증강체스 보드"></div>
+          </div>
         </div>
 
         <div class="board-footer panel">

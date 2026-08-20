@@ -57,6 +57,8 @@ crates/augment-web/                  로컬 핫시트 웹 UI와 엔진 API 어�
 crates/augment-cli/                  터미널 핫시트 UI
 crates/augment-snapshot/             카드 카탈로그 추출·diff 도구
 docs/architecture.md                 엔진, 규칙 버전, self-play 설계
+docs/ai-v2-baseline.md               V3 전환을 위한 V2 AI 기준선과 보존 정책
+docs/ai-v3-roadmap.md                AI V3 전환 1~14단계와 단계별 완료 조건
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```
 

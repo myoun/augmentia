@@ -1,4 +1,4 @@
-use augment_ai::{HeuristicEvaluator, MctsConfig, MctsTree};
+use augment_ai::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator, MctsConfig, MctsTree};
 use augment_core::{
     Action, ActionTarget, CardActivation, Engine, Event, GamePhase, GameState, GameStatus, Mode,
     MoveAction, Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
@@ -7,12 +7,14 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 pub const DEFAULT_SEED: u64 = 20_260_807;
+const V2_BASELINE_MODEL_PATH: &str = "models/baseline/augment_net_v2_canonical_baseline.onnx";
 
 pub struct GameSession {
     engine: Engine,
     state: GameState,
     seed: u64,
     history: Vec<String>,
+    neural_eval: Option<OnnxNeuralEvaluator>,
 }
 
 impl GameSession {
@@ -21,10 +23,12 @@ impl GameSession {
         let transition = engine
             .new_game_transition(Mode::Standard, seed)
             .map_err(|error| error.to_string())?;
+        let neural_eval = OnnxNeuralEvaluator::from_file(V2_BASELINE_MODEL_PATH).ok();
         let mut session = Self {
             engine,
             state: transition.state,
             seed,
+            neural_eval,
             history: Vec::new(),
         };
         session.record_events(&transition.events);
@@ -53,6 +57,7 @@ impl GameSession {
         };
         Ok(state_view(
             &self.state,
+            &self.engine,
             self.seed,
             &self.history,
             &legal_actions,
@@ -89,14 +94,19 @@ impl GameSession {
         if self.state.status != GameStatus::Ongoing {
             return self.view();
         }
-        let evaluator = HeuristicEvaluator::new();
         let config = MctsConfig {
             c_puct: 2.0,
             num_simulations: simulations.clamp(10, 1000),
             temperature: 0.5,
         };
         let mut tree = MctsTree::new(config);
-        let search_result = tree.search(&self.state, &self.engine, &evaluator);
+
+        let search_result = if let Some(ref neural_eval) = self.neural_eval {
+            tree.search(&self.state, &self.engine, neural_eval)
+        } else {
+            let heuristic_eval = HeuristicEvaluator::new();
+            tree.search(&self.state, &self.engine, &heuristic_eval)
+        };
         if let Some((chosen_action, _, _)) = search_result {
             let transition = self
                 .engine
@@ -117,7 +127,7 @@ impl GameSession {
     }
 }
 
-fn state_view(state: &GameState, seed: u64, history: &[String], actions: &[Action]) -> Value {
+fn state_view(state: &GameState, engine: &Engine, seed: u64, history: &[String], actions: &[Action]) -> Value {
     let action_views = actions
         .iter()
         .enumerate()
@@ -159,6 +169,7 @@ fn state_view(state: &GameState, seed: u64, history: &[String], actions: &[Actio
         },
         "rules": state.applied_rules.iter().map(|id| card_name(id)).collect::<Vec<_>>(),
         "events": history,
+        "eval": compute_eval(state, engine),
         "deathmatch": state.deathmatch.map(|deathmatch| json!({
             "startedAt": deathmatch.started_at_shared_turn,
             "quietFullTurns": deathmatch.quiet_full_turns,
@@ -932,4 +943,32 @@ mod tests {
         assert_eq!(card["available"], false);
         assert!(card["actionIndices"].as_array().unwrap().is_empty());
     }
+}
+
+
+
+fn compute_eval(state: &GameState, engine: &Engine) -> Value {
+    let raw_val = if let Ok(neural) = OnnxNeuralEvaluator::from_file(V2_BASELINE_MODEL_PATH) {
+        neural.evaluate(state, engine).1
+    } else {
+        HeuristicEvaluator::new().evaluate(state, engine).1
+    };
+
+    let white_value = if state.turn == Player::White {
+        raw_val
+    } else {
+        -raw_val
+    };
+
+    let score = (white_value * 10.0).clamp(-99.0, 99.0);
+    let white_pct = ((white_value + 1.0) / 2.0 * 100.0).clamp(0.0, 100.0);
+    let black_pct = 100.0 - white_pct;
+
+    json!({
+        "whiteValue": white_value,
+        "score": if score > 0.0 { format!("+{:.1}", score) } else { format!("{:.1}", score) },
+        "whitePercent": format!("{:.0}%", white_pct),
+        "blackPercent": format!("{:.0}%", black_pct),
+        "whiteRatio": white_pct,
+    })
 }

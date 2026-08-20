@@ -2,8 +2,35 @@
 *.profraw
 .DS_Store
 
+# Local Python environments and caches.
+/.venv/
+/train/.venv/
+**/__pycache__/
+*.py[cod]
+
 # Self-play and training outputs are reproducible artifacts, not source history.
 /artifacts/
 /runs/
 /checkpoints/
 /replay-buffers/
+/archive_legacy/
+/dataset*.jsonl
+/dataset*.pt
+/train/dataset*.jsonl
+/train/dataset*.pt
+/train/holdout/*.jsonl
+*.log
+
+# Model binaries are local artifacts. Their hashes and provenance belong in docs/manifests.
+*.onnx
+*.onnx.data
+*.pt
+*.pth
+
+# One-off local analysis outputs.
+/models.jsonl
+/pgn_output.txt
+/sim_output.txt
+/sim_*_out.txt
+/tactical_output.txt
+/tunnel.log

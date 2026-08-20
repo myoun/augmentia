@@ -1,3 +1,4 @@
+use super::tensor::canonical_square;
 use augment_core::{Action, ActionTarget, Engine, GameState, PieceAbility, PieceKind};
 
 /// Total discrete action space dimension for the unified Policy head.
@@ -117,7 +118,9 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
     let raw_index = match action {
         Action::Move(movement) => {
             let promo_idx = promo_to_index(movement.promotion);
-            MOVE_OFFSET + movement.from.index() * 64 * 6 + movement.to.index() * 6 + promo_idx
+            let from_c = canonical_square(movement.from, state.turn);
+            let to_c = canonical_square(movement.to, state.turn);
+            MOVE_OFFSET + from_c.index() * 64 * 6 + to_c.index() * 6 + promo_idx
         }
         Action::UseCard {
             instance_id,
@@ -132,14 +135,16 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
                 .min(2);
             match target {
                 ActionTarget::None => CARD_OFFSET + slot * 256,
-                ActionTarget::Square(sq) => CARD_OFFSET + slot * 256 + 1 + sq.index(),
-                ActionTarget::PieceAt(sq) => CARD_OFFSET + slot * 256 + 65 + sq.index(),
+                ActionTarget::Square(sq) => CARD_OFFSET + slot * 256 + 1 + canonical_square(*sq, state.turn).index(),
+                ActionTarget::PieceAt(sq) => CARD_OFFSET + slot * 256 + 65 + canonical_square(*sq, state.turn).index(),
                 ActionTarget::Squares(sqs) => {
                     if sqs.len() == 2 {
-                        let pair_idx = sqs[0].index() * 64 + sqs[1].index();
+                        let s0 = canonical_square(sqs[0], state.turn).index();
+                        let s1 = canonical_square(sqs[1], state.turn).index();
+                        let pair_idx = s0 * 64 + s1;
                         (MULTI_SQ_OFFSET + slot * 4096 + pair_idx).min(ACTION_SPACE_SIZE - 1)
                     } else if let Some(first) = sqs.first() {
-                        CARD_OFFSET + slot * 256 + 129 + first.index()
+                        CARD_OFFSET + slot * 256 + 129 + canonical_square(*first, state.turn).index()
                     } else {
                         CARD_OFFSET + slot * 256
                     }
@@ -152,8 +157,8 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
             let ab_idx = ability_to_index(*ability);
             let target_idx = match target {
                 ActionTarget::None => 0,
-                ActionTarget::Square(sq) | ActionTarget::PieceAt(sq) => 1 + sq.index(),
-                ActionTarget::Squares(sqs) => sqs.first().map_or(0, |sq| 1 + sq.index()),
+                ActionTarget::Square(sq) | ActionTarget::PieceAt(sq) => 1 + canonical_square(*sq, state.turn).index(),
+                ActionTarget::Squares(sqs) => sqs.first().map_or(0, |sq| 1 + canonical_square(*sq, state.turn).index()),
             };
             ABILITY_OFFSET + ab_idx * 65 + target_idx
         }
