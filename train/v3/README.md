@@ -27,3 +27,15 @@ external artifacts and are not checked into Git.
 The checked-in `bootstrap_standard_v1.pgn` and `bootstrap_tactics_v1.json` inputs exercise the
 stage-7 board-pretraining importer and exact Augmentia forced-win solver. They are regression
 fixtures, not a training corpus. See `docs/bootstrap-v3-data.md` before importing larger sources.
+
+`model.py` contains the stage-8 hybrid V3 network. `tensorize.py` converts validated Rust-authored
+records into padded tensors while preserving exact vocabularies, runtime parent relations, local
+piece/card references, and ordered multi-square targets. Run its tests and benchmark from `train`:
+
+```powershell
+uv run python -m unittest v3.test_model -v
+uv run python -m v3.benchmark_model --case runtime_rich --device cpu --threads 1
+```
+
+The production replay loader, resumable trainer, checkpoint vocabulary artifact, and ONNX wrapper
+belong to stage 9. The stage-8 model does not load V2 weights or emit a model binary.

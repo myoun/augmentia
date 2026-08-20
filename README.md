@@ -64,6 +64,7 @@ docs/action-v3-contract.md            ActionDescriptorV3와 가변 policy 계약
 docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 계약
 docs/data-v3-format.md                V3 대국·독립 decision·shard·manifest 포맷
 docs/bootstrap-v3-data.md             PGN board-pretraining과 proven 전술 생성 계약
+docs/ai-v3-model.md                   첫 V3 신경망 구조·동적 policy·성능 기준
 rulesets/augment_chess_20260807/      불변 규칙 스냅숏
 ```
 
