@@ -5,6 +5,7 @@ use augment_core::{Action, Engine, GameState, GameStatus, PieceKind, Player};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub trait Evaluator: Send + Sync {
     /// Evaluates a leaf game state, returning prior probabilities for each legal action and the estimated state value v in [-1.0, 1.0].
@@ -116,6 +117,7 @@ pub struct OnnxNeuralEvaluator {
     session: Arc<Mutex<ort::session::Session>>,
     cache: Arc<Mutex<HashMap<u64, (Vec<(Action, ActionIndex, f32)>, f32)>>>,
     fallback: HeuristicEvaluator,
+    inference_failures: AtomicU64,
 }
 
 impl OnnxNeuralEvaluator {
@@ -131,6 +133,7 @@ impl OnnxNeuralEvaluator {
             session: Arc::new(Mutex::new(session)),
             cache: Arc::new(Mutex::new(HashMap::with_capacity(65536))),
             fallback: HeuristicEvaluator::new(),
+            inference_failures: AtomicU64::new(0),
         })
     }
 
@@ -138,6 +141,10 @@ impl OnnxNeuralEvaluator {
         if let Ok(mut cache) = self.cache.lock() {
             cache.clear();
         }
+    }
+
+    pub fn inference_failures(&self) -> u64 {
+        self.inference_failures.load(Ordering::Relaxed)
     }
 }
 
@@ -235,6 +242,7 @@ impl Evaluator for OnnxNeuralEvaluator {
             }
         }
 
+        self.inference_failures.fetch_add(1, Ordering::Relaxed);
         self.fallback.evaluate(state, engine)
     }
 }

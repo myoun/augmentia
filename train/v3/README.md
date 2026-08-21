@@ -59,3 +59,12 @@ artifact retention. See `docs/ai-v3-self-play.md`; the iteration command is:
 ```powershell
 uv run python -m v3.iteration path\to\iteration.json ..\runs\v3-iterations
 ```
+
+`promotion.py` and Rust `arena_v3` implement the stage-13 fail-closed evaluation gate. They check
+sealed tactics, value calibration, complete implemented-ruleset coverage, paired colors/seeds,
+equal simulations, equal wall-clock time, and the preserved V2 baseline without modifying a
+champion registry. See `docs/ai-v3-promotion.md` and run:
+
+```powershell
+uv run python -m v3.promotion path\to\promotion.json path\to\report.json
+```

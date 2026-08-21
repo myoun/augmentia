@@ -5,6 +5,7 @@ use rand::distributions::WeightedIndex;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rand_distr::{Distribution as RandDistrDistribution, Gamma};
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Debug)]
 pub struct MctsConfig {
@@ -206,6 +207,36 @@ impl MctsTree {
         evaluator: &dyn Evaluator,
         root_noise: Option<RootNoiseConfig>,
     ) -> Option<SearchResult> {
+        self.search_internal(root_state, engine, evaluator, root_noise, None)
+    }
+
+    pub fn search_for_duration(
+        &mut self,
+        root_state: &GameState,
+        engine: &Engine,
+        evaluator: &dyn Evaluator,
+        duration: Duration,
+    ) -> Option<SearchResult> {
+        if duration.is_zero() {
+            return None;
+        }
+        self.search_internal(
+            root_state,
+            engine,
+            evaluator,
+            None,
+            Some(Instant::now() + duration),
+        )
+    }
+
+    fn search_internal(
+        &mut self,
+        root_state: &GameState,
+        engine: &Engine,
+        evaluator: &dyn Evaluator,
+        root_noise: Option<RootNoiseConfig>,
+        deadline: Option<Instant>,
+    ) -> Option<SearchResult> {
         self.clear();
         self.nodes
             .push(MctsNode::new(root_state.clone(), None, None, 0, 1.0));
@@ -245,6 +276,9 @@ impl MctsTree {
         self.nodes[0].value_sum = root_value;
 
         for simulation in 1..=self.config.num_simulations {
+            if simulation > 1 && deadline.is_some_and(|limit| Instant::now() >= limit) {
+                break;
+            }
             let mut current_idx = 0usize;
             let mut selected_root_child = None;
 
@@ -500,5 +534,20 @@ mod shortcut_regression_tests {
         let (_, _, visits) = tree.search(&state, &engine, &UniformEvaluator).unwrap();
         assert_eq!(visits.iter().map(|item| item.2).sum::<u32>(), 8);
         assert!(visits.iter().all(|item| item.2 < 1_000));
+    }
+
+    #[test]
+    fn wall_clock_search_produces_a_visited_action() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 19);
+        let mut tree = MctsTree::new(MctsConfig {
+            num_simulations: 64,
+            ..MctsConfig::default()
+        });
+        let result = tree
+            .search_for_duration(&state, &engine, &UniformEvaluator, Duration::from_nanos(1))
+            .unwrap();
+        let visits = result.2.iter().map(|(_, _, count)| count).sum::<u32>();
+        assert!((1..=64).contains(&visits));
     }
 }

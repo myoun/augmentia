@@ -6,6 +6,7 @@ use rand::{Rng, SeedableRng};
 use rand_distr::{Distribution as RandDistribution, Gamma};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Debug)]
 pub struct MctsV3Config {
@@ -245,6 +246,36 @@ impl MctsV3Tree {
         evaluator: &dyn BatchEvaluatorV3,
         root_noise: Option<RootNoiseConfigV3>,
     ) -> Result<SearchResultV3, MctsV3Error> {
+        self.search_internal(root_state, engine, evaluator, root_noise, None)
+    }
+
+    pub fn search_for_duration(
+        &mut self,
+        root_state: &GameState,
+        engine: &Engine,
+        evaluator: &dyn BatchEvaluatorV3,
+        duration: Duration,
+    ) -> Result<SearchResultV3, MctsV3Error> {
+        if duration.is_zero() {
+            return search_error("wall-clock search duration must be positive");
+        }
+        self.search_internal(
+            root_state,
+            engine,
+            evaluator,
+            None,
+            Some(Instant::now() + duration),
+        )
+    }
+
+    fn search_internal(
+        &mut self,
+        root_state: &GameState,
+        engine: &Engine,
+        evaluator: &dyn BatchEvaluatorV3,
+        root_noise: Option<RootNoiseConfigV3>,
+        deadline: Option<Instant>,
+    ) -> Result<SearchResultV3, MctsV3Error> {
         if root_state.status != GameStatus::Ongoing {
             return Err(MctsV3Error::TerminalRoot);
         }
@@ -274,6 +305,9 @@ impl MctsV3Tree {
 
         let mut completed = 0usize;
         while completed < self.config.num_simulations {
+            if completed > 0 && deadline.is_some_and(|limit| Instant::now() >= limit) {
+                break;
+            }
             let requested = self
                 .config
                 .leaf_batch_size
@@ -1166,5 +1200,21 @@ mod tests {
             MctsV3Tree::sample_action_from_visits(&left_result.visits, 0.8, 123),
             MctsV3Tree::sample_action_from_visits(&right_result.visits, 0.8, 123)
         );
+    }
+
+    #[test]
+    fn wall_clock_search_completes_at_least_one_simulation_and_honors_the_cap() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let state = tactical_state(false);
+        let evaluator = RecordingEvaluator::new(false);
+        let mut tree = MctsV3Tree::new(config(64, 8)).unwrap();
+        tree.search_for_duration(&state, &engine, &evaluator, Duration::from_nanos(1))
+            .unwrap();
+        let completed = tree
+            .last_diagnostics
+            .as_ref()
+            .unwrap()
+            .completed_simulations;
+        assert!((1..=64).contains(&completed));
     }
 }
