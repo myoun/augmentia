@@ -13,6 +13,7 @@
 /runs/
 /checkpoints/
 /replay-buffers/
+/data-sources/
 /archive_legacy/
 /dataset*.jsonl
 /dataset*.pt

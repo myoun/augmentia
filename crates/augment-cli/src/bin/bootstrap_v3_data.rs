@@ -138,6 +138,8 @@ struct Config {
     created_at_utc: String,
     engine_commit: String,
     pgn_license: Option<String>,
+    expected_pgn_sha256: Option<String>,
+    expected_pgn_bytes: Option<u64>,
     tactics_license: Option<String>,
     ruleset_manifest: PathBuf,
     split_salt: String,
@@ -178,6 +180,25 @@ impl Config {
             Some(_) => Some(required_arg(args, "--pgn-license")?),
             None => None,
         };
+        let expected_pgn_sha256 = optional_arg(args, "--expected-pgn-sha256");
+        if let Some(expected) = &expected_pgn_sha256
+            && (expected.len() != 64
+                || !expected
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)))
+        {
+            return Err("--expected-pgn-sha256 must be a 64-character lowercase hex digest".into());
+        }
+        let expected_pgn_bytes = optional_arg(args, "--expected-pgn-bytes")
+            .map(|value| {
+                value
+                    .parse::<u64>()
+                    .map_err(|error| format!("invalid --expected-pgn-bytes: {error}"))
+            })
+            .transpose()?;
+        if pgn.is_none() && (expected_pgn_sha256.is_some() || expected_pgn_bytes.is_some()) {
+            return Err("expected PGN identity arguments require --pgn".into());
+        }
         let tactics_license = match &tactics {
             Some(_) => Some(required_arg(args, "--tactics-license")?),
             None => None,
@@ -202,6 +223,8 @@ impl Config {
             created_at_utc,
             engine_commit,
             pgn_license,
+            expected_pgn_sha256,
+            expected_pgn_bytes,
             tactics_license,
             ruleset_manifest: PathBuf::from(
                 optional_arg(args, "--ruleset-manifest")
@@ -233,8 +256,23 @@ fn import_pgn(
     coverage: &mut BootstrapCoverageV3,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let source_sha256 = sha256_file(path)?;
+    if let Some(expected) = &config.expected_pgn_sha256
+        && &source_sha256 != expected
+    {
+        return Err(
+            format!("PGN SHA-256 mismatch: expected {expected}, got {source_sha256}").into(),
+        );
+    }
+    let input_bytes = std::fs::metadata(path)?.len();
+    if let Some(expected) = config.expected_pgn_bytes
+        && input_bytes != expected
+    {
+        return Err(
+            format!("PGN byte count mismatch: expected {expected}, got {input_bytes}").into(),
+        );
+    }
     coverage.pgn_sha256 = Some(source_sha256.clone());
-    coverage.pgn_input_bytes = Some(std::fs::metadata(path)?.len());
+    coverage.pgn_input_bytes = Some(input_bytes);
     coverage.pgn_compression = Some(if is_zstd_path(path) {
         "zstd".to_owned()
     } else {
@@ -259,11 +297,17 @@ fn import_pgn(
                     continue;
                 }
                 coverage.games_accepted += 1;
+                // `Site` is a game URL in standard Lichess dumps, but broadcast PGNs may
+                // reuse one event URL for many boards. The streaming game index is stable
+                // for an immutable, hash-addressed source and makes every game group unique.
                 let game_key = game
                     .site
                     .as_deref()
                     .filter(|site| !site.trim().is_empty())
-                    .map_or_else(|| format!("index:{game_index}"), ToOwned::to_owned);
+                    .map_or_else(
+                        || format!("index:{game_index}"),
+                        |site| format!("index:{game_index}:site:{site}"),
+                    );
                 let split_group_id = format!("standard:{source_sha256}:game:{game_key}");
                 for (ply_index, ply) in game.plies.into_iter().enumerate() {
                     if writer.total_records() >= config.max_records as u64 {
@@ -1370,6 +1414,107 @@ mod tests {
         assert_eq!(manifest.totals.records, 5);
         assert_eq!(manifest.shards.len(), 3);
         assert!(manifest.shards.iter().all(|shard| shard.records <= 2));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn keeps_broadcast_games_with_a_shared_site_in_distinct_groups() {
+        let root = temp_dir("bootstrap-broadcast-shared-site");
+        std::fs::create_dir_all(&root).unwrap();
+        let pgn = root.join("broadcast.pgn.zst");
+        let games = r#"[Event "Broadcast"]
+[Site "https://lichess.org/broadcast/shared"]
+[Result "*"]
+[WhiteElo "2200"]
+[BlackElo "2200"]
+[Variant "Standard"]
+
+1. e4 e5 *
+
+[Event "Broadcast"]
+[Site "https://lichess.org/broadcast/shared"]
+[Result "*"]
+[WhiteElo "2200"]
+[BlackElo "2200"]
+[Variant "Standard"]
+
+1. e4 e5 *
+"#;
+        std::fs::write(&pgn, zstd::stream::encode_all(games.as_bytes(), 1).unwrap()).unwrap();
+        let ruleset_manifest = root.join("ruleset.json");
+        std::fs::write(&ruleset_manifest, "{}\n").unwrap();
+        let output = root.join("dataset");
+        run(vec![
+            "--pgn".to_owned(),
+            pgn.display().to_string(),
+            "--out".to_owned(),
+            output.display().to_string(),
+            "--dataset-id".to_owned(),
+            "test-broadcast-shared-site".to_owned(),
+            "--created-at-utc".to_owned(),
+            "2026-08-21T00:00:00Z".to_owned(),
+            "--engine-commit".to_owned(),
+            "d".repeat(40),
+            "--pgn-license".to_owned(),
+            "test-only".to_owned(),
+            "--ruleset-manifest".to_owned(),
+            ruleset_manifest.display().to_string(),
+        ])
+        .unwrap();
+
+        let manifest: DatasetManifestV3 =
+            serde_json::from_slice(&std::fs::read(output.join("manifest.json")).unwrap()).unwrap();
+        assert_eq!(manifest.totals.records, 4);
+        let mut ids = BTreeSet::new();
+        let mut groups = BTreeSet::new();
+        for shard in manifest.shards {
+            for record in augment_ai::read_jsonl_zstd_shard(output.join(shard.path)).unwrap() {
+                let DataRecordV3::Decision(record) = record else {
+                    panic!("bootstrap shard must contain decisions");
+                };
+                assert!(ids.insert(record.decision_id.clone()));
+                groups.insert(record.provenance.split_group_id.clone());
+            }
+        }
+        assert_eq!(groups.len(), 2);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_a_pgn_that_does_not_match_its_locked_identity() {
+        let root = temp_dir("bootstrap-pgn-identity");
+        std::fs::create_dir_all(&root).unwrap();
+        let pgn = root.join("tiny.pgn");
+        std::fs::write(
+            &pgn,
+            include_bytes!("../../../../train/v3/fixtures/bootstrap_standard_v1.pgn"),
+        )
+        .unwrap();
+        let ruleset_manifest = root.join("ruleset.json");
+        std::fs::write(&ruleset_manifest, "{}\n").unwrap();
+        let error = run(vec![
+            "--pgn".to_owned(),
+            pgn.display().to_string(),
+            "--out".to_owned(),
+            root.join("dataset").display().to_string(),
+            "--dataset-id".to_owned(),
+            "test-pgn-identity".to_owned(),
+            "--created-at-utc".to_owned(),
+            "2026-08-21T00:00:00Z".to_owned(),
+            "--engine-commit".to_owned(),
+            "e".repeat(40),
+            "--pgn-license".to_owned(),
+            "test-only".to_owned(),
+            "--expected-pgn-sha256".to_owned(),
+            "0".repeat(64),
+            "--expected-pgn-bytes".to_owned(),
+            std::fs::metadata(&pgn).unwrap().len().to_string(),
+            "--ruleset-manifest".to_owned(),
+            ruleset_manifest.display().to_string(),
+        ])
+        .unwrap_err();
+        assert!(error.to_string().contains("PGN SHA-256 mismatch"));
+        assert!(!root.join("dataset/manifest.json").exists());
         std::fs::remove_dir_all(root).unwrap();
     }
 

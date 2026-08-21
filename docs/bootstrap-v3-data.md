@@ -69,6 +69,8 @@ board-only tactical input v1은 작은 수작업·회귀 fixture용이다. 카�
 $commit = git rev-parse HEAD
 cargo run -p augment-cli --bin bootstrap_v3_data -- `
   --pgn C:\data\lichess_db_standard_rated_2026-07.pgn.zst `
+  --expected-pgn-sha256 <official-64-hex-digest> `
+  --expected-pgn-bytes <official-byte-count> `
   --out replay-buffers\v3\lichess-pilot `
   --dataset-id lichess-standard-pilot-v1 `
   --created-at-utc 2026-08-21T00:00:00Z `
@@ -89,6 +91,8 @@ cargo run -p augment-cli --bin bootstrap_v3_data -- `
 `--tactics`, `--tactics-license`, `--tactical-depth`, `--tactical-nodes`를 지정한다.
 서로 다른 출처에 하나의 license를
 잘못 붙이지 않는다. 출력 디렉터리에 기존 manifest가 있으면 덮어쓰지 않는다.
+production corpus에는 `--expected-pgn-sha256`와 `--expected-pgn-bytes`를 함께 지정해,
+다운로드가 완전하고 고정한 공식 source와 동일한지 생성기가 직접 확인하게 한다.
 
 PGN importer는 GPL-3.0-or-later인 `pgn-reader 0.28`에 의존한다. 이 CLI를 바이너리로
 배포할 계획이라면 배포 전에 프로젝트의 라이선스 정책과 의무를 별도로 검토한다. 이 문구는
@@ -146,3 +150,27 @@ replay-buffers/v3/bootstrap-pilot/
 이는 처리량과 데이터 계약을 검증한 pilot이지 학습 corpus가 아니다. 부분 원본과 생성물은
 재생성 가능한 대용량 산출물이므로 Git에 넣지 않고 측정 후 삭제한다. 본 corpus를 만들 때는
 부분 파일이 아니라 Lichess가 제공한 전체 파일과 공식 SHA-256을 사용한다.
+
+## 첫 production board-pretraining corpus
+
+첫 corpus는 디스크가 큰 standard-rated 월별 덤프보다 Lichess 공식 broadcast 대국을 먼저
+사용한다. broadcast는 일반 사용자 대국보다 강한 대국의 비중이 높고, 2026-07 파일 하나가
+24,535,400 bytes라서 원본과 V3 shard를 함께 보관해도 로컬 디스크를 압박하지 않는다.
+Lichess가 공개한 2026-07 원본 정보는 다음과 같이 고정한다.
+
+- URL: `https://database.lichess.org/broadcast/lichess_db_broadcast_2026-07.pgn.zst`
+- SHA-256: `714d0eb99f99fca8d791142038b6c59b5ca6a51b3339bd3891a92f4bdffcbf0c`
+- license: `CC-BY-SA-4.0`
+- published games: 40,038
+
+이 corpus도 일반 체스의 최종 결과나 Stockfish eval을 value target으로 사용하지 않고,
+mainline 착수의 `board_pretraining` policy만 사용한다. 두 선수 레이팅이 모두 2000 이상인
+대국을 production 기본값으로 삼고, 표본 수와 필터 탈락률은 생성된 `coverage.json`에서
+확인한 뒤 추가 월 또는 rating threshold를 결정한다. CC0인 standard-rated corpus와
+라이선스가 다르므로 같은 source license로 합치지 않는다.
+
+2026-08-21 첫 전체 변환에서는 40,038대국 중 12,123대국이 필터를 통과해 1,096,662개의
+policy position이 생성됐다. 46개 shard의 압축 크기는 372,561,415 bytes였다. value,
+card와 proven-tactical target은 모두 0이었으며 독립 Rust engine replay validator를
+통과했다. 이 결과는 목표 5백만 board position의 약 22%이므로, 나머지는 추가 broadcast
+월을 동일 조건으로 변환해 채운다.
