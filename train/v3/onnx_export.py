@@ -17,7 +17,8 @@ import torch
 from torch import nn
 
 from .model import AugmentNetV3, V3ModelConfig
-from .replay import DatasetIdentity, ReplayDatasetV3, collate_examples
+from .mixture import load_dataset_from_identity
+from .replay import DatasetIdentity, collate_examples
 from .schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID
 from .tensorize import V3Batch, V3Vocabulary
 
@@ -196,17 +197,8 @@ def main() -> None:
     model, checkpoint = load_model_checkpoint(args.checkpoint)
     identity = checkpoint["run_identity"]
     vocabulary = V3Vocabulary.from_json(identity["vocabulary"])
-    dataset = DatasetIdentity(
-        **{
-            **identity["dataset"],
-            "shard_sha256": tuple(
-                tuple(item) for item in identity["dataset"]["shard_sha256"]
-            ),
-        }
-    )
-    replay = ReplayDatasetV3(dataset.manifest_path)
-    if replay.identity != dataset:
-        raise RuntimeError("checkpoint dataset provenance no longer matches the manifest")
+    replay = load_dataset_from_identity(identity["dataset"])
+    dataset = replay.identity
     sample = collate_examples(
         [replay[index] for index in range(min(2, len(replay)))], vocabulary
     ).inputs

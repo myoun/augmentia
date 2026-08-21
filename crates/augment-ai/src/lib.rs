@@ -1,22 +1,23 @@
-pub mod action_v3;
 pub mod action_space;
+pub mod action_v3;
 pub mod bootstrap_v3;
 pub mod data_v3;
-pub mod evaluator;
 pub mod encoder_v3;
+pub mod evaluator;
 pub mod mcts;
 pub mod mcts_v3;
 pub mod observation_v3;
 pub mod quiescence;
 pub mod runtime_v3;
+pub mod self_play_v3;
 pub mod tensor;
 
+pub use action_space::{
+    ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
+};
 pub use action_v3::{
     ACTION_V3_SCHEMA_ID, ActionDescriptorV3, ActionTargetV3, ActionV3Error, LegalActionSetV3,
     PieceAbilityV3, decode_action_v3, encode_action_v3,
-};
-pub use action_space::{
-    ACTION_SPACE_SIZE, ActionIndex, ActionMask, encode_action, generate_action_mask,
 };
 pub use bootstrap_v3::{
     ForcedWinConfigV3, ForcedWinErrorV3, ForcedWinSolutionV3, solve_forced_win_v3,
@@ -27,12 +28,12 @@ pub use data_v3::{
     read_jsonl_zstd_shard, validate_manifest, verify_manifest_files, verify_manifest_replays,
     write_jsonl_zstd_shard,
 };
-pub use evaluator::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator};
 pub use encoder_v3::{
-    BoardPieceV3, CardRecordV3, GlobalStateV3, NamedRuntimeValueV3, ObservationV3, PhaseV3,
-    RelativePlayerV3, RuntimeFeatureV3, RuntimeValueV3, OBSERVATION_V3_GLOBAL_FEATURES,
-    OBSERVATION_V3_SPATIAL_PLANES, OBSERVATION_V3_SPATIAL_SIZE, encode_observation_v3,
+    BoardPieceV3, CardRecordV3, GlobalStateV3, NamedRuntimeValueV3, OBSERVATION_V3_GLOBAL_FEATURES,
+    OBSERVATION_V3_SPATIAL_PLANES, OBSERVATION_V3_SPATIAL_SIZE, ObservationV3, PhaseV3,
+    RelativePlayerV3, RuntimeFeatureV3, RuntimeValueV3, encode_observation_v3,
 };
+pub use evaluator::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator};
 pub use mcts::{
     MctsConfig, MctsNode, MctsTree, RootActionDiagnostics, RootNoiseConfig, SearchDiagnostics,
 };
@@ -48,6 +49,9 @@ pub use observation_v3::{
 };
 pub use quiescence::QuiescenceSearch;
 pub use runtime_v3::{EvaluationV3, MODEL_METADATA_V3_SCHEMA_ID, V3OnnxRuntime, V3RuntimeError};
+pub use self_play_v3::{
+    SelfPlayAgentV3, SelfPlayGameConfigV3, SelfPlayV3Error, generate_self_play_game_v3,
+};
 pub use tensor::{
     EncodedState, GLOBAL_FEATURES_SIZE, SPATIAL_CHANNELS, SPATIAL_SIZE, encode_state,
 };

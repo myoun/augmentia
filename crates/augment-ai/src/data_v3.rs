@@ -45,7 +45,7 @@ pub enum AbsolutePlayerV3 {
 }
 
 impl AbsolutePlayerV3 {
-    fn from_player(player: Player) -> Self {
+    pub fn from_player(player: Player) -> Self {
         match player {
             Player::White => Self::White,
             Player::Black => Self::Black,
@@ -153,6 +153,36 @@ pub enum TerminationV3 {
 }
 
 impl TerminationV3 {
+    pub fn from_engine_status(
+        status: &GameStatus,
+        final_state_fingerprint: String,
+    ) -> Option<Self> {
+        match status {
+            GameStatus::Ongoing => None,
+            GameStatus::Won { winner, reason } => {
+                let (reason, detail) = win_reason(reason);
+                Some(Self::EngineTerminal {
+                    result: match winner {
+                        Player::White => GameResultV3::WhiteWin,
+                        Player::Black => GameResultV3::BlackWin,
+                    },
+                    reason: reason.to_owned(),
+                    detail,
+                    final_state_fingerprint,
+                })
+            }
+            GameStatus::Draw { reason } => {
+                let (reason, detail) = draw_reason(reason);
+                Some(Self::EngineTerminal {
+                    result: GameResultV3::Draw,
+                    reason: reason.to_owned(),
+                    detail,
+                    final_state_fingerprint,
+                })
+            }
+        }
+    }
+
     pub fn final_state_fingerprint(&self) -> &str {
         match self {
             Self::EngineTerminal {

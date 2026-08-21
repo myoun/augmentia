@@ -11,6 +11,7 @@ import torch
 import zstandard
 
 from v3.model import V3ModelConfig
+from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
 from v3.onnx_export import assert_onnx_equivalent, export_onnx_v3
 from v3.onnx_runtime import OnnxRuntimeV3
 from v3.replay import ReplayDatasetV3, collate_examples
@@ -43,6 +44,79 @@ class PipelineV3Tests(unittest.TestCase):
             dataset = ReplayDatasetV3(manifest)
             self.assertEqual(len(dataset), 3)
             self.assertEqual([item.value for item in dataset], [1.0, -1.0, 1.0])
+
+    def test_bootstrap_mixture_has_exact_reproducible_source_quotas(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            config = root / "mixture.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "mixture_schema_id": MIXTURE_SCHEMA_ID,
+                        "profile": "bootstrap",
+                        "seed": 41,
+                        "epoch_size": 20,
+                        "sources": {
+                            "lichess": str(manifest),
+                            "solver": str(manifest),
+                            "weak_selfplay": str(manifest),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            left = load_training_dataset(config)
+            right = ReplayMixtureV3.from_config(config)
+            self.assertEqual(left.quotas, {"lichess": 10, "solver": 6, "weak_selfplay": 4})
+            self.assertEqual(
+                [item.decision_id for item in left],
+                [item.decision_id for item in right],
+            )
+            self.assertEqual(left.identity.to_json(), right.identity.to_json())
+
+    def test_mixture_resume_preserves_the_exact_cross_source_batch_order(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            datasets = {
+                name: ReplayDatasetV3(manifest)
+                for name in ("lichess", "solver", "weak_selfplay")
+            }
+            mixture = ReplayMixtureV3(
+                datasets,
+                {"lichess": 0.5, "solver": 0.3, "weak_selfplay": 0.2},
+                epoch_size=20,
+                seed=53,
+                profile="bootstrap",
+            )
+            vocabulary = V3Vocabulary.from_cases(item.case for item in mixture)
+            config = _training_config()
+            model_config = _model_config(vocabulary)
+            continuous = TrainerV3(
+                mixture, vocabulary, model_config, config, root / "mix-continuous"
+            )
+            expected = continuous.train(steps=3)
+            interrupted = TrainerV3(
+                mixture, vocabulary, model_config, config, root / "mix-resumed"
+            )
+            actual = interrupted.train(steps=1)
+            interrupted.save_checkpoint()
+            resumed = TrainerV3(
+                mixture, vocabulary, model_config, config, root / "mix-resumed"
+            )
+            resumed.resume_latest()
+            actual.extend(resumed.train(steps=2))
+            self.assertEqual(
+                [item.decision_ids for item in expected],
+                [item.decision_ids for item in actual],
+            )
+            np.testing.assert_allclose(
+                [item.loss for item in expected],
+                [item.loss for item in actual],
+                rtol=0,
+                atol=0,
+            )
 
     def test_invalid_policy_is_rejected_before_training(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

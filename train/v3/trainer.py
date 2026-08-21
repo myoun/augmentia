@@ -18,6 +18,7 @@ import numpy as np
 import torch
 
 from .model import AugmentNetV3, V3ModelConfig, compute_v3_loss
+from .mixture import load_training_dataset
 from .replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
 from .tensorize import V3Vocabulary
 
@@ -407,7 +408,7 @@ def main() -> None:
     parser.add_argument("--checkpoint-interval", type=int, default=500)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
-    dataset = ReplayDatasetV3(args.manifest)
+    dataset = load_training_dataset(args.manifest)
     vocabulary = V3Vocabulary.from_cases(example.case for example in dataset)
     config = TrainingConfigV3(
         batch_size=args.batch_size,

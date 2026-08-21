@@ -47,3 +47,8 @@ input contract를 기록한다. export 직후 PyTorch와 ONNX Runtime policy/val
 연속 4-step 실행과 2-step 중단·재개의 batch 순서, loss, parameter, optimizer 상태를
 bitwise 비교하고, 손상 checkpoint 복구, config mismatch, NaN/불법 policy, ONNX 동등성을
 검사한다.
+
+12단계부터 단일 manifest 외에 `augmentia.training-mixture.v3` 설정을 같은 positional
+인자로 줄 수 있다. 혼합 설정은 `bootstrap`, `first_champion`, `mature` profile의 정확한
+source quota를 만들며 그 identity 전체가 checkpoint와 ONNX metadata에 저장된다. self-play
+생성부터 candidate까지의 통합 실행과 보존 정책은 `ai-v3-self-play.md`를 참고한다.

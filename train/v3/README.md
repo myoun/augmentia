@@ -50,3 +50,12 @@ uv run python -m v3.benchmark_runtime --iterations 20 --soak 1000 --rust `
 ```
 
 V2 weights and fallback are never loaded.
+
+`self_play_v3.rs`, `mixture.py`, and `iteration.py` implement the stage-12 reproducible loop.
+An iteration generates engine-replayable MCTS games, applies a fixed source-mixture profile,
+resumes exact-step training, exports a candidate, records complete lineage, and enforces bounded
+artifact retention. See `docs/ai-v3-self-play.md`; the iteration command is:
+
+```powershell
+uv run python -m v3.iteration path\to\iteration.json ..\runs\v3-iterations
+```
