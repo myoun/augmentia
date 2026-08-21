@@ -37,5 +37,7 @@ uv run python -m unittest v3.test_model -v
 uv run python -m v3.benchmark_model --case runtime_rich --device cpu --threads 1
 ```
 
-The production replay loader, resumable trainer, checkpoint vocabulary artifact, and ONNX wrapper
-belong to stage 9. The stage-8 model does not load V2 weights or emit a model binary.
+`replay.py`, `trainer.py`, and `onnx_export.py` implement the stage-9 verified loader, exact-step
+resume, auxiliary supervision, and provenance-bound ONNX artifacts. `onnx_runtime.py` and Rust
+`augment_ai::runtime_v3` implement the stage-10 reusable batched runtime. See
+`docs/ai-v3-training.md` and `docs/ai-v3-runtime.md`. V2 weights and fallback are never loaded.

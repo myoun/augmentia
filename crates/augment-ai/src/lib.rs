@@ -7,6 +7,7 @@ pub mod encoder_v3;
 pub mod mcts;
 pub mod observation_v3;
 pub mod quiescence;
+pub mod runtime_v3;
 pub mod tensor;
 
 pub use action_v3::{
@@ -41,6 +42,7 @@ pub use observation_v3::{
     V2_BASELINE_MODEL_ID,
 };
 pub use quiescence::QuiescenceSearch;
+pub use runtime_v3::{EvaluationV3, MODEL_METADATA_V3_SCHEMA_ID, V3OnnxRuntime, V3RuntimeError};
 pub use tensor::{
     EncodedState, GLOBAL_FEATURES_SIZE, SPATIAL_CHANNELS, SPATIAL_SIZE, encode_state,
 };

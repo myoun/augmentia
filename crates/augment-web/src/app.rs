@@ -58,6 +58,7 @@ impl GameSession {
         Ok(state_view(
             &self.state,
             &self.engine,
+            self.neural_eval.as_ref(),
             self.seed,
             &self.history,
             &legal_actions,
@@ -127,7 +128,14 @@ impl GameSession {
     }
 }
 
-fn state_view(state: &GameState, engine: &Engine, seed: u64, history: &[String], actions: &[Action]) -> Value {
+fn state_view(
+    state: &GameState,
+    engine: &Engine,
+    neural_eval: Option<&OnnxNeuralEvaluator>,
+    seed: u64,
+    history: &[String],
+    actions: &[Action],
+) -> Value {
     let action_views = actions
         .iter()
         .enumerate()
@@ -169,7 +177,7 @@ fn state_view(state: &GameState, engine: &Engine, seed: u64, history: &[String],
         },
         "rules": state.applied_rules.iter().map(|id| card_name(id)).collect::<Vec<_>>(),
         "events": history,
-        "eval": compute_eval(state, engine),
+        "eval": compute_eval(state, engine, neural_eval),
         "deathmatch": state.deathmatch.map(|deathmatch| json!({
             "startedAt": deathmatch.started_at_shared_turn,
             "quietFullTurns": deathmatch.quiet_full_turns,
@@ -947,8 +955,12 @@ mod tests {
 
 
 
-fn compute_eval(state: &GameState, engine: &Engine) -> Value {
-    let raw_val = if let Ok(neural) = OnnxNeuralEvaluator::from_file(V2_BASELINE_MODEL_PATH) {
+fn compute_eval(
+    state: &GameState,
+    engine: &Engine,
+    neural_eval: Option<&OnnxNeuralEvaluator>,
+) -> Value {
+    let raw_val = if let Some(neural) = neural_eval {
         neural.evaluate(state, engine).1
     } else {
         HeuristicEvaluator::new().evaluate(state, engine).1
