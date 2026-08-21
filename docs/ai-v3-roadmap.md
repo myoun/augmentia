@@ -5,13 +5,14 @@ AI로 교체하는 작업 순서와 각 단계의 완료 조건을 고정한다.
 바뀔 수 있지만, 앞 단계의 계약과 검증을 통과하지 않은 채 뒤 단계로 넘어가지는
 않는다.
 
-현재 진행 상태(2026-08-21): 1~10단계 완료. 7단계는 Lichess `.pgn.zst` streaming,
+현재 진행 상태(2026-08-21): 1~11단계 완료. 7단계는 Lichess `.pgn.zst` streaming,
 품질 필터, bounded-memory shard 출력과 50,000-position 실데이터 pilot까지 검증했다.
 8단계는 residual CNN, exact-vocabulary entity/runtime encoder와 dynamic ActionV3 scorer를
 구현하고 tiny overfit과 batch-one 성능 기준을 통과했다. 9단계는 manifest 검증 loader,
 정확한 optimizer-step 재개, auxiliary loss와 ONNX export를 구현했고 10단계는 Python/Rust
-세션 재사용, batch 추론, fail-closed metadata 검사와 교차 언어 동등성을 구현했다. 다음
-작업은 11단계 V3 batch leaf queue와 MCTS 의미 수정이다.
+세션 재사용, batch 추론, fail-closed metadata 검사와 교차 언어 동등성을 구현했다.
+11단계는 V3 local action MCTS, batch leaf queue, 정확한 terminal/value 의미, root 탐색
+보장과 subtree reuse를 구현했다. 다음 작업은 12단계 반복 self-play와 학습 루프다.
 1단계는
 `ai/v2-baseline-before-observation-v3` 태그로 고정했고, 2단계 계약은
 `observation-v3-contract.md`와 `augment-ai::observation_v3`에 고정했다. 3단계 Rust

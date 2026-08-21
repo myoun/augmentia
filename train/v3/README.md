@@ -40,4 +40,13 @@ uv run python -m v3.benchmark_model --case runtime_rich --device cpu --threads 1
 `replay.py`, `trainer.py`, and `onnx_export.py` implement the stage-9 verified loader, exact-step
 resume, auxiliary supervision, and provenance-bound ONNX artifacts. `onnx_runtime.py` and Rust
 `augment_ai::runtime_v3` implement the stage-10 reusable batched runtime. See
-`docs/ai-v3-training.md` and `docs/ai-v3-runtime.md`. V2 weights and fallback are never loaded.
+`docs/ai-v3-training.md` and `docs/ai-v3-runtime.md`. `augment_ai::mcts_v3` implements the
+stage-11 local-action batch MCTS, documented in `docs/ai-v3-search.md`. Include the Rust search
+benchmark with:
+
+```powershell
+uv run python -m v3.benchmark_runtime --iterations 20 --soak 1000 --rust `
+  --search-simulations 100 --search-iterations 5
+```
+
+V2 weights and fallback are never loaded.

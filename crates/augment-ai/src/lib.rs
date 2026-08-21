@@ -5,6 +5,7 @@ pub mod data_v3;
 pub mod evaluator;
 pub mod encoder_v3;
 pub mod mcts;
+pub mod mcts_v3;
 pub mod observation_v3;
 pub mod quiescence;
 pub mod runtime_v3;
@@ -34,6 +35,10 @@ pub use encoder_v3::{
 };
 pub use mcts::{
     MctsConfig, MctsNode, MctsTree, RootActionDiagnostics, RootNoiseConfig, SearchDiagnostics,
+};
+pub use mcts_v3::{
+    BatchEvaluatorV3, MctsV3Config, MctsV3Error, MctsV3Tree, RootActionDiagnosticsV3,
+    RootNoiseConfigV3, SearchDiagnosticsV3, SearchResultV3,
 };
 pub use observation_v3::{
     ACTION_V2_SCHEMA_ID, CARD_RUNTIME_SOURCE_FIELDS, DERIVED_SOURCE_FIELDS,

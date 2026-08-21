@@ -26,6 +26,8 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--soak", type=int, default=1_000)
     parser.add_argument("--rust", action="store_true")
+    parser.add_argument("--search-simulations", type=int, default=200)
+    parser.add_argument("--search-iterations", type=int, default=5)
     args = parser.parse_args()
     root = Path(__file__).parents[2]
     suite = load_golden_suite()
@@ -111,6 +113,38 @@ def main() -> None:
             )
             report["rust"] = rust
             report["cross_language_equivalent"] = True
+            search = subprocess.run(
+                [
+                    "cargo",
+                    "run",
+                    "-q",
+                    "-p",
+                    "augment-cli",
+                    "--bin",
+                    "benchmark_v3_search",
+                    "--",
+                    "--model",
+                    str(model_path),
+                    "--metadata",
+                    str(metadata_path),
+                    "--ruleset-hash",
+                    ruleset_hash,
+                    "--simulations",
+                    str(args.search_simulations),
+                    "--iterations",
+                    str(args.search_iterations),
+                ],
+                cwd=root,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if search.returncode:
+                raise RuntimeError(
+                    f"Rust V3 search exited {search.returncode}: {search.stderr}"
+                )
+            report["search"] = json.loads(search.stdout)
         print(json.dumps(report, indent=2, sort_keys=True))
 
 

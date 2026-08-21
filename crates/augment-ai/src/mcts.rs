@@ -1,6 +1,6 @@
 use super::action_space::ActionIndex;
 use super::evaluator::Evaluator;
-use augment_core::{Action, Engine, GameState, GameStatus, PieceKind, Player};
+use augment_core::{Action, Engine, GameState, GameStatus, Player};
 use rand::distributions::WeightedIndex;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -151,10 +151,7 @@ impl MctsTree {
         }
 
         if temperature <= 1e-6 {
-            return visits
-                .iter()
-                .max_by_key(|(_, _, count)| *count)
-                .cloned();
+            return visits.iter().max_by_key(|(_, _, count)| *count).cloned();
         }
 
         let exponent = 1.0f64 / temperature as f64;
@@ -166,26 +163,6 @@ impl MctsTree {
         let distribution = WeightedIndex::new(&weights).ok()?;
         let mut rng = StdRng::seed_from_u64(seed);
         visits.get(rng.sample(distribution)).cloned()
-    }
-
-    /// Fast O(1) Check: checks whether the opponent can capture the mover's King immediately.
-    #[inline]
-    fn leads_to_immediate_king_loss(state: &GameState, engine: &Engine, mover: Player) -> bool {
-        if state.status != GameStatus::Ongoing || state.turn == mover {
-            return false;
-        }
-        if let Ok(opp_actions) = engine.legal_actions(state) {
-            for opp_act in &opp_actions {
-                if let Action::Move(m) = opp_act {
-                    if let Some(target_p) = state.board.get(m.to) {
-                        if target_p.owner == mover && target_p.kind == PieceKind::King {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        false
     }
 
     fn sample_dirichlet(action_count: usize, config: RootNoiseConfig) -> Vec<f32> {
@@ -241,53 +218,6 @@ impl MctsTree {
         let noise_values = root_noise.map(|cfg| Self::sample_dirichlet(root_priors.len(), cfg));
         let noise_epsilon = root_noise.map_or(0.0, |cfg| cfg.epsilon.clamp(0.0, 1.0));
 
-        // Immediate king capture is terminally proven and may bypass MCTS.
-        for (action, act_idx, raw_prior) in &root_priors {
-            if let Action::Move(m) = action {
-                if let Some(target_p) = root_state.board.get(m.to) {
-                    if target_p.owner != root_player && target_p.kind == PieceKind::King {
-                        let root_actions: Vec<RootActionDiagnostics> = root_priors
-                            .iter()
-                            .enumerate()
-                            .map(|(i, (candidate_action, candidate_index, candidate_prior))| {
-                                let eta = noise_values.as_ref().map(|draws| draws[i]);
-                                let effective_prior = eta.map_or(*candidate_prior, |noise| {
-                                    (1.0 - noise_epsilon) * *candidate_prior + noise_epsilon * noise
-                                });
-                                let visits = if *candidate_index == *act_idx { 1000 } else { 0 };
-                                RootActionDiagnostics {
-                                    action: candidate_action.clone(),
-                                    action_index: *candidate_index,
-                                    raw_prior: *candidate_prior,
-                                    root_noise: eta,
-                                    effective_prior,
-                                    visits,
-                                    first_visit_simulation: if visits > 0 { Some(0) } else { None },
-                                    q_root: if visits > 0 { 1.0 } else { 0.0 },
-                                }
-                            })
-                            .collect();
-                        self.last_diagnostics = Some(SearchDiagnostics {
-                            root_raw_value: root_value,
-                            root_legal_actions: root_actions.len(),
-                            root_visited_action_count: 1,
-                            root_visit_entropy: 0.0,
-                            top1_visit_fraction: 1.0,
-                            effective_branching_factor: 1.0,
-                            low_prior_visit_rate: if *raw_prior < 1e-4 { 1.0 } else { 0.0 },
-                            max_search_depth: 1,
-                            root_actions,
-                        });
-                        return Some((
-                            action.clone(),
-                            *act_idx,
-                            vec![(action.clone(), *act_idx, 1000)],
-                        ));
-                    }
-                }
-            }
-        }
-
         // Expand root with either raw NN priors (evaluation) or P' (self-play).
         for (position, (action, act_idx, raw_prior)) in root_priors.into_iter().enumerate() {
             if let Ok(transition) = engine.apply(root_state, action.clone()) {
@@ -341,45 +271,45 @@ impl MctsTree {
             let leaf_value = if is_terminal {
                 match self.nodes[current_idx].state.status {
                     GameStatus::Won { winner, .. } => {
-                        if winner == leaf_player { 1.0 } else { -1.0 }
+                        if winner == leaf_player {
+                            1.0
+                        } else {
+                            -1.0
+                        }
                     }
                     _ => 0.0,
                 }
             } else {
-                let parent_player = self.nodes[current_idx]
-                    .parent
-                    .map_or(leaf_player, |parent| self.nodes[parent].player);
                 let node_state = self.nodes[current_idx].state.clone();
-
-                if Self::leads_to_immediate_king_loss(&node_state, engine, parent_player) {
-                    if leaf_player == parent_player { -1.0 } else { 1.0 }
-                } else {
-                    let (priors, val) = evaluator.evaluate(&node_state, engine);
-                    let child_depth = self.nodes[current_idx].depth + 1;
-                    for (action, act_idx, prior) in priors {
-                        if let Ok(transition) = engine.apply(&node_state, action.clone()) {
-                            let mut child = MctsNode::new(
-                                transition.state,
-                                Some(current_idx),
-                                Some(action),
-                                act_idx,
-                                prior,
-                            );
-                            child.depth = child_depth;
-                            let child_idx = self.nodes.len();
-                            self.nodes.push(child);
-                            self.nodes[current_idx].children.push(child_idx);
-                        }
+                let (priors, val) = evaluator.evaluate(&node_state, engine);
+                let child_depth = self.nodes[current_idx].depth + 1;
+                for (action, act_idx, prior) in priors {
+                    if let Ok(transition) = engine.apply(&node_state, action.clone()) {
+                        let mut child = MctsNode::new(
+                            transition.state,
+                            Some(current_idx),
+                            Some(action),
+                            act_idx,
+                            prior,
+                        );
+                        child.depth = child_depth;
+                        let child_idx = self.nodes.len();
+                        self.nodes.push(child);
+                        self.nodes[current_idx].children.push(child_idx);
                     }
-                    val
                 }
+                val
             };
 
             // Backpropagation flips only when the player perspective changes.
             let mut backprop_idx = Some(current_idx);
             while let Some(idx) = backprop_idx {
                 self.nodes[idx].visit_count += 1;
-                let sign = if self.nodes[idx].player == leaf_player { 1.0 } else { -1.0 };
+                let sign = if self.nodes[idx].player == leaf_player {
+                    1.0
+                } else {
+                    -1.0
+                };
                 self.nodes[idx].value_sum += leaf_value * sign;
                 backprop_idx = self.nodes[idx].parent;
             }
@@ -428,8 +358,7 @@ impl MctsTree {
                 q_root,
             });
 
-            let is_suicide = Self::leads_to_immediate_king_loss(&child.state, engine, root_player);
-            visit_distribution.push((action, child.action_index, visits, is_suicide));
+            visit_distribution.push((action, child.action_index, visits));
         }
 
         for node in &self.nodes {
@@ -467,22 +396,13 @@ impl MctsTree {
             root_actions: diagnostics_actions,
         });
 
-        let has_safe = visit_distribution.iter().any(|(_, _, _, is_suicide)| !*is_suicide);
-        let best_entry = if has_safe {
-            visit_distribution
-                .iter()
-                .filter(|(_, _, _, is_suicide)| !*is_suicide)
-                .max_by_key(|(_, _, visits, _)| *visits)?
-        } else {
-            visit_distribution.iter().max_by_key(|(_, _, visits, _)| *visits)?
-        };
+        let best_entry = visit_distribution
+            .iter()
+            .max_by_key(|(_, _, visits)| *visits)?;
 
         let best_action = best_entry.0.clone();
         let best_index = best_entry.1;
-        let final_visits = visit_distribution
-            .into_iter()
-            .map(|(action, index, visits, _)| (action, index, visits))
-            .collect();
+        let final_visits = visit_distribution;
 
         Some((best_action, best_index, final_visits))
     }
@@ -511,5 +431,74 @@ impl MctsTree {
             }
         }
         best_idx
+    }
+}
+
+#[cfg(test)]
+mod shortcut_regression_tests {
+    use super::*;
+    use crate::action_space::encode_action;
+    use augment_core::{BUNDLED_RULESET_ID, Board, Mode, Piece, PieceKind};
+
+    struct UniformEvaluator;
+
+    impl Evaluator for UniformEvaluator {
+        fn evaluate(
+            &self,
+            state: &GameState,
+            engine: &Engine,
+        ) -> (Vec<(Action, ActionIndex, f32)>, f32) {
+            let legal = engine.legal_actions(state).unwrap();
+            let prior = 1.0 / legal.len().max(1) as f32;
+            (
+                legal
+                    .into_iter()
+                    .map(|action| {
+                        let index = encode_action(&action, state);
+                        (action, index, prior)
+                    })
+                    .collect(),
+                0.0,
+            )
+        }
+    }
+
+    #[test]
+    fn shielded_king_attack_uses_the_engine_transition_instead_of_a_shortcut() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut board = Board::empty();
+        board.set(
+            "h1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::King).with_id(1)),
+        );
+        board.set(
+            "a1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Rook).with_id(2)),
+        );
+        board.set(
+            "a8".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::King).with_id(3)),
+        );
+        let mut state =
+            GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, Player::White, 41);
+        state.card_runtime.shielded_piece_ids.insert(3);
+        let capture = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(movement) if movement.to == "a8".parse().unwrap()))
+            .unwrap();
+        assert_eq!(
+            engine.apply(&state, capture).unwrap().state.status,
+            GameStatus::Ongoing
+        );
+        let mut tree = MctsTree::new(MctsConfig {
+            c_puct: 1.5,
+            num_simulations: 8,
+            temperature: 0.0,
+        });
+        let (_, _, visits) = tree.search(&state, &engine, &UniformEvaluator).unwrap();
+        assert_eq!(visits.iter().map(|item| item.2).sum::<u32>(), 8);
+        assert!(visits.iter().all(|item| item.2 < 1_000));
     }
 }
