@@ -77,14 +77,15 @@ class V3Vocabulary:
         )
 
     @classmethod
-    def from_golden_suite(
+    def from_cases(
         cls,
-        suite: Mapping[str, Any],
+        cases: Iterable[Mapping[str, Any]],
         catalog_path: str | Path | None = None,
         extra_tokens: Iterable[str] = (),
     ) -> V3Vocabulary:
+        """Build the immutable run vocabulary from every training example."""
         tokens = set(extra_tokens)
-        for case in suite["cases"]:
+        for case in cases:
             _collect_observation_text(case["observation"], tokens)
             for action in case["legal_actions"]["actions"]:
                 _collect_action_text(action, tokens)
@@ -100,6 +101,15 @@ class V3Vocabulary:
                 if isinstance(value, str):
                     tokens.add(value)
         return cls(("<none>", *sorted(token for token in tokens if token)))
+
+    @classmethod
+    def from_golden_suite(
+        cls,
+        suite: Mapping[str, Any],
+        catalog_path: str | Path | None = None,
+        extra_tokens: Iterable[str] = (),
+    ) -> V3Vocabulary:
+        return cls.from_cases(suite["cases"], catalog_path, extra_tokens)
 
     @classmethod
     def from_json(cls, payload: Mapping[str, Any]) -> V3Vocabulary:

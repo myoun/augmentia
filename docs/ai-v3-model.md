@@ -1,6 +1,6 @@
 # 첫 V3 신경망
 
-상태: 8단계 구현 완료 (`2026-08-21`)
+상태: 8단계 모델 완료, 9단계 auxiliary/export 확장 (`2026-08-21`)
 
 구현: `train/v3/model.py`, `train/v3/tensorize.py`
 
@@ -8,8 +8,10 @@
 
 `AugmentNetV3`는 `ObservationV3`와 현재 `LegalActionSetV3`를 받아 합법 행동마다 logit
 하나와 actor 관점 value 하나를 출력한다. 모델 가중치는 랜덤 초기화한다. 대규모 replay
-loader, 장기 학습, checkpoint 재개와 ONNX export는 9단계이며 이 모델 안에 V2 tensor,
-고정 `ActionIndex`, heuristic 또는 ONNX fallback은 없다.
+loader, 장기 학습, checkpoint 재개와 ONNX export는 9단계 모듈로 분리되어 있으며 V2 tensor,
+고정 `ActionIndex`, heuristic 또는 ONNX fallback은 없다. 9단계에서 solver의
+`forced_win_distance_decisions`를 위한 scalar auxiliary head가 추가되어 기본 parameter
+수는 2,841,732개가 되었다.
 
 일반 체스 `board_pretraining` record는 shared state encoder와 move action scorer의 policy만
 학습한다. value label이 없으므로 value loss에서 제외하고, 일반 체스 결과를 Augmentia

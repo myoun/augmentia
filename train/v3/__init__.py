@@ -10,6 +10,7 @@ from .schema import (
     validate_golden_suite,
 )
 from .tensorize import V3Batch, V3Vocabulary, tensorize_cases
+from .replay import ReplayDatasetV3, TrainingBatchV3, TrainingExampleV3
 
 __all__ = [
     "ACTION_SCHEMA_ID",
@@ -22,6 +23,9 @@ __all__ = [
     "V3ModelConfig",
     "V3ModelOutput",
     "V3Vocabulary",
+    "ReplayDatasetV3",
+    "TrainingBatchV3",
+    "TrainingExampleV3",
     "compute_v3_loss",
     "load_golden_suite",
     "tensorize_cases",

@@ -42,7 +42,7 @@ class AugmentNetV3Tests(unittest.TestCase):
     def test_default_parameter_and_vocabulary_baseline_is_fixed(self) -> None:
         model = AugmentNetV3(V3ModelConfig(text_vocabulary_size=self.vocabulary.size))
         self.assertEqual(self.vocabulary.size, 355)
-        self.assertEqual(model.parameter_count(), 2_825_091)
+        self.assertEqual(model.parameter_count(), 2_841_732)
         self.assertEqual(
             V3Vocabulary.from_json(self.vocabulary.to_json()), self.vocabulary
         )

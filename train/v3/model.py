@@ -39,6 +39,7 @@ class V3ModelConfig:
 class V3ModelOutput:
     policy_logits: torch.Tensor
     value: torch.Tensor
+    forced_win_distance: torch.Tensor | None = None
 
 
 @dataclass
@@ -46,8 +47,10 @@ class V3Loss:
     total: torch.Tensor
     policy: torch.Tensor
     value: torch.Tensor
+    auxiliary: torch.Tensor
     policy_samples: int
     value_samples: int
+    auxiliary_samples: int
 
 
 class ResidualBlock(nn.Module):
@@ -143,9 +146,16 @@ class AugmentNetV3(nn.Module):
             nn.Linear(dim, 1),
             nn.Tanh(),
         )
+        self.forced_win_distance_head = nn.Sequential(
+            nn.Linear(dim, dim), nn.SiLU(), nn.Linear(dim, 1)
+        )
 
     def forward(self, batch: V3Batch) -> V3ModelOutput:
         self._validate_batch(batch)
+        return self._forward(batch)
+
+    def _forward(self, batch: V3Batch) -> V3ModelOutput:
+        """Tensor-only path used by the checked ONNX export wrapper."""
         board_hidden = self.board_blocks(self.board_stem(batch.spatial))
         board_map = self.board_projection(board_hidden)
         board_tokens = board_map.flatten(2).transpose(1, 2)
@@ -193,7 +203,9 @@ class AugmentNetV3(nn.Module):
         ).squeeze(-1)
         logits = logits.masked_fill(~batch.action_mask, torch.finfo(logits.dtype).min)
         return V3ModelOutput(
-            policy_logits=logits, value=self.value_head(state).squeeze(-1)
+            policy_logits=logits,
+            value=self.value_head(state).squeeze(-1),
+            forced_win_distance=self.forced_win_distance_head(state).squeeze(-1),
         )
 
     def parameter_count(self) -> int:
@@ -345,6 +357,9 @@ def compute_v3_loss(
     value_targets: torch.Tensor,
     value_supervision: torch.Tensor,
     value_weight: float = 1.0,
+    auxiliary_targets: torch.Tensor | None = None,
+    auxiliary_supervision: torch.Tensor | None = None,
+    auxiliary_weight: float = 0.25,
 ) -> V3Loss:
     if (
         output.policy_logits.shape != action_mask.shape
@@ -384,12 +399,35 @@ def compute_v3_loss(
     value_loss = _masked_loss_mean(
         (output.value - safe_value_targets).square(), value_supervision
     )
+    if auxiliary_targets is None or auxiliary_supervision is None:
+        auxiliary_loss = output.value.sum() * 0.0
+        auxiliary_samples = 0
+    else:
+        if output.forced_win_distance is None:
+            raise ValueError("model does not expose forced-win distance auxiliary head")
+        if (
+            auxiliary_targets.shape != output.value.shape
+            or auxiliary_supervision.shape != output.value.shape
+        ):
+            raise ValueError("auxiliary targets and mask must match the batch")
+        selected_targets = auxiliary_targets.masked_select(auxiliary_supervision)
+        if not torch.isfinite(selected_targets).all():
+            raise ValueError("auxiliary targets must be finite")
+        auxiliary_loss = _masked_loss_mean(
+            (output.forced_win_distance - auxiliary_targets).square(),
+            auxiliary_supervision,
+        )
+        auxiliary_samples = int(auxiliary_supervision.sum().item())
     return V3Loss(
-        total=policy_loss + value_weight * value_loss,
+        total=policy_loss
+        + value_weight * value_loss
+        + auxiliary_weight * auxiliary_loss,
         policy=policy_loss,
         value=value_loss,
+        auxiliary=auxiliary_loss,
         policy_samples=int(policy_supervision.sum().item()),
         value_samples=int(value_supervision.sum().item()),
+        auxiliary_samples=auxiliary_samples,
     )
 
 
