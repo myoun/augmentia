@@ -170,7 +170,15 @@ mainline 착수의 `board_pretraining` policy만 사용한다. 두 선수 레이
 라이선스가 다르므로 같은 source license로 합치지 않는다.
 
 2026-08-21 첫 전체 변환에서는 40,038대국 중 12,123대국이 필터를 통과해 1,096,662개의
-policy position이 생성됐다. 46개 shard의 압축 크기는 372,561,415 bytes였다. value,
+policy position이 생성됐다. 46개 shard의 압축 크기는 372,549,083 bytes였고 manifest
+SHA-256은 `e5d87260944424e2875639ae9278d1f9d56f0272eeb5aa9215c8dd8cdb4778c1`이다. value,
 card와 proven-tactical target은 모두 0이었으며 독립 Rust engine replay validator를
 통과했다. 이 결과는 목표 5백만 board position의 약 22%이므로, 나머지는 추가 broadcast
 월을 동일 조건으로 변환해 채운다.
+
+단, 추가 월 생성은 trainer loader의 bounded-memory 전환 뒤에 진행한다. 현재
+`ReplayDatasetV3`는 모든 JSON record를 Python 객체로 materialize한다. 이 corpus의 train
+split을 읽는 smoke에서 프로세스 working set이 37.1 GiB까지 증가했는데도 초기화가 끝나지
+않아 중단했다. 5백만 position으로 그대로 확대하면 학습 가능한 메모리 범위를 벗어난다.
+shard-aware deterministic sampling과 제한된 shard cache를 구현하고, 같은 corpus에서 loader
+peak memory와 첫 batch를 통과시키는 것을 다음 data gate로 삼는다.
