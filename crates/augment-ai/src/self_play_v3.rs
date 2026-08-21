@@ -44,6 +44,11 @@ impl SelfPlayGameConfigV3 {
                 "decision, simulation, and leaf batch limits must be positive".to_owned(),
             ));
         }
+        if self.max_decisions > u32::MAX as usize || self.simulations > u32::MAX as usize {
+            return Err(SelfPlayV3Error::Config(
+                "decision and simulation counts must fit the V3 record width".to_owned(),
+            ));
+        }
         if !self.root_noise_alpha.is_finite()
             || self.root_noise_alpha <= 0.0
             || !self.root_noise_epsilon.is_finite()
@@ -170,6 +175,12 @@ pub fn generate_self_play_game_v3(
             }
             visit_counts[*action_index] = *visits;
         }
+        let completed_simulations = visit_counts
+            .iter()
+            .try_fold(0u32, |total, visits| total.checked_add(*visits))
+            .ok_or_else(|| {
+                SelfPlayV3Error::Record("root visit count exceeds the V3 record width".to_owned())
+            })?;
         let sampled =
             MctsV3Tree::sample_action_from_visits(&search.visits, temperature, sample_seed)
                 .ok_or_else(|| SelfPlayV3Error::Record("visit sampling failed".to_owned()))?;
@@ -198,7 +209,7 @@ pub fn generate_self_play_game_v3(
             legal_actions,
             policy_target: PolicyTargetV3::MctsVisits {
                 visit_counts,
-                completed_simulations: config.simulations as u32,
+                completed_simulations,
                 root_value: diagnostics.root_raw_value,
                 noise_seed_hex: Some(fingerprint_hex(noise_seed)),
                 sampling_temperature: temperature,
@@ -359,6 +370,17 @@ mod tests {
                 .iter()
                 .all(|step| matches!(step.policy_target, PolicyTargetV3::MctsVisits { .. }))
         );
+        for step in &game.steps {
+            let PolicyTargetV3::MctsVisits {
+                visit_counts,
+                completed_simulations,
+                ..
+            } = &step.policy_target
+            else {
+                unreachable!()
+            };
+            assert_eq!(visit_counts.iter().sum::<u32>(), *completed_simulations);
+        }
         assert!(game.value_target(0).is_none());
         game.validate_replay(&engine).unwrap();
     }

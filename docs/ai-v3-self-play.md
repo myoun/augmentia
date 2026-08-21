@@ -116,3 +116,12 @@ candidate export는 champion registry를 수정하지 않는다.
 삭제 후보로 본다. 최신 개수나 총 byte 한도를 넘으면 오래된 unpinned iteration 전체를
 제거한다. `PINNED` 파일이 있거나 현재 실행 중인 iteration은 삭제하지 않으며, 한도를 맞출
 수 없으면 임의로 보호 artifact를 지우지 않고 실패한다.
+
+## 12단계 smoke 검증
+
+2026-08-21 CPU smoke run은 1게임·2 decision·decision당 8 simulations, bootstrap virtual
+epoch 10개와 optimizer 1 step으로 전체 경로를 실행했다. 생성 manifest는 1 shard, 1 game,
+2 policy decision으로 엔진 replay 검증을 통과했다. 혼합 quota는 Lichess 5, solver 3,
+weak self-play 2로 정확히 기록됐다. candidate의 PyTorch/ONNX 최대 절대 오차는 policy
+`5.22e-8`, value `7.45e-8`였다. 동일 설정의 `--resume` 재실행은 기존 artifact hash를
+유지하고 추가 optimizer step을 실행하지 않았다.
