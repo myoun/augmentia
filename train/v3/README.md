@@ -51,6 +51,26 @@ uv run python -m v3.benchmark_runtime --iterations 20 --soak 1000 --rust `
 
 V2 weights and fallback are never loaded.
 
+Large JSON corpora use a content-addressed verification sidecar. Cold semantic verification uses
+all logical CPUs for large manifests; warm startup verifies only compressed byte counts and
+SHA-256. Generate the separate training-time binary artifact with:
+
+```powershell
+uv run python -m v3.pretensor path\to\manifest.json ..\replay-buffers\v3-tensorized `
+  --chunk-size 64 --workers 8
+```
+
+Pass the generated pre-tensor `manifest.json` to `v3.trainer`. It preserves source, vocabulary,
+tensorizer-version and checksum provenance while removing JSON parsing and tensorization from the
+training hot path.
+
+Measure the artifact independently with:
+
+```powershell
+uv run python -m v3.benchmark_pretensor path\to\tensorized\manifest.json `
+  --batch-size 64 --batches 20
+```
+
 `self_play_v3.rs`, `mixture.py`, and `iteration.py` implement the stage-12 reproducible loop.
 An iteration generates engine-replayable MCTS games, applies a fixed source-mixture profile,
 resumes exact-step training, exports a candidate, records complete lineage, and enforces bounded

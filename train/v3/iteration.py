@@ -70,7 +70,7 @@ def run_iteration(
     mixture_bytes = _json_bytes(mixture_config)
     _write_once_or_match(mixture_path, mixture_bytes, resume)
     dataset = load_training_dataset(mixture_path)
-    vocabulary = V3Vocabulary.from_cases(example.case for example in dataset)
+    vocabulary = dataset.build_vocabulary()
     training_config = _training_config(config["training"])
     model_config = V3ModelConfig(
         text_vocabulary_size=vocabulary.size,

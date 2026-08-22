@@ -4,6 +4,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from dataclasses import fields
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,8 @@ from v3.model import V3ModelConfig
 from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
 from v3.onnx_export import assert_onnx_equivalent, export_onnx_v3
 from v3.onnx_runtime import OnnxRuntimeV3
-from v3.replay import ReplayDatasetV3, collate_examples
+from v3.pretensor import PretensorizedReplayDatasetV3, build_pretensor_artifact
+from v3.replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
 from v3.schema import SchemaError, load_golden_suite
 from v3.tensorize import V3Vocabulary
 from v3.trainer import CheckpointMismatchError, TrainerV3, TrainingConfigV3
@@ -36,6 +38,38 @@ class PipelineV3Tests(unittest.TestCase):
             self.assertEqual(int(batch.auxiliary_supervision.sum()), 1)
             torch.testing.assert_close(batch.policy_targets.sum(dim=1), torch.ones(3))
 
+    def test_pretensor_artifact_matches_raw_collation_across_frames(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "source").mkdir()
+            manifest = _write_dataset(root / "source")
+            artifact = build_pretensor_artifact(
+                manifest, root / "tensorized", chunk_size=2, workers=1
+            )
+            dataset = PretensorizedReplayDatasetV3(artifact, max_cached_frames=1)
+            loaded = load_training_dataset(artifact)
+            raw = ReplayDatasetV3(manifest)
+            indices = [2, 0, 1]
+            expected = collate_examples(
+                [raw[index] for index in indices], raw.build_vocabulary()
+            )
+            actual = dataset.collate_indices(indices)
+            self.assertIsInstance(loaded, PretensorizedReplayDatasetV3)
+            self.assertEqual(dataset.sampler_group_sizes, (2, 1))
+            self.assertEqual(expected.decision_ids, actual.decision_ids)
+            for field in fields(expected.inputs):
+                left = getattr(expected.inputs, field.name)
+                right = getattr(actual.inputs, field.name)
+                slices = tuple(slice(0, size) for size in left.shape)
+                torch.testing.assert_close(left, right[slices], rtol=0, atol=0)
+            torch.testing.assert_close(
+                expected.policy_targets,
+                actual.policy_targets[:, : expected.policy_targets.shape[1]],
+                rtol=0,
+                atol=0,
+            )
+            torch.testing.assert_close(expected.value_targets, actual.value_targets)
+
     def test_full_game_records_expand_to_actor_relative_examples(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -44,6 +78,57 @@ class PipelineV3Tests(unittest.TestCase):
             dataset = ReplayDatasetV3(manifest)
             self.assertEqual(len(dataset), 3)
             self.assertEqual([item.value for item in dataset], [1.0, -1.0, 1.0])
+
+    def test_replay_loader_uses_one_shard_cache_and_shard_local_sampling(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            _split_decisions_across_two_shards(root, manifest)
+            dataset = ReplayDatasetV3(manifest, max_cached_shards=1)
+            self.assertFalse(dataset.index_cache_hit)
+            cached_dataset = ReplayDatasetV3(manifest, max_cached_shards=1)
+            self.assertTrue(cached_dataset.index_cache_hit)
+            self.assertEqual(
+                cached_dataset.vocabulary_tokens, dataset.vocabulary_tokens
+            )
+            index_payload = json.loads(dataset.index_cache_path.read_text())
+            self.assertIn("code_version", index_payload)
+            self.assertIn("schema_versions", index_payload)
+            index_payload["verifier_version"] = "stale"
+            dataset.index_cache_path.write_text(
+                json.dumps(index_payload), encoding="utf-8"
+            )
+            rebuilt_dataset = ReplayDatasetV3(manifest, max_cached_shards=1)
+            self.assertFalse(rebuilt_dataset.index_cache_hit)
+            self.assertEqual(dataset.sampler_group_sizes, (2, 1))
+            self.assertEqual(dataset.cache_info()["resident_shards"], 0)
+            collected_vocabulary = dataset.build_vocabulary()
+            expected_vocabulary = V3Vocabulary.from_cases(item.case for item in dataset)
+            self.assertEqual(collected_vocabulary, expected_vocabulary)
+            dataset.clear_cache()
+            baseline = dataset.cache_info()
+
+            first = dataset[0]
+            self.assertEqual(dataset.cache_info()["misses"], baseline["misses"] + 1)
+            self.assertEqual(dataset[1].decision_id, "decision-1")
+            self.assertEqual(dataset.cache_info()["hits"], baseline["hits"] + 1)
+            self.assertEqual(dataset[2].decision_id, "decision-2")
+            self.assertEqual(dataset.cache_info()["resident_shards"], 1)
+            self.assertEqual(dataset[0].decision_id, first.decision_id)
+            self.assertEqual(dataset.cache_info()["misses"], baseline["misses"] + 3)
+
+            sampler = DeterministicSamplerV3(
+                len(dataset), seed=71, group_sizes=dataset.sampler_group_sizes
+            )
+            order = sampler.take(len(dataset))
+            positions = {index: offset for offset, index in enumerate(order)}
+            self.assertEqual(abs(positions[0] - positions[1]), 1)
+            state = sampler.state_dict()
+            restored = DeterministicSamplerV3(
+                len(dataset), seed=71, group_sizes=dataset.sampler_group_sizes
+            )
+            restored.load_state_dict(state)
+            self.assertEqual(restored.state_dict(), state)
 
     def test_bootstrap_mixture_has_exact_reproducible_source_quotas(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -68,12 +153,50 @@ class PipelineV3Tests(unittest.TestCase):
             )
             left = load_training_dataset(config)
             right = ReplayMixtureV3.from_config(config)
-            self.assertEqual(left.quotas, {"lichess": 10, "solver": 6, "weak_selfplay": 4})
+            self.assertEqual(
+                left.quotas, {"lichess": 10, "solver": 6, "weak_selfplay": 4}
+            )
             self.assertEqual(
                 [item.decision_id for item in left],
                 [item.decision_id for item in right],
             )
             self.assertEqual(left.identity.to_json(), right.identity.to_json())
+
+    def test_mixture_keeps_virtual_references_instead_of_materializing_examples(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            _split_decisions_across_two_shards(root, manifest)
+            datasets = {
+                name: ReplayDatasetV3(manifest)
+                for name in ("lichess", "solver", "weak_selfplay")
+            }
+            mixture = ReplayMixtureV3(
+                datasets,
+                {"lichess": 0.5, "solver": 0.3, "weak_selfplay": 0.2},
+                epoch_size=20,
+                seed=43,
+                profile="bootstrap",
+            )
+            self.assertEqual(len(mixture.entries), 20)
+            self.assertTrue(
+                all(
+                    not item.cache_info()["resident_shards"]
+                    for item in datasets.values()
+                )
+            )
+            self.assertEqual(sum(mixture.sampler_group_sizes), len(mixture))
+            self.assertTrue(
+                mixture[0].decision_id.startswith(
+                    ("lichess:", "solver:", "weak_selfplay:")
+                )
+            )
+            self.assertEqual(
+                sum(item.cache_info()["resident_shards"] for item in datasets.values()),
+                1,
+            )
 
     def test_mixture_resume_preserves_the_exact_cross_source_batch_order(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -402,6 +525,37 @@ def _refresh_manifest_hashes(manifest: Path) -> None:
     shard = manifest.parent / payload["shards"][0]["path"]
     payload["shards"][0]["sha256"] = hashlib.sha256(shard.read_bytes()).hexdigest()
     payload["shards"][0]["compressed_bytes"] = shard.stat().st_size
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _split_decisions_across_two_shards(root: Path, manifest: Path) -> None:
+    original = root / "train.jsonl.zst"
+    records = (
+        zstandard.ZstdDecompressor().decompress(original.read_bytes()).splitlines()
+    )
+    shards = []
+    for shard_index, shard_records in enumerate((records[:2], records[2:])):
+        path = root / f"train-{shard_index}.jsonl.zst"
+        raw = b"\n".join(shard_records) + b"\n"
+        path.write_bytes(zstandard.ZstdCompressor(level=1).compress(raw))
+        shards.append(
+            {
+                "path": path.name,
+                "split": "train",
+                "record_schema_id": "augmentia.training.decision.v3",
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "compressed_bytes": path.stat().st_size,
+                "records": len(shard_records),
+                "games": 0,
+                "decisions": len(shard_records),
+                "game_steps": 0,
+                "policy_eligible_decisions": len(shard_records),
+                "value_eligible_decisions": len(shard_records),
+            }
+        )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["shards"] = shards
+    payload["totals"]["shards"] = len(shards)
     manifest.write_text(json.dumps(payload), encoding="utf-8")
 
 

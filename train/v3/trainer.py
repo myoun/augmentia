@@ -159,7 +159,9 @@ class TrainerV3:
         )
         amp_enabled = training_config.amp and self.device.type == "cuda"
         self.scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
-        self.sampler = DeterministicSamplerV3(len(dataset), training_config.seed)
+        self.sampler = DeterministicSamplerV3(
+            len(dataset), training_config.seed, dataset.sampler_group_sizes
+        )
         self.checkpoints = CheckpointManagerV3(run_dir, training_config.checkpoint_keep)
         self.run_id = run_id or uuid.uuid4().hex
         self.parent_checkpoint = parent_checkpoint
@@ -181,8 +183,11 @@ class TrainerV3:
         samples = 0
         for _ in range(self.config.gradient_accumulation_steps):
             indices = self._next_indices(self.config.batch_size)
-            examples = [self.dataset[index] for index in indices]
-            batch = collate_examples(examples, self.vocabulary).to(self.device)
+            if hasattr(self.dataset, "collate_indices"):
+                batch = self.dataset.collate_indices(indices).to(self.device)
+            else:
+                examples = [self.dataset[index] for index in indices]
+                batch = collate_examples(examples, self.vocabulary).to(self.device)
             accumulated_ids.extend(batch.decision_ids)
             with torch.autocast(
                 device_type=self.device.type,
@@ -215,7 +220,7 @@ class TrainerV3:
                 dtype=torch.float64,
             )
             microbatches += 1
-            samples += len(examples)
+            samples += len(indices)
         self.scaler.unscale_(self.optimizer)
         for name, parameter in self.model.named_parameters():
             if parameter.grad is not None and not torch.isfinite(parameter.grad).all():
@@ -409,7 +414,7 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     dataset = load_training_dataset(args.manifest)
-    vocabulary = V3Vocabulary.from_cases(example.case for example in dataset)
+    vocabulary = dataset.build_vocabulary()
     config = TrainingConfigV3(
         batch_size=args.batch_size,
         total_steps=args.steps,

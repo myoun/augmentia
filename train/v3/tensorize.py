@@ -84,23 +84,33 @@ class V3Vocabulary:
         extra_tokens: Iterable[str] = (),
     ) -> V3Vocabulary:
         """Build the immutable run vocabulary from every training example."""
-        tokens = set(extra_tokens)
+        tokens: set[str] = set()
         for case in cases:
-            _collect_observation_text(case["observation"], tokens)
-            for action in case["legal_actions"]["actions"]:
-                _collect_action_text(action, tokens)
+            collect_case_text_tokens(case, tokens)
+        return cls.from_tokens(tokens, catalog_path, extra_tokens)
+
+    @classmethod
+    def from_tokens(
+        cls,
+        tokens: Iterable[str],
+        catalog_path: str | Path | None = None,
+        extra_tokens: Iterable[str] = (),
+    ) -> V3Vocabulary:
+        """Build the run vocabulary from tokens collected during replay validation."""
+        collected = set(tokens)
+        collected.update(extra_tokens)
 
         path = (
             Path(catalog_path) if catalog_path is not None else _default_catalog_path()
         )
         catalog = json.loads(path.read_text(encoding="utf-8"))
         for card in catalog["cards"]:
-            tokens.add(card["id"])
+            collected.add(card["id"])
             for optional_key in ("effect", "target"):
                 value = card.get(optional_key)
                 if isinstance(value, str):
-                    tokens.add(value)
-        return cls(("<none>", *sorted(token for token in tokens if token)))
+                    collected.add(value)
+        return cls(("<none>", *sorted(token for token in collected if token)))
 
     @classmethod
     def from_golden_suite(
@@ -148,6 +158,13 @@ class V3Vocabulary:
             "schema_id": "augmentia.model-vocabulary.v3",
             "tokens": list(self.tokens),
         }
+
+
+def collect_case_text_tokens(case: Mapping[str, Any], tokens: set[str]) -> None:
+    """Collect exact-string features without retaining a training example."""
+    _collect_observation_text(case["observation"], tokens)
+    for action in case["legal_actions"]["actions"]:
+        _collect_action_text(action, tokens)
 
 
 def _collect_observation_text(observation: Mapping[str, Any], tokens: set[str]) -> None:

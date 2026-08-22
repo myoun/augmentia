@@ -176,9 +176,41 @@ card와 proven-tactical target은 모두 0이었으며 독립 Rust engine replay
 통과했다. 이 결과는 목표 5백만 board position의 약 22%이므로, 나머지는 추가 broadcast
 월을 동일 조건으로 변환해 채운다.
 
-단, 추가 월 생성은 trainer loader의 bounded-memory 전환 뒤에 진행한다. 현재
-`ReplayDatasetV3`는 모든 JSON record를 Python 객체로 materialize한다. 이 corpus의 train
-split을 읽는 smoke에서 프로세스 working set이 37.1 GiB까지 증가했는데도 초기화가 끝나지
-않아 중단했다. 5백만 position으로 그대로 확대하면 학습 가능한 메모리 범위를 벗어난다.
-shard-aware deterministic sampling과 제한된 shard cache를 구현하고, 같은 corpus에서 loader
-peak memory와 첫 batch를 통과시키는 것을 다음 data gate로 삼는다.
+기존 `ReplayDatasetV3`가 모든 JSON record를 Python 객체로 materialize하던 smoke는 working
+set 37.1 GiB에서도 초기화가 끝나지 않아 중단됐다. 이후 shard-aware deterministic sampling과
+제한된 shard cache로 바꿔 bounded-memory 목표는 통과했다. 하지만 직렬 의미 검증은 25분
+startup 제한을 넘겼으므로 별도의 latency 실패로 판정했다. 이 시점 이후 정확한 완료 시간을
+얻기 위한 직렬 대기는 성능 gate에 필요하지 않다.
+
+content-addressed verification sidecar는 manifest/split, 압축 shard의 SHA-256·크기·record 및
+example 수, ruleset, vocabulary, schema/parser/verifier/code version을 고정한다. 전체 의미 검증이
+성공한 경우에만 원자적으로 기록하고 어느 항목이든 달라지면 fail-closed로 전체 재검증한다.
+cache hit에서는 압축 shard의 크기와 SHA-256만 다시 확인한다.
+
+Ryzen 7 5800X(8C/16T), RAM 64 GiB 장비에서 16-process cold 검증은 train 40 shard를
+384.495초에 완료했다. 부모 loader working set은 0.47 GiB였고 worker 합산 working set은 실행
+중 약 8.0 GiB였다. 같은 sidecar의 warm initialization은 0.286초였다. 반면 JSON에서 첫 batch
+64개를 만드는 데는 cold 71.908초, warm 72.461초가 걸렸고 peak working set은 각각 약
+10.28 GiB였다. 따라서 sidecar는 startup만 해결한 것으로 판정하며 JSON 학습 경로를 성능
+통과로 간주하지 않는다.
+
+학습 경로는 원본 JSON과 분리된 content-addressed pre-tensorized binary artifact를 사용한다.
+artifact는 source manifest identity, vocabulary SHA-256, tensorizer code version을 고정하고,
+독립 압축 frame과 artifact shard 모두를 SHA-256으로 검증한다. JSON은 감사·재생성 원본으로만
+남기며 trainer의 hot path에서는 파싱하거나 다시 tensorize하지 않는다.
+
+2026-08-22 실제 train artifact는 8 worker, frame 64 설정으로 4,640.17초에 생성됐다. train
+40 shard, 984,584 example을 15,399개 독립 frame으로 변환했으며 binary shard 합계는
+436,269,795 bytes다. artifact manifest SHA-256은
+`0dc8f2542344038deb5836fbecafd76e6bc79092bc02306de091e13dee379741`이다. 16 worker는
+working set보다 훨씬 큰 private commit/pagefile 압박으로 ENOSPC를 일으켰으므로 이 8C/16T
+장비에서는 생성 명령에 논리 스레드 16이 아니라 물리 코어 기준 `--workers 8`을 사용한다.
+
+완성 artifact의 checksum을 전부 확인하는 initialization은 0.495초였다. batch 64의 첫
+collation은 0.0285초, 20 batch 평균은 0.0181초(약 3,542 examples/s), peak working set은
+0.521 GiB였다. 같은 batch의 JSON 경로 72.461초와 비교해 첫 batch가 약 2,540배 빨라졌고,
+기존 별도 tensorization 측정 1.65초와 비교해 평균 batch 준비는 약 91배 빨라졌다.
+생성 artifact의 실제 batch를 RTX 3060으로 전달해 forward/loss까지 통과했으며, warm FP16
+forward 20회 평균은 0.0161초, CUDA peak allocation은 110.7 MiB였다. CPU batch 준비
+0.0181초가 이제 GPU forward와 같은 규모이므로 이후 throughput 개선은 pinned-memory
+prefetch와 host-to-device/compute overlap으로 진행한다.
