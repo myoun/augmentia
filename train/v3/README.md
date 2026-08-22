@@ -71,6 +71,24 @@ uv run python -m v3.benchmark_pretensor path\to\tensorized\manifest.json `
   --batch-size 64 --batches 20
 ```
 
+On the measured RTX 3060 host, use batch 1024 with one pinned-memory background prefetch. Batch
+1536 did not improve throughput and left too little VRAM headroom. `--steps` remains the complete
+run target; `--max-steps-this-run` pauses one invocation without changing checkpoint identity:
+
+```powershell
+uv run python -m v3.trainer path\to\tensorized\manifest.json ..\runs\v3-pretrain `
+  --batch-size 1024 --steps 100000 --max-steps-this-run 10000 `
+  --checkpoint-interval 500 --prefetch-batches 1 --log-interval 50
+
+uv run python -m v3.trainer path\to\tensorized\manifest.json ..\runs\v3-pretrain `
+  --batch-size 1024 --steps 100000 --max-steps-this-run 10000 `
+  --checkpoint-interval 500 --prefetch-batches 1 --log-interval 50 --resume
+```
+
+Training metrics are streamed instead of retained for the entire run. A normal limited invocation,
+SIGINT, or SIGTERM writes an atomic exact-step checkpoint; prefetched-but-unconsumed indices are not
+committed to sampler state.
+
 `self_play_v3.rs`, `mixture.py`, and `iteration.py` implement the stage-12 reproducible loop.
 An iteration generates engine-replayable MCTS games, applies a fixed source-mixture profile,
 resumes exact-step training, exports a candidate, records complete lineage, and enforces bounded

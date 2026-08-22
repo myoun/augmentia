@@ -3,23 +3,30 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import Future, ThreadPoolExecutor
 import hashlib
 import json
 import os
 import random
 import signal
 import subprocess
+import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 import numpy as np
 import torch
 
 from .model import AugmentNetV3, V3ModelConfig, compute_v3_loss
 from .mixture import load_training_dataset
-from .replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
+from .replay import (
+    DeterministicSamplerV3,
+    ReplayDatasetV3,
+    TrainingBatchV3,
+    collate_examples,
+)
 from .tensorize import V3Vocabulary
 
 CHECKPOINT_SCHEMA_ID = "augmentia.training-checkpoint.v3"
@@ -38,6 +45,7 @@ class TrainingConfigV3:
     value_weight: float = 1.0
     amp: bool = True
     device: str = "cuda"
+    prefetch_batches: int = 1
 
     def __post_init__(self) -> None:
         positive = (
@@ -50,6 +58,8 @@ class TrainingConfigV3:
         )
         if any(value <= 0 for value in positive):
             raise ValueError("training sizes, rates and intervals must be positive")
+        if self.prefetch_batches not in {0, 1}:
+            raise ValueError("prefetch_batches must be zero or one")
 
 
 @dataclass
@@ -61,6 +71,13 @@ class StepMetricsV3:
     value_loss: float
     auxiliary_loss: float
     decision_ids: tuple[str, ...]
+
+
+@dataclass
+class _PrefetchedBatchV3:
+    base_sampler_state: dict[str, Any]
+    committed_sampler_state: dict[str, Any]
+    future: Future[TrainingBatchV3]
 
 
 class CheckpointMismatchError(RuntimeError):
@@ -171,6 +188,12 @@ class TrainerV3:
         self.stop_requested = False
         self.code_commit = _git_commit()
         self._identity = self._run_identity()
+        self._prefetch_executor = (
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="v3-batch-prefetch")
+            if training_config.prefetch_batches
+            else None
+        )
+        self._prefetched_batch: _PrefetchedBatchV3 | None = None
 
     def train_step(self) -> StepMetricsV3:
         if self.global_step >= self.config.total_steps:
@@ -182,12 +205,12 @@ class TrainerV3:
         microbatches = 0
         samples = 0
         for _ in range(self.config.gradient_accumulation_steps):
-            indices = self._next_indices(self.config.batch_size)
-            if hasattr(self.dataset, "collate_indices"):
-                batch = self.dataset.collate_indices(indices).to(self.device)
-            else:
-                examples = [self.dataset[index] for index in indices]
-                batch = collate_examples(examples, self.vocabulary).to(self.device)
+            batch = self._next_training_batch()
+            batch = _move_training_batch(
+                batch,
+                self.device,
+                non_blocking=self._prefetch_executor is not None,
+            )
             accumulated_ids.extend(batch.decision_ids)
             with torch.autocast(
                 device_type=self.device.type,
@@ -220,7 +243,7 @@ class TrainerV3:
                 dtype=torch.float64,
             )
             microbatches += 1
-            samples += len(indices)
+            samples += len(batch.decision_ids)
         self.scaler.unscale_(self.optimizer)
         for name, parameter in self.model.named_parameters():
             if parameter.grad is not None and not torch.isfinite(parameter.grad).all():
@@ -248,21 +271,24 @@ class TrainerV3:
         }
         return result
 
-    def train(self, steps: int | None = None) -> list[StepMetricsV3]:
+    def iter_train(self, steps: int | None = None) -> Iterator[StepMetricsV3]:
         limit = (
             self.config.total_steps
             if steps is None
             else min(self.config.total_steps, self.global_step + steps)
         )
-        history = []
         while self.global_step < limit and not self.stop_requested:
             metrics = self.train_step()
-            history.append(metrics)
             if self.global_step % self.config.checkpoint_interval == 0:
                 self.save_checkpoint()
-        if self.stop_requested or self.global_step == self.config.total_steps:
+            yield metrics
+        if (self.stop_requested or self.global_step == limit) and (
+            self.global_step % self.config.checkpoint_interval != 0
+        ):
             self.save_checkpoint()
-        return history
+
+    def train(self, steps: int | None = None) -> list[StepMetricsV3]:
+        return list(self.iter_train(steps))
 
     def save_checkpoint(self) -> Path:
         return self.checkpoints.save(self._checkpoint_payload(), self.global_step)
@@ -293,17 +319,68 @@ class TrainerV3:
         return path
 
     def _next_indices(self, count: int) -> list[int]:
-        indices: list[int] = []
-        while len(indices) < count:
-            indices.extend(self.sampler.take(count - len(indices)))
-            self.sampler.advance_epoch_if_complete()
-        return indices
+        return _take_sampler_indices(self.sampler, count)
+
+    def _next_training_batch(self) -> TrainingBatchV3:
+        prefetched = self._prefetched_batch
+        if prefetched is None:
+            indices = self._next_indices(self.config.batch_size)
+            batch = _collate_dataset_indices(
+                self.dataset,
+                indices,
+                self.vocabulary,
+                pin_memory=self._prefetch_executor is not None
+                and self.device.type == "cuda",
+            )
+        else:
+            if self.sampler.state_dict() != prefetched.base_sampler_state:
+                raise RuntimeError("prefetched batch sampler state became stale")
+            batch = prefetched.future.result()
+            self.sampler.load_state_dict(prefetched.committed_sampler_state)
+            self._prefetched_batch = None
+        self._schedule_prefetch()
+        return batch
+
+    def _schedule_prefetch(self) -> None:
+        if self._prefetch_executor is None or self._prefetched_batch is not None:
+            return
+        base_state = self.sampler.state_dict()
+        preview = DeterministicSamplerV3(
+            len(self.dataset),
+            self.config.seed,
+            self.dataset.sampler_group_sizes,
+        )
+        preview.load_state_dict(base_state)
+        indices = _take_sampler_indices(preview, self.config.batch_size)
+        self._prefetched_batch = _PrefetchedBatchV3(
+            base_sampler_state=base_state,
+            committed_sampler_state=preview.state_dict(),
+            future=self._prefetch_executor.submit(
+                _collate_dataset_indices,
+                self.dataset,
+                indices,
+                self.vocabulary,
+                self.device.type == "cuda",
+            ),
+        )
+
+    def close(self) -> None:
+        if self._prefetch_executor is not None:
+            self._prefetch_executor.shutdown(wait=True, cancel_futures=True)
+            self._prefetch_executor = None
+            self._prefetched_batch = None
+
+    def __del__(self) -> None:
+        executor = getattr(self, "_prefetch_executor", None)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _run_identity(self) -> dict[str, Any]:
         critical_config = asdict(self.config)
         critical_config.pop("checkpoint_interval")
         critical_config.pop("checkpoint_keep")
         critical_config.pop("device")
+        critical_config.pop("prefetch_batches")
         return {
             "dataset": self.dataset.identity.to_json(),
             "model_config": asdict(self.model_config),
@@ -342,6 +419,70 @@ def _capture_rng() -> dict[str, Any]:
         if torch.cuda.is_available()
         else [],
     }
+
+
+def _take_sampler_indices(sampler: DeterministicSamplerV3, count: int) -> list[int]:
+    indices: list[int] = []
+    while len(indices) < count:
+        indices.extend(sampler.take(count - len(indices)))
+        sampler.advance_epoch_if_complete()
+    return indices
+
+
+def _collate_dataset_indices(
+    dataset: ReplayDatasetV3,
+    indices: list[int],
+    vocabulary: V3Vocabulary,
+    pin_memory: bool,
+) -> TrainingBatchV3:
+    if hasattr(dataset, "collate_indices"):
+        batch = dataset.collate_indices(indices)
+    else:
+        examples = [dataset[index] for index in indices]
+        batch = collate_examples(examples, vocabulary)
+    return _pin_training_batch(batch) if pin_memory else batch
+
+
+def _pin_training_batch(batch: TrainingBatchV3) -> TrainingBatchV3:
+    inputs = type(batch.inputs)(
+        **{
+            field.name: getattr(batch.inputs, field.name).pin_memory()
+            for field in fields(batch.inputs)
+        }
+    )
+    return TrainingBatchV3(
+        inputs=inputs,
+        policy_targets=batch.policy_targets.pin_memory(),
+        policy_supervision=batch.policy_supervision.pin_memory(),
+        value_targets=batch.value_targets.pin_memory(),
+        value_supervision=batch.value_supervision.pin_memory(),
+        auxiliary_targets=batch.auxiliary_targets.pin_memory(),
+        auxiliary_supervision=batch.auxiliary_supervision.pin_memory(),
+        decision_ids=batch.decision_ids,
+    )
+
+
+def _move_training_batch(
+    batch: TrainingBatchV3, device: torch.device, *, non_blocking: bool
+) -> TrainingBatchV3:
+    if not non_blocking:
+        return batch.to(device)
+    inputs = type(batch.inputs)(
+        **{
+            field.name: getattr(batch.inputs, field.name).to(device, non_blocking=True)
+            for field in fields(batch.inputs)
+        }
+    )
+    return TrainingBatchV3(
+        inputs=inputs,
+        policy_targets=batch.policy_targets.to(device, non_blocking=True),
+        policy_supervision=batch.policy_supervision.to(device, non_blocking=True),
+        value_targets=batch.value_targets.to(device, non_blocking=True),
+        value_supervision=batch.value_supervision.to(device, non_blocking=True),
+        auxiliary_targets=batch.auxiliary_targets.to(device, non_blocking=True),
+        auxiliary_supervision=batch.auxiliary_supervision.to(device, non_blocking=True),
+        decision_ids=batch.decision_ids,
+    )
 
 
 def _restore_rng(state: Mapping[str, Any]) -> None:
@@ -410,9 +551,16 @@ def main() -> None:
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--steps", type=int, default=100_000)
+    parser.add_argument("--max-steps-this-run", type=int)
     parser.add_argument("--checkpoint-interval", type=int, default=500)
+    parser.add_argument("--prefetch-batches", type=int, choices=(0, 1), default=1)
+    parser.add_argument("--log-interval", type=int, default=10)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
+    if args.max_steps_this_run is not None and args.max_steps_this_run <= 0:
+        parser.error("--max-steps-this-run must be positive")
+    if args.log_interval <= 0:
+        parser.error("--log-interval must be positive")
     dataset = load_training_dataset(args.manifest)
     vocabulary = dataset.build_vocabulary()
     config = TrainingConfigV3(
@@ -420,6 +568,7 @@ def main() -> None:
         total_steps=args.steps,
         checkpoint_interval=args.checkpoint_interval,
         device=args.device,
+        prefetch_batches=args.prefetch_batches,
     )
     trainer = TrainerV3(
         dataset,
@@ -437,8 +586,48 @@ def main() -> None:
     signal.signal(signal.SIGINT, request_stop)
     if hasattr(signal, "SIGTERM"):
         signal.signal(signal.SIGTERM, request_stop)
-    for metrics in trainer.train():
-        print(json.dumps(asdict(metrics), sort_keys=True))
+    started = time.perf_counter()
+    window_started = started
+    window_samples = 0
+    last_logged_step = trainer.global_step
+    last_metrics = None
+    for metrics in trainer.iter_train(steps=args.max_steps_this_run):
+        last_metrics = metrics
+        window_samples += metrics.samples
+        if metrics.step == 1 or metrics.step % args.log_interval == 0:
+            now = time.perf_counter()
+            payload = asdict(metrics)
+            payload["decision_count"] = len(payload.pop("decision_ids"))
+            payload["examples_per_second"] = window_samples / (now - window_started)
+            print(json.dumps(payload, sort_keys=True), flush=True)
+            window_started = now
+            window_samples = 0
+            last_logged_step = metrics.step
+    if last_metrics is not None and last_metrics.step != last_logged_step:
+        now = time.perf_counter()
+        payload = asdict(last_metrics)
+        payload["decision_count"] = len(payload.pop("decision_ids"))
+        payload["examples_per_second"] = window_samples / (now - window_started)
+        print(json.dumps(payload, sort_keys=True), flush=True)
+    trainer.close()
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "stopped"
+                    if trainer.stop_requested
+                    else "complete"
+                    if trainer.global_step == trainer.config.total_steps
+                    else "paused"
+                ),
+                "global_step": trainer.global_step,
+                "samples_seen": trainer.samples_seen,
+                "elapsed_seconds": time.perf_counter() - started,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

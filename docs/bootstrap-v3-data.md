@@ -212,5 +212,61 @@ collation은 0.0285초, 20 batch 평균은 0.0181초(약 3,542 examples/s), peak
 기존 별도 tensorization 측정 1.65초와 비교해 평균 batch 준비는 약 91배 빨라졌다.
 생성 artifact의 실제 batch를 RTX 3060으로 전달해 forward/loss까지 통과했으며, warm FP16
 forward 20회 평균은 0.0161초, CUDA peak allocation은 110.7 MiB였다. CPU batch 준비
-0.0181초가 이제 GPU forward와 같은 규모이므로 이후 throughput 개선은 pinned-memory
-prefetch와 host-to-device/compute overlap으로 진행한다.
+0.0181초가 이제 GPU forward와 같은 규모였다.
+
+## 첫 GPU 학습·재개 smoke
+
+2026-08-22 RTX 3060에서 실제 forward/backward/AdamW 경로를 측정했다. prefetch 전 batch
+sweep 결과는 다음과 같다. 수치는 CUDA warm step 기준이며 batch가 달라지므로 loss 자체를
+서로 비교하는 실험은 아니다.
+
+| batch | examples/s | CUDA peak allocation |
+|---:|---:|---:|
+| 64 | 579 | 381 MiB |
+| 128 | 828 | 695 MiB |
+| 256 | 1,071 | 1,339 MiB |
+| 512 | 1,210 | 2,614 MiB |
+| 1,024 | 1,326 | 5,168 MiB |
+| 1,536 | 1,329 | 7,711 MiB (9,272 MiB reserved) |
+
+batch 1,536은 1,024보다 처리량이 사실상 늘지 않으면서 예약 VRAM만 크게 증가했다. 따라서
+이 장비의 첫 학습 기본값은 안전 여유가 있는 batch 1,024로 정한다. batch 1,024의 구간별
+profile은 collation 0.211초, H2D 0.015초, forward/loss 0.110초, backward 0.415초,
+gradient finite check 0.025초, optimizer 0.004초였다. 한 batch의 pinned-memory background
+prefetch를 추가해 sampler checkpoint와 미리 읽은 batch를 분리했고, 동일 seed의 loss를
+byte-for-byte 유지하면서 1,302에서 1,783 examples/s로 37% 개선했다. checkpoint에는 완료한
+batch의 sampler 상태만 기록하므로 미리 읽은 다음 batch는 재개 시 건너뛰지 않는다. 별도
+30-step resource profile에서는 1,739 examples/s, GPU utilization 평균 85.1%·p95/최대 100%,
+평균 120.2 W·최대 130.3 W, 최고 64°C였다. `nvidia-smi`의 최대 사용 메모리 8,280 MiB에는
+동시에 실행 중인 다른 GPU 프로세스가 포함된다.
+
+trainer의 장기 실행 경로는 모든 `StepMetricsV3`와 decision ID를 끝까지 보관하지 않고
+streaming한다. `--max-steps-this-run`은 전체 `--steps` 계약을 바꾸지 않은 채 이번 프로세스의
+실행량만 제한하고, 제한점에서 원자적 checkpoint를 기록한다. 다음 두 명령으로 실제 프로세스
+종료·재개를 검증했다.
+
+```powershell
+cd train
+uv run python -m v3.trainer <tensor-manifest> ..\runs\v3-smoke\lichess-board-pretrain-b1024-v1 `
+  --device cuda --batch-size 1024 --steps 500 --max-steps-this-run 250 `
+  --checkpoint-interval 250 --prefetch-batches 1 --log-interval 50
+
+uv run python -m v3.trainer <tensor-manifest> ..\runs\v3-smoke\lichess-board-pretrain-b1024-v1 `
+  --device cuda --batch-size 1024 --steps 500 --max-steps-this-run 250 `
+  --checkpoint-interval 250 --prefetch-batches 1 --log-interval 50 --resume
+```
+
+첫 프로세스는 step 250, 256,000 examples에서 `paused`로 끝났고 checkpoint SHA-256
+`a79de5f59db596094e94fd542d1137f57af7aa46882019a85b294ea7d7f14b00`을 다시 계산해
+일치함을 확인했다. 두 번째 프로세스는 그 파일을 로드해 step 500까지 완료했다. 두 학습
+구간의 합산 시간은 323.27초였고 프로세스 startup을 포함한 wall time은 약 333.8초였다.
+지속 구간 처리량은 약 1,476~1,672 examples/s였다. policy loss는 step 1의 3.4519에서
+step 500의 2.1380으로 감소했다. 이 corpus는 policy-only이므로 value/auxiliary loss 0은
+의도한 결과다.
+
+최종 checkpoint는 34,301,143 bytes, SHA-256
+`ed5c798cc30d74bd81ab559593615a631ea0803b302329b774f573295a5dd1b3`이며 checksum 검증을
+통과했다. payload는 `global_step=500`, `samples_seen=512000`, `sampler_cursor=512000`,
+`scheduler.last_epoch=500`, `gradient_accumulation_boundary=0`을 기록했다. Python 전체
+회귀 테스트 33개도 prefetch 활성 상태의 연속 학습과 중단·재개가 같은 decision 순서,
+loss, model 및 optimizer state를 만드는지 검증한다.

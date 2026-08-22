@@ -87,7 +87,8 @@ def run_iteration(
     )
     if resume and trainer.checkpoints.load_latest_valid() is not None:
         trainer.resume_latest()
-    history = trainer.train()
+    steps_executed = sum(1 for _ in trainer.iter_train())
+    trainer.close()
     loaded = trainer.checkpoints.load_latest_valid()
     if loaded is None:
         checkpoint = trainer.save_checkpoint()
@@ -145,7 +146,7 @@ def run_iteration(
             "global_step": trainer.global_step,
             "samples_seen": trainer.samples_seen,
             "last_metrics": trainer.last_metrics,
-            "steps_executed_this_invocation": len(history),
+            "steps_executed_this_invocation": steps_executed,
             "source_quotas": dataset.quotas,
             "source_weights": dataset.weights,
         },
@@ -257,6 +258,7 @@ def _training_config(payload: Mapping[str, Any]) -> TrainingConfigV3:
         "value_weight",
         "amp",
         "device",
+        "prefetch_batches",
     }
     values = {name: payload[name] for name in names if name in payload}
     return TrainingConfigV3(**values)
