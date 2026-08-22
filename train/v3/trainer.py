@@ -30,6 +30,7 @@ from .replay import (
 from .tensorize import V3Vocabulary
 
 CHECKPOINT_SCHEMA_ID = "augmentia.training-checkpoint.v3"
+MAX_AMP_OVERFLOW_RETRIES = 8
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ class StepMetricsV3:
     value_loss: float
     auxiliary_loss: float
     decision_ids: tuple[str, ...]
+    amp_overflow_retries: int = 0
 
 
 @dataclass
@@ -199,57 +201,84 @@ class TrainerV3:
         if self.global_step >= self.config.total_steps:
             raise StopIteration("configured optimizer step limit reached")
         self.model.train()
-        self.optimizer.zero_grad(set_to_none=True)
-        accumulated_ids: list[str] = []
-        totals = torch.zeros(4, dtype=torch.float64)
-        microbatches = 0
-        samples = 0
-        for _ in range(self.config.gradient_accumulation_steps):
-            batch = self._next_training_batch()
-            batch = _move_training_batch(
-                batch,
-                self.device,
-                non_blocking=self._prefetch_executor is not None,
-            )
-            accumulated_ids.extend(batch.decision_ids)
-            with torch.autocast(
-                device_type=self.device.type,
-                enabled=self.scaler.is_enabled(),
-                dtype=torch.float16,
-            ):
-                output = self.model(batch.inputs)
-                loss = compute_v3_loss(
-                    output,
-                    batch.inputs.action_mask,
-                    batch.policy_targets,
-                    batch.policy_supervision,
-                    batch.value_targets,
-                    batch.value_supervision,
-                    self.config.value_weight,
-                    batch.auxiliary_targets,
-                    batch.auxiliary_supervision,
+        cached_batches: list[TrainingBatchV3] = []
+        overflow_retries = 0
+        while True:
+            self.optimizer.zero_grad(set_to_none=True)
+            accumulated_ids: list[str] = []
+            totals = torch.zeros(4, dtype=torch.float64)
+            microbatches = 0
+            samples = 0
+            for microbatch_index in range(self.config.gradient_accumulation_steps):
+                if overflow_retries == 0:
+                    source_batch = self._next_training_batch()
+                    cached_batches.append(source_batch)
+                else:
+                    source_batch = cached_batches[microbatch_index]
+                batch = _move_training_batch(
+                    source_batch,
+                    self.device,
+                    non_blocking=self._prefetch_executor is not None,
                 )
-                scaled_loss = loss.total / self.config.gradient_accumulation_steps
-            if not torch.isfinite(loss.total):
-                raise FloatingPointError("training loss became NaN or infinite")
-            self.scaler.scale(scaled_loss).backward()
-            totals += torch.tensor(
-                [
-                    loss.total.item(),
-                    loss.policy.item(),
-                    loss.value.item(),
-                    loss.auxiliary.item(),
-                ],
-                dtype=torch.float64,
+                accumulated_ids.extend(batch.decision_ids)
+                with torch.autocast(
+                    device_type=self.device.type,
+                    enabled=self.scaler.is_enabled(),
+                    dtype=torch.float16,
+                ):
+                    output = self.model(batch.inputs)
+                    loss = compute_v3_loss(
+                        output,
+                        batch.inputs.action_mask,
+                        batch.policy_targets,
+                        batch.policy_supervision,
+                        batch.value_targets,
+                        batch.value_supervision,
+                        self.config.value_weight,
+                        batch.auxiliary_targets,
+                        batch.auxiliary_supervision,
+                    )
+                    scaled_loss = loss.total / self.config.gradient_accumulation_steps
+                if not torch.isfinite(loss.total):
+                    raise FloatingPointError("training loss became NaN or infinite")
+                self.scaler.scale(scaled_loss).backward()
+                totals += torch.tensor(
+                    [
+                        loss.total.item(),
+                        loss.policy.item(),
+                        loss.value.item(),
+                        loss.auxiliary.item(),
+                    ],
+                    dtype=torch.float64,
+                )
+                microbatches += 1
+                samples += len(batch.decision_ids)
+            self.scaler.unscale_(self.optimizer)
+            invalid_gradient = next(
+                (
+                    name
+                    for name, parameter in self.model.named_parameters()
+                    if parameter.grad is not None
+                    and not torch.isfinite(parameter.grad).all()
+                ),
+                None,
             )
-            microbatches += 1
-            samples += len(batch.decision_ids)
-        self.scaler.unscale_(self.optimizer)
-        for name, parameter in self.model.named_parameters():
-            if parameter.grad is not None and not torch.isfinite(parameter.grad).all():
-                raise FloatingPointError(f"gradient {name} became NaN or infinite")
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
+            if invalid_gradient is None:
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                break
+            if not self.scaler.is_enabled() or overflow_retries >= MAX_AMP_OVERFLOW_RETRIES:
+                raise FloatingPointError(
+                    f"gradient {invalid_gradient} became NaN or infinite"
+                )
+            previous_scale = self.scaler.get_scale()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            if self.scaler.get_scale() >= previous_scale:
+                raise FloatingPointError(
+                    f"gradient {invalid_gradient} became NaN or infinite without AMP backoff"
+                )
+            overflow_retries += 1
         self.scheduler.step()
         self.global_step += 1
         self.samples_seen += samples
@@ -262,6 +291,7 @@ class TrainerV3:
             float(averages[2]),
             float(averages[3]),
             tuple(accumulated_ids),
+            overflow_retries,
         )
         self.last_metrics = {
             "loss": result.loss,
