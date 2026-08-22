@@ -60,6 +60,7 @@ dependencies = [
  "augment-ai",
  "augment-core",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

@@ -1,34 +1,82 @@
-use augment_ai::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator, MctsConfig, MctsTree};
+use augment_ai::{
+    Evaluator, HeuristicEvaluator, MctsConfig, MctsTree, MctsV3Config, MctsV3Tree,
+    OnnxNeuralEvaluator, V3OnnxRuntime,
+};
 use augment_core::{
-    Action, ActionTarget, CardActivation, Engine, Event, GamePhase, GameState, GameStatus, Mode,
-    MoveAction, Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
+    Action, ActionTarget, BUNDLED_RULESET_ID, CardActivation, Engine, Event, GamePhase, GameState,
+    GameStatus, Mode, MoveAction, Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 pub const DEFAULT_SEED: u64 = 20_260_807;
 const V2_BASELINE_MODEL_PATH: &str = "models/baseline/augment_net_v2_canonical_baseline.onnx";
+const V3_SMOKE_MODEL_PATH: &str = "artifacts/models/v3-smoke-step500.onnx";
+const V3_SMOKE_METADATA_PATH: &str = "artifacts/models/v3-smoke-step500.metadata.json";
+const RULESET_MANIFEST_PATH: &str = "rulesets/augment_chess_20260807/manifest.json";
+
+#[derive(Clone, Debug)]
+pub struct WebModelConfig {
+    pub model_1: PathBuf,
+    pub model_2: PathBuf,
+    pub model_2_metadata: PathBuf,
+    pub ruleset_manifest: PathBuf,
+}
+
+impl Default for WebModelConfig {
+    fn default() -> Self {
+        Self {
+            model_1: V2_BASELINE_MODEL_PATH.into(),
+            model_2: V3_SMOKE_MODEL_PATH.into(),
+            model_2_metadata: V3_SMOKE_METADATA_PATH.into(),
+            ruleset_manifest: RULESET_MANIFEST_PATH.into(),
+        }
+    }
+}
 
 pub struct GameSession {
     engine: Engine,
     state: GameState,
     seed: u64,
     history: Vec<String>,
-    neural_eval: Option<OnnxNeuralEvaluator>,
+    model_1: Result<OnnxNeuralEvaluator, String>,
+    model_2: Result<V3OnnxRuntime, String>,
 }
 
 impl GameSession {
+    #[cfg(test)]
     pub fn new(seed: u64) -> Result<Self, String> {
+        let missing = PathBuf::from("test-models-are-not-loaded");
+        Self::new_with_models(
+            seed,
+            &WebModelConfig {
+                model_1: missing.join("model-1.onnx"),
+                model_2: missing.join("model-2.onnx"),
+                model_2_metadata: missing.join("model-2.metadata.json"),
+                ruleset_manifest: missing.join("manifest.json"),
+            },
+        )
+    }
+
+    pub fn new_with_models(seed: u64, models: &WebModelConfig) -> Result<Self, String> {
         let engine = Engine::bundled_20260807().map_err(|error| error.to_string())?;
         let transition = engine
             .new_game_transition(Mode::Standard, seed)
             .map_err(|error| error.to_string())?;
-        let neural_eval = OnnxNeuralEvaluator::from_file(V2_BASELINE_MODEL_PATH).ok();
+        let model_1 = OnnxNeuralEvaluator::from_file(&models.model_1)
+            .map_err(|error| format!("1번 모델을 불러오지 못했습니다: {error}"));
+        let model_2 = load_v3_runtime(models)
+            .map_err(|error| format!("2번 모델을 불러오지 못했습니다: {error}"));
         let mut session = Self {
             engine,
             state: transition.state,
             seed,
-            neural_eval,
+            model_1,
+            model_2,
             history: Vec::new(),
         };
         session.record_events(&transition.events);
@@ -58,11 +106,71 @@ impl GameSession {
         Ok(state_view(
             &self.state,
             &self.engine,
-            self.neural_eval.as_ref(),
+            self.model_1.as_ref().ok(),
             self.seed,
             &self.history,
             &legal_actions,
         ))
+    }
+
+    pub fn suggestions(
+        &self,
+        simulations: usize,
+        fingerprint: Option<&str>,
+    ) -> Result<Value, String> {
+        let current = format!("{:016x}", self.state.fingerprint());
+        if fingerprint.is_some_and(|fingerprint| fingerprint != current) {
+            return Err("화면이 오래되었습니다. 최신 상태를 불러온 뒤 다시 시도하세요.".to_owned());
+        }
+        if self.state.status != GameStatus::Ongoing {
+            return Ok(json!({ "fingerprint": current, "suggestions": [] }));
+        }
+        let legal_actions = self
+            .engine
+            .legal_actions(&self.state)
+            .map_err(|error| error.to_string())?;
+        let simulations = simulations.clamp(10, 1_000);
+        let (model_1, model_2) = std::thread::scope(|scope| {
+            let first = scope.spawn(|| {
+                model_1_suggestion(
+                    &self.model_1,
+                    &self.state,
+                    &self.engine,
+                    &legal_actions,
+                    simulations,
+                )
+            });
+            let second = scope.spawn(|| {
+                model_2_suggestion(
+                    &self.model_2,
+                    &self.state,
+                    &self.engine,
+                    &legal_actions,
+                    simulations,
+                )
+            });
+            (
+                first.join().unwrap_or_else(|_| {
+                    suggestion_error(
+                        "model-1",
+                        "1번 모델 · V2 기준",
+                        "탐색 스레드가 중단됐습니다.",
+                    )
+                }),
+                second.join().unwrap_or_else(|_| {
+                    suggestion_error(
+                        "model-2",
+                        "2번 모델 · V3 smoke",
+                        "탐색 스레드가 중단됐습니다.",
+                    )
+                }),
+            )
+        });
+        Ok(json!({
+            "fingerprint": current,
+            "simulations": simulations,
+            "suggestions": [model_1, model_2],
+        }))
     }
 
     pub fn apply_index(
@@ -102,12 +210,12 @@ impl GameSession {
         };
         let mut tree = MctsTree::new(config);
 
-        let search_result = if let Some(ref neural_eval) = self.neural_eval {
-            tree.search(&self.state, &self.engine, neural_eval)
-        } else {
-            let heuristic_eval = HeuristicEvaluator::new();
-            tree.search(&self.state, &self.engine, &heuristic_eval)
-        };
+        let neural_eval = self.model_1.as_ref().map_err(Clone::clone)?;
+        let failures_before = neural_eval.inference_failures();
+        let search_result = tree.search(&self.state, &self.engine, neural_eval);
+        if neural_eval.inference_failures() != failures_before {
+            return Err("1번 모델 ONNX 추론이 실패해 자동 착수를 중단했습니다.".to_owned());
+        }
         if let Some((chosen_action, _, _)) = search_result {
             let transition = self
                 .engine
@@ -951,9 +1059,199 @@ mod tests {
         assert_eq!(card["available"], false);
         assert!(card["actionIndices"].as_array().unwrap().is_empty());
     }
+
+    #[test]
+    fn unavailable_models_are_reported_independently() {
+        let missing = PathBuf::from("does-not-exist");
+        let models = WebModelConfig {
+            model_1: missing.join("model-1.onnx"),
+            model_2: missing.join("model-2.onnx"),
+            model_2_metadata: missing.join("model-2.metadata.json"),
+            ruleset_manifest: missing.join("manifest.json"),
+        };
+        let session = GameSession::new_with_models(DEFAULT_SEED, &models).unwrap();
+        let result = session.suggestions(10, None).unwrap();
+        let suggestions = result["suggestions"].as_array().unwrap();
+        assert_eq!(suggestions.len(), 2);
+        assert_eq!(suggestions[0]["modelId"], "model-1");
+        assert_eq!(suggestions[1]["modelId"], "model-2");
+        assert_eq!(suggestions[0]["status"], "error");
+        assert_eq!(suggestions[1]["status"], "error");
+    }
 }
 
+fn load_v3_runtime(models: &WebModelConfig) -> Result<V3OnnxRuntime, String> {
+    let ruleset_hash = sha256_file(&models.ruleset_manifest)?;
+    V3OnnxRuntime::from_files(
+        &models.model_2,
+        &models.model_2_metadata,
+        BUNDLED_RULESET_ID,
+        &ruleset_hash,
+    )
+    .map_err(|error| error.to_string())
+}
 
+fn sha256_file(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    Ok(format!("{:x}", Sha256::digest(bytes)))
+}
+
+fn model_1_suggestion(
+    evaluator: &Result<OnnxNeuralEvaluator, String>,
+    state: &GameState,
+    engine: &Engine,
+    legal_actions: &[Action],
+    simulations: usize,
+) -> Value {
+    let evaluator = match evaluator {
+        Ok(evaluator) => evaluator,
+        Err(error) => return suggestion_error("model-1", "1번 모델 · V2 기준", error),
+    };
+    let started = Instant::now();
+    let failures_before = evaluator.inference_failures();
+    let mut tree = MctsTree::new(MctsConfig {
+        c_puct: 2.0,
+        num_simulations: simulations,
+        temperature: 0.0,
+    });
+    let Some((action, _, visits)) = tree.search(state, engine, evaluator) else {
+        return suggestion_error("model-1", "1번 모델 · V2 기준", "탐색 결과가 없습니다.");
+    };
+    if evaluator.inference_failures() != failures_before {
+        return suggestion_error(
+            "model-1",
+            "1번 모델 · V2 기준",
+            "ONNX 추론이 실패해 휴리스틱 fallback이 발생했습니다.",
+        );
+    }
+    let Some(action_index) = legal_actions
+        .iter()
+        .position(|candidate| candidate == &action)
+    else {
+        return suggestion_error(
+            "model-1",
+            "1번 모델 · V2 기준",
+            "제안 행동이 현재 합법 행동 목록에 없습니다.",
+        );
+    };
+    let visit_count = visits
+        .iter()
+        .find(|(candidate, _, _)| candidate == &action)
+        .map_or(0, |(_, _, count)| *count);
+    let root_value = tree
+        .last_diagnostics
+        .as_ref()
+        .map_or(0.0, |diagnostics| diagnostics.root_raw_value);
+    suggestion_ready(
+        "model-1",
+        "1번 모델 · V2 기준",
+        state,
+        action_index,
+        &action,
+        visit_count,
+        root_value,
+        simulations,
+        started.elapsed().as_secs_f64() * 1_000.0,
+        None,
+    )
+}
+
+fn model_2_suggestion(
+    evaluator: &Result<V3OnnxRuntime, String>,
+    state: &GameState,
+    engine: &Engine,
+    legal_actions: &[Action],
+    simulations: usize,
+) -> Value {
+    let evaluator = match evaluator {
+        Ok(evaluator) => evaluator,
+        Err(error) => return suggestion_error("model-2", "2번 모델 · V3 smoke", error),
+    };
+    let started = Instant::now();
+    let mut tree = match MctsV3Tree::new(MctsV3Config {
+        num_simulations: simulations,
+        leaf_batch_size: 16,
+        ..MctsV3Config::default()
+    }) {
+        Ok(tree) => tree,
+        Err(error) => {
+            return suggestion_error("model-2", "2번 모델 · V3 smoke", &error.to_string());
+        }
+    };
+    let result = match tree.search(state, engine, evaluator) {
+        Ok(result) => result,
+        Err(error) => {
+            return suggestion_error("model-2", "2번 모델 · V3 smoke", &error.to_string());
+        }
+    };
+    let Some(action_index) = legal_actions
+        .iter()
+        .position(|candidate| candidate == &result.action)
+    else {
+        return suggestion_error(
+            "model-2",
+            "2번 모델 · V3 smoke",
+            "제안 행동이 현재 합법 행동 목록에 없습니다.",
+        );
+    };
+    let visit_count = result
+        .visits
+        .iter()
+        .find(|(candidate, _, _)| candidate == &result.action)
+        .map_or(0, |(_, _, count)| *count);
+    let root_value = tree
+        .last_diagnostics
+        .as_ref()
+        .map_or(0.0, |diagnostics| diagnostics.root_raw_value);
+    suggestion_ready(
+        "model-2",
+        "2번 모델 · V3 smoke",
+        state,
+        action_index,
+        &result.action,
+        visit_count,
+        root_value,
+        simulations,
+        started.elapsed().as_secs_f64() * 1_000.0,
+        Some("일반 체스 policy-only smoke 모델 · value/카드/드래프트 미학습"),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn suggestion_ready(
+    model_id: &str,
+    name: &str,
+    state: &GameState,
+    action_index: usize,
+    action: &Action,
+    visits: u32,
+    root_value: f32,
+    simulations: usize,
+    elapsed_ms: f64,
+    warning: Option<&str>,
+) -> Value {
+    json!({
+        "modelId": model_id,
+        "name": name,
+        "status": "ready",
+        "actionIndex": action_index,
+        "action": action_view(state, action_index, action),
+        "visits": visits,
+        "rootValue": root_value,
+        "simulations": simulations,
+        "elapsedMs": elapsed_ms,
+        "warning": warning,
+    })
+}
+
+fn suggestion_error(model_id: &str, name: &str, error: &str) -> Value {
+    json!({
+        "modelId": model_id,
+        "name": name,
+        "status": "error",
+        "error": error,
+    })
+}
 
 fn compute_eval(
     state: &GameState,

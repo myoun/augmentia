@@ -1,9 +1,18 @@
 const elements = {
   board: document.querySelector("#board"),
   seedInput: document.querySelector("#seedInput"),
-  aiMoveButton: document.querySelector("#aiMoveButton"),
-  autoPlayButton: document.querySelector("#autoPlayButton"),
   newGameButton: document.querySelector("#newGameButton"),
+  model1Card: document.querySelector("#model1Card"),
+  model2Card: document.querySelector("#model2Card"),
+  model1Move: document.querySelector("#model1Move"),
+  model2Move: document.querySelector("#model2Move"),
+  model1Meta: document.querySelector("#model1Meta"),
+  model2Meta: document.querySelector("#model2Meta"),
+  chooseModel1: document.querySelector("#chooseModel1"),
+  chooseModel2: document.querySelector("#chooseModel2"),
+  autoModel1: document.querySelector("#autoModel1"),
+  autoModel2: document.querySelector("#autoModel2"),
+  stopAutoButton: document.querySelector("#stopAutoButton"),
   connectionState: document.querySelector("#connectionState"),
   turnPill: document.querySelector("#turnPill"),
   phaseLabel: document.querySelector("#phaseLabel"),
@@ -42,7 +51,9 @@ let selectedSquare = null;
 let targeting = null;
 let busy = false;
 let toastTimer = null;
-let autoPlay = false;
+let suggestions = null;
+let suggestionRequest = 0;
+let autoModel = null;
 let autoPlayTimer = null;
 
 async function request(path, options = {}) {
@@ -68,14 +79,16 @@ async function loadState() {
     clearInteraction();
     render();
     setConnection("ready", "연결됨");
+    refreshSuggestions();
   } catch (error) {
     setConnection("error", "연결 끊김");
     showToast(error.message);
   }
 }
 
-async function applyAction(index) {
+async function applyAction(index, { preserveAuto = false } = {}) {
   if (busy || !game) return;
+  if (!preserveAuto) setAutoModel(null);
   setBusy(true);
   try {
     game = await request("/api/action", {
@@ -87,14 +100,16 @@ async function applyAction(index) {
   } catch (error) {
     showToast(error.message);
     await loadState();
+    return;
   } finally {
     setBusy(false);
   }
+  refreshSuggestions();
 }
 
 async function newGame() {
   if (busy) return;
-  setAutoPlay(false);
+  setAutoModel(null);
   const seed = Number(elements.seedInput.value.trim());
   if (!Number.isSafeInteger(seed) || seed < 0) {
     showToast("seed는 0 이상의 정수여야 합니다.");
@@ -113,14 +128,17 @@ async function newGame() {
     render();
   } catch (error) {
     showToast(error.message);
+    return;
   } finally {
     setBusy(false);
   }
+  refreshSuggestions();
 }
 
 function render() {
   if (!game) return;
   renderHeader();
+  renderSuggestions();
   renderBoard();
   renderCards("white", elements.whiteCards);
   renderCards("black", elements.blackCards);
@@ -560,7 +578,7 @@ function setBusy(value) {
   busy = value;
   document.body.classList.toggle("busy", value);
   elements.newGameButton.disabled = value;
-  if (elements.aiMoveButton) elements.aiMoveButton.disabled = value;
+  renderSuggestions();
 }
 
 function setConnection(state, label) {
@@ -575,92 +593,132 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("visible"), 4200);
 }
 
-async function botMove() {
-  if (busy || !game || game.status.kind !== "ongoing") return;
-  setBusy(true);
-  try {
-    game = await request("/api/bot-move", {
-      method: "POST",
-      body: JSON.stringify({ sims: 150 }),
-    });
-    clearInteraction();
-    render();
-    return game;
-  } catch (error) {
-    showToast(error.message);
-    await loadState();
-    throw error;
-  } finally {
-    setBusy(false);
-  }
-}
-
-function setAutoPlay(active) {
-  autoPlay = active;
-  if (elements.autoPlayButton) {
-    elements.autoPlayButton.classList.toggle("active", active);
-    const icon = elements.autoPlayButton.querySelector(".auto-play-icon");
-    const label = elements.autoPlayButton.querySelector(".auto-play-label");
-    if (icon) icon.textContent = active ? "⏸" : "▶";
-    if (label) label.textContent = active ? "중지" : "자동 진행";
-  }
-  if (active) {
-    runAutoPlayLoop();
-  } else {
-    if (autoPlayTimer) {
-      clearTimeout(autoPlayTimer);
-      autoPlayTimer = null;
-    }
-  }
-}
-
-function toggleAutoPlay() {
-  if (autoPlay) {
-    setAutoPlay(false);
-  } else {
-    if (!game || game.status.kind !== "ongoing") {
-      showToast("진행 중인 게임이 없습니다.");
-      return;
-    }
-    setAutoPlay(true);
-  }
-}
-
-async function runAutoPlayLoop() {
-  if (!autoPlay) return;
+async function refreshSuggestions() {
+  const fingerprint = game?.fingerprint;
+  const requestId = ++suggestionRequest;
+  suggestions = null;
+  renderSuggestions();
   if (!game || game.status.kind !== "ongoing") {
-    setAutoPlay(false);
-    if (game && game.status.kind !== "ongoing") {
-      showToast(`게임 종료: ${game.status.label}`);
-    }
+    setAutoModel(null);
     return;
   }
-  if (busy) {
-    autoPlayTimer = setTimeout(runAutoPlayLoop, 300);
-    return;
-  }
-
   try {
-    await botMove();
-  } catch (err) {
-    setAutoPlay(false);
+    const result = await request("/api/suggestions", {
+      method: "POST",
+      body: JSON.stringify({ sims: 150, fingerprint }),
+    });
+    if (requestId !== suggestionRequest || game?.fingerprint !== result.fingerprint) return;
+    suggestions = result;
+    renderSuggestions();
+    scheduleAutoMove();
+  } catch (error) {
+    if (requestId !== suggestionRequest) return;
+    showToast(error.message);
+    if (autoModel) setAutoModel(null);
+  }
+}
+
+function renderSuggestions() {
+  if (!elements.model1Card) return;
+  renderSuggestion("model-1", {
+    card: elements.model1Card,
+    move: elements.model1Move,
+    meta: elements.model1Meta,
+    choose: elements.chooseModel1,
+    auto: elements.autoModel1,
+  });
+  renderSuggestion("model-2", {
+    card: elements.model2Card,
+    move: elements.model2Move,
+    meta: elements.model2Meta,
+    choose: elements.chooseModel2,
+    auto: elements.autoModel2,
+  });
+  elements.stopAutoButton.classList.toggle("hidden", !autoModel);
+}
+
+function renderSuggestion(modelId, view) {
+  const suggestion = currentSuggestion(modelId);
+  const ongoing = game?.status.kind === "ongoing";
+  const ready = suggestion?.status === "ready";
+  if (!ongoing) {
+    view.card.dataset.state = "idle";
+    view.move.textContent = game ? game.status.label : "게임 대기";
+    view.meta.textContent = "진행 중인 게임이 없습니다.";
+  } else if (!suggestion) {
+    view.card.dataset.state = "loading";
+    view.move.textContent = "계산 중…";
+    view.meta.textContent = "두 모델이 같은 상태에서 동시에 탐색 중입니다.";
+  } else if (ready) {
+    view.card.dataset.state = "ready";
+    view.move.textContent = suggestion.action.label;
+    const details = [
+      `방문 ${suggestion.visits}`,
+      `${suggestion.elapsedMs.toFixed(0)} ms`,
+    ];
+    if (suggestion.warning) details.push(suggestion.warning);
+    view.meta.textContent = details.join(" · ");
+  } else {
+    view.card.dataset.state = "error";
+    view.move.textContent = "제안 불가";
+    view.meta.textContent = suggestion.error || "모델 탐색에 실패했습니다.";
+  }
+  view.choose.disabled = busy || !ready;
+  view.auto.disabled = busy || !ready;
+  view.auto.classList.toggle("active", autoModel === modelId);
+}
+
+function currentSuggestion(modelId) {
+  if (!suggestions || suggestions.fingerprint !== game?.fingerprint) return null;
+  return suggestions.suggestions.find((item) => item.modelId === modelId) || null;
+}
+
+async function chooseSuggestion(modelId, preserveAuto = false) {
+  const suggestion = currentSuggestion(modelId);
+  if (busy || suggestion?.status !== "ready") return;
+  await applyAction(suggestion.actionIndex, { preserveAuto });
+}
+
+function setAutoModel(modelId) {
+  if (autoPlayTimer) {
+    clearTimeout(autoPlayTimer);
+    autoPlayTimer = null;
+  }
+  autoModel = modelId;
+  renderSuggestions();
+  if (modelId) scheduleAutoMove();
+}
+
+function startAutoModel(modelId) {
+  if (!game || game.status.kind !== "ongoing") {
+    showToast("진행 중인 게임이 없습니다.");
     return;
   }
+  setAutoModel(modelId);
+}
 
-  if (autoPlay && game && game.status.kind === "ongoing") {
-    autoPlayTimer = setTimeout(runAutoPlayLoop, 500);
-  } else if (autoPlay) {
-    setAutoPlay(false);
-    showToast(`게임 종료: ${game?.status.label || "완료"}`);
+function scheduleAutoMove() {
+  if (autoPlayTimer) clearTimeout(autoPlayTimer);
+  autoPlayTimer = null;
+  if (!autoModel || busy || !game || game.status.kind !== "ongoing") return;
+  const suggestion = currentSuggestion(autoModel);
+  if (!suggestion) return;
+  if (suggestion.status !== "ready") {
+    showToast(`${suggestion.name} 제안을 만들 수 없어 자동 진행을 중지했습니다.`);
+    setAutoModel(null);
+    return;
   }
+  autoPlayTimer = setTimeout(() => {
+    autoPlayTimer = null;
+    chooseSuggestion(autoModel, true);
+  }, 650);
 }
 
-if (elements.aiMoveButton) {
-  elements.aiMoveButton.addEventListener("click", botMove);
-}
-if (elements.autoPlayButton) {
-  elements.autoPlayButton.addEventListener("click", toggleAutoPlay);
-}
+elements.chooseModel1.addEventListener("click", () => chooseSuggestion("model-1"));
+elements.chooseModel2.addEventListener("click", () => chooseSuggestion("model-2"));
+elements.autoModel1.addEventListener("click", () => startAutoModel("model-1"));
+elements.autoModel2.addEventListener("click", () => startAutoModel("model-2"));
+elements.stopAutoButton.addEventListener("click", () => setAutoModel(null));
 elements.newGameButton.addEventListener("click", newGame);
 elements.cancelSelection.addEventListener("click", () => {
   clearInteraction();

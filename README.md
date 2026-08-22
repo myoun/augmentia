@@ -24,6 +24,33 @@ cargo run -p augment-web
 드래프트와 확률 결과를 다시 재현할 수 있고, `--port 9000`으로 포트를 바꾸거나
 `--no-open`으로 브라우저 자동 열기를 끌 수 있습니다.
 
+웹은 매 상태에서 1번 V2 기준 모델과 2번 V3 모델을 같은 fingerprint·simulation 수로 병렬
+탐색해 제안 하나씩을 나란히 보여줍니다. 어느 제안이든 사용자가 선택할 수 있고,
+`1번 모델 자동 진행` 또는 `2번 모델 자동 진행`을 누르면 선택한 모델이 백·흑 양쪽을 계속
+둡니다. 자동 진행 중에도 두 제안은 매 상태마다 함께 갱신됩니다. V2 ONNX 추론이 실패하면
+휴리스틱으로 조용히 대체하지 않고 해당 제안을 오류로 표시합니다.
+
+현재 smoke checkpoint를 기본 2번 모델 artifact로 내보내려면 다음을 실행합니다. export는
+pre-tensor provenance를 유지하고, Rust가 생성한 현재 ruleset runtime vocabulary 계약에서
+학습 vocabulary에 없던 token을 기존 index 뒤에 zero-initialized row로 추가합니다. 따라서 일반 체스에서 학습한 embedding은
+그대로 유지하면서 드래프트·카드 상태도 fail-closed V3 런타임에 입력할 수 있습니다.
+상황에 따라 달라지는 선택지 표시 문구는 AI vocabulary에서 제외하고 안정된 handler·option
+식별자로 바꾸므로, 새로운 문구가 등장해도 `unknown token` 오류를 만들지 않습니다.
+
+```powershell
+cd train
+uv run python -m v3.onnx_export `
+  ..\runs\v3-smoke\lichess-board-pretrain-b1024-v1\checkpoints\step-000000000500.pt `
+  ..\artifacts\models\v3-smoke-step500.onnx
+cd ..
+cargo run -p augment-web
+```
+
+기본 경로가 아닌 artifact를 비교하려면 `--model-1`, `--model-2`,
+`--model-2-metadata`, `--ruleset-manifest`를 지정합니다. 현재 V3 smoke는 일반 체스
+policy-only 모델이므로 이 화면은 통합·행동 비교용이며 카드 실력이나 value 품질을 증명하지
+않습니다.
+
 터미널 UI가 필요하면 `cargo run -p augment-cli`를 사용할 수 있습니다. 드래프트·카드·후속
 선택은 화면에 표시된 번호로 고르고, 보드 이동은 `e2e4` 또는 `e2-e4`로 입력합니다.
 전체 공개 카드 192장의 메타데이터는 정규화되어

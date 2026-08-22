@@ -11,9 +11,13 @@ import numpy as np
 import torch
 import zstandard
 
-from v3.model import V3ModelConfig
+from v3.model import AugmentNetV3, V3ModelConfig
 from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
-from v3.onnx_export import assert_onnx_equivalent, export_onnx_v3
+from v3.onnx_export import (
+    assert_onnx_equivalent,
+    export_onnx_v3,
+    extend_model_for_runtime_vocabulary,
+)
 from v3.onnx_runtime import OnnxRuntimeV3
 from v3.pretensor import PretensorizedReplayDatasetV3, build_pretensor_artifact
 from v3.replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
@@ -358,6 +362,23 @@ class PipelineV3Tests(unittest.TestCase):
             metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
             with self.assertRaisesRegex(SchemaError, "observation schema"):
                 OnnxRuntimeV3(model_path, metadata_path)
+
+    def test_runtime_vocabulary_extension_preserves_trained_rows(self) -> None:
+        vocabulary = V3Vocabulary(("<none>", "standard"))
+        model = AugmentNetV3(_model_config(vocabulary))
+        original = model.text_embedding.weight.detach().clone()
+        extended, extended_vocabulary, appended = extend_model_for_runtime_vocabulary(
+            model, vocabulary
+        )
+        self.assertTrue(appended)
+        self.assertEqual(extended_vocabulary.tokens[:2], vocabulary.tokens)
+        self.assertIn("square", appended)
+        self.assertIn("square", extended_vocabulary.tokens)
+        torch.testing.assert_close(extended.text_embedding.weight[:2], original)
+        torch.testing.assert_close(
+            extended.text_embedding.weight[2:],
+            torch.zeros_like(extended.text_embedding.weight[2:]),
+        )
 
 
 def _model_config(vocabulary: V3Vocabulary) -> V3ModelConfig:

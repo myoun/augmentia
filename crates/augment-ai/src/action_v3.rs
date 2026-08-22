@@ -1,4 +1,4 @@
-use crate::encoder_v3::LocalIds;
+use crate::encoder_v3::{LocalIds, model_choice_option_token};
 use crate::observation_v3::PIECE_KIND_VOCABULARY;
 use augment_core::{
     Action, ActionTarget, Engine, GamePhase, GameState, MoveAction, PieceAbility, PieceKind,
@@ -269,7 +269,7 @@ pub fn encode_action_v3(
                     actual: *choice_id,
                 });
             }
-            let option = choice.options.get(usize::from(*option_index)).ok_or(
+            choice.options.get(usize::from(*option_index)).ok_or(
                 ActionV3Error::OptionIndexOutOfRange {
                     index: *option_index,
                     len: choice.options.len(),
@@ -279,7 +279,7 @@ pub fn encode_action_v3(
                 choice_slot: 0,
                 handler_id: choice.handler_id.clone(),
                 option_index: *option_index,
-                option: option.clone(),
+                option: model_choice_option_token(&choice.handler_id, usize::from(*option_index)),
             })
         }
     }
@@ -398,13 +398,15 @@ pub fn decode_action_v3(
                     expected: "awaiting_choice",
                 });
             };
-            let current = choice.options.get(usize::from(*option_index)).ok_or(
+            choice.options.get(usize::from(*option_index)).ok_or(
                 ActionV3Error::OptionIndexOutOfRange {
                     index: *option_index,
                     len: choice.options.len(),
                 },
             )?;
-            if choice.handler_id != *handler_id || current != option {
+            if choice.handler_id != *handler_id
+                || model_choice_option_token(handler_id, usize::from(*option_index)) != *option
+            {
                 return Err(ActionV3Error::StaleChoiceDescriptor);
             }
             Ok(Action::ResolveChoice {
@@ -731,6 +733,11 @@ mod tests {
             option_index: 1,
         };
         let descriptor = encode_action_v3(&choice_action, &choice).unwrap();
+        assert!(matches!(
+            &descriptor,
+            ActionDescriptorV3::ResolveChoice { option, .. }
+                if option == "choice:test-choice:1"
+        ));
         assert_eq!(
             decode_action_v3(&descriptor, &choice).unwrap(),
             choice_action

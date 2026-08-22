@@ -1,10 +1,11 @@
 mod app;
 
-use app::{DEFAULT_SEED, GameSession};
+use app::{DEFAULT_SEED, GameSession, WebModelConfig};
 use serde_json::{Value, json};
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
 use std::time::Duration;
 
 const INDEX_HTML: &str = include_str!("static/index.html");
@@ -12,11 +13,12 @@ const APP_JS: &str = include_str!("static/app.js");
 const STYLES_CSS: &str = include_str!("static/styles.css");
 const MAX_REQUEST_BYTES: usize = 1_048_576;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Options {
     port: u16,
     seed: u64,
     open_browser: bool,
+    models: WebModelConfig,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -24,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind(("127.0.0.1", options.port))?;
     let address = listener.local_addr()?;
     let url = format!("http://{address}");
-    let mut session = GameSession::new(options.seed)?;
+    let mut session = GameSession::new_with_models(options.seed, &options.models)?;
 
     println!("증강체스 웹 UI");
     println!("주소: {url}");
@@ -60,6 +62,7 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Options, Box<dyn
         port: 7878,
         seed: DEFAULT_SEED,
         open_browser: true,
+        models: WebModelConfig::default(),
     };
     while let Some(argument) = args.next() {
         match argument.as_str() {
@@ -76,9 +79,31 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Options, Box<dyn
                     .parse()?;
             }
             "--no-open" => options.open_browser = false,
+            "--model-1" => {
+                options.models.model_1 =
+                    PathBuf::from(args.next().ok_or("--model-1 뒤에 ONNX 경로가 필요합니다")?);
+            }
+            "--model-2" => {
+                options.models.model_2 =
+                    PathBuf::from(args.next().ok_or("--model-2 뒤에 ONNX 경로가 필요합니다")?);
+            }
+            "--model-2-metadata" => {
+                options.models.model_2_metadata = PathBuf::from(
+                    args.next()
+                        .ok_or("--model-2-metadata 뒤에 metadata 경로가 필요합니다")?,
+                );
+            }
+            "--ruleset-manifest" => {
+                options.models.ruleset_manifest = PathBuf::from(
+                    args.next()
+                        .ok_or("--ruleset-manifest 뒤에 manifest 경로가 필요합니다")?,
+                );
+            }
             "--help" | "-h" => {
                 println!(
-                    "사용법: cargo run -p augment-web -- [--port 7878] [--seed 정수] [--no-open]"
+                    "사용법: cargo run -p augment-web -- [--port 7878] [--seed 정수] [--no-open] \
+                     [--model-1 V2.onnx] [--model-2 V3.onnx] \
+                     [--model-2-metadata V3.metadata.json] [--ruleset-manifest manifest.json]"
                 );
                 std::process::exit(0);
             }
@@ -137,6 +162,15 @@ fn handle_connection(
             match session.bot_move(sims) {
                 Ok(view) => write_json(stream, 200, &view),
                 Err(error) => write_json(stream, 400, &json!({ "error": error })),
+            }
+        }
+        ("POST", "/api/suggestions") => {
+            let payload = parse_json_body(&request)?;
+            let sims = payload.get("sims").and_then(Value::as_u64).unwrap_or(150) as usize;
+            let fingerprint = payload.get("fingerprint").and_then(Value::as_str);
+            match session.suggestions(sims, fingerprint) {
+                Ok(view) => write_json(stream, 200, &view),
+                Err(error) => write_json(stream, 409, &json!({ "error": error })),
             }
         }
         ("POST", "/api/action") => {

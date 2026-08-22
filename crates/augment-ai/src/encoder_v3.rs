@@ -15,6 +15,85 @@ pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 102;
 pub const OBSERVATION_V3_SPATIAL_SIZE: usize = OBSERVATION_V3_SPATIAL_PLANES * 64;
 pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
 
+/// Exact string tokens that the bundled V3 encoder can emit independently of
+/// card catalog data. Keep this list in Rust, next to the encoder that owns the
+/// semantics, so ONNX export does not infer runtime coverage from a few sample
+/// positions.
+pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 72] = [
+    "age_shared_turns",
+    "anchor",
+    "bishop",
+    "bundles",
+    "by",
+    "card_effect",
+    "cell",
+    "chaos",
+    "choice:middle.trolley:0",
+    "choice:middle.trolley:1",
+    "clock_owner",
+    "count",
+    "draw",
+    "effect",
+    "elapsed_turns",
+    "end",
+    "equal_stars_after_deathmatch",
+    "equal_stars_on_repetition",
+    "expires_in_turns",
+    "file_delta",
+    "finish_turn",
+    "first",
+    "from",
+    "grand",
+    "guardian",
+    "hp",
+    "kind",
+    "king_captured",
+    "lightning",
+    "limit",
+    "lower_stars_after_deathmatch",
+    "lower_stars_on_repetition",
+    "max_hp",
+    "meteor",
+    "middle",
+    "middle.trolley",
+    "moves",
+    "next_in_shared_turns",
+    "no_legal_actions",
+    "nonce",
+    "ongoing",
+    "opening",
+    "origin",
+    "owner",
+    "pawn",
+    "piece",
+    "piece_kind",
+    "pieces",
+    "platform",
+    "player",
+    "promotion",
+    "queen",
+    "rank_delta",
+    "remaining_ply",
+    "remaining_turns",
+    "resume_turn",
+    "roll_in_owner_turns",
+    "rook",
+    "second",
+    "source",
+    "square",
+    "squares",
+    "standard",
+    "starts_in_turns",
+    "to",
+    "trigger_after",
+    "trigger_in_turns",
+    "trigger_player",
+    "triggered_pieces",
+    "used",
+    "value",
+    "won",
+];
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RelativePlayerV3 {
@@ -340,7 +419,9 @@ fn encode_phase(state: &GameState, ids: &mut LocalIds) -> PhaseV3 {
             owner: relative_player(choice.owner, state.turn),
             source_card: ids.card(choice.source_card_instance),
             handler_id: choice.handler_id.clone(),
-            options: choice.options.clone(),
+            options: (0..choice.options.len())
+                .map(|index| model_choice_option_token(&choice.handler_id, index))
+                .collect(),
             continuation: match choice.continuation {
                 ChoiceContinuation::ResumeTurn => "resume_turn",
                 ChoiceContinuation::FinishTurn => "finish_turn",
@@ -348,6 +429,10 @@ fn encode_phase(state: &GameState, ids: &mut LocalIds) -> PhaseV3 {
             .to_owned(),
         },
     }
+}
+
+pub(crate) fn model_choice_option_token(handler_id: &str, option_index: usize) -> String {
+    format!("choice:{handler_id}:{option_index}")
 }
 
 fn encode_global_state(state: &GameState) -> GlobalStateV3 {
@@ -1248,6 +1333,12 @@ fn named(name: &str, value: RuntimeValueV3) -> NamedRuntimeValueV3 {
 }
 
 fn record(fields: Vec<(&str, RuntimeValueV3)>) -> RuntimeValueV3 {
+    for (name, _) in &fields {
+        assert!(
+            OBSERVATION_V3_REQUIRED_TEXT_TOKENS.contains(name),
+            "runtime record field {name:?} is missing from OBSERVATION_V3_REQUIRED_TEXT_TOKENS"
+        );
+    }
     RuntimeValueV3::Record(
         fields
             .into_iter()
@@ -1832,13 +1923,38 @@ fn icbm_value(status: &PendingIcbm, state: &GameState, ids: &mut LocalIds) -> Ru
 mod tests {
     use super::*;
     use crate::observation_v3::PIECE_KIND_VOCABULARY;
-    use augment_core::{BUNDLED_RULESET_ID, Board, CardInstance, Engine, IMPLEMENTED_CARDS, Piece};
+    use augment_core::{
+        BUNDLED_RULESET_ID, Board, CardInstance, Engine, IMPLEMENTED_CARDS, PendingChoice, Piece,
+    };
 
     fn playing_state(board: Board, turn: Player, seed: u64) -> GameState {
         let mut state =
             GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, turn, seed);
         state.phase = GamePhase::Playing;
         state
+    }
+
+    #[test]
+    fn dynamic_choice_labels_are_not_observation_text_tokens() {
+        let mut state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 77);
+        state.phase = GamePhase::AwaitingChoice(PendingChoice {
+            id: 1,
+            owner: Player::White,
+            source_card_instance: 0,
+            handler_id: "middle.trolley".to_owned(),
+            options: vec![
+                "희생: Pawn + Knight".to_owned(),
+                "희생: Bishop".to_owned(),
+            ],
+            continuation: ChoiceContinuation::ResumeTurn,
+        });
+
+        let observation = encode_observation_v3(&state);
+        assert!(matches!(
+            observation.phase,
+            PhaseV3::AwaitingChoice { options, .. }
+                if options == ["choice:middle.trolley:0", "choice:middle.trolley:1"]
+        ));
     }
 
     fn piece_with_captures(owner: Player, kind: PieceKind, id: u32, capture_count: u16) -> Piece {

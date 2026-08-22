@@ -9,3 +9,4 @@ publish = false
 augment-core = { path = "../augment-core" }
 augment-ai = { path = "../augment-ai" }
 serde_json.workspace = true
+sha2.workspace = true

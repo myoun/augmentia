@@ -3,10 +3,19 @@ from __future__ import annotations
 import copy
 import unittest
 
-from v3.schema import SchemaError, load_golden_suite, validate_golden_suite
+from v3.schema import (
+    SchemaError,
+    load_golden_suite,
+    load_runtime_vocabulary,
+    validate_golden_suite,
+)
 
 
 class GoldenV3ParityTests(unittest.TestCase):
+    def test_rust_runtime_vocabulary_covers_structural_record_names(self) -> None:
+        vocabulary = load_runtime_vocabulary()
+        self.assertIn("square", vocabulary["tokens"])
+
     def test_checked_in_rust_fixture_passes_python_validation(self) -> None:
         suite = load_golden_suite()
         self.assertEqual(
@@ -44,6 +53,28 @@ class GoldenV3ParityTests(unittest.TestCase):
         }
         self.assertEqual(promotions, {2, 3, 4, 5})
         self.assertEqual(cases["terminal_draw"]["legal_actions"]["actions"], [])
+
+    def test_choice_display_labels_are_not_model_tokens(self) -> None:
+        suite = load_golden_suite()
+        choice = next(case for case in suite["cases"] if case["name"] == "awaiting_choice")
+        self.assertEqual(
+            choice["observation"]["phase"]["options"],
+            ["choice:trolley:0", "choice:trolley:1"],
+        )
+        action_options = [
+            action["option"]
+            for action in choice["legal_actions"]["actions"]
+            if action["kind"] == "resolve_choice"
+        ]
+        self.assertEqual(action_options, ["choice:trolley:0", "choice:trolley:1"])
+
+        corrupted = copy.deepcopy(suite)
+        corrupted_choice = next(
+            case for case in corrupted["cases"] if case["name"] == "awaiting_choice"
+        )
+        corrupted_choice["observation"]["phase"]["options"][0] = "희생: Pawn + Knight"
+        with self.assertRaisesRegex(SchemaError, "stable token"):
+            validate_golden_suite(corrupted)
 
     def test_shape_drift_is_rejected(self) -> None:
         suite = load_golden_suite()

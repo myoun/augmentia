@@ -254,6 +254,18 @@ h2 {
   background: transparent;
 }
 
+.button.danger {
+  border: 1px solid rgba(231, 121, 114, 0.45);
+  color: #ffaaa4;
+  background: rgba(231, 121, 114, 0.12);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  transform: none !important;
+}
+
 .connection {
   display: flex;
   align-items: center;
@@ -467,6 +479,120 @@ h2 {
 .match-metrics span,
 .match-metrics strong {
   display: block;
+}
+
+.model-compare {
+  padding: 15px;
+}
+
+.model-compare-heading,
+.model-suggestion-title,
+.model-actions {
+  display: flex;
+  align-items: center;
+}
+
+.model-compare-heading {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.model-suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.model-suggestion {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.model-suggestion.model-one[data-state="ready"] {
+  border-color: rgba(217, 184, 105, 0.42);
+  background: rgba(217, 184, 105, 0.055);
+}
+
+.model-suggestion.model-two[data-state="ready"] {
+  border-color: rgba(141, 124, 243, 0.48);
+  background: rgba(141, 124, 243, 0.06);
+}
+
+.model-suggestion[data-state="error"] {
+  border-color: rgba(231, 121, 114, 0.5);
+  background: rgba(231, 121, 114, 0.055);
+}
+
+.model-suggestion-title {
+  gap: 9px;
+}
+
+.model-suggestion-title strong,
+.model-suggestion-title span {
+  display: block;
+}
+
+.model-suggestion-title strong {
+  font-size: 13px;
+}
+
+.model-suggestion-title div > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.model-number {
+  display: grid !important;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 9px;
+  color: #121318;
+  background: var(--gold-bright);
+  font-weight: 900;
+}
+
+.model-two .model-number {
+  color: #fff;
+  background: var(--violet);
+}
+
+.model-move {
+  min-height: 26px;
+  margin-top: 12px;
+  overflow: hidden;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-meta {
+  min-height: 31px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.model-actions {
+  align-items: stretch;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.model-actions .button {
+  flex: 1;
+  min-height: 36px;
+  padding-inline: 9px;
+  font-size: 10px;
 }
 
 .match-metrics span {
@@ -1071,8 +1197,13 @@ h2 {
   }
 
   .decision-grid,
-  .cards-column {
+  .cards-column,
+  .model-suggestion-grid {
     grid-template-columns: 1fr;
+  }
+
+  .model-actions {
+    flex-direction: column;
   }
 
   .board-stage {

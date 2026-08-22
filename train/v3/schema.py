@@ -11,6 +11,7 @@ FIXTURE_SCHEMA_ID = "augmentia.golden.observation-action.v3"
 OBSERVATION_SCHEMA_ID = "augmentia.observation.v3"
 ACTION_SCHEMA_ID = "augmentia.action.v3"
 RULESET_ID = "augment_chess_20260807"
+RUNTIME_VOCABULARY_SCHEMA_ID = "augmentia.runtime-vocabulary.v3"
 SPATIAL_SHAPE = [102, 8, 8]
 SPATIAL_SIZE = 102 * 8 * 8
 GLOBAL_SHAPE = [32]
@@ -49,6 +50,36 @@ class SchemaError(ValueError):
 
 def default_fixture_path() -> Path:
     return Path(__file__).with_name("fixtures") / "observation_action_v3.json"
+
+
+def default_runtime_vocabulary_path() -> Path:
+    return Path(__file__).with_name("fixtures") / "runtime_vocabulary_v3.json"
+
+
+def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
+    vocabulary_path = (
+        Path(path) if path is not None else default_runtime_vocabulary_path()
+    )
+    with vocabulary_path.open("r", encoding="utf-8") as vocabulary_file:
+        payload = json.load(vocabulary_file)
+    vocabulary = _mapping(payload, "runtime_vocabulary")
+    _exact_keys(vocabulary, {"schema_id", "ruleset_id", "tokens"}, "runtime_vocabulary")
+    _equal(
+        vocabulary.get("schema_id"),
+        RUNTIME_VOCABULARY_SCHEMA_ID,
+        "runtime_vocabulary.schema_id",
+    )
+    _equal(vocabulary.get("ruleset_id"), RULESET_ID, "runtime_vocabulary.ruleset_id")
+    tokens = _sequence(vocabulary.get("tokens"), "runtime_vocabulary.tokens")
+    normalized = [
+        _string(token, f"runtime_vocabulary.tokens[{index}]")
+        for index, token in enumerate(tokens)
+    ]
+    if not normalized:
+        raise SchemaError("runtime_vocabulary.tokens must not be empty")
+    if normalized != sorted(set(normalized)):
+        raise SchemaError("runtime_vocabulary.tokens must be sorted and unique")
+    return vocabulary
 
 
 def load_golden_suite(path: str | Path | None = None) -> dict[str, Any]:
@@ -348,9 +379,14 @@ def _validate_descriptor(
             path,
         )
         _equal(descriptor.get("choice_slot"), 0, f"{path}.choice_slot")
-        _string(descriptor.get("handler_id"), f"{path}.handler_id")
-        _unsigned(descriptor.get("option_index"), f"{path}.option_index")
-        _string(descriptor.get("option"), f"{path}.option")
+        handler_id = _string(descriptor.get("handler_id"), f"{path}.handler_id")
+        option_index = _unsigned(descriptor.get("option_index"), f"{path}.option_index")
+        option = _string(descriptor.get("option"), f"{path}.option")
+        expected_option = _model_choice_option_token(handler_id, option_index)
+        if option != expected_option:
+            raise SchemaError(
+                f"{path}.option must be stable token {expected_option!r}, got {option!r}"
+            )
 
 
 def _validate_target(payload: Any, path: str) -> None:
@@ -515,9 +551,15 @@ def _validate_phase(
         _equal(phase.get("choice_slot"), 0, f"{path}.choice_slot")
         _player(phase.get("owner"), f"{path}.owner")
         _slot(phase.get("source_card"), card_slot_count, f"{path}.source_card")
-        _string(phase.get("handler_id"), f"{path}.handler_id")
+        handler_id = _string(phase.get("handler_id"), f"{path}.handler_id")
         for index, option in enumerate(_sequence(phase.get("options"), f"{path}.options")):
-            _string(option, f"{path}.options[{index}]")
+            option = _string(option, f"{path}.options[{index}]")
+            expected_option = _model_choice_option_token(handler_id, index)
+            if option != expected_option:
+                raise SchemaError(
+                    f"{path}.options[{index}] must be stable token "
+                    f"{expected_option!r}, got {option!r}"
+                )
         _continuation(phase.get("continuation"), f"{path}.continuation")
     else:
         raise SchemaError(f"{path}.kind has unknown value {kind!r}")
@@ -528,6 +570,10 @@ def _continuation(payload: Any, path: str) -> str:
     if continuation not in {"resume_turn", "finish_turn"}:
         raise SchemaError(f"{path} has unknown continuation {continuation!r}")
     return continuation
+
+
+def _model_choice_option_token(handler_id: str, option_index: int) -> str:
+    return f"choice:{handler_id}:{option_index}"
 
 
 def _optional_string(payload: Any, path: str) -> str | None:

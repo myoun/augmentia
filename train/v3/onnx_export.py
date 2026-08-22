@@ -7,7 +7,7 @@ import hashlib
 import json
 import os
 import uuid
-from dataclasses import asdict, fields
+from dataclasses import asdict, fields, replace
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -18,8 +18,14 @@ from torch import nn
 
 from .model import AugmentNetV3, V3ModelConfig
 from .mixture import load_dataset_from_identity
-from .replay import DatasetIdentity, collate_examples
-from .schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID
+from .replay import collate_examples
+from .schema import (
+    ACTION_SCHEMA_ID,
+    OBSERVATION_SCHEMA_ID,
+    default_runtime_vocabulary_path,
+    load_golden_suite,
+    load_runtime_vocabulary,
+)
 from .tensorize import V3Batch, V3Vocabulary
 
 MODEL_METADATA_SCHEMA_ID = "augmentia.onnx-model-metadata.v3"
@@ -42,10 +48,11 @@ def export_onnx_v3(
     sample: V3Batch,
     output_path: str | Path,
     vocabulary: V3Vocabulary,
-    dataset: DatasetIdentity,
+    dataset: Any,
     checkpoint_path: str | Path | None = None,
     code_commit: str = "unknown",
     opset: int = 18,
+    vocabulary_extension: dict[str, Any] | None = None,
 ) -> tuple[Path, Path]:
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -77,13 +84,15 @@ def export_onnx_v3(
             str(output), providers=["CPUExecutionProvider"]
         ).get_inputs()
     )
+    dataset_identity = dataset.to_json()
+    ruleset_id, ruleset_manifest_sha256 = _ruleset_identity(dataset_identity)
     metadata = {
         "metadata_schema_id": MODEL_METADATA_SCHEMA_ID,
         "observation_schema_id": OBSERVATION_SCHEMA_ID,
         "action_schema_id": ACTION_SCHEMA_ID,
-        "ruleset_id": dataset.ruleset_id,
-        "ruleset_manifest_sha256": dataset.ruleset_manifest_sha256,
-        "dataset": dataset.to_json(),
+        "ruleset_id": ruleset_id,
+        "ruleset_manifest_sha256": ruleset_manifest_sha256,
+        "dataset": dataset_identity,
         "vocabulary": vocabulary.to_json(),
         "model_config": asdict(model.config),
         "onnx_sha256": _sha256(output),
@@ -99,6 +108,7 @@ def export_onnx_v3(
             for name in exported_inputs
         ],
         "outputs": ["policy_logits", "value"],
+        "vocabulary_extension": vocabulary_extension,
     }
     metadata_path = output.with_suffix(".metadata.json")
     _atomic_json(metadata_path, metadata)
@@ -140,6 +150,34 @@ def load_model_checkpoint(path: str | Path) -> tuple[AugmentNetV3, dict[str, Any
     return model, checkpoint
 
 
+def extend_model_for_runtime_vocabulary(
+    model: AugmentNetV3, vocabulary: V3Vocabulary
+) -> tuple[AugmentNetV3, V3Vocabulary, tuple[str, ...]]:
+    runtime_contract = load_runtime_vocabulary()
+    runtime_vocabulary = V3Vocabulary.from_golden_suite(
+        load_golden_suite(), extra_tokens=runtime_contract["tokens"]
+    )
+    missing = tuple(
+        token for token in runtime_vocabulary.tokens if token not in vocabulary.tokens
+    )
+    if not missing:
+        return model, vocabulary, ()
+    extended_vocabulary = V3Vocabulary((*vocabulary.tokens, *missing))
+    extended_config = replace(
+        model.config, text_vocabulary_size=extended_vocabulary.size
+    )
+    extended_model = AugmentNetV3(extended_config)
+    state = model.state_dict()
+    extended_state = extended_model.state_dict()
+    old_embedding = state["text_embedding.weight"]
+    extended_embedding = torch.zeros_like(extended_state["text_embedding.weight"])
+    extended_embedding[: old_embedding.shape[0]].copy_(old_embedding)
+    extended_state.update(state)
+    extended_state["text_embedding.weight"] = extended_embedding
+    extended_model.load_state_dict(extended_state)
+    return extended_model, extended_vocabulary, missing
+
+
 def _dynamic_axes(sample: V3Batch) -> dict[str, dict[int, str]]:
     result: dict[str, dict[int, str]] = {}
     axis_names = {
@@ -175,6 +213,20 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _ruleset_identity(dataset: dict[str, Any]) -> tuple[str, str]:
+    source = dataset
+    while source.get("identity_kind") == "pretensorized_v3":
+        nested = source.get("source")
+        if not isinstance(nested, dict):
+            raise ValueError("pre-tensor dataset identity has no source provenance")
+        source = nested
+    ruleset_id = source.get("ruleset_id")
+    ruleset_hash = source.get("ruleset_manifest_sha256")
+    if not isinstance(ruleset_id, str) or not isinstance(ruleset_hash, str):
+        raise ValueError("dataset identity has no ruleset provenance")
+    return ruleset_id, ruleset_hash
+
+
 def _fsync(path: Path) -> None:
     with path.open("r+b") as handle:
         os.fsync(handle.fileno())
@@ -197,11 +249,19 @@ def main() -> None:
     model, checkpoint = load_model_checkpoint(args.checkpoint)
     identity = checkpoint["run_identity"]
     vocabulary = V3Vocabulary.from_json(identity["vocabulary"])
+    model, vocabulary, appended_tokens = extend_model_for_runtime_vocabulary(
+        model, vocabulary
+    )
+    runtime_contract = load_runtime_vocabulary()
     replay = load_dataset_from_identity(identity["dataset"])
     dataset = replay.identity
-    sample = collate_examples(
-        [replay[index] for index in range(min(2, len(replay)))], vocabulary
-    ).inputs
+    sample_indices = list(range(min(2, len(replay))))
+    if hasattr(replay, "collate_indices"):
+        sample = replay.collate_indices(sample_indices).inputs
+    else:
+        sample = collate_examples(
+            [replay[index] for index in sample_indices], vocabulary
+        ).inputs
     output, metadata = export_onnx_v3(
         model,
         sample,
@@ -210,6 +270,14 @@ def main() -> None:
         dataset,
         args.checkpoint,
         checkpoint.get("code_commit", "unknown"),
+        vocabulary_extension={
+            "kind": "append_zero_initialized_runtime_tokens",
+            "base_size": len(identity["vocabulary"]["tokens"]),
+            "appended_tokens": list(appended_tokens),
+            "contract_schema_id": runtime_contract["schema_id"],
+            "contract_ruleset_id": runtime_contract["ruleset_id"],
+            "contract_sha256": _sha256(default_runtime_vocabulary_path()),
+        },
     )
     print(
         json.dumps(

@@ -1,6 +1,6 @@
 use augment_ai::{
-    ACTION_V3_SCHEMA_ID, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID, ObservationV3,
-    encode_observation_v3,
+    ACTION_V3_SCHEMA_ID, LegalActionSetV3, OBSERVATION_V3_REQUIRED_TEXT_TOKENS,
+    OBSERVATION_V3_SCHEMA_ID, ObservationV3, encode_observation_v3,
 };
 use augment_core::{
     BUNDLED_RULESET_ID, Board, CardInstance, ChoiceContinuation, DeathmatchState, DelayedHazard,
@@ -12,7 +12,9 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 const GOLDEN_FIXTURE_SCHEMA_ID: &str = "augmentia.golden.observation-action.v3";
+const RUNTIME_VOCABULARY_SCHEMA_ID: &str = "augmentia.runtime-vocabulary.v3";
 const DEFAULT_FIXTURE_PATH: &str = "train/v3/fixtures/observation_action_v3.json";
+const DEFAULT_VOCABULARY_PATH: &str = "train/v3/fixtures/runtime_vocabulary_v3.json";
 
 #[derive(Debug, Serialize)]
 struct GoldenSuiteV3 {
@@ -24,6 +26,13 @@ struct GoldenSuiteV3 {
 }
 
 #[derive(Debug, Serialize)]
+struct RuntimeVocabularyV3 {
+    schema_id: &'static str,
+    ruleset_id: &'static str,
+    tokens: Vec<&'static str>,
+}
+
+#[derive(Debug, Serialize)]
 struct GoldenCaseV3 {
     name: &'static str,
     observation: ObservationV3,
@@ -31,23 +40,34 @@ struct GoldenCaseV3 {
 }
 
 fn main() {
-    let output = output_path(std::env::args().skip(1).collect());
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    let output = output_path(&args, "--out", DEFAULT_FIXTURE_PATH);
+    let vocabulary_output = output_path(&args, "--vocabulary-out", DEFAULT_VOCABULARY_PATH);
     let rendered = render_suite();
     if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).expect("create V3 fixture directory");
     }
     std::fs::write(&output, format!("{rendered}\n")).expect("write V3 golden fixture");
+    if let Some(parent) = vocabulary_output.parent() {
+        std::fs::create_dir_all(parent).expect("create V3 vocabulary fixture directory");
+    }
+    std::fs::write(
+        &vocabulary_output,
+        format!("{}\n", render_runtime_vocabulary()),
+    )
+    .expect("write V3 runtime vocabulary fixture");
     println!("wrote {}", output.display());
+    println!("wrote {}", vocabulary_output.display());
 }
 
-fn output_path(args: Vec<String>) -> PathBuf {
-    if let Some(index) = args.iter().position(|arg| arg == "--out") {
+fn output_path(args: &[String], flag: &str, default: &str) -> PathBuf {
+    if let Some(index) = args.iter().position(|arg| arg == flag) {
         return args
             .get(index + 1)
             .map(PathBuf::from)
-            .expect("--out requires a path");
+            .unwrap_or_else(|| panic!("{flag} requires a path"));
     }
-    repository_root().join(DEFAULT_FIXTURE_PATH)
+    repository_root().join(default)
 }
 
 fn repository_root() -> PathBuf {
@@ -59,6 +79,22 @@ fn repository_root() -> PathBuf {
 
 fn render_suite() -> String {
     serde_json::to_string(&build_suite()).expect("serialize V3 golden fixture")
+}
+
+fn render_runtime_vocabulary() -> String {
+    serde_json::to_string(&build_runtime_vocabulary())
+        .expect("serialize V3 runtime vocabulary fixture")
+}
+
+fn build_runtime_vocabulary() -> RuntimeVocabularyV3 {
+    let mut tokens = OBSERVATION_V3_REQUIRED_TEXT_TOKENS.to_vec();
+    tokens.sort_unstable();
+    tokens.dedup();
+    RuntimeVocabularyV3 {
+        schema_id: RUNTIME_VOCABULARY_SCHEMA_ID,
+        ruleset_id: BUNDLED_RULESET_ID,
+        tokens,
+    }
 }
 
 fn build_suite() -> GoldenSuiteV3 {
@@ -261,10 +297,16 @@ mod tests {
 
     const CHECKED_IN: &str =
         include_str!("../../../../train/v3/fixtures/observation_action_v3.json");
+    const CHECKED_IN_RUNTIME_VOCABULARY: &str =
+        include_str!("../../../../train/v3/fixtures/runtime_vocabulary_v3.json");
 
     #[test]
     fn checked_in_v3_fixture_matches_the_rust_encoder() {
         assert_eq!(CHECKED_IN.trim_end(), render_suite());
+        assert_eq!(
+            CHECKED_IN_RUNTIME_VOCABULARY.trim_end(),
+            render_runtime_vocabulary()
+        );
     }
 
     #[test]

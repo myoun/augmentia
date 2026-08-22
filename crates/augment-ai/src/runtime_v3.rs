@@ -1,6 +1,7 @@
 use crate::{
     ACTION_V3_SCHEMA_ID, ActionDescriptorV3, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID,
-    ObservationV3, RuntimeValueV3, encode_observation_v3,
+    OBSERVATION_V3_REQUIRED_TEXT_TOKENS, ObservationV3, RuntimeValueV3,
+    encode_observation_v3,
 };
 use augment_core::{Action, Engine, GameState};
 use ort::session::{Session, SessionInputValue};
@@ -130,6 +131,7 @@ impl V3OnnxRuntime {
             expected_ruleset_manifest_sha256,
         )?;
         let vocabulary = VocabularyV3::from_artifact(&metadata.vocabulary)?;
+        validate_required_runtime_vocabulary(&vocabulary)?;
         let session = Session::builder()
             .map_err(|error| V3RuntimeError::Inference(error.to_string()))?
             .with_intra_threads(1)
@@ -234,6 +236,23 @@ impl V3OnnxRuntime {
         }
         Ok(evaluations)
     }
+}
+
+fn validate_required_runtime_vocabulary(
+    vocabulary: &VocabularyV3,
+) -> Result<(), V3RuntimeError> {
+    let missing = OBSERVATION_V3_REQUIRED_TEXT_TOKENS
+        .iter()
+        .filter(|token| !vocabulary.lookup.contains_key(**token))
+        .copied()
+        .collect::<Vec<_>>();
+    if !missing.is_empty() {
+        return metadata(format!(
+            "V3 vocabulary is missing required runtime tokens: {}",
+            missing.join(", ")
+        ));
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug)]
@@ -1108,6 +1127,18 @@ mod tests {
     struct Case {
         observation: ObservationV3,
         legal_actions: LegalActionSetV3,
+    }
+
+    #[test]
+    fn incomplete_runtime_vocabulary_is_rejected_before_inference() {
+        let artifact = VocabularyArtifactV3 {
+            schema_id: "augmentia.model-vocabulary.v3".to_owned(),
+            tokens: vec!["<none>".to_owned(), "opening".to_owned()],
+        };
+        let vocabulary = VocabularyV3::from_artifact(&artifact).unwrap();
+        let error = validate_required_runtime_vocabulary(&vocabulary).unwrap_err();
+        assert!(error.to_string().contains("middle"));
+        assert!(error.to_string().contains("square"));
     }
 
     #[test]

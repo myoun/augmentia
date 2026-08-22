@@ -24,11 +24,6 @@
           <span>SEED</span>
           <input id="seedInput" inputmode="numeric" value="20260807" aria-label="게임 seed" />
         </label>
-        <button id="aiMoveButton" class="button primary" type="button">AI 착수</button>
-        <button id="autoPlayButton" class="button auto-play" type="button">
-          <span class="auto-play-icon">▶</span>
-          <span class="auto-play-label">자동 진행</span>
-        </button>
         <button id="newGameButton" class="button secondary" type="button">새 게임</button>
         <div id="connectionState" class="connection" data-state="loading">
           <span class="connection-dot"></span>
@@ -77,6 +72,51 @@
             <div><span>턴</span><strong id="turnValue">0 / 0</strong></div>
           </div>
         </div>
+
+        <section class="model-compare panel" aria-live="polite">
+          <div class="model-compare-heading">
+            <div>
+              <span class="eyebrow">MODEL COMPARISON</span>
+              <h2>두 모델의 제안</h2>
+            </div>
+            <button id="stopAutoButton" class="button danger hidden" type="button">
+              자동 진행 중지
+            </button>
+          </div>
+          <div class="model-suggestion-grid">
+            <article id="model1Card" class="model-suggestion model-one" data-state="loading">
+              <div class="model-suggestion-title">
+                <span class="model-number">1</span>
+                <div>
+                  <strong>1번 모델</strong>
+                  <span>V2 기준 모델</span>
+                </div>
+              </div>
+              <div id="model1Move" class="model-move">계산 중…</div>
+              <div id="model1Meta" class="model-meta">같은 상태에서 탐색하고 있습니다.</div>
+              <div class="model-actions">
+                <button id="chooseModel1" class="button primary" type="button" disabled>이 수 선택</button>
+                <button id="autoModel1" class="button auto-play" type="button" disabled>1번 모델 자동 진행</button>
+              </div>
+            </article>
+
+            <article id="model2Card" class="model-suggestion model-two" data-state="loading">
+              <div class="model-suggestion-title">
+                <span class="model-number">2</span>
+                <div>
+                  <strong>2번 모델</strong>
+                  <span>V3 smoke 모델</span>
+                </div>
+              </div>
+              <div id="model2Move" class="model-move">계산 중…</div>
+              <div id="model2Meta" class="model-meta">같은 상태에서 탐색하고 있습니다.</div>
+              <div class="model-actions">
+                <button id="chooseModel2" class="button primary" type="button" disabled>이 수 선택</button>
+                <button id="autoModel2" class="button auto-play" type="button" disabled>2번 모델 자동 진행</button>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <div id="decisionPanel" class="decision-panel panel hidden" aria-live="polite"></div>
 
