@@ -12,6 +12,59 @@ impl Engine {
     ) -> Result<bool, EngineError> {
         let opponent = actor.opponent();
         match definition_id {
+            HYPOCRISY => {
+                let ActionTarget::Squares(squares) = target else {
+                    return Err(EngineError::Invariant(
+                        "hypocrisy requires four squares".to_owned(),
+                    ));
+                };
+                for &square in squares {
+                    let pawn =
+                        Piece::new(opponent, PieceKind::Pawn).with_id(state.allocate_piece_id());
+                    state.board.set(square, Some(pawn));
+                    self.register_spawned_piece(state, square, pawn, true);
+                }
+            }
+            GOMOKU => {
+                state.card_runtime.gomoku[actor.index()] = true;
+                self.resolve_gomoku_victory(state);
+            }
+            REPLAY => {
+                let replay = state.card_runtime.move_replays[actor.index()]
+                    .clone()
+                    .ok_or_else(|| {
+                        EngineError::Invariant("replay has no recorded move".to_owned())
+                    })?;
+                if !replay
+                    .cells
+                    .iter()
+                    .all(|cell| state.board.get(cell.square) == cell.after)
+                    || !replay_piece_runtime_matches(&state.card_runtime, &replay)
+                {
+                    return Err(EngineError::Invariant(
+                        "replay cells no longer match the recorded move".to_owned(),
+                    ));
+                }
+                for cell in &replay.cells {
+                    state.board.set(cell.square, cell.before);
+                }
+                if state.en_passant == replay.en_passant_after {
+                    state.en_passant = replay.en_passant_before;
+                }
+                let mut current_runtime = state.card_runtime.clone();
+                current_runtime.move_replays = [None, None];
+                if current_runtime == *replay.runtime_after {
+                    let other_replay = state.card_runtime.move_replays[opponent.index()].clone();
+                    state.card_runtime = (*replay.runtime_before).clone();
+                    // Playing Replay only consumes the current player's stored move. The other
+                    // player's independent capture remains available, as in normalizeColorValues.
+                    state.card_runtime.move_replays[opponent.index()] = other_replay;
+                } else {
+                    restore_replay_piece_runtime(&mut state.card_runtime, &replay);
+                    restore_replay_color_runtime(&mut state.card_runtime, &replay, actor);
+                }
+                state.card_runtime.move_replays[actor.index()] = None;
+            }
             BABY_BEAR => {
                 let (square, queen) = piece_target(state, target)?;
                 self.remove_piece_for_card(state, square, queen, actor, BABY_BEAR, events);
@@ -58,7 +111,14 @@ impl Engine {
             LAST_RESISTANCE => {
                 for (_, piece) in state.board.iter() {
                     if piece.owner == actor && self.is_royal_piece(state, piece) {
-                        state.card_runtime.shielded_piece_ids.insert(piece.id);
+                        state.card_runtime.protected_piece_ids.insert(piece.id);
+                        state.card_runtime.last_resistance.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner,
+                                remaining_turns: 3,
+                            },
+                        );
                     }
                 }
             }
@@ -98,10 +158,13 @@ impl Engine {
             }
             STAKE => {
                 let (_, piece) = piece_target(state, target)?;
-                state
-                    .card_runtime
-                    .stake_statuses
-                    .insert(piece.id, state.ply.saturating_add(4));
+                state.card_runtime.stake_statuses.insert(
+                    piece.id,
+                    TimedPieceStatus {
+                        by: piece.owner,
+                        remaining_turns: 4,
+                    },
+                );
             }
             UNDERPROMOTION => state.card_runtime.underpromotion[actor.index()] = true,
             VIP => {
@@ -135,7 +198,7 @@ impl Engine {
                 let enemy_king = state
                     .board
                     .iter()
-                    .find(|(_, p)| p.owner == opponent && p.kind == PieceKind::King);
+                    .find(|(_, p)| p.owner == opponent && self.is_royal_piece(state, *p));
                 if let Some((current_square, king)) = enemy_king {
                     state.board.set(current_square, None);
                     if let Some(occupant) = state.board.get(home_square) {
@@ -225,7 +288,7 @@ impl Engine {
                 if let Some((king_sq, _)) = state
                     .board
                     .iter()
-                    .find(|(_, p)| p.owner == opponent && p.kind == PieceKind::King)
+                    .find(|(_, p)| p.owner == opponent && self.is_royal_piece(state, *p))
                 {
                     let min_file = king_sq.file().saturating_sub(1);
                     let max_file = u8::min(7, king_sq.file().saturating_add(1));
@@ -247,7 +310,7 @@ impl Engine {
                 if let Some((_, king)) = state
                     .board
                     .iter()
-                    .find(|(_, p)| p.owner == actor && p.kind == PieceKind::King)
+                    .find(|(_, p)| p.owner == actor && self.is_royal_piece(state, *p))
                 {
                     state.card_runtime.bunkers.insert(king.id, 5);
                 }
@@ -394,6 +457,36 @@ impl Engine {
             })
         };
         match card.definition_id.as_str() {
+            HYPOCRISY => {
+                let squares = (0_u8..64)
+                    .filter_map(Square::from_index)
+                    .filter(|square| {
+                        state.board.get(*square).is_none()
+                            && !state.card_runtime.black_holes.contains(square)
+                    })
+                    .take(4)
+                    .collect::<Vec<_>>();
+                if squares.len() == 4 {
+                    actions.push(Action::UseCard {
+                        instance_id: card.instance_id,
+                        target: ActionTarget::Squares(squares),
+                    });
+                }
+            }
+            GOMOKU => push_none(actions),
+            REPLAY => {
+                if state.card_runtime.move_replays[actor.index()]
+                    .as_ref()
+                    .is_some_and(|replay| {
+                        replay
+                            .cells
+                            .iter()
+                            .all(|cell| state.board.get(cell.square) == cell.after)
+                    })
+                {
+                    push_none(actions);
+                }
+            }
             BABY_BEAR => {
                 for (square, piece) in state.board.iter() {
                     if piece.owner == actor && piece.kind == PieceKind::Queen {
@@ -636,6 +729,10 @@ impl Engine {
             && movement.promotion == Some(PieceKind::Queen)
         {
             state.card_runtime.protected_piece_ids.insert(piece.id);
+            state
+                .card_runtime
+                .coronation_protection
+                .insert(piece.id, state.turns_taken[actor.index()]);
         }
 
         if state.card_runtime.underpromotion[actor.index()]
@@ -661,7 +758,7 @@ impl Engine {
         }
 
         if state.card_runtime.racing_king[actor.index()]
-            && piece.kind == PieceKind::King
+            && self.is_royal_piece(state, piece)
             && movement.to.rank() == if actor == Player::White { 7 } else { 0 }
         {
             state.status = GameStatus::Won {
@@ -671,21 +768,19 @@ impl Engine {
         }
 
         if state.card_runtime.vanish[actor.index()] {
-            for player in [actor, actor.opponent()] {
-                let candidates = state
-                    .board
-                    .iter()
-                    .filter(|(_, p)| p.owner == player && !self.is_royal_piece(state, *p))
-                    .collect::<Vec<_>>();
-                if !candidates.is_empty() {
-                    let (roll, idx) = state.rng_mut().web_choice_index(candidates.len());
-                    events.push(Event::RandomSample {
-                        purpose: "vanish".to_owned(),
-                        roll_53: roll,
-                    });
-                    let (sq, p) = candidates[idx.unwrap_or(0)];
-                    self.remove_piece_for_card(state, sq, p, actor, VANISH, events);
-                }
+            let candidates = state
+                .board
+                .iter()
+                .filter(|(_, p)| p.owner == actor && !self.is_royal_piece(state, *p))
+                .collect::<Vec<_>>();
+            if !candidates.is_empty() {
+                let (roll, idx) = state.rng_mut().web_choice_index(candidates.len());
+                events.push(Event::RandomSample {
+                    purpose: "vanish".to_owned(),
+                    roll_53: roll,
+                });
+                let (sq, p) = candidates[idx.unwrap_or(0)];
+                self.remove_piece_for_card(state, sq, p, actor.opponent(), VANISH, events);
             }
         }
 
@@ -706,7 +801,7 @@ impl Engine {
             if let Some((king_sq, _)) = state
                 .board
                 .iter()
-                .find(|(_, p)| p.owner == actor.opponent() && p.kind == PieceKind::King)
+                .find(|(_, p)| p.owner == actor.opponent() && self.is_royal_piece(state, *p))
             {
                 let mut attackers = 0;
                 for (_, friendly) in state.board.iter().filter(|(_, p)| p.owner == actor) {
@@ -782,9 +877,19 @@ impl Engine {
         let due_stakes = state
             .card_runtime
             .stake_statuses
-            .iter()
-            .filter(|(_, due)| state.ply >= **due)
-            .map(|(id, _)| *id)
+            .iter_mut()
+            .filter_map(|(piece_id, status)| {
+                if state
+                    .board
+                    .find_by_id(*piece_id)
+                    .is_some_and(|(_, piece)| piece.owner == actor)
+                {
+                    status.remaining_turns = status.remaining_turns.saturating_sub(1);
+                    (status.remaining_turns == 0).then_some(*piece_id)
+                } else {
+                    None
+                }
+            })
             .collect::<Vec<_>>();
         for piece_id in due_stakes {
             state.card_runtime.stake_statuses.remove(&piece_id);
@@ -839,5 +944,170 @@ impl Engine {
                 state.card_runtime.ultimatum = None;
             }
         }
+    }
+}
+
+fn replay_piece_ids(replay: &MoveReplayState) -> Vec<u32> {
+    let mut ids = replay
+        .cells
+        .iter()
+        .flat_map(|cell| [cell.before, cell.after])
+        .flatten()
+        .map(|piece| piece.id)
+        .collect::<Vec<_>>();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
+fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayState) -> bool {
+    let after = &*replay.runtime_after;
+    macro_rules! sets_match {
+        ($id:expr; $($field:ident),+ $(,)?) => {
+            $(if current.$field.contains(&$id) != after.$field.contains(&$id) { return false; })+
+        };
+    }
+    macro_rules! maps_match {
+        ($id:expr; $($field:ident),+ $(,)?) => {
+            $(if current.$field.get(&$id) != after.$field.get(&$id) { return false; })+
+        };
+    }
+    for id in replay_piece_ids(replay) {
+        sets_match!(id;
+            moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
+            idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
+            basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
+            ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, potion_basic_training_piece_ids,
+            potion_manner_piece_ids, manner_captured_last_piece_ids,
+            potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
+            stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
+            field_promoted_piece_ids
+        );
+        maps_match!(id;
+            fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
+            herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
+            reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
+            holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
+            sacrifice_protection, last_resistance, coronation_protection,
+            poison_stun_turns, saturation_capture_counts, quantum_positions,
+            witch_trials, baby_bear_grow_turns, bear_retaliations,
+            trickster_move_kinds, stake_statuses, bunkers, spies
+        );
+    }
+    true
+}
+
+fn restore_replay_piece_runtime(current: &mut CardRuntimeState, replay: &MoveReplayState) {
+    let before = &*replay.runtime_before;
+    macro_rules! restore_sets {
+        ($id:expr; $($field:ident),+ $(,)?) => {
+            $(if before.$field.contains(&$id) {
+                current.$field.insert($id);
+            } else {
+                current.$field.remove(&$id);
+            })+
+        };
+    }
+    macro_rules! restore_maps {
+        ($id:expr; $($field:ident),+ $(,)?) => {
+            $(if let Some(value) = before.$field.get(&$id).cloned() {
+                current.$field.insert($id, value);
+            } else {
+                current.$field.remove(&$id);
+            })+
+        };
+    }
+    for id in replay_piece_ids(replay) {
+        restore_sets!(id;
+            moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
+            idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
+            basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
+            ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, potion_basic_training_piece_ids,
+            potion_manner_piece_ids, manner_captured_last_piece_ids,
+            potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
+            stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
+            field_promoted_piece_ids
+        );
+        restore_maps!(id;
+            fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
+            herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
+            reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
+            holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
+            sacrifice_protection, last_resistance, coronation_protection,
+            poison_stun_turns, saturation_capture_counts, quantum_positions,
+            witch_trials, baby_bear_grow_turns, bear_retaliations,
+            trickster_move_kinds, stake_statuses, bunkers, spies
+        );
+    }
+
+    let ids = replay_piece_ids(replay);
+    let touches = |id: u32| ids.binary_search(&id).is_ok();
+    current
+        .siren_exposure
+        .retain(|(siren, target), _| !touches(*siren) && !touches(*target));
+    current.siren_exposure.extend(
+        before
+            .siren_exposure
+            .iter()
+            .filter(|((siren, target), _)| touches(*siren) || touches(*target))
+            .map(|(key, value)| (*key, *value)),
+    );
+    current
+        .feudal_contracts
+        .retain(|entry| !touches(entry.pawn_id) && !touches(entry.guardian_id));
+    current.feudal_contracts.extend(
+        before
+            .feudal_contracts
+            .iter()
+            .filter(|entry| touches(entry.pawn_id) || touches(entry.guardian_id))
+            .copied(),
+    );
+    current
+        .twin_bonds
+        .retain(|entry| !touches(entry.first_id) && !touches(entry.second_id));
+    current.twin_bonds.extend(
+        before
+            .twin_bonds
+            .iter()
+            .filter(|entry| touches(entry.first_id) || touches(entry.second_id))
+            .copied(),
+    );
+}
+
+fn restore_replay_color_runtime(
+    current: &mut CardRuntimeState,
+    replay: &MoveReplayState,
+    actor: Player,
+) {
+    let before = &*replay.runtime_before;
+    let after = &*replay.runtime_after;
+    let index = actor.index();
+    macro_rules! restore_color_fields {
+        ($($field:ident),+ $(,)?) => {
+            $(if current.$field[index] == after.$field[index] {
+                current.$field[index] = before.$field[index];
+            })+
+        };
+    }
+    restore_color_fields!(
+        quantum_pending,
+        switcheroo,
+        moving,
+        moving_consecutive,
+        exhaustion_last_piece,
+        exhaustion_count,
+        zugzwang,
+    );
+    if current.crown_pos == after.crown_pos && current.crown_holder == after.crown_holder {
+        current.crown_pos = before.crown_pos;
+        current.crown_holder = before.crown_holder;
+    }
+    if current.ultimatum == after.ultimatum {
+        current.ultimatum = before.ultimatum;
+    }
+    if current.undead_resurrections == after.undead_resurrections {
+        current.undead_resurrections = before.undead_resurrections.clone();
     }
 }

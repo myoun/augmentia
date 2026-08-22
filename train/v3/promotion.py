@@ -850,7 +850,7 @@ def _validate_config(config: Any, config_path: Path) -> None:
     if set(thresholds["required_action_kinds"]) != REQUIRED_ACTION_KINDS:
         raise ValueError("required actions must cover the complete ActionV3 contract")
     if set(thresholds["required_runtime_field_ids"]) != REQUIRED_RUNTIME_FIELD_IDS:
-        raise ValueError("required runtime fields must cover all 147 V3 fields")
+        raise ValueError("required runtime fields must cover all 169 V3 fields")
     if config["evaluation_mode"] == "promotion":
         _validate_promotion_scale(config)
 

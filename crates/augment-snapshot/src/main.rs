@@ -132,7 +132,7 @@ fn extract_catalog(source: &[u8], ruleset_id: String) -> Result<CatalogSnapshot,
     let raw_cards = split_top_level(strip_collection(definitions, '[', ']')?, ',')
         .into_iter()
         .filter(|item| item.trim_start().starts_with('{'))
-        .map(|object| parse_card(object, &categories))
+        .map(|object| parse_card(object, &categories, javascript))
         .collect::<Result<Vec<_>, _>>()?;
 
     let hidden_by_default_ids: Vec<_> = raw_cards
@@ -165,13 +165,14 @@ fn extract_catalog(source: &[u8], ruleset_id: String) -> Result<CatalogSnapshot,
 fn parse_card(
     object: &str,
     categories: &BTreeMap<String, String>,
+    javascript: &str,
 ) -> Result<CatalogCard, Box<dyn Error>> {
     let properties = parse_object_properties(object)?;
     let id = required_string_property(&properties, "id")?;
     let source_phase = required_string_property(&properties, "phase")?;
     let phase = categories.get(&id).cloned().unwrap_or(source_phase);
     Ok(CatalogCard {
-        name_ko: required_string_property(&properties, "name")?,
+        name_ko: required_static_string_property(&properties, "name", javascript)?,
         half_stars: parse_half_stars(required_property(&properties, "stars")?)?,
         effect: required_string_property(&properties, "effect")?,
         target: properties
@@ -238,6 +239,39 @@ fn required_string_property(
     key: &str,
 ) -> Result<String, Box<dyn Error>> {
     parse_js_string(required_property(properties, key)?)
+}
+
+fn required_static_string_property(
+    properties: &BTreeMap<String, String>,
+    key: &str,
+    javascript: &str,
+) -> Result<String, Box<dyn Error>> {
+    let expression = required_property(properties, key)?;
+    if let Ok(value) = parse_js_string(expression) {
+        return Ok(value);
+    }
+
+    let expression = expression.trim();
+    let Some(function_name) = expression.strip_suffix("()") else {
+        return Err(format!("expected a static JavaScript string, got {expression:?}").into());
+    };
+    if function_name.is_empty()
+        || !function_name.chars().all(|character| {
+            character == '_' || character == '$' || character.is_ascii_alphanumeric()
+        })
+    {
+        return Err(format!("unsupported static string expression {expression:?}").into());
+    }
+
+    let marker = format!("function {function_name}()");
+    let body = assignment_collection(javascript, &marker, '{', '}')?;
+    let body = strip_collection(body, '{', '}')?;
+    let return_index = body
+        .find("return ")
+        .ok_or_else(|| format!("static string function {function_name:?} has no return"))?;
+    let returned = &body[return_index + "return ".len()..];
+    let end = find_top_level(returned, ';').unwrap_or(returned.len());
+    parse_js_string(&returned[..end])
 }
 
 fn parse_half_stars(source: &str) -> Result<Option<u16>, Box<dyn Error>> {
@@ -471,9 +505,12 @@ mod tests {
     use super::*;
 
     const SAMPLE: &str = r#"
+function dynamicRuleName() {
+  return "동적 규칙";
+}
 const CARD_DEFS = [
   { id: "alpha", name: "알파", phase: "OPENING", stars: 2.5, text: "설명", art: "a", effect: "alphaEffect" },
-  { id: "rule-one", name: "규칙", phase: "RULE", stars: null, text: "규칙 설명", art: "r", effect: "ruleEffect", target: "square" },
+  { id: "rule-one", name: dynamicRuleName(), phase: "RULE", stars: null, text: "규칙 설명", art: "r", effect: "ruleEffect", target: "square" },
   { id: "hidden", name: "숨김", phase: "OPENING", stars: 3, text: "숨김", art: "h", effect: "hiddenEffect" }
 ];
 const CARD_CATEGORY_GROUPS = Object.freeze({
@@ -493,6 +530,7 @@ const CARD_CATEGORY_GROUPS = Object.freeze({
         assert_eq!(snapshot.cards[0].id, "alpha");
         assert_eq!(snapshot.cards[0].half_stars, Some(5));
         assert_eq!(snapshot.cards[1].phase, "RULE");
+        assert_eq!(snapshot.cards[1].name_ko, "동적 규칙");
         assert_eq!(snapshot.cards[1].half_stars, None);
         assert_eq!(snapshot.cards[1].target.as_deref(), Some("square"));
     }

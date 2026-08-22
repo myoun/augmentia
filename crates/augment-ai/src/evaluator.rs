@@ -1,11 +1,11 @@
 use super::action_space::{ActionIndex, encode_action};
 use super::quiescence::QuiescenceSearch;
-use super::tensor::{encode_state, GLOBAL_FEATURES_SIZE, SPATIAL_CHANNELS};
+use super::tensor::{GLOBAL_FEATURES_SIZE, SPATIAL_CHANNELS, encode_state};
 use augment_core::{Action, Engine, GameState, GameStatus, PieceKind, Player};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 pub trait Evaluator: Send + Sync {
     /// Evaluates a leaf game state, returning prior probabilities for each legal action and the estimated state value v in [-1.0, 1.0].
@@ -196,7 +196,8 @@ impl Evaluator for OnnxNeuralEvaluator {
 
                             // Tactical Quiescence Stabilization:
                             // Quiescence Search resolves lingering tactical exchanges/pins without harming strategic cards.
-                            let final_val = QuiescenceSearch::tactical_leaf_value(state, engine, nn_val);
+                            let final_val =
+                                QuiescenceSearch::tactical_leaf_value(state, engine, nn_val);
 
                             // Legal-Masked Softmax over raw Logits
                             let mut raw_logits = Vec::with_capacity(legal_actions.len());

@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("증강체스 웹 UI");
     println!("주소: {url}");
     println!(
-        "규칙 스냅숏: augment_chess_20260807 | seed: {}",
+        "규칙 스냅숏: augment_chess_20260818 | seed: {}",
         options.seed
     );
     println!("종료하려면 Ctrl+C를 누르세요.");

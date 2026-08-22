@@ -6,6 +6,7 @@ pub const PLATFORM: &str = "platform";
 pub const SPRINT: &str = "sprint";
 pub const EARLY_PROMOTION: &str = "early-promotion";
 pub const INITIATIVE: &str = "initiative";
+pub const FIELD_PROMOTION: &str = "field-promotion";
 pub const REVELATION: &str = "revelation";
 pub const DISARM: &str = "disarm";
 pub const DICE: &str = "dice";
@@ -14,6 +15,10 @@ pub const REPOSITION: &str = "reposition";
 pub const ASSASSIN: &str = "assassin";
 pub const GRASSHOPPER: &str = "grasshopper";
 pub const JUDGMENT: &str = "judgment";
+pub const CLEANUP: &str = "cleanup";
+pub const FRONTLINE_RESPONSE: &str = "frontline-response";
+pub const RELAY: &str = "relay";
+pub const SUSPICIOUS_POTION: &str = "suspicious-potion";
 pub const CLEANUP_SACRIFICE: &str = "cleanup-sacrifice";
 pub const AMAZON: &str = "amazon";
 pub const CONSTITUTIONAL_MONARCHY: &str = "constitutional-monarchy";
@@ -35,6 +40,13 @@ pub const ORDINATION: &str = "ordination";
 pub const REFORMATION: &str = "reformation";
 pub const STANDARD_BEARER: &str = "standard-bearer";
 pub const WINDMILL: &str = "windmill";
+pub const BERSERKER: &str = "berserker";
+pub const MAGIC_GIRL: &str = "magic-girl";
+pub const SIEGE_RAM: &str = "siege-ram";
+pub const SIREN: &str = "siren";
+pub const SLIME: &str = "slime";
+pub const TRICKSTER: &str = "trickster";
+pub const UNDEAD: &str = "undead";
 pub const APPRENTICE_KNIGHTS: &str = "apprentice-knights";
 pub const BIG_ROOK: &str = "big-rook";
 pub const CALLING_CARD: &str = "calling-card";
@@ -165,6 +177,9 @@ pub const SPY: &str = "spy";
 pub const TRAITOR: &str = "traitor";
 pub const ULTIMATUM: &str = "ultimatum";
 pub const VANISH: &str = "vanish";
+pub const GOMOKU: &str = "gomoku";
+pub const HYPOCRISY: &str = "hypocrisy";
+pub const REPLAY: &str = "replay";
 
 // Part 05 - RULE cards
 pub const ACCELERATION: &str = "acceleration";
@@ -190,6 +205,7 @@ pub const RULE_BOMBS: &str = "rule-bombs";
 pub const SATURATION: &str = "saturation";
 pub const TRANSCENDENCE: &str = "transcendence";
 pub const WINTER_KINGDOM: &str = "winter-kingdom";
+pub const CHESS_N_POW_30: &str = "chess-n-pow-30";
 
 // Part 06 - META cards
 pub const BLACK_BOX: &str = "black-box";
@@ -287,7 +303,7 @@ const fn rule_card(
     }
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -364,7 +380,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "initiative",
         activation: CardActivation::Passive,
         phase: CardPhase::Opening,
-        half_stars: 4,
+        half_stars: 6,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -444,7 +460,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "judgment",
         activation: CardActivation::Active,
         phase: CardPhase::End,
-        half_stars: 4,
+        half_stars: 6,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -624,7 +640,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "ordination",
         activation: CardActivation::Active,
         phase: CardPhase::Piece,
-        half_stars: 8,
+        half_stars: 4,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -744,7 +760,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "fianchetto",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 6,
+        half_stars: 7,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -864,7 +880,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "pawnConversion",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 6,
+        half_stars: 4,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -884,7 +900,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "queensGambit",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 6,
+        half_stars: 8,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -894,7 +910,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         effect: "qxe1",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 4,
+        half_stars: 6,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -1308,7 +1324,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         PREMOVE,
         "프리 무브",
         "freeMove",
-        6,
+        7,
         CardActivation::Active,
         true,
         true,
@@ -1344,7 +1360,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         STEALTH,
         "은신",
         "stealth",
-        7,
+        6,
         CardActivation::Active,
         false,
         false,
@@ -1651,7 +1667,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         LOBSTER,
         "랍스터",
         "lobster",
-        5,
+        6,
         CardActivation::Active,
         false,
         false,
@@ -1809,7 +1825,151 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 192] = [
         false,
         false,
     ),
-    rule_card(ACCELERATION, "가속", "acceleration", 10),
+    ImplementedCardDefinition {
+        id: FIELD_PROMOTION,
+        name_ko: "특진",
+        effect: "fieldPromotion",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    middle_card(
+        CLEANUP,
+        "클린업",
+        "cleanupPieces",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        FRONTLINE_RESPONSE,
+        "불가침",
+        "frontlineResponse",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        RELAY,
+        "교대",
+        "relay",
+        5,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SUSPICIOUS_POTION,
+        "수상한 물약",
+        "suspiciousPotion",
+        6,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    ImplementedCardDefinition {
+        id: BERSERKER,
+        name_ko: "버서커",
+        effect: "berserker",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: MAGIC_GIRL,
+        name_ko: "마법소녀",
+        effect: "magicGirl",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: SIEGE_RAM,
+        name_ko: "공성추",
+        effect: "siegeRam",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 5,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: SIREN,
+        name_ko: "세이렌",
+        effect: "siren",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: SLIME,
+        name_ko: "슬라임",
+        effect: "slime",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: TRICKSTER,
+        name_ko: "트릭스터",
+        effect: "trickster",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: UNDEAD,
+        name_ko: "언데드",
+        effect: "undead",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    end_card(
+        GOMOKU,
+        "오목",
+        "gomoku",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        HYPOCRISY,
+        "위선",
+        "hypocrisy",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        REPLAY,
+        "리플레이",
+        "replayMove",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    rule_card(ACCELERATION, "가속", "acceleration", 2),
+    rule_card(CHESS_N_POW_30, "혼돈의 체스", "chessNPow30", 0),
     rule_card(BLACK_HOLE, "블랙홀", "blackHole", 0),
     rule_card(CAMOUFLAGE_COLOR, "위장색", "camouflageRule", 0),
     rule_card(CHESS_344200, "344200 체스", "chess344200", 4),
@@ -1897,9 +2057,9 @@ mod tests {
     use super::*;
 
     const BUNDLED_IMPLEMENTED_CARDS_JSON: &str =
-        include_str!("../../../rulesets/augment_chess_20260807/cards/implemented.json");
+        include_str!("../../../rulesets/augment_chess_20260818/cards/implemented.json");
     const BUNDLED_CARD_CATALOG_JSON: &str =
-        include_str!("../../../rulesets/augment_chess_20260807/cards/catalog.json");
+        include_str!("../../../rulesets/augment_chess_20260818/cards/catalog.json");
 
     #[test]
     fn implemented_ids_and_effects_are_unique() {
@@ -1926,28 +2086,28 @@ mod tests {
                 "effect": compiled.effect,
                 "engine_primitives": ["board_transaction", "rule_hook"],
                 "source_symbols": [compiled.effect],
-                "compatibility": ["Faithfully implemented according to snapshot ruleset."]
+                "compatibility": ["Behavioral slice implemented; site parity is not yet verified."]
             }));
         }
         let doc = serde_json::json!({
-            "ruleset_id": "augment_chess_20260807",
+            "ruleset_id": "augment_chess_20260818",
             "schema_version": 1,
-            "source_bundle_sha256": "5c03d793d93f9516487d7f5c209a6f09943161a9acf2349af6daf634d2afb834",
+            "source_bundle_sha256": "81db8d047a9e8636af93be309feda6bff0bf70cf9909ab303ce3a71b79a41818",
             "scope": {
                 "status": "behavioral_slice",
                 "implemented_cards": IMPLEMENTED_CARDS.len(),
                 "site_parity_verified_cards": 0,
-                "notes": "Base-piece behavior plus all 192 cards (opening, middle, end, piece, and rule cards) are fully implemented in the engine."
+                "notes": "Base-piece behavior plus all 208 visible cards have an engine behavioral slice. The four previously documented 0818 approximations (Suspicious Potion, Trickster, Replay, and Chess N^30) now follow the source algorithms; exhaustive cross-card site parity remains unverified."
             },
             "compatibility_gaps": [],
             "cards": cards
         });
         let _ = std::fs::write(
-            "../../rulesets/augment_chess_20260807/cards/implemented.json",
+            "../../rulesets/augment_chess_20260818/cards/implemented.json",
             format!("{:#}\n", doc),
         );
         let _ = std::fs::write(
-            "rulesets/augment_chess_20260807/cards/implemented.json",
+            "rulesets/augment_chess_20260818/cards/implemented.json",
             format!("{:#}\n", doc),
         );
 
@@ -1998,13 +2158,13 @@ mod tests {
         let implemented_document: serde_json::Value =
             serde_json::from_str(BUNDLED_IMPLEMENTED_CARDS_JSON).unwrap();
         let cards = document["cards"].as_array().unwrap();
-        assert_eq!(document["raw_card_definitions"].as_u64(), Some(193));
-        assert_eq!(document["visible_card_count"].as_u64(), Some(192));
+        assert_eq!(document["raw_card_definitions"].as_u64(), Some(209));
+        assert_eq!(document["visible_card_count"].as_u64(), Some(208));
         assert_eq!(
             document["source_bundle_sha256"],
             implemented_document["source_bundle_sha256"]
         );
-        assert_eq!(cards.len(), 192);
+        assert_eq!(cards.len(), 208);
         let phase_counts = cards.iter().fold(
             std::collections::BTreeMap::<&str, usize>::new(),
             |mut counts, card| {
@@ -2012,11 +2172,11 @@ mod tests {
                 counts
             },
         );
-        assert_eq!(phase_counts["OPENING"], 30);
-        assert_eq!(phase_counts["MIDDLE"], 71);
-        assert_eq!(phase_counts["PIECE"], 22);
-        assert_eq!(phase_counts["END"], 44);
-        assert_eq!(phase_counts["RULE"], 25);
+        assert_eq!(phase_counts["OPENING"], 31);
+        assert_eq!(phase_counts["MIDDLE"], 75);
+        assert_eq!(phase_counts["PIECE"], 29);
+        assert_eq!(phase_counts["END"], 47);
+        assert_eq!(phase_counts["RULE"], 26);
 
         for compiled in IMPLEMENTED_CARDS {
             let catalog = cards

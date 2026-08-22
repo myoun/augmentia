@@ -60,11 +60,7 @@ fn canonical_piece_channel(kind: PieceKind, is_my_piece: bool) -> usize {
         PieceKind::Lobster | PieceKind::Vip => 14,
         _ => 15,
     };
-    if is_my_piece {
-        base_idx
-    } else {
-        16 + base_idx
-    }
+    if is_my_piece { base_idx } else { 16 + base_idx }
 }
 
 #[inline]
@@ -176,11 +172,29 @@ pub fn encode_state(state: &GameState) -> EncodedState {
         let is_my = piece.owner == current_turn;
         let reach_ch = if is_my { 52 } else { 53 };
 
-        let directions: &[ (i8, i8) ] = match piece.kind {
+        let directions: &[(i8, i8)] = match piece.kind {
             PieceKind::Rook => &[(-1, 0), (1, 0), (0, -1), (0, 1)],
             PieceKind::Bishop => &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
-            PieceKind::Queen => &[(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)],
-            PieceKind::Knight => &[(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)],
+            PieceKind::Queen => &[
+                (-1, 0),
+                (1, 0),
+                (0, -1),
+                (0, 1),
+                (-1, -1),
+                (-1, 1),
+                (1, -1),
+                (1, 1),
+            ],
+            PieceKind::Knight => &[
+                (-2, -1),
+                (-2, 1),
+                (-1, -2),
+                (-1, 2),
+                (1, -2),
+                (1, 2),
+                (2, -1),
+                (2, 1),
+            ],
             _ => &[],
         };
 
@@ -196,7 +210,9 @@ pub fn encode_state(state: &GameState) -> EncodedState {
                 while let Some(next_sq) = cur.offset(df, dr) {
                     encoded.set_spatial(reach_ch, canonical_square(next_sq, current_turn), 0.5);
                     if let Some(p) = state.board.get(next_sq) {
-                        if p.owner != piece.owner && (p.kind == PieceKind::King || p.kind == PieceKind::Queen) {
+                        if p.owner != piece.owner
+                            && (p.kind == PieceKind::King || p.kind == PieceKind::Queen)
+                        {
                             encoded.set_spatial(55, canonical_square(next_sq, current_turn), 1.0);
                             encoded.set_spatial(54, canonical_square(next_sq, current_turn), 1.0);
                         }
@@ -214,7 +230,8 @@ pub fn encode_state(state: &GameState) -> EncodedState {
     encoded.global[2] = (state.quiet_ply as f32 / 50.0).min(1.0);
     let my_idx = current_turn.index();
     let opp_idx = current_turn.opponent().index();
-    encoded.global[3] = (state.half_star_totals[my_idx] as f32 - state.half_star_totals[opp_idx] as f32) / 20.0;
+    encoded.global[3] =
+        (state.half_star_totals[my_idx] as f32 - state.half_star_totals[opp_idx] as f32) / 20.0;
     if let Some(dm) = state.deathmatch {
         encoded.global[4] = 1.0;
         encoded.global[5] = dm.quiet_full_turns as f32 / 10.0;
@@ -229,20 +246,28 @@ pub fn encode_state(state: &GameState) -> EncodedState {
     if let Some(k) = state.board.get(Square::new(4, my_rank).unwrap()) {
         if k.kind == PieceKind::King && !moved.contains(&k.id) {
             if let Some(r) = state.board.get(Square::new(7, my_rank).unwrap()) {
-                if r.kind == PieceKind::Rook && !moved.contains(&r.id) { encoded.global[7] = 1.0; }
+                if r.kind == PieceKind::Rook && !moved.contains(&r.id) {
+                    encoded.global[7] = 1.0;
+                }
             }
             if let Some(r) = state.board.get(Square::new(0, my_rank).unwrap()) {
-                if r.kind == PieceKind::Rook && !moved.contains(&r.id) { encoded.global[8] = 1.0; }
+                if r.kind == PieceKind::Rook && !moved.contains(&r.id) {
+                    encoded.global[8] = 1.0;
+                }
             }
         }
     }
     if let Some(k) = state.board.get(Square::new(4, opp_rank).unwrap()) {
         if k.kind == PieceKind::King && !moved.contains(&k.id) {
             if let Some(r) = state.board.get(Square::new(7, opp_rank).unwrap()) {
-                if r.kind == PieceKind::Rook && !moved.contains(&r.id) { encoded.global[9] = 1.0; }
+                if r.kind == PieceKind::Rook && !moved.contains(&r.id) {
+                    encoded.global[9] = 1.0;
+                }
             }
             if let Some(r) = state.board.get(Square::new(0, opp_rank).unwrap()) {
-                if r.kind == PieceKind::Rook && !moved.contains(&r.id) { encoded.global[10] = 1.0; }
+                if r.kind == PieceKind::Rook && !moved.contains(&r.id) {
+                    encoded.global[10] = 1.0;
+                }
             }
         }
     }
@@ -267,7 +292,11 @@ pub fn encode_state(state: &GameState) -> EncodedState {
 
     // Opponent Hand Cards (indices 18..23)
     let mut opp_c = 0;
-    for card in state.cards.iter().filter(|c| c.owner == current_turn.opponent()) {
+    for card in state
+        .cards
+        .iter()
+        .filter(|c| c.owner == current_turn.opponent())
+    {
         if opp_c < 3 {
             encoded.global[18 + opp_c * 2] = card_id_hash(&card.definition_id);
             encoded.global[19 + opp_c * 2] = card.charges as f32 / 3.0;

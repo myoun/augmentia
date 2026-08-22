@@ -11,7 +11,7 @@
 loader, 장기 학습, checkpoint 재개와 ONNX export는 9단계 모듈로 분리되어 있으며 V2 tensor,
 고정 `ActionIndex`, heuristic 또는 ONNX fallback은 없다. 9단계에서 solver의
 `forced_win_distance_decisions`를 위한 scalar auxiliary head가 추가되어 기본 parameter
-수는 2,841,732개가 되었다.
+수는 2,864,132개가 되었다.
 
 일반 체스 `board_pretraining` record는 shared state encoder와 move action scorer의 policy만
 학습한다. value label이 없으므로 value loss에서 제외하고, 일반 체스 결과를 Augmentia
@@ -19,12 +19,12 @@ value로 사용하지 않는다.
 
 ## 입력 표현
 
-- spatial board: `[batch, 102, 8, 8]` residual CNN;
+- spatial board: `[batch, 116, 8, 8]` residual CNN;
 - global dense state: `[batch, 32]`, exact mode/applied-rule tokens와 local entity counts;
 - piece/card records: exact kind/definition ID, owner, local slot과 수치 feature를 embedding한
   뒤 masked pooling;
 - phase: phase kind, local piece/card reference와 순서가 있는 exact text token;
-- runtime: 147 field의 재귀 값을 field/type/text/value/parent/depth/sibling/local-reference
+- runtime: 169 field의 재귀 값을 field/type/text/value/parent/depth/sibling/local-reference
   node로 평탄화하고 두 번의 parent message passing 뒤 attention pooling;
 - actions: move, ability, card, draft, choice의 typed field와 from/to board context, local
   piece/card reference, exact text ID, 순서가 있는 target square sequence.

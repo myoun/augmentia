@@ -1,17 +1,17 @@
 use crate::observation_v3::{CARD_RUNTIME_SOURCE_FIELDS, OBSERVATION_V3_SCHEMA_ID};
 use augment_core::{
     BribeRevert, CardRuntimeState, ChoiceContinuation, DelayedHazard, DelayedHazardKind,
-    DiceLockStatus, DraftPhase, EmptyLunchboxStatus, FeudalContract, ForcedMoveContinuation,
-    ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus, InitiativeStatus,
-    LargePieceStatus, LogStatus, Mode, MoveAction, NecromancyRevert, PendingIcbm,
-    PendingOtherworld, PendingPanic, PendingPremove, PendingScarecrow, PendingVip, PieceKind,
-    PlatformRuleState, Player, RepositionStatus, RoyalCommandStatus, Square, TimedPieceStatus,
-    TrolleyDilemma, TwinBond, WindmillMode,
+    DiceLockStatus, DraftPhase, EmptyLunchboxStatus, EnPassantState, FeudalContract,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
+    InitiativeStatus, LargePieceStatus, LogStatus, Mode, MoveAction, NecromancyRevert, PendingIcbm,
+    PendingOtherworld, PendingPanic, PendingPremove, PendingScarecrow, PendingVip, Piece,
+    PieceKind, PlatformRuleState, Player, RepositionStatus, RoyalCommandStatus, Square,
+    TimedPieceStatus, TrolleyDilemma, TwinBond, WindmillMode,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 102;
+pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 116;
 pub const OBSERVATION_V3_SPATIAL_SIZE: usize = OBSERVATION_V3_SPATIAL_PLANES * 64;
 pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
 
@@ -524,7 +524,7 @@ fn encode_spatial(pieces: &[BoardPieceV3]) -> Vec<f32> {
     for piece in pieces {
         let owner_offset = match piece.owner {
             RelativePlayerV3::SelfPlayer => 0,
-            RelativePlayerV3::Opponent => 51,
+            RelativePlayerV3::Opponent => 58,
         };
         let plane = owner_offset + usize::from(piece.kind_code - 1);
         spatial[plane * 64 + usize::from(piece.square)] = 1.0;
@@ -835,6 +835,160 @@ fn encode_runtime_fields(
         ("democracy", runtime.democracy),
         ("fast_growth", runtime.fast_growth),
         ("fianchetto", runtime.fianchetto),
+    ] {
+        let index = fields.len();
+        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS[index], name);
+        fields.push(RuntimeFeatureV3 {
+            field_id: (index + 1) as u16,
+            value: bool_pair(values, state.turn),
+        });
+    }
+
+    push!(
+        "field_promotion",
+        bool_pair(runtime.field_promotion, state.turn)
+    );
+    push!(
+        "field_promoted_piece_ids",
+        piece_set(&runtime.field_promoted_piece_ids, ids)
+    );
+    push!(
+        "frontline_response",
+        bool_pair(runtime.frontline_response, state.turn)
+    );
+    push!("relay", bool_pair(runtime.relay, state.turn));
+    push!("gomoku", bool_pair(runtime.gomoku, state.turn));
+    push!(
+        "magic_girl_surge",
+        bool_pair(runtime.magic_girl_surge, state.turn)
+    );
+    push!(
+        "free_move_no_capture",
+        bool_pair(runtime.free_move_no_capture, state.turn)
+    );
+    push!(
+        "siren_exposure",
+        RuntimeValueV3::List(
+            runtime
+                .siren_exposure
+                .iter()
+                .map(|((siren, target), count)| {
+                    record(vec![
+                        ("first", RuntimeValueV3::Piece(ids.piece(*siren))),
+                        ("second", RuntimeValueV3::Piece(ids.piece(*target))),
+                        ("count", RuntimeValueV3::Unsigned(u64::from(*count))),
+                    ])
+                })
+                .collect(),
+        )
+    );
+    push!(
+        "trickster_move_kinds",
+        piece_map(&runtime.trickster_move_kinds, ids, |_, kind, _| {
+            RuntimeValueV3::PieceKind(kind.stable_code())
+        })
+    );
+    push!(
+        "undead_resurrections",
+        RuntimeValueV3::List(
+            runtime
+                .undead_resurrections
+                .iter()
+                .map(|pending| {
+                    record(vec![
+                        (
+                            "piece",
+                            runtime_piece_value(&pending.piece, ids, state.turn),
+                        ),
+                        (
+                            "remaining_ply",
+                            RuntimeValueV3::Unsigned(u64::from(
+                                pending.due_ply.saturating_sub(state.ply),
+                            )),
+                        ),
+                    ])
+                })
+                .collect(),
+        )
+    );
+    push!(
+        "judgment_exiles",
+        RuntimeValueV3::List(
+            runtime
+                .judgment_exiles
+                .iter()
+                .map(|exile| {
+                    record(vec![
+                        ("piece", runtime_piece_value(&exile.piece, ids, state.turn)),
+                        (
+                            "square",
+                            RuntimeValueV3::Square(square_value(exile.square, state.turn)),
+                        ),
+                        (
+                            "resume_turn",
+                            RuntimeValueV3::Text(
+                                draft_phase_name(exile.return_at_draft).to_owned(),
+                            ),
+                        ),
+                    ])
+                })
+                .collect(),
+        )
+    );
+    push!(
+        "move_replays",
+        pair_with(&runtime.move_replays, state.turn, |replay| match replay {
+            None => RuntimeValueV3::None,
+            Some(replay) => record(vec![
+                (
+                    "pieces",
+                    RuntimeValueV3::List(
+                        replay
+                            .cells
+                            .iter()
+                            .map(|cell| {
+                                record(vec![
+                                    (
+                                        "square",
+                                        RuntimeValueV3::Square(square_value(
+                                            cell.square,
+                                            state.turn,
+                                        )),
+                                    ),
+                                    (
+                                        "first",
+                                        optional_runtime_piece_value(
+                                            cell.before.as_ref(),
+                                            ids,
+                                            state.turn,
+                                        ),
+                                    ),
+                                    (
+                                        "second",
+                                        optional_runtime_piece_value(
+                                            cell.after.as_ref(),
+                                            ids,
+                                            state.turn,
+                                        ),
+                                    ),
+                                ])
+                            })
+                            .collect(),
+                    ),
+                ),
+                (
+                    "first",
+                    optional_en_passant_value(replay.en_passant_before.as_ref(), state.turn),
+                ),
+                (
+                    "second",
+                    optional_en_passant_value(replay.en_passant_after.as_ref(), state.turn),
+                ),
+            ]),
+        })
+    );
+
+    for (name, values) in [
         ("iron_monarch", runtime.iron_monarch),
         ("pawn_conversion", runtime.pawn_conversion),
         ("backward_knight", runtime.backward_knight),
@@ -948,6 +1102,55 @@ fn encode_runtime_fields(
         "sacrifice_protection",
         piece_map(&runtime.sacrifice_protection, ids, |_, status, _| {
             timed_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "last_resistance",
+        piece_map(&runtime.last_resistance, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
+        })
+    );
+    push!(
+        "coronation_protection",
+        piece_map(&runtime.coronation_protection, ids, |piece_id, start, _| {
+            let elapsed = state
+                .board
+                .find_by_id(piece_id)
+                .map(|(_, piece)| state.turns_taken[piece.owner.index()].saturating_sub(*start))
+                .unwrap_or(0);
+            RuntimeValueV3::Unsigned(u64::from(elapsed))
+        })
+    );
+    push!(
+        "queens_gambit_protection",
+        piece_set(&runtime.queens_gambit_protection, ids)
+    );
+    push!(
+        "potion_basic_training_piece_ids",
+        piece_set(&runtime.potion_basic_training_piece_ids, ids)
+    );
+    push!(
+        "poison_stun_turns",
+        piece_map(&runtime.poison_stun_turns, ids, |_, remaining, _| {
+            RuntimeValueV3::Unsigned(u64::from(*remaining))
+        })
+    );
+    push!(
+        "potion_manner_piece_ids",
+        piece_set(&runtime.potion_manner_piece_ids, ids)
+    );
+    push!(
+        "manner_captured_last_piece_ids",
+        piece_set(&runtime.manner_captured_last_piece_ids, ids)
+    );
+    push!(
+        "potion_saturation_piece_ids",
+        piece_set(&runtime.potion_saturation_piece_ids, ids)
+    );
+    push!(
+        "saturation_capture_counts",
+        piece_map(&runtime.saturation_capture_counts, ids, |_, count, _| {
+            RuntimeValueV3::Unsigned(u64::from(*count))
         })
     );
     push!("bishop_snipe", bool_pair(runtime.bishop_snipe, state.turn));
@@ -1134,8 +1337,8 @@ fn encode_runtime_fields(
     );
     push!(
         "stake_statuses",
-        piece_map(&runtime.stake_statuses, ids, |_, deadline, _| {
-            RuntimeValueV3::Unsigned(u64::from(deadline.saturating_sub(state.ply)))
+        piece_map(&runtime.stake_statuses, ids, |_, status, _| {
+            timed_piece_value(status, state.turn)
         })
     );
     push!(
@@ -1222,6 +1425,12 @@ fn encode_runtime_fields(
     );
     push!("vanish", bool_pair(runtime.vanish, state.turn));
     push!("acceleration", RuntimeValueV3::Bool(runtime.acceleration));
+    push!(
+        "chaos_no_capture_until_ply",
+        RuntimeValueV3::Unsigned(u64::from(
+            runtime.chaos_no_capture_until_ply.saturating_sub(state.ply),
+        ))
+    );
     push!("black_holes", square_set(&runtime.black_holes, state.turn));
     push!(
         "camouflage_color",
@@ -1442,6 +1651,64 @@ fn optional_square(value: Option<Square>, perspective: Player) -> RuntimeValueV3
     value.map_or(RuntimeValueV3::None, |square| {
         RuntimeValueV3::Square(square_value(square, perspective))
     })
+}
+
+fn runtime_piece_value(piece: &Piece, ids: &mut LocalIds, perspective: Player) -> RuntimeValueV3 {
+    record(vec![
+        ("piece", RuntimeValueV3::Piece(ids.piece(piece.id))),
+        (
+            "owner",
+            RuntimeValueV3::Player(relative_player(piece.owner, perspective)),
+        ),
+        (
+            "piece_kind",
+            RuntimeValueV3::PieceKind(piece.kind.stable_code()),
+        ),
+        (
+            "count",
+            RuntimeValueV3::Unsigned(u64::from(piece.capture_count)),
+        ),
+    ])
+}
+
+fn optional_runtime_piece_value(
+    piece: Option<&Piece>,
+    ids: &mut LocalIds,
+    perspective: Player,
+) -> RuntimeValueV3 {
+    piece.map_or(RuntimeValueV3::None, |piece| {
+        runtime_piece_value(piece, ids, perspective)
+    })
+}
+
+fn optional_en_passant_value(
+    en_passant: Option<&EnPassantState>,
+    perspective: Player,
+) -> RuntimeValueV3 {
+    en_passant.map_or(RuntimeValueV3::None, |en_passant| {
+        record(vec![
+            (
+                "to",
+                RuntimeValueV3::Square(square_value(en_passant.target, perspective)),
+            ),
+            (
+                "from",
+                RuntimeValueV3::Square(square_value(en_passant.captured, perspective)),
+            ),
+            (
+                "owner",
+                RuntimeValueV3::Player(relative_player(en_passant.pawn_owner, perspective)),
+            ),
+        ])
+    })
+}
+
+fn draft_phase_name(phase: DraftPhase) -> &'static str {
+    match phase {
+        DraftPhase::Opening => "opening",
+        DraftPhase::Middle => "middle",
+        DraftPhase::End => "end",
+    }
 }
 
 fn optional_square_pair(value: Option<[Square; 2]>, perspective: Player) -> RuntimeValueV3 {
@@ -1942,10 +2209,7 @@ mod tests {
             owner: Player::White,
             source_card_instance: 0,
             handler_id: "middle.trolley".to_owned(),
-            options: vec![
-                "희생: Pawn + Knight".to_owned(),
-                "희생: Bishop".to_owned(),
-            ],
+            options: vec!["희생: Pawn + Knight".to_owned(), "희생: Bishop".to_owned()],
             continuation: ChoiceContinuation::ResumeTurn,
         });
 
@@ -1970,7 +2234,7 @@ mod tests {
         let observation = encode_observation_v3(&state);
 
         assert_eq!(observation.schema_id, OBSERVATION_V3_SCHEMA_ID);
-        assert_eq!(observation.spatial_shape, [102, 8, 8]);
+        assert_eq!(observation.spatial_shape, [116, 8, 8]);
         assert_eq!(observation.spatial.len(), OBSERVATION_V3_SPATIAL_SIZE);
         assert_eq!(observation.global_shape, [32]);
         assert_eq!(observation.global.len(), OBSERVATION_V3_GLOBAL_FEATURES);
@@ -1981,7 +2245,7 @@ mod tests {
                 .chain(&observation.global)
                 .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
         );
-        assert_eq!(observation.runtime.len(), 147);
+        assert_eq!(observation.runtime.len(), 169);
         assert_eq!(
             observation
                 .runtime
@@ -2000,7 +2264,7 @@ mod tests {
     }
 
     #[test]
-    fn all_51_piece_kinds_have_distinct_self_planes() {
+    fn all_58_piece_kinds_have_distinct_self_planes() {
         let mut board = Board::empty();
         for (index, (_, kind)) in PIECE_KIND_VOCABULARY.iter().enumerate() {
             let square = Square::from_index(index as u8).unwrap();
@@ -2011,7 +2275,7 @@ mod tests {
         }
         let observation = encode_observation_v3(&playing_state(board, Player::White, 1));
 
-        for plane in 0..51 {
+        for plane in 0..58 {
             let values = &observation.spatial[plane * 64..(plane + 1) * 64];
             assert_eq!(values.iter().filter(|value| **value == 1.0).count(), 1);
         }
@@ -2022,12 +2286,12 @@ mod tests {
                 .map(|piece| piece.kind_code)
                 .collect::<BTreeSet<_>>()
                 .len(),
-            51
+            58
         );
     }
 
     #[test]
-    fn all_192_card_ids_survive_without_hashing_or_truncation() {
+    fn all_208_card_ids_survive_without_hashing_or_truncation() {
         let mut state = playing_state(Board::empty(), Player::White, 3);
         for (index, definition) in IMPLEMENTED_CARDS.iter().enumerate() {
             state.add_card(CardInstance {
@@ -2055,8 +2319,8 @@ mod tests {
             .map(|definition| definition.id)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(observation.cards.len(), 192);
-        assert_eq!(observation.card_slot_count, 192);
+        assert_eq!(observation.cards.len(), 208);
+        assert_eq!(observation.card_slot_count, 208);
         assert_eq!(observed_ids, expected_ids);
     }
 

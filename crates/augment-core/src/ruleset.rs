@@ -4,8 +4,8 @@ use std::fmt;
 
 use crate::{SUPPORTED_ENGINE_API_VERSION, SUPPORTED_SCHEMA_VERSION};
 
-const BUNDLED_20260807: &str =
-    include_str!("../../../rulesets/augment_chess_20260807/manifest.json");
+const BUNDLED_20260818: &str =
+    include_str!("../../../rulesets/augment_chess_20260818/manifest.json");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct RulesetManifest {
@@ -23,7 +23,11 @@ pub struct RulesetManifest {
 
 impl RulesetManifest {
     pub fn bundled_20260807() -> Result<Self, RulesetError> {
-        Self::from_json(BUNDLED_20260807)
+        Self::bundled_20260818()
+    }
+
+    pub fn bundled_20260818() -> Result<Self, RulesetError> {
+        Self::from_json(BUNDLED_20260818)
     }
 
     pub fn from_json(json: &str) -> Result<Self, RulesetError> {
@@ -224,11 +228,11 @@ mod tests {
     fn bundled_manifest_is_valid_and_explicitly_incomplete() {
         let manifest = RulesetManifest::bundled_20260807().unwrap();
         assert_eq!(manifest.id, BUNDLED_RULESET_ID);
-        assert_eq!(manifest.snapshot_date, "2026-08-07");
+        assert_eq!(manifest.snapshot_date, "2026-08-18");
         assert_eq!(manifest.coverage.status, "partial");
-        assert_eq!(manifest.coverage.target_card_count, 192);
-        assert_eq!(manifest.coverage.implemented_card_count, 124);
-        assert_eq!(manifest.coverage.behavioral_slice_card_count, 124);
+        assert_eq!(manifest.coverage.target_card_count, 208);
+        assert_eq!(manifest.coverage.implemented_card_count, 208);
+        assert_eq!(manifest.coverage.behavioral_slice_card_count, 208);
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
         assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);

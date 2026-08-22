@@ -106,7 +106,7 @@ index와 clamp가 없다. terminal 상태의 빈 합법 행동 목록에는 빈 
 - 모든 `Action` variant의 encode/decode 왕복;
 - 네 가지 합법 promotion의 고유 descriptor;
 - 빈 목록부터 세 칸 이상까지 multi-square target 비충돌;
-- 192개 현재 카드가 생성하는 모든 합법 카드 행동의 고유 descriptor와 왕복;
+- 208개 현재 카드가 생성하는 모든 합법 카드 행동의 고유 descriptor와 왕복;
 - decode한 행동과 원본 행동의 `Engine::apply()` 전이 완전 일치;
 - deterministic game prefix의 모든 상태에서 합법 행동 descriptor 고유성;
 - 색 교환·rank mirror의 descriptor 대칭성;

@@ -2,7 +2,7 @@
 
 상태: 의미 계약 및 Rust 인코더 구현 완료 (`2026-08-21`)
 
-스키마 ID: `augmentia.observation.v3`
+스키마 ID: `augmentia.observation.v3.20260818`
 
 이 문서는 ObservationV3가 표현해야 하는 게임 의미와 공개 정보 경계를 정의한다.
 실제 tensor shape, padding 한도와 네트워크 입력 배치는 3단계에서 정한다. 따라서
@@ -11,7 +11,7 @@
 
 Rust가 의미의 기준이다. 기계 판독 가능한 전체 필드 목록은
 `crates/augment-ai/src/observation_v3.rs`의 `GAME_STATE_SOURCE_FIELDS` 18개와
-`CARD_RUNTIME_SOURCE_FIELDS` 147개다.
+`CARD_RUNTIME_SOURCE_FIELDS` 169개다.
 
 ## 1. 관측자와 공개 정보 경계
 
@@ -71,7 +71,7 @@ piece owner는 이 관계를 검증하는 데도 사용한다. terminal 상태�
 | `deathmatch` | 시작·quiet·interval·round progress | presence가 있는 record |
 | `en_passant` | target, captured, pawn owner | presence가 있는 spatial record |
 | `applied_rules` | exact rule definition ID 목록 | ruleset namespaced token set |
-| `card_runtime` | 아래 147개 필드 | typed record collections |
+| `card_runtime` | 아래 169개 필드 | typed record collections |
 
 추가 파생값으로 `shared_turn_count`와 `current_repetition_count`를 포함한다. 절대
 deadline은 해당 player의 `turns_taken`, `ply` 또는 `shared_turn_count`를 기준으로
@@ -93,7 +93,7 @@ handler/effect/option 문자열은 해시하지 않는다. 현재 ruleset vocabu
 
 ## 5. 기물과 카드의 안정 ID
 
-기물 종류는 `PieceKind::stable_code()`의 1~51을 그대로 사용한다. 51종 각각이 고유한
+기물 종류는 `PieceKind::stable_code()`의 1~58을 그대로 사용한다. 58종 각각이 고유한
 token이며 V2의 16개 catch-all 채널은 폐기한다. 새 기물은 기존 번호를 재사용하지 않고
 새 번호를 추가하며 schema 검토를 요구한다.
 
@@ -107,7 +107,7 @@ hash는 폐기한다. 카드 instance ID는 같은 정의 카드 여러 장과 r
 - `opening_auto_card_ids` membership;
 - 현재 합법 행동에 연결되는지 여부는 ActionDescriptorV3 단계에서 추가한다.
 
-## 6. `CardRuntimeState` 147개 필드의 표현 규칙
+## 6. `CardRuntimeState` 169개 필드의 표현 규칙
 
 모든 필드는 Rust의 원래 타입을 보존하는 아래 record family 중 하나로 변환한다.
 필드 이름의 전체 목록과 순서는 코드의 `CARD_RUNTIME_SOURCE_FIELDS`가 고정한다.
@@ -184,7 +184,7 @@ kind, owner, trigger player와 모든 square를, `PendingPremove`는 owner, trig
 
 V2 Gen2 audit generator에도 이 필드를 추가해 새 데이터가 출처 없이 생기지 않도록
 했다. V3 encoder가 구현되기 전에는 어떤 샘플에도
-`augmentia.observation.v3`를 기록하지 않는다.
+`augmentia.observation.v3.20260818`를 기록하지 않는다.
 
 ## 10. 변경과 검증 규칙
 
@@ -192,7 +192,7 @@ V2 Gen2 audit generator에도 이 필드를 추가해 새 데이터가 출처 �
   하며, 이 계약에서 encode/derive/exclude 중 하나를 선택해야 한다.
 - 기존 stable piece code와 card definition ID의 의미는 변경하지 않는다.
 - 공개 범위, 관점 변환, deadline 기준 또는 ID 의미가 바뀌면 새 schema ID를 만든다.
-- 3단계 구현은 18개 `GameState` 필드, 147개 runtime 필드와 2개 파생값에 대한
+- 3단계 구현은 18개 `GameState` 필드, 169개 runtime 필드와 2개 파생값에 대한
   coverage test를 제공해야 한다.
 
 ## 11. Rust 물리 레이아웃
@@ -203,9 +203,9 @@ ONNX와 MCTS 입력은 아직 교체하지 않았으며, V3 학습·모델 경�
 
 고정 dense 입력:
 
-- `spatial`: `f32[102, 8, 8]`, 총 6,528개 값, 범위 `[0, 1]`;
-- plane 0~50: self의 `PieceKind::stable_code() - 1`;
-- plane 51~101: opponent의 `PieceKind::stable_code() - 1`;
+- `spatial`: `f32[116, 8, 8]`, 총 7,424개 값, 범위 `[0, 1]`;
+- plane 0~57: self의 `PieceKind::stable_code() - 1`;
+- plane 58~115: opponent의 `PieceKind::stable_code() - 1`;
 - `global`: `f32[32]`, 범위 `[0, 1]`;
 - count의 dense 사본은 `x / (x + 1)`을 사용하고 exact integer는 typed state에 함께
   보존한다.
@@ -224,7 +224,7 @@ ONNX와 MCTS 입력은 아직 교체하지 않았으며, V3 학습·모델 경�
 
 정확한 board piece는 `BoardPieceV3`, 카드는 `CardRecordV3`, phase는 `PhaseV3`, 전역
 정수와 terminal metadata는 `GlobalStateV3`에 보존한다. `CardRuntimeState`는 항상
-147개의 `RuntimeFeatureV3`를 source 순서대로 내보내며 field ID는 1~147이다. 값은
+169개의 `RuntimeFeatureV3`를 source 순서대로 내보내며 field ID는 1~169이다. 값은
 `None`, boolean, signed/unsigned integer, relative player, local piece/card reference,
 exact piece kind, canonical square, exact text, list, named record 중 하나다. 가변 목록에는
 고정 길이 truncation이나 padding을 적용하지 않는다.
@@ -232,9 +232,9 @@ exact piece kind, canonical square, exact text, list, named record 중 하나다
 검증은 다음을 고정한다.
 
 - dense shape, finite 여부와 `[0, 1]` 범위;
-- 147/147 runtime field 이름과 ID 순서;
-- 51종 기물 plane의 비충돌;
-- 192개 card definition ID의 무손실 보존;
+- 169/169 runtime field 이름과 ID 순서;
+- 58종 기물 plane의 비충돌;
+- 208개 card definition ID의 무손실 보존;
 - raw piece/card ID와 RNG state 비노출;
 - 색 교환·rank mirror 시 board, card와 대표 runtime relation의 동일 관측;
 - 서로 다른 runtime 의미가 같은 관측으로 축약되지 않음.

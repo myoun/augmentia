@@ -16,8 +16,8 @@ versioned record를 검증하고 학습 입력으로 소비한다.
 fixture ID는 `augmentia.golden.observation-action.v3`이며 내부에 다음 provenance를
 필수로 둔다.
 
-- ruleset: `augment_chess_20260807`;
-- observation: `augmentia.observation.v3`;
+- ruleset: `augment_chess_20260818`;
+- observation: `augmentia.observation.v3.20260818`;
 - action: `augmentia.action.v3`.
 
 ## 대표 상태
@@ -41,9 +41,9 @@ byte-for-byte 비교한다. Rust 의미나 serialization이 달라지면 fixture
 Python validator는 다음을 검사한다.
 
 - suite/ruleset/observation/action schema ID;
-- `f32[102,8,8]` spatial과 `f32[32]` global shape, finite 및 `[0,1]` 범위;
-- board/card local slot, square 0~63, piece kind 1~51;
-- runtime field 147개와 연속 field ID 1~147;
+- `f32[116,8,8]` spatial과 `f32[32]` global shape, finite 및 `[0,1]` 범위;
+- board/card local slot, square 0~63, piece kind 1~58;
+- runtime field 169개와 연속 field ID 1~169;
 - 모든 recursive runtime value type과 local reference 범위;
 - Move, PieceAbility, Card, DraftPick, ResolveChoice descriptor payload;
 - descriptor 중복, target 종류와 가변 square 목록;

@@ -17,7 +17,7 @@ pub const DEFAULT_SEED: u64 = 20_260_807;
 const V2_BASELINE_MODEL_PATH: &str = "models/baseline/augment_net_v2_canonical_baseline.onnx";
 const V3_SMOKE_MODEL_PATH: &str = "artifacts/models/v3-smoke-step500.onnx";
 const V3_SMOKE_METADATA_PATH: &str = "artifacts/models/v3-smoke-step500.metadata.json";
-const RULESET_MANIFEST_PATH: &str = "rulesets/augment_chess_20260807/manifest.json";
+const RULESET_MANIFEST_PATH: &str = "rulesets/augment_chess_20260818/manifest.json";
 
 #[derive(Clone, Debug)]
 pub struct WebModelConfig {
@@ -954,6 +954,13 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::Vip => ("vip", "귀빈", "VP"),
         PieceKind::Crown => ("crown", "왕관", "CR"),
         PieceKind::Football => ("football", "축구공", "FB"),
+        PieceKind::SiegeRam => ("siege_ram", "공성추", "SR"),
+        PieceKind::MagicGirl => ("magic_girl", "마법소녀", "MG"),
+        PieceKind::Berserker => ("berserker", "버서커", "BK"),
+        PieceKind::Slime => ("slime", "슬라임", "SL"),
+        PieceKind::Siren => ("siren", "세이렌", "SI"),
+        PieceKind::Trickster => ("trickster", "트릭스터", "TR"),
+        PieceKind::Undead => ("undead", "언데드", "UD"),
         PieceKind::Pawn
         | PieceKind::Knight
         | PieceKind::Bishop

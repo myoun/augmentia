@@ -160,6 +160,13 @@ pub enum PieceKind {
     Vip,
     Crown,
     Football,
+    SiegeRam,
+    MagicGirl,
+    Berserker,
+    Slime,
+    Siren,
+    Trickster,
+    Undead,
 }
 
 impl PieceKind {
@@ -216,6 +223,13 @@ impl PieceKind {
             Self::Vip => 49,
             Self::Crown => 50,
             Self::Football => 51,
+            Self::SiegeRam => 52,
+            Self::MagicGirl => 53,
+            Self::Berserker => 54,
+            Self::Slime => 55,
+            Self::Siren => 56,
+            Self::Trickster => 57,
+            Self::Undead => 58,
         }
     }
 

@@ -228,7 +228,7 @@ impl Config {
             tactics_license,
             ruleset_manifest: PathBuf::from(
                 optional_arg(args, "--ruleset-manifest")
-                    .unwrap_or_else(|| "rulesets/augment_chess_20260807/manifest.json".to_owned()),
+                    .unwrap_or_else(|| "rulesets/augment_chess_20260818/manifest.json".to_owned()),
             ),
             split_salt: optional_arg(args, "--split-salt")
                 .unwrap_or_else(|| "augmentia-bootstrap-v3".to_owned()),

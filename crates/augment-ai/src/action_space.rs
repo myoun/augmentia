@@ -135,8 +135,12 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
                 .min(2);
             match target {
                 ActionTarget::None => CARD_OFFSET + slot * 256,
-                ActionTarget::Square(sq) => CARD_OFFSET + slot * 256 + 1 + canonical_square(*sq, state.turn).index(),
-                ActionTarget::PieceAt(sq) => CARD_OFFSET + slot * 256 + 65 + canonical_square(*sq, state.turn).index(),
+                ActionTarget::Square(sq) => {
+                    CARD_OFFSET + slot * 256 + 1 + canonical_square(*sq, state.turn).index()
+                }
+                ActionTarget::PieceAt(sq) => {
+                    CARD_OFFSET + slot * 256 + 65 + canonical_square(*sq, state.turn).index()
+                }
                 ActionTarget::Squares(sqs) => {
                     if sqs.len() == 2 {
                         let s0 = canonical_square(sqs[0], state.turn).index();
@@ -144,7 +148,10 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
                         let pair_idx = s0 * 64 + s1;
                         (MULTI_SQ_OFFSET + slot * 4096 + pair_idx).min(ACTION_SPACE_SIZE - 1)
                     } else if let Some(first) = sqs.first() {
-                        CARD_OFFSET + slot * 256 + 129 + canonical_square(*first, state.turn).index()
+                        CARD_OFFSET
+                            + slot * 256
+                            + 129
+                            + canonical_square(*first, state.turn).index()
                     } else {
                         CARD_OFFSET + slot * 256
                     }
@@ -157,8 +164,12 @@ pub fn encode_action(action: &Action, state: &GameState) -> ActionIndex {
             let ab_idx = ability_to_index(*ability);
             let target_idx = match target {
                 ActionTarget::None => 0,
-                ActionTarget::Square(sq) | ActionTarget::PieceAt(sq) => 1 + canonical_square(*sq, state.turn).index(),
-                ActionTarget::Squares(sqs) => sqs.first().map_or(0, |sq| 1 + canonical_square(*sq, state.turn).index()),
+                ActionTarget::Square(sq) | ActionTarget::PieceAt(sq) => {
+                    1 + canonical_square(*sq, state.turn).index()
+                }
+                ActionTarget::Squares(sqs) => sqs
+                    .first()
+                    .map_or(0, |sq| 1 + canonical_square(*sq, state.turn).index()),
             };
             ABILITY_OFFSET + ab_idx * 65 + target_idx
         }

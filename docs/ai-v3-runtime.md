@@ -24,7 +24,8 @@ uv run python -m v3.benchmark_runtime --iterations 100 --soak 1000 --rust
 directory에만 존재하고 Git에 남지 않는다. batch 1/8/32의 p50/p95와 처리량, session
 instance/run 수, Rust soak 전후 working set을 출력한다.
 
-2026-08-21 로컬 debug build, CPU, default 2,841,732-parameter network, 20회 측정 결과:
+2026-08-21 이전 0807 observation schema의 로컬 debug build, CPU,
+2,841,732-parameter network, 20회 측정 결과:
 
 | 경로 | batch | p50 | p95 | positions/s |
 |---|---:|---:|---:|---:|

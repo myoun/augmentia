@@ -7,7 +7,13 @@ pub struct QuiescenceSearch;
 
 impl QuiescenceSearch {
     /// Evaluates the tactical static balance by pursuing all immediate captures and check threats until quiet.
-    pub fn search(state: &GameState, engine: &Engine, mut alpha: f32, beta: f32, depth: usize) -> f32 {
+    pub fn search(
+        state: &GameState,
+        engine: &Engine,
+        mut alpha: f32,
+        beta: f32,
+        depth: usize,
+    ) -> f32 {
         if state.status != GameStatus::Ongoing {
             return match state.status {
                 GameStatus::Won { winner, .. } => {
@@ -48,7 +54,10 @@ impl QuiescenceSearch {
                     }
                     if target.owner != state.turn {
                         let victim_val = HeuristicEvaluator::piece_material(target.kind);
-                        let mover_val = state.board.get(m.from).map_or(1.0, |p| HeuristicEvaluator::piece_material(p.kind));
+                        let mover_val = state
+                            .board
+                            .get(m.from)
+                            .map_or(1.0, |p| HeuristicEvaluator::piece_material(p.kind));
                         // Prioritize high-value captures first (MVV-LVA)
                         tactical_moves.push((action.clone(), victim_val * 10.0 - mover_val));
                     }

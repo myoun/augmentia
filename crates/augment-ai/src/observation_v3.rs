@@ -4,7 +4,7 @@ use augment_core::PieceKind;
 ///
 /// This identifier describes meaning, not a tensor layout. Changing field visibility,
 /// perspective, identity handling, or normalization requires a new identifier.
-pub const OBSERVATION_V3_SCHEMA_ID: &str = "augmentia.observation.v3";
+pub const OBSERVATION_V3_SCHEMA_ID: &str = "augmentia.observation.v3.20260818";
 
 /// Identifiers attached to retained V2 audit samples. They must never be used for V3 data.
 pub const OBSERVATION_V2_SCHEMA_ID: &str = "augmentia.observation.canonical-v2";
@@ -38,7 +38,7 @@ pub const GAME_STATE_SOURCE_FIELDS: [&str; 18] = [
 ///
 /// Step 3 may choose different physical tensors or token collections, but it must assign every
 /// entry here to an encoded or explicitly derived representation. No catch-all bucket is allowed.
-pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 147] = [
+pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 169] = [
     "opening_auto_card_ids",
     "hill_king",
     "geneva_convention",
@@ -77,6 +77,18 @@ pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 147] = [
     "democracy",
     "fast_growth",
     "fianchetto",
+    "field_promotion",
+    "field_promoted_piece_ids",
+    "frontline_response",
+    "relay",
+    "gomoku",
+    "magic_girl_surge",
+    "free_move_no_capture",
+    "siren_exposure",
+    "trickster_move_kinds",
+    "undead_resurrections",
+    "judgment_exiles",
+    "move_replays",
     "iron_monarch",
     "pawn_conversion",
     "backward_knight",
@@ -116,6 +128,15 @@ pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 147] = [
     "mistake_card",
     "poisoned_piece_ids",
     "sacrifice_protection",
+    "last_resistance",
+    "coronation_protection",
+    "queens_gambit_protection",
+    "potion_basic_training_piece_ids",
+    "poison_stun_turns",
+    "potion_manner_piece_ids",
+    "manner_captured_last_piece_ids",
+    "potion_saturation_piece_ids",
+    "saturation_capture_counts",
     "bishop_snipe",
     "explosive_piece_ids",
     "trojan_piece_ids",
@@ -165,6 +186,7 @@ pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 147] = [
     "ultimatum",
     "vanish",
     "acceleration",
+    "chaos_no_capture_until_ply",
     "black_holes",
     "camouflage_color",
     "conveyor",
@@ -211,7 +233,7 @@ pub const INTERNAL_STATE_EXCLUSIONS: [(&str, &str); 6] = [
 pub const DERIVED_SOURCE_FIELDS: [&str; 2] = ["shared_turn_count", "current_repetition_count"];
 
 /// Complete, collision-free piece vocabulary for ObservationV3.
-pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 51] = [
+pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 58] = [
     (1, PieceKind::Pawn),
     (2, PieceKind::Knight),
     (3, PieceKind::Bishop),
@@ -263,6 +285,13 @@ pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 51] = [
     (49, PieceKind::Vip),
     (50, PieceKind::Crown),
     (51, PieceKind::Football),
+    (52, PieceKind::SiegeRam),
+    (53, PieceKind::MagicGirl),
+    (54, PieceKind::Berserker),
+    (55, PieceKind::Slime),
+    (56, PieceKind::Siren),
+    (57, PieceKind::Trickster),
+    (58, PieceKind::Undead),
 ];
 
 #[cfg(test)]
@@ -281,7 +310,7 @@ mod tests {
     #[test]
     fn source_field_inventories_are_unique_and_complete_at_the_frozen_count() {
         assert_eq!(GAME_STATE_SOURCE_FIELDS.len(), 18);
-        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS.len(), 147);
+        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS.len(), 169);
         assert_eq!(
             GAME_STATE_SOURCE_FIELDS
                 .iter()
@@ -309,7 +338,7 @@ mod tests {
             .collect::<BTreeSet<_>>();
         assert_eq!(codes.len(), PIECE_KIND_VOCABULARY.len());
         assert_eq!(codes.first(), Some(&1));
-        assert_eq!(codes.last(), Some(&51));
+        assert_eq!(codes.last(), Some(&58));
     }
 
     #[test]
@@ -354,6 +383,18 @@ mod tests {
             democracy: _,
             fast_growth: _,
             fianchetto: _,
+            field_promotion: _,
+            field_promoted_piece_ids: _,
+            frontline_response: _,
+            relay: _,
+            gomoku: _,
+            magic_girl_surge: _,
+            free_move_no_capture: _,
+            siren_exposure: _,
+            trickster_move_kinds: _,
+            undead_resurrections: _,
+            judgment_exiles: _,
+            move_replays: _,
             iron_monarch: _,
             pawn_conversion: _,
             backward_knight: _,
@@ -393,6 +434,15 @@ mod tests {
             mistake_card: _,
             poisoned_piece_ids: _,
             sacrifice_protection: _,
+            last_resistance: _,
+            coronation_protection: _,
+            queens_gambit_protection: _,
+            potion_basic_training_piece_ids: _,
+            poison_stun_turns: _,
+            potion_manner_piece_ids: _,
+            manner_captured_last_piece_ids: _,
+            potion_saturation_piece_ids: _,
+            saturation_capture_counts: _,
             bishop_snipe: _,
             explosive_piece_ids: _,
             trojan_piece_ids: _,
@@ -442,6 +492,7 @@ mod tests {
             ultimatum: _,
             vanish: _,
             acceleration: _,
+            chaos_no_capture_until_ply: _,
             black_holes: _,
             camouflage_color: _,
             conveyor: _,

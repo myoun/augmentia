@@ -52,7 +52,7 @@ def _default_catalog_path() -> Path:
     return (
         Path(__file__).parents[2]
         / "rulesets"
-        / "augment_chess_20260807"
+        / "augment_chess_20260818"
         / "cards"
         / "catalog.json"
     )

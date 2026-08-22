@@ -1,4 +1,4 @@
-use crate::{Board, DeterministicRng, MoveAction, PieceKind, Player, Square};
+use crate::{Board, DeterministicRng, MoveAction, Piece, PieceKind, Player, Square};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -295,6 +295,38 @@ pub struct PendingIcbm {
     pub due_turn: u32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct JudgmentExile {
+    pub piece: Piece,
+    pub square: Square,
+    pub return_at_draft: DraftPhase,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct UndeadResurrection {
+    pub piece: Piece,
+    pub due_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ReplayCell {
+    pub square: Square,
+    pub before: Option<Piece>,
+    pub after: Option<Piece>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MoveReplayState {
+    pub cells: Vec<ReplayCell>,
+    pub en_passant_before: Option<EnPassantState>,
+    pub en_passant_after: Option<EnPassantState>,
+    /// The web client stores status flags on the piece objects contained in the board delta.
+    /// Core keeps those flags in `CardRuntimeState`, so retain matching runtime snapshots here.
+    /// Nested replay entries are stripped before these snapshots are stored.
+    pub runtime_before: Box<CardRuntimeState>,
+    pub runtime_after: Box<CardRuntimeState>,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
@@ -337,6 +369,18 @@ pub struct CardRuntimeState {
     pub democracy: [bool; 2],
     pub fast_growth: [bool; 2],
     pub fianchetto: [bool; 2],
+    pub field_promotion: [bool; 2],
+    pub field_promoted_piece_ids: BTreeSet<u32>,
+    pub frontline_response: [bool; 2],
+    pub relay: [bool; 2],
+    pub gomoku: [bool; 2],
+    pub magic_girl_surge: [bool; 2],
+    pub free_move_no_capture: [bool; 2],
+    pub siren_exposure: BTreeMap<(u32, u32), u8>,
+    pub trickster_move_kinds: BTreeMap<u32, PieceKind>,
+    pub undead_resurrections: Vec<UndeadResurrection>,
+    pub judgment_exiles: Vec<JudgmentExile>,
+    pub move_replays: [Option<MoveReplayState>; 2],
     pub iron_monarch: [bool; 2],
     pub pawn_conversion: [bool; 2],
     pub backward_knight: [bool; 2],
@@ -376,6 +420,16 @@ pub struct CardRuntimeState {
     pub mistake_card: [bool; 2],
     pub poisoned_piece_ids: BTreeSet<u32>,
     pub sacrifice_protection: BTreeMap<u32, TimedPieceStatus>,
+    pub last_resistance: BTreeMap<u32, TimedPieceStatus>,
+    /// Owner turn number at which this temporary protection was granted.
+    pub coronation_protection: BTreeMap<u32, u32>,
+    pub queens_gambit_protection: BTreeSet<u32>,
+    pub potion_basic_training_piece_ids: BTreeSet<u32>,
+    pub poison_stun_turns: BTreeMap<u32, u8>,
+    pub potion_manner_piece_ids: BTreeSet<u32>,
+    pub manner_captured_last_piece_ids: BTreeSet<u32>,
+    pub potion_saturation_piece_ids: BTreeSet<u32>,
+    pub saturation_capture_counts: BTreeMap<u32, u8>,
     pub bishop_snipe: [bool; 2],
     pub explosive_piece_ids: BTreeSet<u32>,
     pub trojan_piece_ids: BTreeSet<u32>,
@@ -405,7 +459,7 @@ pub struct CardRuntimeState {
     pub moving_consecutive: [(Option<u32>, u8); 2],
     pub necromancy_reverts: Vec<NecromancyRevert>,
     pub reverse_pawns_charges: [u8; 2],
-    pub stake_statuses: BTreeMap<u32, u32>,
+    pub stake_statuses: BTreeMap<u32, TimedPieceStatus>,
     pub underpromotion: [bool; 2],
     pub vip_pending: Vec<PendingVip>,
     pub barricades: BTreeSet<Square>,
@@ -425,6 +479,7 @@ pub struct CardRuntimeState {
     pub ultimatum: Option<u32>,
     pub vanish: [bool; 2],
     pub acceleration: bool,
+    pub chaos_no_capture_until_ply: u32,
     pub black_holes: BTreeSet<Square>,
     pub camouflage_color: bool,
     pub conveyor: bool,
@@ -495,6 +550,15 @@ impl CardRuntimeState {
             || !self.imperial_moves.is_empty()
             || !self.poisoned_piece_ids.is_empty()
             || !self.sacrifice_protection.is_empty()
+            || !self.last_resistance.is_empty()
+            || !self.coronation_protection.is_empty()
+            || !self.queens_gambit_protection.is_empty()
+            || !self.potion_basic_training_piece_ids.is_empty()
+            || !self.poison_stun_turns.is_empty()
+            || !self.potion_manner_piece_ids.is_empty()
+            || !self.manner_captured_last_piece_ids.is_empty()
+            || !self.potion_saturation_piece_ids.is_empty()
+            || !self.saturation_capture_counts.is_empty()
             || !self.explosive_piece_ids.is_empty()
             || !self.trojan_piece_ids.is_empty()
             || !self.feudal_contracts.is_empty()
@@ -983,6 +1047,23 @@ impl GameState {
                 format!(
                     "{:?}",
                     (
+                        &self.card_runtime.last_resistance,
+                        &self.card_runtime.coronation_protection,
+                        &self.card_runtime.queens_gambit_protection,
+                        &self.card_runtime.potion_basic_training_piece_ids,
+                        &self.card_runtime.poison_stun_turns,
+                        &self.card_runtime.potion_manner_piece_ids,
+                        &self.card_runtime.manner_captured_last_piece_ids,
+                        &self.card_runtime.potion_saturation_piece_ids,
+                        &self.card_runtime.saturation_capture_counts,
+                    )
+                )
+                .as_bytes(),
+            );
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
                         self.card_runtime.bishop_snipe,
                         &self.card_runtime.explosive_piece_ids,
                         &self.card_runtime.trojan_piece_ids,
@@ -1150,6 +1231,51 @@ impl GameState {
         if self.card_runtime.skip_turns != [false, false] {
             hash.u8(u8::from(self.card_runtime.skip_turns[0]));
             hash.u8(u8::from(self.card_runtime.skip_turns[1]));
+        }
+        let has_0818_runtime = self.card_runtime.field_promotion != [false, false]
+            || !self.card_runtime.field_promoted_piece_ids.is_empty()
+            || self.card_runtime.frontline_response != [false, false]
+            || self.card_runtime.relay != [false, false]
+            || self.card_runtime.gomoku != [false, false]
+            || self.card_runtime.magic_girl_surge != [false, false]
+            || self.card_runtime.free_move_no_capture != [false, false]
+            || !self.card_runtime.siren_exposure.is_empty()
+            || !self.card_runtime.trickster_move_kinds.is_empty()
+            || !self.card_runtime.undead_resurrections.is_empty()
+            || !self.card_runtime.judgment_exiles.is_empty()
+            || self.card_runtime.chaos_no_capture_until_ply > self.ply;
+        if has_0818_runtime {
+            hash.bytes(b"augment-chess-20260818-runtime-v1");
+            hash.bytes(
+                format!(
+                    "{:?}",
+                    (
+                        self.card_runtime.field_promotion,
+                        &self.card_runtime.field_promoted_piece_ids,
+                        self.card_runtime.frontline_response,
+                        self.card_runtime.relay,
+                        self.card_runtime.gomoku,
+                        self.card_runtime.magic_girl_surge,
+                        self.card_runtime.free_move_no_capture,
+                        &self.card_runtime.siren_exposure,
+                        &self.card_runtime.trickster_move_kinds,
+                        &self.card_runtime.judgment_exiles,
+                    )
+                )
+                .as_bytes(),
+            );
+            for resurrection in &self.card_runtime.undead_resurrections {
+                hash.u32(resurrection.piece.id);
+                hash.u8(resurrection.piece.kind.stable_code());
+                hash.u8(resurrection.piece.owner.index() as u8);
+                hash.u16(resurrection.piece.capture_count);
+                hash.u32(resurrection.due_ply.saturating_sub(self.ply));
+            }
+            hash.u32(
+                self.card_runtime
+                    .chaos_no_capture_until_ply
+                    .saturating_sub(self.ply),
+            );
         }
         match &self.phase {
             GamePhase::Playing => hash.u8(0),

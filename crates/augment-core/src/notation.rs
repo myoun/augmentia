@@ -4,12 +4,12 @@ use std::fmt;
 
 use crate::{BUNDLED_RULESET_ID, SUPPORTED_SCHEMA_VERSION};
 
-const BUNDLED_NOTATION_20260807: &str =
-    include_str!("../../../rulesets/augment_chess_20260807/notation.json");
+const BUNDLED_NOTATION_20260818: &str =
+    include_str!("../../../rulesets/augment_chess_20260818/notation.json");
 
 #[cfg(test)]
-const BUNDLED_NOTATION_RAW_20260807: &str =
-    include_str!("../../../rulesets/augment_chess_20260807/sources/raw/notation-legend.html");
+const BUNDLED_NOTATION_RAW_20260818: &str =
+    include_str!("../../../rulesets/augment_chess_20260818/sources/raw/notation-legend.html");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct NotationCatalog {
@@ -22,7 +22,11 @@ pub struct NotationCatalog {
 
 impl NotationCatalog {
     pub fn bundled_20260807() -> Result<Self, NotationError> {
-        let catalog = Self::from_json(BUNDLED_NOTATION_20260807)?;
+        Self::bundled_20260818()
+    }
+
+    pub fn bundled_20260818() -> Result<Self, NotationError> {
+        let catalog = Self::from_json(BUNDLED_NOTATION_20260818)?;
         catalog.validate_for_ruleset(BUNDLED_RULESET_ID)?;
         Ok(catalog)
     }
@@ -194,12 +198,12 @@ mod tests {
     #[test]
     fn normalized_entries_are_present_in_the_preserved_html() {
         let catalog = NotationCatalog::bundled_20260807().unwrap();
-        assert_eq!(BUNDLED_NOTATION_RAW_20260807.matches("<dt>").count(), 52);
-        assert_eq!(BUNDLED_NOTATION_RAW_20260807.matches("<dd>").count(), 52);
+        assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dt>").count(), 52);
+        assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dd>").count(), 52);
         for entry in &catalog.entries {
             let original_pair = format!("<dt>{}</dt><dd>{}</dd>", entry.code, entry.name_ko);
             assert!(
-                BUNDLED_NOTATION_RAW_20260807.contains(&original_pair),
+                BUNDLED_NOTATION_RAW_20260818.contains(&original_pair),
                 "raw HTML is missing {original_pair:?}"
             );
         }

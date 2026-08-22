@@ -1,7 +1,7 @@
 use crate::action_v3::{ACTION_V3_SCHEMA_ID, ActionDescriptorV3, ActionTargetV3, LegalActionSetV3};
 use crate::encoder_v3::{
-    OBSERVATION_V3_GLOBAL_FEATURES, OBSERVATION_V3_SPATIAL_SIZE, ObservationV3, PhaseV3, StatusV3,
-    encode_observation_v3,
+    OBSERVATION_V3_GLOBAL_FEATURES, OBSERVATION_V3_SPATIAL_PLANES, OBSERVATION_V3_SPATIAL_SIZE,
+    ObservationV3, PhaseV3, StatusV3, encode_observation_v3,
 };
 use crate::observation_v3::{
     CARD_RUNTIME_SOURCE_FIELDS, OBSERVATION_V3_SCHEMA_ID, PIECE_KIND_VOCABULARY,
@@ -1316,7 +1316,7 @@ fn validate_observation(
         ruleset_id,
         &format!("{path}.ruleset_id"),
     )?;
-    if observation.spatial_shape != [102, 8, 8]
+    if observation.spatial_shape != [OBSERVATION_V3_SPATIAL_PLANES, 8, 8]
         || observation.spatial.len() != OBSERVATION_V3_SPATIAL_SIZE
     {
         return validation(format!("{path}.spatial shape or length drifted"));

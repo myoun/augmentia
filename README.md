@@ -2,7 +2,7 @@
 
 증강체스용 결정론적 게임 엔진과 self-play AI를 위한 초기 저장소입니다.
 
-현재 범위는 `augment_chess_20260807`의 일반 모드 게임 코어입니다. 백·흑 순서의 게임
+현재 범위는 `augment_chess_20260818`의 일반 모드 게임 코어입니다. 백·흑 순서의 게임
 시작 드래프트, 양쪽 10수/20수 완료 시 드래프트, 다음 턴 카드 잠금, 기본 이동과
 캐슬링·앙파상·프로모션, 행동 예산 기반 연속 행동, 강제 이동, 카드 후속 선택, 45수 연장전 및 별 판정을
 실행합니다. 게임 시작 전 40% 오프닝 RULE 판정도 결정론적으로 실행합니다. 현재
@@ -53,10 +53,9 @@ policy-only 모델이므로 이 화면은 통합·행동 비교용이며 카드 
 
 터미널 UI가 필요하면 `cargo run -p augment-cli`를 사용할 수 있습니다. 드래프트·카드·후속
 선택은 화면에 표시된 번호로 고르고, 보드 이동은 `e2e4` 또는 `e2-e4`로 입력합니다.
-전체 공개 카드 192장의 메타데이터는 정규화되어
-있지만 실제 효과를 실행할 수 있는 카드는 현재 124장이므로, 드래프트도 이 124장 중
-RULE을 제외한 카드를 사용합니다. 오프닝 RULE 선택 풀에는 현재 실행 가능한 `발판`과
-`계시`가 들어갑니다.
+전체 공개 카드 208장의 메타데이터를 정규화했고 모두 엔진 behavioral slice에
+연결했습니다. 처음 남아 있던 0818의 네 근사 구현은 원본 알고리즘으로 교체했으며,
+전체 상호작용의 parity 검증 상태는 최신 스냅숏의 `cards/implemented.json`에 기록합니다.
 
 ## 카드 스냅숏 갱신
 
@@ -65,12 +64,12 @@ RULE을 제외한 카드를 사용합니다. 오프닝 RULE 선택 풀에는 현
 ```powershell
 cargo run -p augment-snapshot -- extract `
   --bundle C:\path\to\main.js `
-  --ruleset-id augment_chess_20260807 `
-  --output rulesets\augment_chess_20260807\cards\catalog.json
+  --ruleset-id augment_chess_20260818 `
+  --output rulesets\augment_chess_20260818\cards\catalog.json
 
 cargo run -p augment-snapshot -- diff `
   --old rulesets\augment_chess_20260807\cards\catalog.json `
-  --new C:\path\to\new-catalog.json
+  --new rulesets\augment_chess_20260818\cards\catalog.json
 ```
 
 추출기는 번들 SHA-256, 원시·공개 카드 수, 숨김 카드, ID·이름·카테고리·별·effect·target·
@@ -92,7 +91,8 @@ docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 �
 docs/data-v3-format.md                V3 대국·독립 decision·shard·manifest 포맷
 docs/bootstrap-v3-data.md             PGN board-pretraining과 proven 전술 생성 계약
 docs/ai-v3-model.md                   첫 V3 신경망 구조·동적 policy·성능 기준
-rulesets/augment_chess_20260807/      불변 규칙 스냅숏
+rulesets/augment_chess_20260818/      최신 불변 규칙 스냅숏
+rulesets/augment_chess_20260807/      이전 불변 규칙 스냅숏
 ```
 
 기보 코드도 규칙 데이터입니다. 현재 스냅숏은 사용자 제공 원본 HTML과 52개 코드의

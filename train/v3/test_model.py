@@ -41,8 +41,8 @@ class AugmentNetV3Tests(unittest.TestCase):
 
     def test_default_parameter_and_vocabulary_baseline_is_fixed(self) -> None:
         model = AugmentNetV3(V3ModelConfig(text_vocabulary_size=self.vocabulary.size))
-        self.assertEqual(self.vocabulary.size, 355)
-        self.assertEqual(model.parameter_count(), 2_841_732)
+        self.assertEqual(self.vocabulary.size, 382)
+        self.assertEqual(model.parameter_count(), 2_864_132)
         self.assertEqual(
             V3Vocabulary.from_json(self.vocabulary.to_json()), self.vocabulary
         )
@@ -213,7 +213,7 @@ class AugmentNetV3Tests(unittest.TestCase):
         value_supervision = torch.ones(len(cases), dtype=torch.bool)
 
         initial = None
-        for _ in range(160):
+        for _ in range(169):
             optimizer.zero_grad(set_to_none=True)
             output = model(batch)
             losses = compute_v3_loss(

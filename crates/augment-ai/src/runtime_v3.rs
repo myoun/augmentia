@@ -1,7 +1,7 @@
 use crate::{
-    ACTION_V3_SCHEMA_ID, ActionDescriptorV3, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID,
-    OBSERVATION_V3_REQUIRED_TEXT_TOKENS, ObservationV3, RuntimeValueV3,
-    encode_observation_v3,
+    ACTION_V3_SCHEMA_ID, ActionDescriptorV3, CARD_RUNTIME_SOURCE_FIELDS, LegalActionSetV3,
+    OBSERVATION_V3_REQUIRED_TEXT_TOKENS, OBSERVATION_V3_SCHEMA_ID, OBSERVATION_V3_SPATIAL_PLANES,
+    ObservationV3, RuntimeValueV3, encode_observation_v3,
 };
 use augment_core::{Action, Engine, GameState};
 use ort::session::{Session, SessionInputValue};
@@ -238,9 +238,7 @@ impl V3OnnxRuntime {
     }
 }
 
-fn validate_required_runtime_vocabulary(
-    vocabulary: &VocabularyV3,
-) -> Result<(), V3RuntimeError> {
+fn validate_required_runtime_vocabulary(vocabulary: &VocabularyV3) -> Result<(), V3RuntimeError> {
     let missing = OBSERVATION_V3_REQUIRED_TEXT_TOKENS
         .iter()
         .filter(|token| !vocabulary.lookup.contains_key(**token))
@@ -374,7 +372,11 @@ fn tensorize_v3(
         .max(1);
 
     let mut store = TensorStoreV3::new();
-    store.f32("spatial", &[batch, 102, 8, 8], 0.0);
+    store.f32(
+        "spatial",
+        &[batch, OBSERVATION_V3_SPATIAL_PLANES, 8, 8],
+        0.0,
+    );
     store.f32("global_features", &[batch, 32], 0.0);
     store.i64("state_text", &[batch, state_text], 0);
     store.f32("state_text_position", &[batch, state_text, 1], 0.0);
@@ -455,12 +457,16 @@ fn tensorize_v3(
 
     for (row, observation) in observations.iter().enumerate() {
         if observation.schema_id != OBSERVATION_V3_SCHEMA_ID
-            || observation.spatial.len() != 102 * 8 * 8
+            || observation.spatial.len() != OBSERVATION_V3_SPATIAL_PLANES * 8 * 8
             || observation.global.len() != 32
         {
             return tensor_error("ObservationV3 dense shape/schema mismatch");
         }
-        store.f32_slice("spatial", row * 102 * 8 * 8, &observation.spatial)?;
+        store.f32_slice(
+            "spatial",
+            row * OBSERVATION_V3_SPATIAL_PLANES * 8 * 8,
+            &observation.spatial,
+        )?;
         store.f32_slice("global_features", row * 32, &observation.global)?;
         for (index, token) in state_tokens[row].iter().copied().enumerate() {
             store.set_i64("state_text", &[row, index], token)?;
@@ -741,10 +747,11 @@ fn flatten_runtime(
     observation: &ObservationV3,
     vocabulary: &VocabularyV3,
 ) -> Result<Vec<RuntimeNodeV3>, V3RuntimeError> {
-    if observation.runtime.len() != 147 {
+    if observation.runtime.len() != CARD_RUNTIME_SOURCE_FIELDS.len() {
         return tensor_error(format!(
-            "runtime has {} fields; expected 147",
-            observation.runtime.len()
+            "runtime has {} fields; expected {}",
+            observation.runtime.len(),
+            CARD_RUNTIME_SOURCE_FIELDS.len()
         ));
     }
     let mut nodes = Vec::new();
@@ -1183,7 +1190,7 @@ mod tests {
         }
         match &tensors["spatial"] {
             TensorDataV3::F32 { shape, values } => {
-                assert_eq!(shape, &[cases.len(), 102, 8, 8]);
+                assert_eq!(shape, &[cases.len(), 116, 8, 8]);
                 assert!(values.iter().all(|value| value.is_finite()));
             }
             _ => panic!("spatial must be float32"),

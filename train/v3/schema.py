@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Any
 
 FIXTURE_SCHEMA_ID = "augmentia.golden.observation-action.v3"
-OBSERVATION_SCHEMA_ID = "augmentia.observation.v3"
+OBSERVATION_SCHEMA_ID = "augmentia.observation.v3.20260818"
 ACTION_SCHEMA_ID = "augmentia.action.v3"
-RULESET_ID = "augment_chess_20260807"
+RULESET_ID = "augment_chess_20260818"
 RUNTIME_VOCABULARY_SCHEMA_ID = "augmentia.runtime-vocabulary.v3"
-SPATIAL_SHAPE = [102, 8, 8]
-SPATIAL_SIZE = 102 * 8 * 8
+SPATIAL_SHAPE = [116, 8, 8]
+SPATIAL_SIZE = 116 * 8 * 8
 GLOBAL_SHAPE = [32]
-RUNTIME_FIELD_COUNT = 147
+RUNTIME_FIELD_COUNT = 169
 
 _PLAYERS = {"self_player", "opponent"}
 _ABILITIES = {

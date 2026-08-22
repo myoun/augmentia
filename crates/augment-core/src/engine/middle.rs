@@ -32,6 +32,199 @@ impl Engine {
     ) -> Result<bool, EngineError> {
         let opponent = actor.opponent();
         match definition_id {
+            CLEANUP => {
+                let squares = squares_target(target)?.to_vec();
+                for square in squares {
+                    if let Some(piece) = state.board.get(square) {
+                        self.remove_piece_for_card(
+                            state,
+                            square,
+                            piece,
+                            actor.opponent(),
+                            CLEANUP,
+                            events,
+                        );
+                    }
+                }
+            }
+            FRONTLINE_RESPONSE => state.card_runtime.frontline_response[actor.index()] = true,
+            RELAY => state.card_runtime.relay[actor.index()] = true,
+            SUSPICIOUS_POTION => {
+                let (_, piece) = piece_target(state, target)?;
+                let royal = self.is_royal_piece(state, piece);
+                let ranged = matches!(
+                    piece.kind,
+                    PieceKind::MagicGirl | PieceKind::Berserker | PieceKind::Trickster
+                ) || is_ranged_piece(piece.kind);
+                // Keep this in the same order as SUSPICIOUS_POTION_EFFECTS in the 0818 client;
+                // web_choice_index therefore consumes the same roll for the same target.
+                let effects = suspicious_potion_effects(royal, piece.kind, ranged);
+                let (roll, index) = state.rng_mut().web_choice_index(effects.len());
+                events.push(Event::RandomSample {
+                    purpose: "suspicious-potion".to_owned(),
+                    roll_53: roll,
+                });
+                match effects[index.unwrap_or(0)] {
+                    "sacrifice-protection" => {
+                        state.card_runtime.protected_piece_ids.insert(piece.id);
+                        state.card_runtime.sacrifice_protection.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner,
+                                remaining_turns: 3,
+                            },
+                        );
+                    }
+                    "last-resistance" => {
+                        state.card_runtime.protected_piece_ids.insert(piece.id);
+                        state.card_runtime.last_resistance.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner,
+                                remaining_turns: 3,
+                            },
+                        );
+                    }
+                    "coronation-protection" => {
+                        state.card_runtime.protected_piece_ids.insert(piece.id);
+                        state
+                            .card_runtime
+                            .coronation_protection
+                            .insert(piece.id, state.turns_taken[piece.owner.index()]);
+                    }
+                    "shield" => {
+                        state.card_runtime.shielded_piece_ids.insert(piece.id);
+                    }
+                    "evasion" => {
+                        state.card_runtime.evasion_piece_ids.insert(piece.id);
+                    }
+                    "parry" => {
+                        state.card_runtime.parry_piece_ids.insert(piece.id);
+                    }
+                    "basic-training" => {
+                        state.card_runtime.basic_training_piece_ids.insert(piece.id);
+                        state
+                            .card_runtime
+                            .potion_basic_training_piece_ids
+                            .insert(piece.id);
+                    }
+                    "stealth" => {
+                        state.card_runtime.stealth_piece_ids.insert(piece.id);
+                    }
+                    "loyalist" => {
+                        state.card_runtime.loyalist_piece_ids.insert(piece.id);
+                    }
+                    "ghost" => {
+                        state.card_runtime.ghost_piece_ids.insert(piece.id);
+                    }
+                    "chameleon" => {
+                        state.card_runtime.chameleon_piece_ids.insert(piece.id);
+                    }
+                    "submerge" => {
+                        state.card_runtime.submerged_piece_ids.insert(piece.id);
+                    }
+                    "freeze" => {
+                        state.card_runtime.frozen.insert(
+                            piece.id,
+                            FrozenStatus {
+                                source: actor.opponent(),
+                                remaining_turns: 3,
+                            },
+                        );
+                    }
+                    "chimera" => {
+                        state.card_runtime.chimera_piece_ids.insert(piece.id);
+                    }
+                    "witch-trial" => {
+                        state.card_runtime.witch_trials.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner.opponent(),
+                                remaining_turns: 3,
+                            },
+                        );
+                    }
+                    "stake" => {
+                        state.card_runtime.stake_statuses.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner,
+                                remaining_turns: 4,
+                            },
+                        );
+                    }
+                    "calling-card" => {
+                        state
+                            .card_runtime
+                            .calling_cards
+                            .insert(piece.id, piece.owner.opponent());
+                    }
+                    "empty-lunchbox" => {
+                        state.card_runtime.empty_lunchboxes.insert(
+                            piece.id,
+                            EmptyLunchboxStatus {
+                                by: piece.owner.opponent(),
+                                deadline_turn: state.turns_taken[piece.owner.index()]
+                                    .saturating_add(3),
+                            },
+                        );
+                    }
+                    "poison-stun" => {
+                        state
+                            .card_runtime
+                            .poison_stun_turns
+                            .entry(piece.id)
+                            .and_modify(|remaining| *remaining = (*remaining).max(3))
+                            .or_insert(3);
+                    }
+                    "disarm" => {
+                        state.card_runtime.disarmed.insert(piece.id, 1);
+                    }
+                    "manner-no-capture" => {
+                        state.card_runtime.potion_manner_piece_ids.insert(piece.id);
+                        state
+                            .card_runtime
+                            .manner_captured_last_piece_ids
+                            .insert(piece.id);
+                    }
+                    "saturation-no-capture" => {
+                        state
+                            .card_runtime
+                            .potion_saturation_piece_ids
+                            .insert(piece.id);
+                        state
+                            .card_runtime
+                            .saturation_capture_counts
+                            .insert(piece.id, 3);
+                    }
+                    "explosive" => {
+                        state.card_runtime.explosive_piece_ids.insert(piece.id);
+                    }
+                    "inertia" => {
+                        state.card_runtime.inertia_piece_ids.insert(piece.id);
+                    }
+                    "poisoned-pawn" => {
+                        state.card_runtime.poisoned_piece_ids.insert(piece.id);
+                    }
+                    "queens-gambit-protection" => {
+                        state.card_runtime.protected_piece_ids.insert(piece.id);
+                        state.card_runtime.queens_gambit_protection.insert(piece.id);
+                    }
+                    "trojan-horse" => {
+                        state.card_runtime.trojan_piece_ids.insert(piece.id);
+                    }
+                    "severance" => {
+                        state.card_runtime.severed.insert(
+                            piece.id,
+                            TimedPieceStatus {
+                                by: piece.owner.opponent(),
+                                remaining_turns: 2,
+                            },
+                        );
+                    }
+                    _ => unreachable!(),
+                }
+            }
             BASIC_TRAINING => {
                 let (_, piece) = piece_target(state, target)?;
                 state.card_runtime.basic_training_piece_ids.insert(piece.id);
@@ -350,19 +543,48 @@ impl Engine {
                     .into_iter()
                     .filter(|(_, piece)| piece.owner == actor)
                     .collect::<Vec<_>>();
+                let royal = pieces
+                    .iter()
+                    .copied()
+                    .find(|(_, piece)| self.is_royal_piece(state, *piece))
+                    .ok_or_else(|| EngineError::Invariant("black magic has no king".to_owned()))?;
+                let mut removed = 0_usize;
                 for (square, mut piece) in pieces {
-                    let is_royal = self.is_royal_piece(state, piece);
-                    self.clear_piece_kind_runtime(state, piece.id);
-                    piece.kind = if is_royal {
-                        PieceKind::DarkWizard
-                    } else {
-                        PieceKind::Monster
-                    };
-                    state.board.set(square, Some(piece));
-                    state.card_runtime.moved_piece_ids.insert(piece.id);
-                    if piece.kind == PieceKind::DarkWizard {
+                    if piece.id == royal.1.id {
+                        self.clear_piece_kind_runtime(state, piece.id);
+                        piece.kind = PieceKind::DarkWizard;
+                        state.board.set(square, Some(piece));
+                        state.card_runtime.moved_piece_ids.insert(piece.id);
                         state.card_runtime.piece_origins.insert(piece.id, square);
+                        continue;
                     }
+                    self.remove_piece_for_card(
+                        state,
+                        square,
+                        piece,
+                        actor.opponent(),
+                        BLACK_MAGIC,
+                        events,
+                    );
+                    removed += 1;
+                }
+                let spawn_count = removed.div_ceil(2);
+                let ranks: Vec<u8> = if actor == Player::White {
+                    (0..8).collect()
+                } else {
+                    (0..8).rev().collect()
+                };
+                let open = ranks
+                    .into_iter()
+                    .flat_map(|rank| (0..8).filter_map(move |file| Square::new(file, rank)))
+                    .filter(|square| state.board.get(*square).is_none())
+                    .take(spawn_count)
+                    .collect::<Vec<_>>();
+                for square in open {
+                    let monster =
+                        Piece::new(actor, PieceKind::Monster).with_id(state.allocate_piece_id());
+                    state.board.set(square, Some(monster));
+                    self.mark_fresh_no_capture(state, monster);
                 }
             }
             FANATICAL_RITUAL => {
@@ -572,10 +794,66 @@ impl Engine {
                     if piece.owner == actor {
                         state.card_runtime.frozen.remove(&piece.id);
                         state.card_runtime.disarmed.remove(&piece.id);
+                        state.card_runtime.severed.remove(&piece.id);
+                        state.card_runtime.inertia_piece_ids.remove(&piece.id);
+                        state.card_runtime.ice_sheet.remove(&piece.id);
+                        state.card_runtime.witch_trials.remove(&piece.id);
+                        state.card_runtime.poison_stun_turns.remove(&piece.id);
+                        state.card_runtime.calling_cards.remove(&piece.id);
+                        state.card_runtime.empty_lunchboxes.remove(&piece.id);
+                        let had_potion_manner =
+                            state.card_runtime.potion_manner_piece_ids.remove(&piece.id);
+                        if had_potion_manner
+                            || state.applied_rules.iter().any(|rule| rule == COOL_GUY)
+                        {
+                            state
+                                .card_runtime
+                                .manner_captured_last_piece_ids
+                                .remove(&piece.id);
+                        }
+                        if state
+                            .card_runtime
+                            .potion_saturation_piece_ids
+                            .remove(&piece.id)
+                            || state.card_runtime.saturation_rule
+                        {
+                            state
+                                .card_runtime
+                                .saturation_capture_counts
+                                .remove(&piece.id);
+                        }
                     } else {
                         state.card_runtime.shielded_piece_ids.remove(&piece.id);
                         state.card_runtime.protected_piece_ids.remove(&piece.id);
+                        state.card_runtime.sacrifice_protection.remove(&piece.id);
+                        state.card_runtime.last_resistance.remove(&piece.id);
+                        state.card_runtime.coronation_protection.remove(&piece.id);
+                        state
+                            .card_runtime
+                            .queens_gambit_protection
+                            .remove(&piece.id);
                         state.card_runtime.evasion_piece_ids.remove(&piece.id);
+                        state.card_runtime.parry_piece_ids.remove(&piece.id);
+                        state.card_runtime.loyalist_piece_ids.remove(&piece.id);
+                        state.card_runtime.submerged_piece_ids.remove(&piece.id);
+                        state.card_runtime.ghost_piece_ids.remove(&piece.id);
+                        state.card_runtime.poisoned_piece_ids.remove(&piece.id);
+                        state.card_runtime.explosive_piece_ids.remove(&piece.id);
+                        state.card_runtime.chimera_piece_ids.remove(&piece.id);
+                        state.card_runtime.chameleon_piece_ids.remove(&piece.id);
+                        state
+                            .card_runtime
+                            .basic_training_piece_ids
+                            .remove(&piece.id);
+                        state
+                            .card_runtime
+                            .potion_basic_training_piece_ids
+                            .remove(&piece.id);
+                        state.card_runtime.trojan_piece_ids.remove(&piece.id);
+                        state.card_runtime.stealth_piece_ids.remove(&piece.id);
+                        state.card_runtime.imperial_moves.remove(&piece.id);
+                        state.card_runtime.quantum_positions.remove(&piece.id);
+                        state.card_runtime.stake_statuses.remove(&piece.id);
                     }
                 }
             }
@@ -609,9 +887,38 @@ impl Engine {
             })
         };
         match card.definition_id.as_str() {
+            CLEANUP => {
+                for (square, piece) in state.board.iter() {
+                    if piece.owner == actor
+                        && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                        && !matches!(
+                            piece.kind,
+                            PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football
+                        )
+                    {
+                        actions.push(Action::UseCard {
+                            instance_id: card.instance_id,
+                            target: ActionTarget::Squares(vec![square]),
+                        });
+                    }
+                }
+            }
             BREAKTHROUGH_ORDER | EN_PASSANT_BANG | ARMISTICE | ROYAL_COMMAND | SOCIALISM
             | TAUNT | MISTAKE_CARD | SNIPE | GALE | QUANTUM_MECHANICS | SUBSTITUTION
-            | WHITE_BOX | BLACK_BOX | INSIGHT | RULE_TICKET | SWITCHEROO => push_none(actions),
+            | WHITE_BOX | BLACK_BOX | INSIGHT | RULE_TICKET | SWITCHEROO | FRONTLINE_RESPONSE
+            | RELAY => push_none(actions),
+            SUSPICIOUS_POTION => {
+                for (square, piece) in state.board.iter() {
+                    if !state.card_runtime.large_pieces.contains_key(&piece.id)
+                        && !matches!(
+                            piece.kind,
+                            PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football
+                        )
+                    {
+                        push_piece(actions, square);
+                    }
+                }
+            }
             EVASION | ROYAL_SHIELD => {
                 if state.board.iter().any(|(_, piece)| {
                     piece.owner == actor
@@ -787,7 +1094,7 @@ impl Engine {
                 if let Some((king_square, _)) = state
                     .board
                     .iter()
-                    .find(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+                    .find(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, *piece))
                 {
                     for (rook_square, piece) in state.board.iter() {
                         if piece.owner == actor
@@ -951,7 +1258,7 @@ impl Engine {
                 if state
                     .board
                     .iter()
-                    .any(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+                    .any(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, piece))
                 {
                     push_none(actions);
                 }
@@ -1050,7 +1357,7 @@ impl Engine {
         let (king_square, king) = state
             .board
             .iter()
-            .find(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::King)
+            .find(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, *piece))
             .ok_or_else(|| EngineError::Invariant("castling king disappeared".to_owned()))?;
         let (file_delta, rank_delta, distance) = aligned_distance(king_square, rook_square)
             .ok_or_else(|| EngineError::Invariant("castling pieces are not aligned".to_owned()))?;
@@ -1100,7 +1407,7 @@ impl Engine {
         };
         state.board.iter().any(|(square, piece)| {
             piece.owner == target.owner
-                && piece.kind == PieceKind::King
+                && self.is_royal_piece(state, piece)
                 && piece.id != target.id
                 && squares_are_adjacent(square, target_square)
         })
@@ -1203,7 +1510,7 @@ impl Engine {
                 }
             }
         }
-        if piece.kind == PieceKind::King && state.card_runtime.horse_riding[owner] {
+        if self.is_royal_piece(state, piece) && state.card_runtime.horse_riding[owner] {
             self.generate_leaper_moves(state, from, piece, KNIGHT_OFFSETS, actions);
         }
         if piece.kind == PieceKind::Knight
@@ -1242,7 +1549,7 @@ impl Engine {
                 }
             }
         }
-        if piece.kind == PieceKind::King && state.card_runtime.switcheroo[owner] {
+        if self.is_royal_piece(state, piece) && state.card_runtime.switcheroo[owner] {
             for (to, target) in state.board.iter() {
                 if target.owner == piece.owner && target.kind == PieceKind::Pawn {
                     actions.push(Action::Move(MoveAction::new(from, to, None)));
@@ -1475,7 +1782,7 @@ impl Engine {
                 attacker.kind = captured_piece.kind;
                 state.board.set(movement.to, Some(attacker));
             }
-            if original_piece.kind == PieceKind::King
+            if self.is_royal_piece(state, original_piece)
                 && state.card_runtime.imperial_studies[owner.index()]
             {
                 state
@@ -1780,7 +2087,20 @@ impl Engine {
                 status.remaining_turns = status.remaining_turns.saturating_sub(1);
                 if status.remaining_turns == 0 {
                     state.card_runtime.sacrifice_protection.remove(&piece_id);
-                    state.card_runtime.protected_piece_ids.remove(&piece_id);
+                    if !has_piece_protection_source(state, piece_id) {
+                        state.card_runtime.protected_piece_ids.remove(&piece_id);
+                    }
+                }
+            }
+        }
+        for piece_id in timed_ids(&state.card_runtime.last_resistance, state) {
+            if let Some(status) = state.card_runtime.last_resistance.get_mut(&piece_id) {
+                status.remaining_turns = status.remaining_turns.saturating_sub(1);
+                if status.remaining_turns == 0 {
+                    state.card_runtime.last_resistance.remove(&piece_id);
+                    if !has_piece_protection_source(state, piece_id) {
+                        state.card_runtime.protected_piece_ids.remove(&piece_id);
+                    }
                 }
             }
         }
@@ -1874,6 +2194,26 @@ impl Engine {
         player: Player,
         events: &mut Vec<Event>,
     ) {
+        let expired_coronation = state
+            .card_runtime
+            .coronation_protection
+            .iter()
+            .filter_map(|(piece_id, start_turn)| {
+                state
+                    .board
+                    .find_by_id(*piece_id)
+                    .is_some_and(|(_, piece)| {
+                        piece.owner == player && state.turns_taken[player.index()] > *start_turn
+                    })
+                    .then_some(*piece_id)
+            })
+            .collect::<Vec<_>>();
+        for piece_id in expired_coronation {
+            state.card_runtime.coronation_protection.remove(&piece_id);
+            if !has_piece_protection_source(state, piece_id) {
+                state.card_runtime.protected_piece_ids.remove(&piece_id);
+            }
+        }
         let revealed = state
             .card_runtime
             .submerged_piece_ids
@@ -2083,6 +2423,7 @@ impl Engine {
             }
             let previous_turn = state.turn;
             state.turn = premove.owner;
+            state.card_runtime.free_move_no_capture[premove.owner.index()] = true;
             for movement in premove.moves {
                 let legal = state.board.get(movement.from).is_some_and(|piece| {
                     piece.owner == premove.owner
@@ -2096,17 +2437,6 @@ impl Engine {
                 let Some(mut piece) = state.board.get(movement.from) else {
                     break;
                 };
-                if let Some(captured) = state.board.get(movement.to) {
-                    self.remove_piece_for_card(
-                        state,
-                        movement.to,
-                        captured,
-                        premove.owner,
-                        PREMOVE,
-                        events,
-                    );
-                    piece.capture_count = piece.capture_count.saturating_add(1);
-                }
                 state.board.set(movement.from, None);
                 if let Some(promotion) = movement.promotion {
                     piece.kind = promotion;
@@ -2269,11 +2599,58 @@ fn is_ranged_piece(kind: PieceKind) -> bool {
         PieceKind::Bishop
             | PieceKind::Rook
             | PieceKind::Queen
+            | PieceKind::Bear
             | PieceKind::Amazon
+            | PieceKind::Cardinal
+            | PieceKind::Cannon
+            | PieceKind::Herald
+            | PieceKind::Hook
+            | PieceKind::Protestant
             | PieceKind::Jester
             | PieceKind::Windmill
             | PieceKind::BigRook
+            | PieceKind::Idol
     )
+}
+
+pub(super) fn suspicious_potion_effects(
+    royal: bool,
+    kind: PieceKind,
+    ranged: bool,
+) -> Vec<&'static str> {
+    [
+        ("sacrifice-protection", !royal),
+        ("last-resistance", royal),
+        ("coronation-protection", true),
+        ("shield", true),
+        ("evasion", true),
+        ("parry", true),
+        ("basic-training", !royal && kind != PieceKind::Pawn),
+        ("stealth", true),
+        ("loyalist", !royal),
+        ("ghost", true),
+        ("chameleon", !royal),
+        ("submerge", true),
+        ("freeze", true),
+        ("chimera", !royal),
+        ("witch-trial", !royal),
+        ("stake", true),
+        ("calling-card", !royal),
+        ("empty-lunchbox", !royal),
+        ("poison-stun", true),
+        ("disarm", true),
+        ("manner-no-capture", true),
+        ("saturation-no-capture", true),
+        ("explosive", kind == PieceKind::Pawn),
+        ("poisoned-pawn", kind == PieceKind::Pawn),
+        ("queens-gambit-protection", kind == PieceKind::Pawn),
+        ("trojan-horse", kind == PieceKind::Knight),
+        ("severance", ranged),
+        ("inertia", ranged),
+    ]
+    .into_iter()
+    .filter_map(|(effect, eligible)| eligible.then_some(effect))
+    .collect()
 }
 
 fn is_major_piece(kind: PieceKind) -> bool {
@@ -2295,6 +2672,22 @@ fn is_major_piece(kind: PieceKind) -> bool {
             | PieceKind::Windmill
             | PieceKind::Bear
     )
+}
+
+fn has_piece_protection_source(state: &GameState, piece_id: u32) -> bool {
+    state
+        .card_runtime
+        .sacrifice_protection
+        .contains_key(&piece_id)
+        || state.card_runtime.last_resistance.contains_key(&piece_id)
+        || state
+            .card_runtime
+            .coronation_protection
+            .contains_key(&piece_id)
+        || state
+            .card_runtime
+            .queens_gambit_protection
+            .contains(&piece_id)
 }
 
 fn middle_piece_value(kind: PieceKind) -> u8 {

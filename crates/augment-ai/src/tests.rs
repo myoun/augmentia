@@ -28,8 +28,14 @@ fn test_invariant_1_color_swap_canonical_tensor_symmetry() {
     let encoded_b = encode_state(&swapped);
 
     // Strict Bitwise Element-wise Equality:
-    assert_eq!(encoded_w.spatial, encoded_b.spatial, "Spatial tensor must be 100% bitwise identical on swapped states");
-    assert_eq!(encoded_w.global, encoded_b.global, "Global tensor must be 100% bitwise identical on swapped states");
+    assert_eq!(
+        encoded_w.spatial, encoded_b.spatial,
+        "Spatial tensor must be 100% bitwise identical on swapped states"
+    );
+    assert_eq!(
+        encoded_w.global, encoded_b.global,
+        "Global tensor must be 100% bitwise identical on swapped states"
+    );
 }
 
 #[test]
@@ -101,7 +107,11 @@ fn test_invariant_5_root_dirichlet_noise_is_explicit_and_normalized() {
 
     let diagnostics = tree.last_diagnostics.as_ref().unwrap();
     assert!(diagnostics.root_legal_actions > 1);
-    let raw_sum: f32 = diagnostics.root_actions.iter().map(|stat| stat.raw_prior).sum();
+    let raw_sum: f32 = diagnostics
+        .root_actions
+        .iter()
+        .map(|stat| stat.raw_prior)
+        .sum();
     let effective_sum: f32 = diagnostics
         .root_actions
         .iter()

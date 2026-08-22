@@ -9,7 +9,7 @@ champion registry에 쓰지 않는다. 모든 필수 gate를 통과한 immutable
 1. candidate, champion, V2 baseline, ruleset과 V3 schema/hash 검사;
 2. engine-only solver가 증명한 봉인 전술의 top-1 policy와 optimal probability mass;
 3. 봉인 terminal/proven value의 RMSE, MAE, Brier score와 ECE;
-4. phase, ActionV3 종류, 51개 기물 종류, 147개 runtime 필드와 구현 카드 coverage;
+4. phase, ActionV3 종류, 58개 기물 종류, 169개 runtime 필드와 구현 카드 coverage;
 5. candidate/champion 동일 simulation 수 arena;
 6. candidate/champion 동일 move-time arena;
 7. candidate/V2 baseline의 동일 simulation 및 동일 move-time arena.
@@ -33,17 +33,17 @@ champion registry에 쓰지 않는다. 모든 필수 gate를 통과한 immutable
 
 ## coverage 계약
 
-현재 `augment_chess_20260807` ruleset은 공개 192장 중 124장을 구현한다. 평가 설정은 ruleset
+현재 `augment_chess_20260818` ruleset은 공개 208장 모두에 behavioral slice를 연결한다. 평가 설정은 ruleset
 manifest의 `implemented_card_count`보다 낮은 카드 threshold를 사용할 수 없다. 또한 다음
 전체 계약을 요구한다.
 
-- 51개 PieceKind code;
+- 58개 PieceKind code;
 - `playing`, `forced_move`, `draft`, `awaiting_choice` phase;
 - `move`, `piece_ability`, `card`, `draft_pick`, `resolve_choice` action;
-- ObservationV3 runtime field ID 1~147.
+- ObservationV3 runtime field ID 1~169.
 
-구현되지 않은 68장을 AI coverage로 꾸며 채우지는 않는다. 이 영역은 엔진 ruleset 확장
-문제이며, 현재 모델의 보고서에는 124/192 상태가 그대로 남는다.
+`site_parity_verified_card_count`는 behavioral slice 수와 구분한다. 근사 구현이나 미검증
+상호작용을 AI coverage로 꾸며 채우지 않으며 manifest와 compatibility gap을 그대로 보고한다.
 
 ## arena 의미
 
@@ -100,8 +100,8 @@ paired seed 완전성, terminal rate와 candidate 카드 분포의 색상별 tot
   "evaluation_id": "candidate-20260822-001",
   "created_at_utc": "2026-08-22T00:00:00Z",
   "evaluation_mode": "promotion",
-  "ruleset_id": "augment_chess_20260807",
-  "ruleset_manifest": "rulesets/augment_chess_20260807/manifest.json",
+  "ruleset_id": "augment_chess_20260818",
+  "ruleset_manifest": "rulesets/augment_chess_20260818/manifest.json",
   "ruleset_manifest_sha256": "<64 hex>",
   "candidate": {"onnx": "candidate.onnx", "metadata": "candidate.metadata.json"},
   "champion": {"kind": "v3", "onnx": "champion.onnx", "metadata": "champion.metadata.json"},
