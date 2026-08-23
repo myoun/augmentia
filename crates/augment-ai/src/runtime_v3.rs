@@ -1,7 +1,7 @@
 use crate::{
     ACTION_V3_SCHEMA_ID, ActionDescriptorV3, CARD_RUNTIME_SOURCE_FIELDS, LegalActionSetV3,
-    OBSERVATION_V3_REQUIRED_TEXT_TOKENS, OBSERVATION_V3_SCHEMA_ID, OBSERVATION_V3_SPATIAL_PLANES,
-    ObservationV3, RuntimeValueV3, encode_observation_v3,
+    OBSERVATION_V3_SCHEMA_ID, OBSERVATION_V3_SPATIAL_PLANES, ObservationV3, PIECE_KIND_VOCABULARY,
+    RuntimeValueV3, encode_observation_v3, observation_v3_runtime_text_tokens,
 };
 use augment_core::{Action, Engine, GameState};
 use ort::session::{Session, SessionInputValue};
@@ -67,6 +67,7 @@ struct ModelMetadataV3 {
     ruleset_id: String,
     ruleset_manifest_sha256: String,
     onnx_sha256: String,
+    piece_kind_vocabulary_size: usize,
     vocabulary: VocabularyArtifactV3,
     inputs: Vec<ModelInputV3>,
     outputs: Vec<String>,
@@ -239,7 +240,8 @@ impl V3OnnxRuntime {
 }
 
 fn validate_required_runtime_vocabulary(vocabulary: &VocabularyV3) -> Result<(), V3RuntimeError> {
-    let missing = OBSERVATION_V3_REQUIRED_TEXT_TOKENS
+    let required = observation_v3_runtime_text_tokens();
+    let missing = required
         .iter()
         .filter(|token| !vocabulary.lookup.contains_key(**token))
         .copied()
@@ -1068,6 +1070,18 @@ fn validate_metadata(
         || metadata_value.ruleset_manifest_sha256 != expected_ruleset_hash
     {
         return metadata("model ruleset artifact does not match the runtime");
+    }
+    let required_piece_kind_rows = PIECE_KIND_VOCABULARY
+        .iter()
+        .map(|(code, _)| usize::from(*code))
+        .max()
+        .unwrap_or(0)
+        + 1;
+    if metadata_value.piece_kind_vocabulary_size != required_piece_kind_rows {
+        return metadata(format!(
+            "model piece-kind vocabulary has {} rows, expected {required_piece_kind_rows}",
+            metadata_value.piece_kind_vocabulary_size
+        ));
     }
     let bytes = fs::read(model_path).map_err(|error| V3RuntimeError::Io(error.to_string()))?;
     let actual_hash = format!("{:x}", Sha256::digest(bytes));

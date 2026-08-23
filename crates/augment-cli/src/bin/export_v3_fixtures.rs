@@ -1,6 +1,6 @@
 use augment_ai::{
-    ACTION_V3_SCHEMA_ID, LegalActionSetV3, OBSERVATION_V3_REQUIRED_TEXT_TOKENS,
-    OBSERVATION_V3_SCHEMA_ID, ObservationV3, encode_observation_v3,
+    ACTION_V3_SCHEMA_ID, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID, ObservationV3,
+    PIECE_KIND_VOCABULARY, encode_observation_v3, observation_v3_runtime_text_tokens,
 };
 use augment_core::{
     BUNDLED_RULESET_ID, Board, CardInstance, ChoiceContinuation, DeathmatchState, DelayedHazard,
@@ -29,6 +29,7 @@ struct GoldenSuiteV3 {
 struct RuntimeVocabularyV3 {
     schema_id: &'static str,
     ruleset_id: &'static str,
+    piece_kind_codes: Vec<u8>,
     tokens: Vec<&'static str>,
 }
 
@@ -87,13 +88,14 @@ fn render_runtime_vocabulary() -> String {
 }
 
 fn build_runtime_vocabulary() -> RuntimeVocabularyV3 {
-    let mut tokens = OBSERVATION_V3_REQUIRED_TEXT_TOKENS.to_vec();
-    tokens.sort_unstable();
-    tokens.dedup();
     RuntimeVocabularyV3 {
         schema_id: RUNTIME_VOCABULARY_SCHEMA_ID,
         ruleset_id: BUNDLED_RULESET_ID,
-        tokens,
+        piece_kind_codes: PIECE_KIND_VOCABULARY
+            .iter()
+            .map(|(code, _)| *code)
+            .collect(),
+        tokens: observation_v3_runtime_text_tokens(),
     }
 }
 
@@ -103,6 +105,8 @@ fn build_suite() -> GoldenSuiteV3 {
         golden_case("initial_draft", initial_draft(&engine), &engine),
         golden_case("standard_playing", standard_playing(), &engine),
         golden_case("forced_move", forced_move(), &engine),
+        golden_case("forced_effect_move", forced_effect_move(), &engine),
+        golden_case("quantum_shadow", quantum_shadow(), &engine),
         golden_case("awaiting_choice", awaiting_choice(), &engine),
         golden_case("runtime_rich", runtime_rich(), &engine),
         golden_case("promotion", promotion(), &engine),
@@ -153,6 +157,27 @@ fn forced_move() -> GameState {
         triggered_piece_ids: [pawn.id].into_iter().collect(),
         nonce: 2,
     });
+    state
+}
+
+fn forced_effect_move() -> GameState {
+    let mut state = standard_playing();
+    let pawn = state.board.get("e2".parse().unwrap()).unwrap();
+    state.phase = GamePhase::ForcedMove {
+        piece_id: pawn.id,
+        source: ForcedMoveSource::Effect(augment_core::MIDDLE_EXTRA_MOVE_SOURCE.to_owned()),
+        continuation: ForcedMoveContinuation::FinishTurn,
+    };
+    state
+}
+
+fn quantum_shadow() -> GameState {
+    let mut state = standard_playing();
+    let rook = state.board.get("a1".parse().unwrap()).unwrap();
+    state
+        .card_runtime
+        .quantum_positions
+        .insert(rook.id, "d1".parse().unwrap());
     state
 }
 
@@ -319,6 +344,8 @@ mod tests {
                 "initial_draft",
                 "standard_playing",
                 "forced_move",
+                "forced_effect_move",
+                "quantum_shadow",
                 "awaiting_choice",
                 "runtime_rich",
                 "promotion",

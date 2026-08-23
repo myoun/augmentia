@@ -41,8 +41,13 @@ class AugmentNetV3Tests(unittest.TestCase):
 
     def test_default_parameter_and_vocabulary_baseline_is_fixed(self) -> None:
         model = AugmentNetV3(V3ModelConfig(text_vocabulary_size=self.vocabulary.size))
-        self.assertEqual(self.vocabulary.size, 382)
-        self.assertEqual(model.parameter_count(), 2_864_132)
+        self.assertEqual(self.vocabulary.size, 384)
+        self.assertEqual(model.parameter_count(), 2_865_284)
+        self.assertEqual(model.piece_kind_embedding.num_embeddings, 59)
+        self.assertEqual(
+            model.piece_kind_embedding(torch.arange(59)).shape,
+            (59, model.config.model_dim),
+        )
         self.assertEqual(
             V3Vocabulary.from_json(self.vocabulary.to_json()), self.vocabulary
         )

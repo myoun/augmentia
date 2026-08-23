@@ -18,6 +18,7 @@ from v3.onnx_export import (
     assert_onnx_equivalent,
     export_onnx_v3,
     extend_model_for_runtime_vocabulary,
+    migrate_piece_kind_embedding,
 )
 from v3.onnx_runtime import OnnxRuntimeV3
 from v3.pretensor import PretensorizedReplayDatasetV3, build_pretensor_artifact
@@ -449,6 +450,19 @@ class PipelineV3Tests(unittest.TestCase):
         torch.testing.assert_close(
             extended.text_embedding.weight[2:],
             torch.zeros_like(extended.text_embedding.weight[2:]),
+        )
+
+    def test_legacy_piece_kind_embedding_expands_without_changing_trained_rows(self) -> None:
+        legacy = torch.arange(52 * 4, dtype=torch.float32).reshape(52, 4)
+        state, migration = migrate_piece_kind_embedding(
+            {"piece_kind_embedding.weight": legacy}, 59
+        )
+        self.assertEqual(migration["source_rows"], 52)
+        self.assertEqual(migration["target_rows"], 59)
+        torch.testing.assert_close(state["piece_kind_embedding.weight"][:52], legacy)
+        torch.testing.assert_close(
+            state["piece_kind_embedding.weight"][52:],
+            torch.zeros(7, 4),
         )
 
 

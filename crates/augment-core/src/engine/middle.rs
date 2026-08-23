@@ -2009,13 +2009,13 @@ impl Engine {
         if extra_move && state.board.find_by_id(original_piece.id).is_some() {
             state.phase = GamePhase::ForcedMove {
                 piece_id: original_piece.id,
-                source: ForcedMoveSource::Effect("middle-extra-move".to_owned()),
+                source: ForcedMoveSource::Effect(MIDDLE_EXTRA_MOVE_SOURCE.to_owned()),
                 continuation: ForcedMoveContinuation::FinishTurn,
             };
             events.push(Event::ForcedMoveStarted {
                 player: owner,
                 piece_id: original_piece.id,
-                source: "middle-extra-move".to_owned(),
+                source: MIDDLE_EXTRA_MOVE_SOURCE.to_owned(),
             });
         }
         self.resolve_religious_victory(state);

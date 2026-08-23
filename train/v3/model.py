@@ -8,13 +8,19 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .schema import GLOBAL_SHAPE, RUNTIME_FIELD_COUNT, SPATIAL_SHAPE
+from .schema import (
+    GLOBAL_SHAPE,
+    PIECE_KIND_VOCABULARY_SIZE,
+    RUNTIME_FIELD_COUNT,
+    SPATIAL_SHAPE,
+)
 from .tensorize import V3Batch
 
 
 @dataclass(frozen=True)
 class V3ModelConfig:
     text_vocabulary_size: int
+    piece_kind_vocabulary_size: int = PIECE_KIND_VOCABULARY_SIZE
     channels: int = 128
     residual_blocks: int = 6
     model_dim: int = 128
@@ -24,6 +30,10 @@ class V3ModelConfig:
         if self.text_vocabulary_size < 2:
             raise ValueError(
                 "text_vocabulary_size must include <none> and at least one token"
+            )
+        if self.piece_kind_vocabulary_size != PIECE_KIND_VOCABULARY_SIZE:
+            raise ValueError(
+                "piece_kind_vocabulary_size must match the current stable piece-kind contract"
             )
         if self.channels <= 0 or self.model_dim <= 0 or self.residual_blocks <= 0:
             raise ValueError(
@@ -93,7 +103,9 @@ class AugmentNetV3(nn.Module):
         )
         self.owner_embedding = nn.Embedding(3, dim, padding_idx=0)
         self.square_embedding = nn.Embedding(65, dim, padding_idx=0)
-        self.piece_kind_embedding = nn.Embedding(52, dim, padding_idx=0)
+        self.piece_kind_embedding = nn.Embedding(
+            config.piece_kind_vocabulary_size, dim, padding_idx=0
+        )
 
         self.piece_numeric = _mlp(2, dim, dim)
         self.piece_norm = nn.LayerNorm(dim)

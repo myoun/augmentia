@@ -2433,7 +2433,7 @@ impl Engine {
         }
         if let Some(piece_id) = choice
             .handler_id
-            .strip_prefix("field-promotion:")
+            .strip_prefix(crate::FIELD_PROMOTION_CHOICE_PREFIX)
             .and_then(|value| value.parse::<u32>().ok())
         {
             next.phase = GamePhase::Playing;
@@ -2705,8 +2705,8 @@ impl Engine {
         // A new forced move emitted while resolving this move must be distinguishable from the
         // forced move that is currently being fulfilled.
         next.phase = GamePhase::Playing;
-        let mut moving_piece = self
-            .board_piece_at(&next, movement.from)
+        let mut moving_piece = next
+            .move_source_piece(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
         let moved_ability_kind = self.piece_ability_kind(&next, moving_piece);
         if moved_ability_kind == PieceKind::SiegeRam {
@@ -3572,7 +3572,11 @@ impl Engine {
                 id: choice_id,
                 owner: actor,
                 source_card_instance: 0,
-                handler_id: format!("field-promotion:{}", moving_piece.id),
+                handler_id: format!(
+                    "{}{}",
+                    crate::FIELD_PROMOTION_CHOICE_PREFIX,
+                    moving_piece.id
+                ),
                 options: vec![
                     "queen".to_owned(),
                     "rook".to_owned(),

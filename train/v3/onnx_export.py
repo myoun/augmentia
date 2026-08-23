@@ -53,6 +53,7 @@ def export_onnx_v3(
     code_commit: str = "unknown",
     opset: int = 18,
     vocabulary_extension: dict[str, Any] | None = None,
+    checkpoint_migrations: Sequence[dict[str, Any]] = (),
 ) -> tuple[Path, Path]:
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +96,7 @@ def export_onnx_v3(
         "dataset": dataset_identity,
         "vocabulary": vocabulary.to_json(),
         "model_config": asdict(model.config),
+        "piece_kind_vocabulary_size": model.config.piece_kind_vocabulary_size,
         "onnx_sha256": _sha256(output),
         "checkpoint_sha256": checkpoint_hash,
         "code_commit": code_commit,
@@ -109,6 +111,7 @@ def export_onnx_v3(
         ],
         "outputs": ["policy_logits", "value"],
         "vocabulary_extension": vocabulary_extension,
+        "checkpoint_migrations": list(checkpoint_migrations),
     }
     metadata_path = output.with_suffix(".metadata.json")
     _atomic_json(metadata_path, metadata)
@@ -146,8 +149,38 @@ def load_model_checkpoint(path: str | Path) -> tuple[AugmentNetV3, dict[str, Any
     identity = checkpoint["run_identity"]
     config = V3ModelConfig(**identity["model_config"])
     model = AugmentNetV3(config)
-    model.load_state_dict(checkpoint["model"])
+    state, migration = migrate_piece_kind_embedding(
+        checkpoint["model"], config.piece_kind_vocabulary_size
+    )
+    model.load_state_dict(state)
+    checkpoint["_load_migrations"] = [] if migration is None else [migration]
     return model, checkpoint
+
+
+def migrate_piece_kind_embedding(
+    state: dict[str, torch.Tensor], target_rows: int
+) -> tuple[dict[str, torch.Tensor], dict[str, Any] | None]:
+    """Expand legacy piece-kind rows without changing any learned row."""
+    name = "piece_kind_embedding.weight"
+    old = state[name]
+    if old.ndim != 2:
+        raise ValueError("piece_kind_embedding.weight must be a matrix")
+    if old.shape[0] == target_rows:
+        return state, None
+    if old.shape[0] > target_rows:
+        raise ValueError(
+            f"checkpoint piece-kind embedding has {old.shape[0]} rows, "
+            f"but the model declares only {target_rows}"
+        )
+    expanded = old.new_zeros((target_rows, old.shape[1]))
+    expanded[: old.shape[0]].copy_(old)
+    migrated = dict(state)
+    migrated[name] = expanded
+    return migrated, {
+        "kind": "expand_zero_initialized_piece_kind_embedding",
+        "source_rows": old.shape[0],
+        "target_rows": target_rows,
+    }
 
 
 def extend_model_for_runtime_vocabulary(
@@ -278,6 +311,7 @@ def main() -> None:
             "contract_ruleset_id": runtime_contract["ruleset_id"],
             "contract_sha256": _sha256(default_runtime_vocabulary_path()),
         },
+        checkpoint_migrations=checkpoint.get("_load_migrations", ()),
     )
     print(
         json.dumps(

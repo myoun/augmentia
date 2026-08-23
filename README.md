@@ -14,9 +14,34 @@
 ## 빠른 실행
 
 ```powershell
+cargo run -q -p augment-cli --bin export_v3_fixtures
 cargo test --workspace
 cargo run -p augment-web
 ```
+
+### V3 모델 계약 게이트
+
+엔진(말 종류, 카드, phase, effect source)이나 V3 인코더 계약을 건드리는 변경은
+커밋 전에 반드시 다음 게이트를 통과해야 합니다. 이 스크립트는 golden fixture와
+runtime vocabulary를 현재 엔진 기준으로 재생성해 드리프트를 즉시 잡고, 전체 Rust
+테스트와 전체 Python V3 테스트를 실행합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-v3.ps1
+```
+
+새 카드·새 phase·새 특수 상태가 엔진에 추가되면 같은 PR에서 golden fixture case도
+확장해야 합니다. `scripts/verify-v3.ps1`이 재생성 결과가 바뀌면 커밋을 막으므로,
+fixture 갱신 없이는 룰셋 수정이 머지될 수 없습니다.
+
+체크포인트 구조 변경(예: 말 종류 임베딩 확장)은 0 초기화 행 추가 방식의 마이그레이션으로만
+처리하고, ONNX metadata(`piece_kind_vocabulary_size`, vocabulary 크기, schema ID)는
+런타임이 fail-closed로 검증합니다. 축소·재배치 같은 비가역 변경은 금지이며 새
+체크포인트로 시작합니다.
+
+기록형 self-play는 clean worktree에서만 실행되며, 생성 중 오류 대국이 하나라도
+나오면 즉시 실패합니다. 배포용 모델은 커밋 후 짧은 smoke self-play(수 시드, 소량
+simulation)로 오류 0건을 확인한 뒤 사용합니다.
 
 기본 실행은 `http://127.0.0.1:7878`의 로컬 웹 UI를 열어 백과 흑을 번갈아 조종하는
 핫시트 게임을 시작합니다. 보드 클릭 이동, 프로모션, 드래프트, 카드 대상 지정, 기물

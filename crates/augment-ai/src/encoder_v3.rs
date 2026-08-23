@@ -3,10 +3,11 @@ use augment_core::{
     BribeRevert, CardRuntimeState, ChoiceContinuation, DelayedHazard, DelayedHazardKind,
     DiceLockStatus, DraftPhase, EmptyLunchboxStatus, EnPassantState, FeudalContract,
     ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
-    InitiativeStatus, LargePieceStatus, LogStatus, Mode, MoveAction, NecromancyRevert, PendingIcbm,
-    PendingOtherworld, PendingPanic, PendingPremove, PendingScarecrow, PendingVip, Piece,
-    PieceKind, PlatformRuleState, Player, RepositionStatus, RoyalCommandStatus, Square,
-    TimedPieceStatus, TrolleyDilemma, TwinBond, WindmillMode,
+    IMPLEMENTED_CARDS, InitiativeStatus, LargePieceStatus, LogStatus, MIDDLE_EXTRA_MOVE_SOURCE,
+    Mode, MoveAction, NecromancyRevert, PendingIcbm, PendingOtherworld, PendingPanic,
+    PendingPremove, PendingScarecrow, PendingVip, Piece, PieceKind, PlatformRuleState, Player,
+    RepositionStatus, RoyalCommandStatus, Square, TimedPieceStatus, TrolleyDilemma, TwinBond,
+    WindmillMode,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -19,15 +20,20 @@ pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
 /// card catalog data. Keep this list in Rust, next to the encoder that owns the
 /// semantics, so ONNX export does not infer runtime coverage from a few sample
 /// positions.
-pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 72] = [
+pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 78] = [
     "age_shared_turns",
     "anchor",
     "bishop",
     "bundles",
     "by",
     "card_effect",
+    "campaign",
     "cell",
     "chaos",
+    "choice:field-promotion:0",
+    "choice:field-promotion:1",
+    "choice:field-promotion:2",
+    "choice:field-promotion:3",
     "choice:middle.trolley:0",
     "choice:middle.trolley:1",
     "clock_owner",
@@ -55,6 +61,7 @@ pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 72] = [
     "max_hp",
     "meteor",
     "middle",
+    MIDDLE_EXTRA_MOVE_SOURCE,
     "middle.trolley",
     "moves",
     "next_in_shared_turns",
@@ -93,6 +100,17 @@ pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 72] = [
     "value",
     "won",
 ];
+
+/// Complete finite token inventory for the bundled ruleset. The fixed encoder
+/// vocabulary is augmented with every implemented card identifier because cards
+/// also appear as draft offers, definitions, effect sources and cloned passives.
+pub fn observation_v3_runtime_text_tokens() -> Vec<&'static str> {
+    let mut tokens = OBSERVATION_V3_REQUIRED_TEXT_TOKENS.to_vec();
+    tokens.extend(IMPLEMENTED_CARDS.iter().map(|definition| definition.id));
+    tokens.sort_unstable();
+    tokens.dedup();
+    tokens
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -222,6 +240,80 @@ impl RuntimeFeatureV3 {
             .checked_sub(1)
             .and_then(|index| CARD_RUNTIME_SOURCE_FIELDS.get(usize::from(index)))
             .copied()
+    }
+}
+
+/// Collect every free-text token that this observation can feed to the model
+/// vocabulary. Used by contract tests and the runtime vocabulary exporter.
+pub fn observation_text_tokens(observation: &ObservationV3) -> BTreeSet<String> {
+    let mut tokens = BTreeSet::new();
+    tokens.insert(observation.state.mode_id.clone());
+    tokens.extend(observation.state.applied_rules.iter().cloned());
+    match &observation.state.status {
+        StatusV3::Ongoing => {}
+        StatusV3::Won { reason, detail, .. } | StatusV3::Draw { reason, detail } => {
+            tokens.insert(reason.clone());
+            if let Some(detail) = detail {
+                tokens.insert(detail.clone());
+            }
+        }
+    }
+    for card in &observation.cards {
+        tokens.insert(card.definition_id.clone());
+    }
+    match &observation.phase {
+        PhaseV3::Playing => {}
+        PhaseV3::ForcedMove {
+            source_kind,
+            source_id,
+            ..
+        } => {
+            tokens.insert(source_kind.clone());
+            if let Some(source_id) = source_id {
+                tokens.insert(source_id.clone());
+            }
+        }
+        PhaseV3::Draft {
+            draft_phase,
+            offers,
+            ..
+        } => {
+            tokens.insert(draft_phase.clone());
+            tokens.extend(offers.iter().cloned());
+        }
+        PhaseV3::AwaitingChoice {
+            handler_id,
+            options,
+            continuation,
+            ..
+        } => {
+            tokens.insert(handler_id.clone());
+            tokens.extend(options.iter().cloned());
+            tokens.insert(continuation.clone());
+        }
+    }
+    for feature in &observation.runtime {
+        collect_runtime_text(&feature.value, &mut tokens);
+    }
+    tokens
+}
+
+fn collect_runtime_text(value: &RuntimeValueV3, tokens: &mut BTreeSet<String>) {
+    match value {
+        RuntimeValueV3::Text(text) => {
+            tokens.insert(text.clone());
+        }
+        RuntimeValueV3::List(values) => {
+            for value in values {
+                collect_runtime_text(value, tokens);
+            }
+        }
+        RuntimeValueV3::Record(fields) => {
+            for field in fields {
+                collect_runtime_text(&field.value, tokens);
+            }
+        }
+        _ => {}
     }
 }
 
@@ -418,7 +510,7 @@ fn encode_phase(state: &GameState, ids: &mut LocalIds) -> PhaseV3 {
             choice_slot: 0,
             owner: relative_player(choice.owner, state.turn),
             source_card: ids.card(choice.source_card_instance),
-            handler_id: choice.handler_id.clone(),
+            handler_id: model_choice_handler_token(&choice.handler_id),
             options: (0..choice.options.len())
                 .map(|index| model_choice_option_token(&choice.handler_id, index))
                 .collect(),
@@ -432,7 +524,14 @@ fn encode_phase(state: &GameState, ids: &mut LocalIds) -> PhaseV3 {
 }
 
 pub(crate) fn model_choice_option_token(handler_id: &str, option_index: usize) -> String {
-    format!("choice:{handler_id}:{option_index}")
+    format!(
+        "choice:{}:{option_index}",
+        model_choice_handler_token(handler_id)
+    )
+}
+
+pub(crate) fn model_choice_handler_token(handler_id: &str) -> String {
+    augment_core::GameState::choice_handler_family(handler_id).to_owned()
 }
 
 fn encode_global_state(state: &GameState) -> GlobalStateV3 {
@@ -442,7 +541,7 @@ fn encode_global_state(state: &GameState) -> GlobalStateV3 {
             Mode::Standard => "standard".to_owned(),
             Mode::Chaos => "chaos".to_owned(),
             Mode::Grand => "grand".to_owned(),
-            Mode::Campaign(id) => format!("campaign:{id}"),
+            Mode::Campaign(_) => "campaign".to_owned(),
         },
         ply: state.ply,
         quiet_ply: state.quiet_ply,
@@ -2219,6 +2318,39 @@ mod tests {
             PhaseV3::AwaitingChoice { options, .. }
                 if options == ["choice:middle.trolley:0", "choice:middle.trolley:1"]
         ));
+    }
+
+    #[test]
+    fn every_text_emitted_by_played_games_is_in_the_runtime_contract() {
+        let contract = observation_v3_runtime_text_tokens()
+            .into_iter()
+            .map(str::to_owned)
+            .collect::<BTreeSet<_>>();
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut emitted = BTreeSet::new();
+        for seed in 0..24u64 {
+            let mut state = engine.new_game(Mode::Standard, seed).unwrap();
+            for _ in 0..160 {
+                if state.status != GameStatus::Ongoing {
+                    break;
+                }
+                emitted.extend(observation_text_tokens(&encode_observation_v3(&state)));
+                let actions = engine.legal_actions(&state).unwrap();
+                if actions.is_empty() {
+                    break;
+                }
+                // Rotate deterministically through the legal list instead of always
+                // taking index 0 so forced moves, choices and cards are exercised.
+                let index = (state.ply as usize + seed as usize) % actions.len();
+                state = engine.apply(&state, actions[index].clone()).unwrap().state;
+            }
+        }
+        assert!(!emitted.is_empty());
+        let unknown: Vec<_> = emitted.difference(&contract).collect();
+        assert!(
+            unknown.is_empty(),
+            "played-game tokens missing from the V3 runtime vocabulary contract: {unknown:?}"
+        );
     }
 
     fn piece_with_captures(owner: Player, kind: PieceKind, id: u32, capture_count: u16) -> Piece {

@@ -32,7 +32,8 @@ pub use encoder_v3::{
     BoardPieceV3, CardRecordV3, GlobalStateV3, NamedRuntimeValueV3, OBSERVATION_V3_GLOBAL_FEATURES,
     OBSERVATION_V3_REQUIRED_TEXT_TOKENS, OBSERVATION_V3_SPATIAL_PLANES,
     OBSERVATION_V3_SPATIAL_SIZE, ObservationV3, PhaseV3, RelativePlayerV3, RuntimeFeatureV3,
-    RuntimeValueV3, encode_observation_v3,
+    RuntimeValueV3, encode_observation_v3, observation_text_tokens,
+    observation_v3_runtime_text_tokens,
 };
 pub use evaluator::{Evaluator, HeuristicEvaluator, OnnxNeuralEvaluator};
 pub use mcts::{

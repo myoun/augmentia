@@ -16,6 +16,8 @@ SPATIAL_SHAPE = [116, 8, 8]
 SPATIAL_SIZE = 116 * 8 * 8
 GLOBAL_SHAPE = [32]
 RUNTIME_FIELD_COUNT = 169
+PIECE_KIND_MAX_CODE = 58
+PIECE_KIND_VOCABULARY_SIZE = PIECE_KIND_MAX_CODE + 1
 
 _PLAYERS = {"self_player", "opponent"}
 _ABILITIES = {
@@ -63,7 +65,11 @@ def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
     with vocabulary_path.open("r", encoding="utf-8") as vocabulary_file:
         payload = json.load(vocabulary_file)
     vocabulary = _mapping(payload, "runtime_vocabulary")
-    _exact_keys(vocabulary, {"schema_id", "ruleset_id", "tokens"}, "runtime_vocabulary")
+    _exact_keys(
+        vocabulary,
+        {"schema_id", "ruleset_id", "piece_kind_codes", "tokens"},
+        "runtime_vocabulary",
+    )
     _equal(
         vocabulary.get("schema_id"),
         RUNTIME_VOCABULARY_SCHEMA_ID,
@@ -79,6 +85,21 @@ def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
         raise SchemaError("runtime_vocabulary.tokens must not be empty")
     if normalized != sorted(set(normalized)):
         raise SchemaError("runtime_vocabulary.tokens must be sorted and unique")
+    piece_kind_codes = [
+        _unsigned(code, f"runtime_vocabulary.piece_kind_codes[{index}]")
+        for index, code in enumerate(
+            _sequence(
+                vocabulary.get("piece_kind_codes"),
+                "runtime_vocabulary.piece_kind_codes",
+            )
+        )
+    ]
+    expected_piece_kind_codes = list(range(1, PIECE_KIND_MAX_CODE + 1))
+    if piece_kind_codes != expected_piece_kind_codes:
+        raise SchemaError(
+            "runtime_vocabulary.piece_kind_codes must contain every stable code "
+            f"1..{PIECE_KIND_MAX_CODE} exactly once"
+        )
     return vocabulary
 
 
@@ -591,8 +612,10 @@ def _slot(payload: Any, count: int, path: str) -> int:
 
 def _piece_kind(payload: Any, path: str) -> int:
     code = _unsigned(payload, path)
-    if not 1 <= code <= 51:
-        raise SchemaError(f"{path} piece kind {code} is outside 1..51")
+    if not 1 <= code <= PIECE_KIND_MAX_CODE:
+        raise SchemaError(
+            f"{path} piece kind {code} is outside 1..{PIECE_KIND_MAX_CODE}"
+        )
     return code
 
 

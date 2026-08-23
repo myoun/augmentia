@@ -15,7 +15,12 @@ import numpy as np
 import onnxruntime as ort
 
 from .onnx_export import INPUT_NAMES, MODEL_METADATA_SCHEMA_ID
-from .schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID, SchemaError
+from .schema import (
+    ACTION_SCHEMA_ID,
+    OBSERVATION_SCHEMA_ID,
+    PIECE_KIND_VOCABULARY_SIZE,
+    SchemaError,
+)
 from .tensorize import V3Batch, V3Vocabulary, tensorize_cases
 
 
@@ -158,6 +163,8 @@ def _validate_metadata(
         raise SchemaError("model observation schema mismatch")
     if metadata.get("action_schema_id") != ACTION_SCHEMA_ID:
         raise SchemaError("model action schema mismatch")
+    if metadata.get("piece_kind_vocabulary_size") != PIECE_KIND_VOCABULARY_SIZE:
+        raise SchemaError("model piece-kind vocabulary mismatch")
     if _sha256(model_path) != metadata.get("onnx_sha256"):
         raise SchemaError("ONNX checksum does not match model metadata")
     if (

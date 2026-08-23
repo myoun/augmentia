@@ -62,6 +62,12 @@ pub enum ForcedMoveSource {
     Effect(String),
 }
 
+/// Stable model/runtime token for the extra move created by middle-card effects.
+pub const MIDDLE_EXTRA_MOVE_SOURCE: &str = "middle-extra-move";
+
+/// Stable model/runtime prefix for the dynamic field-promotion follow-up choice.
+pub const FIELD_PROMOTION_CHOICE_PREFIX: &str = "field-promotion:";
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ForcedMoveContinuation {
     ResumeTurn,
@@ -753,6 +759,31 @@ impl GameState {
 
     pub fn shared_turn_count(&self) -> u32 {
         self.turns_taken[0].min(self.turns_taken[1])
+    }
+
+    /// Resolve the piece that owns a legal move source, including a quantum shadow square.
+    pub fn move_source_piece(&self, square: Square) -> Option<Piece> {
+        self.board.get(square).or_else(|| {
+            self.card_runtime
+                .quantum_positions
+                .iter()
+                .find_map(|(piece_id, shadow)| {
+                    (*shadow == square)
+                        .then(|| self.board.find_by_id(*piece_id).map(|(_, piece)| piece))
+                        .flatten()
+                })
+        })
+    }
+
+    /// Stable choice-handler family used by the V3 model vocabulary.
+    pub fn choice_handler_family(handler_id: &str) -> &str {
+        if handler_id
+            .strip_prefix(FIELD_PROMOTION_CHOICE_PREFIX)
+            .is_some_and(|piece_id| piece_id.parse::<u32>().is_ok())
+        {
+            return crate::FIELD_PROMOTION;
+        }
+        handler_id
     }
 
     pub fn position_key(&self) -> u64 {

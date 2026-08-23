@@ -1,7 +1,7 @@
 use augment_ai::data_v3::{
     AbsolutePlayerV3, AgentKindV3, CompressionV3, DATASET_MANIFEST_V3_SCHEMA_ID, DataRecordV3,
     DatasetManifestV3, DatasetSplitV3, DatasetTotalsV3, GeneratorProvenanceV3, ModelArtifactV3,
-    PlayerAgentV3, RulesetRefV3, SPLIT_POLICY_V3_ALGORITHM, SplitPolicyV3,
+    PlayerAgentV3, RulesetRefV3, SPLIT_POLICY_V3_ALGORITHM, SplitPolicyV3, TerminationV3,
 };
 use augment_ai::{
     ACTION_V3_SCHEMA_ID, OBSERVATION_V3_SCHEMA_ID, SelfPlayAgentV3, SelfPlayGameConfigV3,
@@ -123,6 +123,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 temperature_decisions,
             },
         )?;
+        if let TerminationV3::Error {
+            stage,
+            code,
+            detail,
+            ..
+        } = &game.termination
+        {
+            return Err(format!(
+                "self-play game {game_index} stopped at {stage:?}/{code}: {}",
+                detail.as_deref().unwrap_or("no error detail")
+            )
+            .into());
+        }
         let split = split_policy.assign(&game.split_group_key())?;
         split_records
             .entry(split)

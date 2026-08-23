@@ -1,4 +1,4 @@
-use crate::encoder_v3::{LocalIds, model_choice_option_token};
+use crate::encoder_v3::{LocalIds, model_choice_handler_token, model_choice_option_token};
 use crate::observation_v3::PIECE_KIND_VOCABULARY;
 use augment_core::{
     Action, ActionTarget, Engine, GamePhase, GameState, MoveAction, PieceAbility, PieceKind,
@@ -175,12 +175,12 @@ pub fn encode_action_v3(
     let ids = LocalIds::new(state);
     match action {
         Action::Move(movement) => {
-            let piece = state
-                .board
-                .get(movement.from)
-                .ok_or(ActionV3Error::MissingMovePiece {
-                    square: movement.from,
-                })?;
+            let piece =
+                state
+                    .move_source_piece(movement.from)
+                    .ok_or(ActionV3Error::MissingMovePiece {
+                        square: movement.from,
+                    })?;
             let slot = ids
                 .piece_slot(piece.id)
                 .ok_or(ActionV3Error::UnknownPieceId { piece_id: piece.id })?;
@@ -277,7 +277,7 @@ pub fn encode_action_v3(
             )?;
             Ok(ActionDescriptorV3::ResolveChoice {
                 choice_slot: 0,
-                handler_id: choice.handler_id.clone(),
+                handler_id: model_choice_handler_token(&choice.handler_id),
                 option_index: *option_index,
                 option: model_choice_option_token(&choice.handler_id, usize::from(*option_index)),
             })
@@ -304,8 +304,7 @@ pub fn decode_action_v3(
                 .ok_or(ActionV3Error::UnknownPieceSlot { slot: *piece })?;
             let state_piece =
                 state
-                    .board
-                    .get(from_square)
+                    .move_source_piece(from_square)
                     .ok_or(ActionV3Error::MissingMovePiece {
                         square: from_square,
                     })?;
@@ -404,7 +403,7 @@ pub fn decode_action_v3(
                     len: choice.options.len(),
                 },
             )?;
-            if choice.handler_id != *handler_id
+            if model_choice_handler_token(&choice.handler_id) != *handler_id
                 || model_choice_option_token(handler_id, usize::from(*option_index)) != *option
             {
                 return Err(ActionV3Error::StaleChoiceDescriptor);
@@ -742,6 +741,73 @@ mod tests {
             decode_action_v3(&descriptor, &choice).unwrap(),
             choice_action
         );
+    }
+
+    #[test]
+    fn quantum_shadow_moves_round_trip_and_apply_through_v3() {
+        let mut board = Board::empty();
+        board.set(
+            "e1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::King).with_id(1)),
+        );
+        board.set(
+            "a1".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Rook).with_id(2)),
+        );
+        board.set(
+            "e8".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::King).with_id(3)),
+        );
+        let mut state =
+            GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, Player::White, 20);
+        state
+            .card_runtime
+            .quantum_positions
+            .insert(2, "d1".parse().unwrap());
+        let engine = Engine::bundled_20260807().unwrap();
+        let legal = LegalActionSetV3::from_state(&state, &engine).unwrap();
+        let shadow_move = Action::Move(MoveAction::new(
+            "d1".parse().unwrap(),
+            "d3".parse().unwrap(),
+            None,
+        ));
+        let index = legal
+            .actions
+            .iter()
+            .position(|descriptor| {
+                decode_action_v3(descriptor, &state).is_ok_and(|action| action == shadow_move)
+            })
+            .expect("quantum shadow move must have a V3 descriptor");
+        let moved = legal.apply(index, &state, &engine).unwrap().state;
+        assert!(moved.board.get("d3".parse().unwrap()).is_some());
+        assert!(moved.board.get("a1".parse().unwrap()).is_none());
+    }
+
+    #[test]
+    fn field_promotion_choice_hides_raw_piece_id_from_model_tokens() {
+        let mut state = standard_playing_state(21);
+        state.phase = GamePhase::AwaitingChoice(PendingChoice {
+            id: 777,
+            owner: Player::White,
+            source_card_instance: 0,
+            handler_id: "field-promotion:12345".to_owned(),
+            options: vec!["queen".to_owned(), "rook".to_owned()],
+            continuation: ChoiceContinuation::FinishTurn,
+        });
+        let action = Action::ResolveChoice {
+            choice_id: 777,
+            option_index: 1,
+        };
+        let descriptor = encode_action_v3(&action, &state).unwrap();
+        assert!(matches!(
+            &descriptor,
+            ActionDescriptorV3::ResolveChoice {
+                handler_id,
+                option,
+                ..
+            } if handler_id == "field-promotion" && option == "choice:field-promotion:1"
+        ));
+        assert_eq!(decode_action_v3(&descriptor, &state).unwrap(), action);
     }
 
     #[test]

@@ -65,12 +65,13 @@ pub use ruleset::{
 pub use state::{
     BribeRevert, CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState,
     DelayedHazard, DelayedHazardKind, DiceLockStatus, DraftPhase, DraftState, DrawReason,
-    EmptyLunchboxStatus, EnPassantState, FeudalContract, ForcedMoveContinuation, ForcedMoveSource,
-    FrozenStatus, GamePhase, GameState, GameStatus, InitiativeStatus, JudgmentExile,
-    LargePieceStatus, LogStatus, Mode, MoveReplayState, NecromancyRevert, PendingChoice,
-    PendingIcbm, PendingOtherworld, PendingPanic, PendingPremove, PendingScarecrow, PendingVip,
-    PlatformRuleState, ReplayCell, RepositionStatus, RoyalCommandStatus, TimedPieceStatus,
-    TrolleyDilemma, TwinBond, UndeadResurrection, WinReason, WindmillMode,
+    EmptyLunchboxStatus, EnPassantState, FIELD_PROMOTION_CHOICE_PREFIX, FeudalContract,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
+    InitiativeStatus, JudgmentExile, LargePieceStatus, LogStatus, MIDDLE_EXTRA_MOVE_SOURCE, Mode,
+    MoveReplayState, NecromancyRevert, PendingChoice, PendingIcbm, PendingOtherworld, PendingPanic,
+    PendingPremove, PendingScarecrow, PendingVip, PlatformRuleState, ReplayCell, RepositionStatus,
+    RoyalCommandStatus, TimedPieceStatus, TrolleyDilemma, TwinBond, UndeadResurrection, WinReason,
+    WindmillMode,
 };
 
 /// Ruleset bundled into this build and used by the first engine milestone.
