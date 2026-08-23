@@ -85,9 +85,23 @@ uv run python -m v3.trainer path\to\tensorized\manifest.json ..\runs\v3-pretrain
   --checkpoint-interval 500 --prefetch-batches 1 --log-interval 50 --resume
 ```
 
-Training metrics are streamed instead of retained for the entire run. A normal limited invocation,
-SIGINT, or SIGTERM writes an atomic exact-step checkpoint; prefetched-but-unconsumed indices are not
-committed to sampler state.
+Pass a sealed validation artifact to retain the full learning curve, preserve the best checkpoint,
+and stop after four consecutive non-improving checks:
+
+```powershell
+uv run python -m v3.trainer path\to\train\manifest.json ..\runs\v3-pretrain `
+  --batch-size 1024 --steps 100000 --checkpoint-interval 500 --log-interval 50 `
+  --validation-manifest path\to\validation\manifest.json `
+  --validation-interval 500 --validation-batch-size 1024 `
+  --early-stopping-patience 4
+```
+
+The trainer atomically updates `metrics.json` with window-averaged train loss, learning rate,
+throughput, AMP state, and validation CE/perplexity/top-1/top-3. Validation runs at step zero and
+every configured interval. `checkpoints/best-validation.pt` and its checksum/metadata are excluded
+from rotating recent-checkpoint retention. `--early-stopping-patience 0` disables early stopping.
+A normal limited invocation, SIGINT, or SIGTERM writes an atomic exact-step checkpoint;
+prefetched-but-unconsumed indices are not committed to sampler state.
 
 `self_play_v3.rs`, `mixture.py`, and `iteration.py` implement the stage-12 reproducible loop.
 An iteration generates engine-replayable MCTS games, applies a fixed source-mixture profile,

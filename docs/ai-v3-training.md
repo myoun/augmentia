@@ -17,6 +17,24 @@ uv run python -m v3.trainer ..\replay-buffers\v3\manifest.json ..\runs\v3-first 
   --device cuda --batch-size 64 --steps 100000 --checkpoint-interval 500
 ```
 
+최적 구간을 자동으로 추적하는 실제 학습은 train과 분리된 pre-tensor validation artifact를
+지정한다.
+
+```powershell
+uv run python -m v3.trainer ..\replay-buffers\v3-tensorized\train\manifest.json `
+  ..\runs\v3-first --device cuda --batch-size 1024 --steps 100000 `
+  --checkpoint-interval 500 --log-interval 50 `
+  --validation-manifest ..\replay-buffers\v3-tensorized\validation\manifest.json `
+  --validation-interval 500 --validation-batch-size 1024 `
+  --early-stopping-patience 4
+```
+
+`metrics.json`은 매 50 step 구간 평균 train loss, learning rate, 처리량과 AMP overflow를,
+매 500 step에는 validation CE, perplexity, top-1, top-3를 원자적으로 누적한다. step 0도
+검증하므로 초기값부터 학습 곡선을 비교할 수 있다. validation CE가 개선되면 회전 보존 대상과
+분리된 `checkpoints/best-validation.pt`, `.pt.sha256`, `best-validation.json`을 갱신한다.
+기본값은 네 번 연속 개선이 없을 때 `early_stopped`로 끝나며 patience 0은 자동 중단만 끈다.
+
 같은 명령에 `--resume`을 추가하면 가장 최근의 정상 checkpoint를 찾는다. checkpoint는
 완료된 optimizer step에서만 만들어지며 model, optimizer, cosine scheduler, AMP scaler,
 sampler epoch/cursor, Python/NumPy/Torch CPU·CUDA RNG, dataset·shard hash, schema·ruleset,

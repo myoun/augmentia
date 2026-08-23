@@ -6,6 +6,7 @@ import argparse
 from concurrent.futures import Future, ThreadPoolExecutor
 import hashlib
 import json
+import math
 import os
 import random
 import signal
@@ -30,6 +31,7 @@ from .replay import (
 from .tensorize import V3Vocabulary
 
 CHECKPOINT_SCHEMA_ID = "augmentia.training-checkpoint.v3"
+METRICS_SCHEMA_ID = "augmentia.training-metrics.v3"
 MAX_AMP_OVERFLOW_RETRIES = 8
 
 
@@ -73,6 +75,133 @@ class StepMetricsV3:
     auxiliary_loss: float
     decision_ids: tuple[str, ...]
     amp_overflow_retries: int = 0
+
+
+@dataclass(frozen=True)
+class PolicyValidationMetricsV3:
+    step: int
+    examples: int
+    cross_entropy: float
+    perplexity: float
+    top1_accuracy: float
+    top3_accuracy: float
+    top1_correct: int
+    top3_correct: int
+    elapsed_seconds: float
+    examples_per_second: float
+
+
+@dataclass
+class EarlyStoppingV3:
+    patience: int
+    min_delta: float = 0.0
+    best_cross_entropy: float = math.inf
+    checks_without_improvement: int = 0
+
+    def __post_init__(self) -> None:
+        if self.patience < 0:
+            raise ValueError("early-stopping patience must be non-negative")
+        if not math.isfinite(self.min_delta) or self.min_delta < 0:
+            raise ValueError("early-stopping min-delta must be finite and non-negative")
+
+    def observe(self, cross_entropy: float) -> tuple[bool, bool]:
+        if not math.isfinite(cross_entropy):
+            raise ValueError("validation cross-entropy must be finite")
+        improved = cross_entropy < self.best_cross_entropy - self.min_delta
+        if improved:
+            self.best_cross_entropy = cross_entropy
+            self.checks_without_improvement = 0
+        else:
+            self.checks_without_improvement += 1
+        should_stop = (
+            self.patience > 0 and self.checks_without_improvement >= self.patience
+        )
+        return improved, should_stop
+
+
+class TrainingMetricsJournalV3:
+    """Atomically persisted, resume-aware train and validation history."""
+
+    def __init__(
+        self,
+        run_dir: str | Path,
+        run_id: str,
+        run_identity: Mapping[str, Any],
+    ) -> None:
+        self.path = Path(run_dir).resolve() / "metrics.json"
+        self.run_id = run_id
+        self.run_identity_sha256 = _json_sha256(run_identity)
+        if self.path.exists():
+            try:
+                payload = json.loads(self.path.read_bytes())
+            except (OSError, json.JSONDecodeError) as error:
+                raise RuntimeError(
+                    f"invalid training metrics journal: {error}"
+                ) from error
+            if (
+                not isinstance(payload, dict)
+                or payload.get("schema_id") != METRICS_SCHEMA_ID
+                or payload.get("run_id") != run_id
+                or payload.get("run_identity_sha256") != self.run_identity_sha256
+                or not isinstance(payload.get("events"), list)
+            ):
+                raise CheckpointMismatchError(
+                    "training metrics journal does not match the resumed run"
+                )
+            self._payload = payload
+        else:
+            self._payload = {
+                "schema_id": METRICS_SCHEMA_ID,
+                "run_id": run_id,
+                "run_identity_sha256": self.run_identity_sha256,
+                "events": [],
+            }
+            self._write()
+
+    @property
+    def events(self) -> tuple[dict[str, Any], ...]:
+        return tuple(dict(event) for event in self._payload["events"])
+
+    @property
+    def validation_events(self) -> tuple[dict[str, Any], ...]:
+        return tuple(
+            dict(event)
+            for event in self._payload["events"]
+            if event.get("kind") == "validation"
+        )
+
+    def event_at(self, kind: str, step: int) -> dict[str, Any] | None:
+        for event in self._payload["events"]:
+            if event.get("kind") == kind and event.get("step") == step:
+                return dict(event)
+        return None
+
+    def append(self, event: Mapping[str, Any]) -> None:
+        normalized = dict(event)
+        if normalized.get("kind") not in {"train", "validation"}:
+            raise ValueError("metric event kind must be train or validation")
+        step = normalized.get("step")
+        if not isinstance(step, int) or step < 0:
+            raise ValueError("metric event step must be a non-negative integer")
+        if self.event_at(str(normalized["kind"]), step) is not None:
+            raise RuntimeError(
+                f"duplicate {normalized['kind']} metric event at step {step}"
+            )
+        self._payload["events"].append(normalized)
+        self._write()
+
+    def truncate_after(self, step: int) -> None:
+        retained = [
+            event
+            for event in self._payload["events"]
+            if isinstance(event.get("step"), int) and event["step"] <= step
+        ]
+        if len(retained) != len(self._payload["events"]):
+            self._payload["events"] = retained
+            self._write()
+
+    def _write(self) -> None:
+        _atomic_json_write(self.path, self._payload)
 
 
 @dataclass
@@ -130,6 +259,43 @@ class CheckpointManagerV3:
             except (OSError, RuntimeError, ValueError, EOFError):
                 continue
         return None
+
+    def save_best(
+        self,
+        payload: Mapping[str, Any],
+        validation: Mapping[str, Any],
+    ) -> Path:
+        """Publish a validation-best checkpoint outside rotating retention."""
+        target = self.checkpoint_dir / "best-validation.pt"
+        temporary = target.with_suffix(f".pt.tmp-{os.getpid()}-{uuid.uuid4().hex}")
+        checksum_path = target.with_suffix(".pt.sha256")
+        checksum_temporary = checksum_path.with_suffix(
+            f".sha256.tmp-{uuid.uuid4().hex}"
+        )
+        metadata_path = self.checkpoint_dir / "best-validation.json"
+        try:
+            torch.save(dict(payload), temporary)
+            _fsync_file(temporary)
+            digest = _sha256_file(temporary)
+            checksum_temporary.write_text(digest + "\n", encoding="ascii")
+            _fsync_file(checksum_temporary)
+            os.replace(temporary, target)
+            os.replace(checksum_temporary, checksum_path)
+            _atomic_json_write(
+                metadata_path,
+                {
+                    "checkpoint": target.name,
+                    "checkpoint_sha256": digest,
+                    "global_step": int(payload["global_step"]),
+                    "primary_metric": "cross_entropy",
+                    "validation": dict(validation),
+                },
+            )
+            _fsync_directory(self.checkpoint_dir)
+            return target
+        finally:
+            temporary.unlink(missing_ok=True)
+            checksum_temporary.unlink(missing_ok=True)
 
     def _write_latest(self, filename: str, digest: str) -> None:
         target = self.checkpoint_dir / "latest.json"
@@ -196,6 +362,10 @@ class TrainerV3:
             else None
         )
         self._prefetched_batch: _PrefetchedBatchV3 | None = None
+
+    @property
+    def run_identity(self) -> dict[str, Any]:
+        return dict(self._identity)
 
     def train_step(self) -> StepMetricsV3:
         if self.global_step >= self.config.total_steps:
@@ -267,7 +437,10 @@ class TrainerV3:
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
                 break
-            if not self.scaler.is_enabled() or overflow_retries >= MAX_AMP_OVERFLOW_RETRIES:
+            if (
+                not self.scaler.is_enabled()
+                or overflow_retries >= MAX_AMP_OVERFLOW_RETRIES
+            ):
                 raise FloatingPointError(
                     f"gradient {invalid_gradient} became NaN or infinite"
                 )
@@ -322,6 +495,9 @@ class TrainerV3:
 
     def save_checkpoint(self) -> Path:
         return self.checkpoints.save(self._checkpoint_payload(), self.global_step)
+
+    def save_best_checkpoint(self, validation: Mapping[str, Any]) -> Path:
+        return self.checkpoints.save_best(self._checkpoint_payload(), validation)
 
     def resume_latest(self) -> Path:
         loaded = self.checkpoints.load_latest_valid()
@@ -440,6 +616,123 @@ class TrainerV3:
         }
 
 
+def evaluate_policy_v3(
+    model: AugmentNetV3,
+    dataset: ReplayDatasetV3,
+    vocabulary: V3Vocabulary,
+    device: torch.device,
+    *,
+    batch_size: int,
+    step: int,
+) -> PolicyValidationMetricsV3:
+    """Evaluate policy calibration and ranking on a stable sequential split."""
+    if batch_size <= 0:
+        raise ValueError("validation batch size must be positive")
+    started = time.perf_counter()
+    previous_training = model.training
+    model.eval()
+    cross_entropy_sum = 0.0
+    supervised_examples = 0
+    top1_correct = 0
+    top3_correct = 0
+    try:
+        with torch.inference_mode():
+            for start in range(0, len(dataset), batch_size):
+                indices = list(range(start, min(start + batch_size, len(dataset))))
+                source = _collate_dataset_indices(
+                    dataset, indices, vocabulary, pin_memory=False
+                )
+                batch = _move_training_batch(source, device, non_blocking=False)
+                output = model(batch.inputs)
+                logits = output.policy_logits.float()
+                log_probabilities = torch.log_softmax(logits, dim=1)
+                per_sample = -(batch.policy_targets * log_probabilities).sum(dim=1)
+                supervised = batch.policy_supervision
+                targets = batch.policy_targets.argmax(dim=1)
+                top1 = logits.argmax(dim=1)
+                top3 = logits.topk(min(3, logits.shape[1]), dim=1).indices
+                cross_entropy_sum += (
+                    per_sample.masked_select(supervised).double().sum().item()
+                )
+                supervised_examples += int(supervised.sum().item())
+                top1_correct += int(
+                    top1.eq(targets).logical_and(supervised).sum().item()
+                )
+                top3_correct += int(
+                    top3.eq(targets.unsqueeze(1))
+                    .any(dim=1)
+                    .logical_and(supervised)
+                    .sum()
+                    .item()
+                )
+    finally:
+        model.train(previous_training)
+    if supervised_examples == 0:
+        raise ValueError("validation split contains no policy-supervised examples")
+    elapsed = time.perf_counter() - started
+    cross_entropy = cross_entropy_sum / supervised_examples
+    return PolicyValidationMetricsV3(
+        step=step,
+        examples=supervised_examples,
+        cross_entropy=cross_entropy,
+        perplexity=math.exp(cross_entropy),
+        top1_accuracy=top1_correct / supervised_examples,
+        top3_accuracy=top3_correct / supervised_examples,
+        top1_correct=top1_correct,
+        top3_correct=top3_correct,
+        elapsed_seconds=elapsed,
+        examples_per_second=supervised_examples / elapsed,
+    )
+
+
+def load_validation_dataset(
+    path: str | Path, split: str = "validation"
+) -> ReplayDatasetV3:
+    if split not in {"validation", "holdout"}:
+        raise ValueError("evaluation split must be validation or holdout")
+    candidate = Path(path).resolve()
+    try:
+        payload = json.loads(candidate.read_bytes())
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid validation dataset JSON: {error}") from error
+    if (
+        isinstance(payload, dict)
+        and payload.get("artifact_schema_id") == "augmentia.pretensor-manifest.v3.1"
+    ):
+        if payload.get("split") != split:
+            raise ValueError(
+                f"validation artifact split is {payload.get('split')!r}, expected {split!r}"
+            )
+        from .pretensor import PretensorizedReplayDatasetV3
+
+        return PretensorizedReplayDatasetV3(candidate)
+    return ReplayDatasetV3(candidate, split=split)
+
+
+def assert_validation_compatible(
+    training_dataset: ReplayDatasetV3,
+    validation_dataset: ReplayDatasetV3,
+    vocabulary: V3Vocabulary,
+) -> None:
+    validation_vocabulary = validation_dataset.build_vocabulary()
+    if validation_vocabulary != vocabulary:
+        raise CheckpointMismatchError(
+            "validation vocabulary differs from the training vocabulary"
+        )
+    training_identity = _base_dataset_identity(training_dataset.identity.to_json())
+    validation_identity = _base_dataset_identity(validation_dataset.identity.to_json())
+    keys = (
+        "ruleset_id",
+        "ruleset_manifest_sha256",
+        "observation_schema_id",
+        "action_schema_id",
+    )
+    if any(training_identity.get(key) != validation_identity.get(key) for key in keys):
+        raise CheckpointMismatchError(
+            "validation ruleset or schema differs from the training dataset"
+        )
+
+
 def _capture_rng() -> dict[str, Any]:
     return {
         "python": random.getstate(),
@@ -540,6 +833,31 @@ def _resolve_device(requested: str) -> torch.device:
     return torch.device(requested)
 
 
+def _base_dataset_identity(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    source = payload.get("source")
+    return source if isinstance(source, Mapping) else payload
+
+
+def _json_sha256(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _atomic_json_write(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f"{path.suffix}.tmp-{uuid.uuid4().hex}")
+    try:
+        temporary.write_text(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        _fsync_file(temporary)
+        os.replace(temporary, path)
+        _fsync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -585,12 +903,33 @@ def main() -> None:
     parser.add_argument("--checkpoint-interval", type=int, default=500)
     parser.add_argument("--prefetch-batches", type=int, choices=(0, 1), default=1)
     parser.add_argument("--log-interval", type=int, default=10)
+    parser.add_argument("--validation-manifest", type=Path)
+    parser.add_argument(
+        "--validation-split",
+        choices=("validation", "holdout"),
+        default="validation",
+    )
+    parser.add_argument("--validation-interval", type=int, default=500)
+    parser.add_argument("--validation-batch-size", type=int)
+    parser.add_argument("--early-stopping-patience", type=int, default=4)
+    parser.add_argument("--early-stopping-min-delta", type=float, default=0.0)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if args.max_steps_this_run is not None and args.max_steps_this_run <= 0:
         parser.error("--max-steps-this-run must be positive")
     if args.log_interval <= 0:
         parser.error("--log-interval must be positive")
+    if args.validation_interval <= 0:
+        parser.error("--validation-interval must be positive")
+    if args.validation_batch_size is not None and args.validation_batch_size <= 0:
+        parser.error("--validation-batch-size must be positive")
+    if args.early_stopping_patience < 0:
+        parser.error("--early-stopping-patience must be non-negative")
+    if (
+        not math.isfinite(args.early_stopping_min_delta)
+        or args.early_stopping_min_delta < 0
+    ):
+        parser.error("--early-stopping-min-delta must be finite and non-negative")
     dataset = load_training_dataset(args.manifest)
     vocabulary = dataset.build_vocabulary()
     config = TrainingConfigV3(
@@ -610,6 +949,25 @@ def main() -> None:
     if args.resume:
         print(f"resumed {trainer.resume_latest()}")
 
+    journal = TrainingMetricsJournalV3(
+        args.run_dir, trainer.run_id, trainer.run_identity
+    )
+    journal.truncate_after(trainer.global_step)
+    validation_dataset = None
+    validation_identity_sha256 = None
+    validation_batch_size = args.validation_batch_size or args.batch_size
+    early_stopping = EarlyStoppingV3(
+        args.early_stopping_patience, args.early_stopping_min_delta
+    )
+    if args.validation_manifest is not None:
+        validation_dataset = load_validation_dataset(
+            args.validation_manifest, args.validation_split
+        )
+        assert_validation_compatible(dataset, validation_dataset, vocabulary)
+        validation_identity_sha256 = _json_sha256(validation_dataset.identity.to_json())
+        for event in journal.validation_events:
+            early_stopping.observe(float(event["cross_entropy"]))
+
     def request_stop(_signum: int, _frame: Any) -> None:
         trainer.stop_requested = True
 
@@ -619,33 +977,133 @@ def main() -> None:
     started = time.perf_counter()
     window_started = started
     window_samples = 0
+    window_steps = 0
+    window_loss = 0.0
+    window_policy_loss = 0.0
+    window_value_loss = 0.0
+    window_auxiliary_loss = 0.0
+    window_amp_overflows = 0
     last_logged_step = trainer.global_step
     last_metrics = None
-    for metrics in trainer.iter_train(steps=args.max_steps_this_run):
-        last_metrics = metrics
-        window_samples += metrics.samples
-        if metrics.step == 1 or metrics.step % args.log_interval == 0:
-            now = time.perf_counter()
-            payload = asdict(metrics)
-            payload["decision_count"] = len(payload.pop("decision_ids"))
-            payload["examples_per_second"] = window_samples / (now - window_started)
-            print(json.dumps(payload, sort_keys=True), flush=True)
-            window_started = now
-            window_samples = 0
-            last_logged_step = metrics.step
-    if last_metrics is not None and last_metrics.step != last_logged_step:
+
+    def emit_train_metrics(metrics: StepMetricsV3) -> None:
+        nonlocal window_started
+        nonlocal window_samples
+        nonlocal window_steps
+        nonlocal window_loss
+        nonlocal window_policy_loss
+        nonlocal window_value_loss
+        nonlocal window_auxiliary_loss
+        nonlocal window_amp_overflows
+        nonlocal last_logged_step
         now = time.perf_counter()
-        payload = asdict(last_metrics)
-        payload["decision_count"] = len(payload.pop("decision_ids"))
-        payload["examples_per_second"] = window_samples / (now - window_started)
-        print(json.dumps(payload, sort_keys=True), flush=True)
-    trainer.close()
+        event = {
+            "kind": "train",
+            "step": metrics.step,
+            "samples_seen": trainer.samples_seen,
+            "window_steps": window_steps,
+            "samples": window_samples,
+            "decision_count": window_samples,
+            "loss": window_loss / window_steps,
+            "policy_loss": window_policy_loss / window_steps,
+            "value_loss": window_value_loss / window_steps,
+            "auxiliary_loss": window_auxiliary_loss / window_steps,
+            "last_step_loss": metrics.loss,
+            "amp_overflow_retries": window_amp_overflows,
+            "learning_rate": trainer.optimizer.param_groups[0]["lr"],
+            "amp_scale": trainer.scaler.get_scale(),
+            "examples_per_second": window_samples / (now - window_started),
+        }
+        journal.append(event)
+        print(json.dumps(event, sort_keys=True), flush=True)
+        window_started = now
+        window_samples = 0
+        window_steps = 0
+        window_loss = 0.0
+        window_policy_loss = 0.0
+        window_value_loss = 0.0
+        window_auxiliary_loss = 0.0
+        window_amp_overflows = 0
+        last_logged_step = metrics.step
+
+    def run_validation() -> bool:
+        if validation_dataset is None:
+            return False
+        existing = journal.event_at("validation", trainer.global_step)
+        if existing is not None:
+            return (
+                early_stopping.patience > 0
+                and early_stopping.checks_without_improvement >= early_stopping.patience
+            )
+        metrics = evaluate_policy_v3(
+            trainer.model,
+            validation_dataset,
+            vocabulary,
+            trainer.device,
+            batch_size=validation_batch_size,
+            step=trainer.global_step,
+        )
+        improved, should_stop = early_stopping.observe(metrics.cross_entropy)
+        event = {
+            "kind": "validation",
+            **asdict(metrics),
+            "validation_identity_sha256": validation_identity_sha256,
+            "is_best": improved,
+            "best_cross_entropy": early_stopping.best_cross_entropy,
+            "checks_without_improvement": (early_stopping.checks_without_improvement),
+        }
+        if improved:
+            trainer.save_best_checkpoint(event)
+        journal.append(event)
+        print(json.dumps(event, sort_keys=True), flush=True)
+        return should_stop
+
+    early_stopped = False
+    if (
+        validation_dataset is not None
+        and journal.event_at("validation", trainer.global_step) is None
+    ):
+        early_stopped = run_validation()
+    elif validation_dataset is not None:
+        early_stopped = (
+            early_stopping.patience > 0
+            and early_stopping.checks_without_improvement >= early_stopping.patience
+        )
+
+    try:
+        if not early_stopped:
+            for metrics in trainer.iter_train(steps=args.max_steps_this_run):
+                last_metrics = metrics
+                window_samples += metrics.samples
+                window_steps += 1
+                window_loss += metrics.loss
+                window_policy_loss += metrics.policy_loss
+                window_value_loss += metrics.value_loss
+                window_auxiliary_loss += metrics.auxiliary_loss
+                window_amp_overflows += metrics.amp_overflow_retries
+                if metrics.step == 1 or metrics.step % args.log_interval == 0:
+                    emit_train_metrics(metrics)
+                if (
+                    validation_dataset is not None
+                    and metrics.step % args.validation_interval == 0
+                    and run_validation()
+                ):
+                    early_stopped = True
+                    if trainer.global_step % trainer.config.checkpoint_interval != 0:
+                        trainer.save_checkpoint()
+                    break
+        if last_metrics is not None and last_metrics.step != last_logged_step:
+            emit_train_metrics(last_metrics)
+    finally:
+        trainer.close()
     print(
         json.dumps(
             {
                 "status": (
                     "stopped"
                     if trainer.stop_requested
+                    else "early_stopped"
+                    if early_stopped
                     else "complete"
                     if trainer.global_step == trainer.config.total_steps
                     else "paused"

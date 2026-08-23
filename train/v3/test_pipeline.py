@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import tempfile
 import unittest
-from dataclasses import fields
+from dataclasses import asdict, fields
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,14 @@ from v3.pretensor import PretensorizedReplayDatasetV3, build_pretensor_artifact
 from v3.replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
 from v3.schema import SchemaError, load_golden_suite
 from v3.tensorize import V3Vocabulary
-from v3.trainer import CheckpointMismatchError, TrainerV3, TrainingConfigV3
+from v3.trainer import (
+    CheckpointMismatchError,
+    EarlyStoppingV3,
+    TrainerV3,
+    TrainingConfigV3,
+    TrainingMetricsJournalV3,
+    evaluate_policy_v3,
+)
 
 
 class PipelineV3Tests(unittest.TestCase):
@@ -324,6 +332,69 @@ class PipelineV3Tests(unittest.TestCase):
             )
             with self.assertRaises(CheckpointMismatchError):
                 mismatch.resume_latest()
+
+    def test_validation_history_best_checkpoint_and_early_stopping(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = ReplayDatasetV3(_write_dataset(root))
+            vocabulary = dataset.build_vocabulary()
+            config = TrainingConfigV3(
+                **{**_training_config().__dict__, "checkpoint_keep": 1}
+            )
+            trainer = TrainerV3(
+                dataset,
+                vocabulary,
+                _model_config(vocabulary),
+                config,
+                root / "run",
+            )
+            trainer.train_step()
+            rotating_first = trainer.save_checkpoint()
+            metrics = evaluate_policy_v3(
+                trainer.model,
+                dataset,
+                vocabulary,
+                trainer.device,
+                batch_size=2,
+                step=trainer.global_step,
+            )
+            self.assertTrue(trainer.model.training)
+            self.assertEqual(metrics.examples, len(dataset))
+            self.assertTrue(math.isfinite(metrics.cross_entropy))
+            self.assertGreaterEqual(metrics.top1_accuracy, 0.0)
+            self.assertLessEqual(metrics.top1_accuracy, 1.0)
+
+            event = {"kind": "validation", **asdict(metrics), "is_best": True}
+            journal = TrainingMetricsJournalV3(
+                root / "run", trainer.run_id, trainer.run_identity
+            )
+            journal.append(event)
+            trainer.save_best_checkpoint(event)
+            reloaded = TrainingMetricsJournalV3(
+                root / "run", trainer.run_id, trainer.run_identity
+            )
+            self.assertEqual(reloaded.event_at("validation", 1), event)
+
+            trainer.train_step()
+            rotating_latest = trainer.save_checkpoint()
+            self.assertFalse(rotating_first.exists())
+            self.assertTrue(rotating_latest.exists())
+            best = root / "run" / "checkpoints" / "best-validation.pt"
+            self.assertTrue(best.exists())
+            best_payload = torch.load(best, map_location="cpu", weights_only=False)
+            self.assertEqual(best_payload["global_step"], 1)
+            best_metadata = json.loads(
+                (root / "run" / "checkpoints" / "best-validation.json").read_text()
+            )
+            self.assertEqual(best_metadata["global_step"], 1)
+            self.assertEqual(
+                best_metadata["validation"]["cross_entropy"], metrics.cross_entropy
+            )
+
+            stopper = EarlyStoppingV3(patience=2)
+            self.assertEqual(stopper.observe(2.0), (True, False))
+            self.assertEqual(stopper.observe(2.1), (False, False))
+            self.assertEqual(stopper.observe(2.2), (False, True))
 
     def test_onnx_export_runtime_batch_and_schema_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
