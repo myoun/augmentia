@@ -189,6 +189,9 @@ pub struct BoardPieceV3 {
     pub slot: u32,
     pub square: u8,
     pub owner: RelativePlayerV3,
+    /// Canonical quantum shadow square, if the piece has one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shadow_square: Option<u8>,
     pub kind_code: u8,
     pub capture_count: u16,
 }
@@ -446,6 +449,11 @@ fn encode_pieces(state: &GameState, ids: &mut LocalIds) -> Vec<BoardPieceV3> {
             slot: ids.piece(piece.id),
             square: square_value(square, state.turn),
             owner: relative_player(piece.owner, state.turn),
+            shadow_square: state
+                .card_runtime
+                .quantum_positions
+                .get(&piece.id)
+                .map(|shadow| square_value(*shadow, state.turn)),
             kind_code: piece.kind.stable_code(),
             capture_count: piece.capture_count,
         })

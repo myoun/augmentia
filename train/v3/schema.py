@@ -188,16 +188,21 @@ def _validate_observation(payload: Any, path: str) -> dict[str, int]:
     for index, raw_piece in enumerate(pieces):
         piece_path = f"{path}.pieces[{index}]"
         piece = _mapping(raw_piece, piece_path)
-        _exact_keys(
-            piece,
-            {"slot", "square", "owner", "kind_code", "capture_count"},
-            piece_path,
-        )
+        expected_piece_keys = {"slot", "square", "owner", "kind_code", "capture_count"}
+        if piece.get("shadow_square") is not None:
+            expected_piece_keys.add("shadow_square")
+        _exact_keys(piece, expected_piece_keys, piece_path)
         slot = _slot(piece.get("slot"), piece_slot_count, f"{piece_path}.slot")
         if slot in piece_slots:
             raise SchemaError(f"{piece_path}.slot duplicates local piece slot {slot}")
         piece_slots.add(slot)
         _square(piece.get("square"), f"{piece_path}.square")
+        if piece.get("shadow_square") is not None:
+            shadow = _square(piece.get("shadow_square"), f"{piece_path}.shadow_square")
+            if shadow == piece["square"]:
+                raise SchemaError(
+                    f"{piece_path}.shadow_square duplicates the real square"
+                )
         _player(piece.get("owner"), f"{piece_path}.owner")
         _piece_kind(piece.get("kind_code"), f"{piece_path}.kind_code")
         _unsigned(piece.get("capture_count"), f"{piece_path}.capture_count")

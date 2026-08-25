@@ -427,7 +427,10 @@ def tensorize_cases(
         )
         for index, piece in enumerate(observation["pieces"]):
             piece_kind[batch_index, index] = piece["kind_code"]
-            piece_square[batch_index, index] = piece["square"] + 1
+            # Shadow moves are encoded from the shadow square; the real square
+            # remains available through the spatial planes and runtime features.
+            square = piece.get("shadow_square") or piece["square"]
+            piece_square[batch_index, index] = square + 1
             piece_owner[batch_index, index] = PLAYER_IDS[piece["owner"]]
             piece_slot[batch_index, index] = piece["slot"]
             piece_numeric[batch_index, index] = torch.tensor(

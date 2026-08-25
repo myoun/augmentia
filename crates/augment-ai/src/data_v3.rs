@@ -1470,12 +1470,16 @@ fn validate_piece_ref(
     path: &str,
 ) -> Result<(), ReplayDataV3Error> {
     validate_square(square, path)?;
-    if observation
+    let matched = observation
         .pieces
         .iter()
         .find(|item| item.slot == piece)
-        .is_none_or(|item| item.kind_code != piece_kind || item.square != square)
-    {
+        .is_some_and(|item| {
+            item.kind_code == piece_kind
+                && (item.square == square
+                    || item.shadow_square.is_some_and(|shadow| shadow == square))
+        });
+    if !matched {
         return validation(format!("{path} does not match an observation piece slot"));
     }
     Ok(())
