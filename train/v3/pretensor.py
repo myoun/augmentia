@@ -79,6 +79,10 @@ class PretensorizedIdentityV3:
     artifact_manifest_path: str
     artifact_manifest_sha256: str
     source: dict[str, Any]
+    ruleset_id: str
+    ruleset_manifest_sha256: str
+    observation_schema_id: str
+    action_schema_id: str
     tensorizer_code_version: str
     vocabulary_sha256: str
 
@@ -88,6 +92,10 @@ class PretensorizedIdentityV3:
             "artifact_manifest_path": self.artifact_manifest_path,
             "artifact_manifest_sha256": self.artifact_manifest_sha256,
             "source": self.source,
+            "ruleset_id": self.ruleset_id,
+            "ruleset_manifest_sha256": self.ruleset_manifest_sha256,
+            "observation_schema_id": self.observation_schema_id,
+            "action_schema_id": self.action_schema_id,
             "tensorizer_code_version": self.tensorizer_code_version,
             "vocabulary_sha256": self.vocabulary_sha256,
         }
@@ -110,6 +118,17 @@ class PretensorizedExampleRefV3:
     dataset: "PretensorizedReplayDatasetV3"
     index: int
 
+    def _example(self):
+        frame_index = self.dataset.shard_index(self.index)
+        local_index = self.index - self.dataset.frames[frame_index].start_index
+        batch = self.dataset._load_frame(frame_index)
+        return batch, local_index
+
+    @property
+    def decision_id(self) -> str:
+        batch, local_index = self._example()
+        return batch.decision_ids[local_index]
+
 
 class PretensorizedReplayDatasetV3(Sequence[PretensorizedExampleRefV3]):
     """Random-access replay dataset backed by independently compressed tensor frames."""
@@ -130,6 +149,11 @@ class PretensorizedReplayDatasetV3(Sequence[PretensorizedExampleRefV3]):
         vocabulary_sha256 = _vocabulary_sha256(vocabulary)
         if vocabulary_sha256 != manifest["vocabulary_sha256"]:
             raise SchemaError("pre-tensor vocabulary checksum mismatch")
+        source = manifest["source_identity"]
+        ruleset_id = source["ruleset_id"]
+        ruleset_manifest_sha256 = source["ruleset_manifest_sha256"]
+        observation_schema_id = source["observation_schema_id"]
+        action_schema_id = source["action_schema_id"]
 
         frames: list[PretensorFrameV3] = []
         sampler_groups: list[int] = []
@@ -177,10 +201,17 @@ class PretensorizedReplayDatasetV3(Sequence[PretensorizedExampleRefV3]):
         self._max_cached_frames = max_cached_frames
         self.vocabulary = vocabulary
         self.vocabulary_tokens = frozenset(vocabulary.tokens[1:])
+        self.shard_sha256 = tuple(
+            (frame.artifact_relative_path, frame.sha256) for frame in self.frames
+        )
         self.identity = PretensorizedIdentityV3(
             artifact_manifest_path=str(path),
             artifact_manifest_sha256=hashlib.sha256(raw).hexdigest(),
             source=dict(manifest["source_identity"]),
+            ruleset_id=ruleset_id,
+            ruleset_manifest_sha256=ruleset_manifest_sha256,
+            observation_schema_id=observation_schema_id,
+            action_schema_id=action_schema_id,
             tensorizer_code_version=manifest["tensorizer_code_version"],
             vocabulary_sha256=vocabulary_sha256,
         )

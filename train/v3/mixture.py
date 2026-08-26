@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .replay import DeterministicSamplerV3, ReplayDatasetV3, TrainingExampleV3
+from .pretensor import _merge_training_batches
 from .schema import SchemaError
 from .tensorize import V3Vocabulary
 
@@ -155,9 +156,11 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
             source_identities.append(
                 MixtureSourceIdentityV3(name, active[name], quota, source_json)
             )
+            identity = dataset.identity
             shard_hashes.extend(
                 (f"{name}:{path}", digest)
-                for path, digest in dataset.identity.shard_sha256
+                for path, digest in getattr(identity, "shard_sha256", ())
+                or getattr(dataset, "shard_sha256", ())
             )
         canonical = {
             "profile": profile,
@@ -207,7 +210,23 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
         if not 0 <= index < len(self):
             raise IndexError(index)
         entry = self.entries[index]
-        example = self.datasets[entry.source_name][entry.dataset_index]
+        dataset = self.datasets[entry.source_name]
+        example = dataset[entry.dataset_index]
+        if hasattr(example, "_example"):
+            batch, local_index = example._example()
+            return TrainingExampleV3(
+                decision_id=f"{entry.source_name}:{batch.decision_ids[local_index]}",
+                observation=None,
+                legal_actions=None,
+                policy=None,
+                value=None,
+                forced_win_distance=None,
+            )
+        if not hasattr(example, "decision_id"):
+            dataset = self.datasets[entry.source_name]
+            raise TypeError(
+                f"source {entry.source_name} does not expose individual examples"
+            )
         return TrainingExampleV3(
             decision_id=f"{entry.source_name}:{example.decision_id}",
             observation=example.observation,
@@ -215,6 +234,62 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
             policy=example.policy,
             value=example.value,
             forced_win_distance=example.forced_win_distance,
+        )
+
+    def collate_indices(self, indices) -> Any:
+        """Collate across sources without materializing raw examples."""
+        if not indices:
+            raise ValueError("cannot collate an empty batch")
+        grouped: dict[str, list[tuple[int, int]]] = {}
+        for output_index, index in enumerate(indices):
+            if index < 0:
+                index += len(self)
+            entry = self.entries[index]
+            grouped.setdefault(entry.source_name, []).append(
+                (output_index, entry.dataset_index)
+            )
+        pieces = []
+        for source_name, rows in grouped.items():
+            dataset = self.datasets[source_name]
+            local_indices = [row[1] for row in rows]
+            if hasattr(dataset, "collate_indices"):
+                batch = dataset.collate_indices(local_indices)
+                batch.decision_ids = tuple(
+                    f"{source_name}:{identifier}"
+                    for identifier in batch.decision_ids
+                )
+            else:
+                from .replay import collate_examples
+
+                examples = []
+                for local_index in local_indices:
+                    example = dataset[local_index]
+                    examples.append(
+                        TrainingExampleV3(
+                            decision_id=f"{source_name}:{example.decision_id}",
+                            observation=example.observation,
+                            legal_actions=example.legal_actions,
+                            policy=example.policy,
+                            value=example.value,
+                            forced_win_distance=example.forced_win_distance,
+                        )
+                    )
+                batch = collate_examples(examples, self.build_vocabulary())
+            pieces.append((rows, batch))
+        ordered = sorted(pieces, key=lambda piece: piece[0][0][0])
+        merged = _merge_training_batches([piece[1] for piece in ordered])
+        current_order = [
+            position for piece in ordered for position, _ in piece[0]
+        ]
+        restore = [0] * len(current_order)
+        for slot, position in enumerate(current_order):
+            restore[position] = slot
+        from .pretensor import _select_training_batch
+
+        import torch
+
+        return _select_training_batch(
+            merged, torch.tensor(restore, dtype=torch.long)
         )
 
     @property
@@ -274,7 +349,7 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
                 f"mixture profile {profile} is missing sources: {missing}"
             )
         datasets = {
-            name: ReplayDatasetV3(_resolve_config_path(config_path, value))
+            name: load_training_dataset(_resolve_config_path(config_path, value))
             for name, value in source_paths.items()
             if weights.get(name, 0) > 0
         }
@@ -299,11 +374,7 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
         weights: dict[str, float] = {}
         for source in sources:
             dataset_identity = source["dataset"]
-            dataset = ReplayDatasetV3(dataset_identity["manifest_path"])
-            if dataset.identity.to_json() != dataset_identity:
-                raise RuntimeError(
-                    "mixture source provenance no longer matches its manifest"
-                )
+            dataset = load_dataset_from_identity(dataset_identity)
             datasets[source["name"]] = dataset
             weights[source["name"]] = float(source["weight"])
         mixture = cls(
