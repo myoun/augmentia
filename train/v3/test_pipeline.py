@@ -13,6 +13,7 @@ import torch
 import zstandard
 
 from v3.model import AugmentNetV3, V3ModelConfig
+from v3.iteration import _collate_dataset_indices
 from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
 from v3.onnx_export import (
     assert_onnx_equivalent,
@@ -82,6 +83,19 @@ class PipelineV3Tests(unittest.TestCase):
                 atol=0,
             )
             torch.testing.assert_close(expected.value_targets, actual.value_targets)
+
+    def test_iteration_collates_pretensorized_examples_without_raw_cases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "source").mkdir()
+            manifest = _write_dataset(root / "source")
+            artifact = build_pretensor_artifact(
+                manifest, root / "tensorized", chunk_size=2, workers=1
+            )
+            dataset = PretensorizedReplayDatasetV3(artifact)
+            batch = _collate_dataset_indices(dataset, [0, 1], dataset.vocabulary)
+            self.assertEqual(batch.inputs.batch_size, 2)
+            self.assertEqual(len(batch.decision_ids), 2)
 
     def test_full_game_records_expand_to_actor_relative_examples(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -197,6 +211,33 @@ class PipelineV3Tests(unittest.TestCase):
             )
             dataset = load_training_dataset(config)
             self.assertEqual(dataset.quotas, {"lichess": 16, "weak_selfplay": 4})
+
+    def test_lichess_solver_warmup_has_exact_source_quotas(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            config = root / "mixture.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "mixture_schema_id": MIXTURE_SCHEMA_ID,
+                        "profile": "lichess_solver_warmup",
+                        "seed": 41,
+                        "epoch_size": 20_000,
+                        "sources": {
+                            "lichess": str(manifest),
+                            "solver": str(manifest),
+                            "weak_selfplay": str(manifest),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            dataset = load_training_dataset(config)
+            self.assertEqual(
+                dataset.quotas,
+                {"lichess": 15_400, "solver": 800, "weak_selfplay": 3_800},
+            )
 
     def test_mixture_keeps_virtual_references_instead_of_materializing_examples(
         self,

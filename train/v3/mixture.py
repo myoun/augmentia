@@ -28,6 +28,12 @@ MIXTURE_PROFILES: dict[str, dict[str, float]] = {
         "weak_selfplay": 0.20,
         "champion_selfplay": 0.0,
     },
+    "lichess_solver_warmup": {
+        "lichess": 0.77,
+        "solver": 0.04,
+        "weak_selfplay": 0.19,
+        "champion_selfplay": 0.0,
+    },
     "bootstrap": {
         "lichess": 0.50,
         "solver": 0.30,

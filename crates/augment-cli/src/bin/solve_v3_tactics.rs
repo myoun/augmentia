@@ -3,29 +3,31 @@ use augment_ai::data_v3::{
     DATASET_MANIFEST_V3_SCHEMA_ID, DECISION_RECORD_V3_SCHEMA_ID, DataRecordV3, DatasetManifestV3,
     DatasetSplitV3, DatasetTotalsV3, DecisionPolicySupervisionV3, DecisionPolicyTargetV3,
     DecisionProvenanceV3, DecisionRecordV3, DecisionSourceKindV3, DecisionTargetsV3,
-    DecisionValueTargetV3, PolicyTrainingScopeV3, RulesetRefV3, SPLIT_POLICY_V3_ALGORITHM,
-    GeneratorProvenanceV3, SourceDomainV3, SplitPolicyV3, fingerprint_hex,
+    DecisionValueTargetV3, GeneratorProvenanceV3, PolicyTrainingScopeV3, RulesetRefV3,
+    SPLIT_POLICY_V3_ALGORITHM, SourceDomainV3, SplitPolicyV3, fingerprint_hex,
 };
 use augment_ai::{
     ACTION_V3_SCHEMA_ID, ForcedWinConfigV3, ForcedWinErrorV3, LegalActionSetV3,
-    OBSERVATION_V3_SCHEMA_ID, encode_observation_v3, solve_forced_win_v3,
-    validate_manifest, verify_manifest_replays, write_jsonl_zstd_shard,
+    OBSERVATION_V3_SCHEMA_ID, encode_observation_v3, solve_forced_win_v3, validate_manifest,
+    verify_manifest_replays, write_jsonl_zstd_shard,
 };
 use augment_core::{BUNDLED_RULESET_ID, Engine, GameStatus, Mode};
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct CandidatePosition {
     game_id: String,
     seed_hex: String,
     mode_id: String,
     decision_index: u32,
+    played_action_prefix: Vec<u32>,
+    expected_state_fingerprint: String,
 }
 
 fn main() {
@@ -54,8 +56,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     std::fs::create_dir_all(output_dir.join("shards"))?;
 
-    let engine_commit =
-        git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
+    let engine_commit = git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
     let dirty_worktree =
         git_output(["status", "--porcelain"]).is_some_and(|output| !output.is_empty());
     let _generator = GeneratorProvenanceV3 {
@@ -77,20 +78,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         holdout_basis_points: 500,
     };
 
+    let engine = Engine::bundled_20260807()?;
     let manifest_bytes = std::fs::read(&selfplay_manifest)?;
     let dataset_manifest: DatasetManifestV3 = serde_json::from_slice(&manifest_bytes)?;
+    validate_manifest(&dataset_manifest)?;
+    let selfplay_root = selfplay_manifest.parent().unwrap_or_else(|| Path::new("."));
+    verify_manifest_replays(selfplay_root, &dataset_manifest, &engine)?;
     let mut candidates: Vec<CandidatePosition> = Vec::new();
     for shard in &dataset_manifest.shards {
-        let records = read_records(&output_dir, &selfplay_manifest, &shard.path)?;
+        let records = read_records(&selfplay_manifest, &shard.path)?;
         for record in records {
             if let DataRecordV3::Game(game) = record {
+                let mut played_action_prefix = Vec::with_capacity(game.steps.len());
                 for step in &game.steps {
                     candidates.push(CandidatePosition {
                         game_id: game.game_id.clone(),
                         seed_hex: game.seed_hex.clone(),
                         mode_id: game.mode_id.clone(),
                         decision_index: step.decision_index,
+                        played_action_prefix: played_action_prefix.clone(),
+                        expected_state_fingerprint: step.state_fingerprint.clone(),
                     });
+                    played_action_prefix.push(step.played_action_index);
                 }
             }
         }
@@ -100,7 +109,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::json!({"event": "candidates_loaded", "count": candidates.len()})
     );
 
-    let engine = Engine::bundled_20260807()?;
     let mut proven_records: Vec<DataRecordV3> = Vec::new();
     let mut seen_positions: BTreeSet<String> = BTreeSet::new();
     let solved = AtomicU64::new(0);
@@ -223,14 +231,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn read_records(
-    output_root: &Path,
     manifest_path: &Path,
     relative: &str,
 ) -> Result<Vec<DataRecordV3>, Box<dyn std::error::Error>> {
     use augment_ai::data_v3::read_jsonl_zstd_shard;
     let base = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     let path = base.join(relative);
-    let _ = output_root;
     Ok(read_jsonl_zstd_shard(path)?)
 }
 
@@ -246,18 +252,44 @@ fn replay_to_decision(
         other => Mode::Campaign(other.to_owned()),
     };
     let mut state = engine.new_game(mode, seed)?;
-    let mut decision_index: u32 = 0;
-    while decision_index < candidate.decision_index {
+    if candidate.played_action_prefix.len() != candidate.decision_index as usize {
+        return Err(format!(
+            "candidate {}#{} has a non-contiguous action prefix",
+            candidate.game_id, candidate.decision_index
+        )
+        .into());
+    }
+    for (prefix_index, played_action_index) in
+        candidate.played_action_prefix.iter().copied().enumerate()
+    {
         let legal = LegalActionSetV3::from_state(&state, engine)?;
         if legal.is_empty() {
-            return Ok(None);
+            return Err(format!(
+                "candidate {}#{} reached no legal actions at prefix {}",
+                candidate.game_id, candidate.decision_index, prefix_index
+            )
+            .into());
         }
-        let transition = legal.apply(0, &state, engine)?;
+        let transition = legal.apply(played_action_index as usize, &state, engine)?;
         state = transition.state;
         if state.status != GameStatus::Ongoing {
-            return Ok(None);
+            return Err(format!(
+                "candidate {}#{} crossed a terminal state at prefix {}",
+                candidate.game_id, candidate.decision_index, prefix_index
+            )
+            .into());
         }
-        decision_index += 1;
+    }
+    let actual = fingerprint_hex(state.fingerprint());
+    if actual != candidate.expected_state_fingerprint {
+        return Err(format!(
+            "candidate {}#{} fingerprint mismatch: expected {}, got {}",
+            candidate.game_id,
+            candidate.decision_index,
+            candidate.expected_state_fingerprint,
+            actual
+        )
+        .into());
     }
     Ok(Some(state))
 }
@@ -333,9 +365,7 @@ fn solve_candidate(
             }),
             auxiliary: vec![AuxiliaryTargetV3 {
                 name: "forced_win_distance_decisions".to_owned(),
-                value: AuxiliaryTargetValueV3::Integer(i64::from(
-                    solution.distance_decisions,
-                )),
+                value: AuxiliaryTargetValueV3::Integer(i64::from(solution.distance_decisions)),
             }],
         },
     };
@@ -352,7 +382,10 @@ fn append_refuted(
     fingerprint: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::io::Write;
-    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(log)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log)?;
     writeln!(file, "{game_id}\t{decision_index}\t{fingerprint}")?;
     Ok(())
 }

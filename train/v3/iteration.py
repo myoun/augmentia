@@ -125,8 +125,8 @@ def run_iteration(
     candidate_dir.mkdir(exist_ok=True)
     candidate = candidate_dir / f"{iteration_id}.onnx"
     metadata = candidate.with_suffix(".metadata.json")
-    sample = collate_examples(
-        [dataset[index] for index in range(min(8, len(dataset)))], vocabulary
+    sample = _collate_dataset_indices(
+        dataset, list(range(min(8, len(dataset)))), vocabulary
     ).inputs
     if candidate.exists() or metadata.exists():
         if not resume or not (candidate.exists() and metadata.exists()):
@@ -338,7 +338,7 @@ def _evaluate_training_slice(
     count: int,
 ) -> dict[str, Any]:
     count = min(_positive_int(count, "evaluation_examples"), len(dataset))
-    batch = collate_examples([dataset[index] for index in range(count)], vocabulary).to(
+    batch = _collate_dataset_indices(dataset, list(range(count)), vocabulary).to(
         trainer.device
     )
     trainer.model.eval()
@@ -366,6 +366,14 @@ def _evaluate_training_slice(
         "auxiliary_samples": losses.auxiliary_samples,
         "scope": "deterministic_training_slice_not_promotion_gate",
     }
+
+
+def _collate_dataset_indices(
+    dataset: Any, indices: list[int], vocabulary: V3Vocabulary
+) -> Any:
+    if hasattr(dataset, "collate_indices"):
+        return dataset.collate_indices(indices)
+    return collate_examples([dataset[index] for index in indices], vocabulary)
 
 
 def _validate_config(config: Any) -> None:
