@@ -13,7 +13,7 @@ import torch
 import zstandard
 
 from v3.model import AugmentNetV3, V3ModelConfig
-from v3.iteration import _collate_dataset_indices
+from v3.iteration import _collate_dataset_indices, _training_metric_event
 from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
 from v3.onnx_export import (
     assert_onnx_equivalent,
@@ -479,7 +479,12 @@ class PipelineV3Tests(unittest.TestCase):
                 config,
                 root / "run",
             )
-            trainer.train_step()
+            train_metrics = trainer.train_step()
+            train_event = _training_metric_event(trainer, train_metrics)
+            self.assertEqual(train_event["kind"], "train")
+            self.assertEqual(train_event["step"], 1)
+            self.assertEqual(train_event["samples_seen"], train_metrics.samples)
+            self.assertEqual(train_event["loss"], train_metrics.loss)
             rotating_first = trainer.save_checkpoint()
             metrics = evaluate_policy_v3(
                 trainer.model,

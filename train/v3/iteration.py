@@ -21,7 +21,7 @@ from .replay import collate_examples
 from .retention import ITERATION_MARKER_SCHEMA_ID, apply_iteration_retention
 from .selfplay_parallel import ParallelSelfPlayConfig, run_parallel_selfplay
 from .tensorize import V3Vocabulary
-from .trainer import TrainerV3, TrainingConfigV3
+from .trainer import TrainerV3, TrainingConfigV3, TrainingMetricsJournalV3
 
 ITERATION_CONFIG_SCHEMA_ID = "augmentia.selfplay-iteration-config.v3"
 
@@ -113,7 +113,24 @@ def run_iteration(
     )
     if resume and trainer.checkpoints.load_latest_valid() is not None:
         trainer.resume_latest()
-    steps_executed = sum(1 for _ in trainer.iter_train())
+    journal = TrainingMetricsJournalV3(
+        iteration_dir / "training", trainer.run_id, trainer.run_identity
+    )
+    journal.truncate_after(trainer.global_step)
+    metrics_interval = _positive_int(
+        config["training"].get("metrics_interval", 10), "metrics_interval"
+    )
+    steps_executed = 0
+    last_logged_step = None
+    last_metrics = None
+    for metrics in trainer.iter_train():
+        steps_executed += 1
+        last_metrics = metrics
+        if metrics.step == 1 or metrics.step % metrics_interval == 0:
+            journal.append(_training_metric_event(trainer, metrics))
+            last_logged_step = metrics.step
+    if last_metrics is not None and last_metrics.step != last_logged_step:
+        journal.append(_training_metric_event(trainer, last_metrics))
     trainer.close()
     loaded = trainer.checkpoints.load_latest_valid()
     if loaded is None:
@@ -161,6 +178,7 @@ def run_iteration(
         "selfplay_manifest": _file_identity(selfplay_manifest),
         "mixture_identity": dataset.identity.to_json(),
         "checkpoint": _file_identity(checkpoint),
+        "training_metrics": _file_identity(journal.path),
         "candidate": _file_identity(candidate),
         "candidate_metadata": _file_identity(metadata),
         "parent_training": trainer.parent_identity,
@@ -176,6 +194,7 @@ def run_iteration(
             "samples_seen": trainer.samples_seen,
             "last_metrics": trainer.last_metrics,
             "steps_executed_this_invocation": steps_executed,
+            "metrics_interval": metrics_interval,
             "source_quotas": dataset.quotas,
             "source_weights": dataset.weights,
         },
@@ -374,6 +393,23 @@ def _collate_dataset_indices(
     if hasattr(dataset, "collate_indices"):
         return dataset.collate_indices(indices)
     return collate_examples([dataset[index] for index in indices], vocabulary)
+
+
+def _training_metric_event(trainer: TrainerV3, metrics: Any) -> dict[str, Any]:
+    return {
+        "kind": "train",
+        "step": metrics.step,
+        "samples_seen": trainer.samples_seen,
+        "samples": metrics.samples,
+        "decision_count": metrics.samples,
+        "loss": metrics.loss,
+        "policy_loss": metrics.policy_loss,
+        "value_loss": metrics.value_loss,
+        "auxiliary_loss": metrics.auxiliary_loss,
+        "amp_overflow_retries": metrics.amp_overflow_retries,
+        "learning_rate": trainer.optimizer.param_groups[0]["lr"],
+        "amp_scale": trainer.scaler.get_scale(),
+    }
 
 
 def _validate_config(config: Any) -> None:
