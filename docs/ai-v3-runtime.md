@@ -11,6 +11,10 @@ Rust runtime은 `V3RuntimeOptions`로 `cpu`/`cuda` execution provider와 intra-o
 오류를 반환해 CPU fallback을 숨기지 않는다. 동적 ONNX Runtime DLL은 실행 환경의
 `ORT_DYLIB_PATH`로 고정한다.
 
+이 프로젝트의 Windows/PyTorch `cu128` 환경은 `onnxruntime-gpu>=1.21,<1.27`로 잠근다.
+1.27 이상 PyPI GPU wheel은 CUDA 13 계열이므로 현재 RTX 3060 드라이버와 `cu128` PyTorch
+DLL 조합에서 사용하지 않는다.
+
 Rust `evaluate_batch`는 여러 `GameState`를 한 번에 ObservationV3와 가변 LegalActionSetV3로
 바꾸고 하나의 ONNX call로 평가한다. 반환 policy는 각 상태의 실제 합법 행동 길이에만
 softmax하며 ActionV3 index와 원래 `Action`을 함께 보존한다. terminal state는 모델 입력이

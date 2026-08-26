@@ -193,8 +193,15 @@ def _start_worker(
     environment = os.environ.copy()
     if config.ort_dylib is not None:
         environment["ORT_DYLIB_PATH"] = str(config.ort_dylib)
-        dll_dir = str(config.ort_dylib.parent)
-        environment["PATH"] = dll_dir + os.pathsep + environment.get("PATH", "")
+        dll_dirs = [config.ort_dylib.parent]
+        torch_lib = Path(sys.prefix) / "Lib" / "site-packages" / "torch" / "lib"
+        cuda_12 = Path(environment.get("CUDA_PATH_V12_8", "")) / "bin"
+        dll_dirs.extend(path for path in (torch_lib, cuda_12) if path.is_dir())
+        environment["PATH"] = (
+            os.pathsep.join(str(path) for path in dll_dirs)
+            + os.pathsep
+            + environment.get("PATH", "")
+        )
     command = _worker_command(config, game_index, part)
     try:
         process = subprocess.Popen(

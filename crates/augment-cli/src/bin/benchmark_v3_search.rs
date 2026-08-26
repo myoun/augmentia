@@ -1,4 +1,4 @@
-use augment_ai::{MctsV3Config, MctsV3Tree, V3OnnxRuntime};
+use augment_ai::{MctsV3Config, MctsV3Tree, V3ExecutionProvider, V3OnnxRuntime, V3RuntimeOptions};
 use augment_core::{BUNDLED_RULESET_ID, Engine, GamePhase, GameState, Mode};
 use serde::Serialize;
 use std::path::PathBuf;
@@ -19,6 +19,8 @@ struct BatchSearchReport {
 
 #[derive(Serialize)]
 struct SearchBenchmarkReport {
+    execution_provider: &'static str,
+    intra_threads: usize,
     session_instances: usize,
     session_runs: u64,
     batches: Vec<BatchSearchReport>,
@@ -34,14 +36,31 @@ fn main() {
     let ruleset_hash = required(&args, "--ruleset-hash");
     let simulations = optional_usize(&args, "--simulations", 200);
     let iterations = optional_usize(&args, "--iterations", 10);
+    let leaf_batch_sizes = optional_usize_value(&args, "--leaf-batch-size")
+        .map_or_else(|| vec![1, 8, 16], |value| vec![value]);
+    let execution_provider = match optional_string(&args, "--execution-provider", "cpu").as_str() {
+        "cpu" => V3ExecutionProvider::Cpu,
+        "cuda" => V3ExecutionProvider::Cuda,
+        value => panic!("--execution-provider must be cpu or cuda, got {value:?}"),
+    };
+    let intra_threads = optional_usize(&args, "--intra-threads", 1);
     let engine = Engine::bundled_20260807().expect("load bundled engine");
     let mut state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 2026082102);
     state.phase = GamePhase::Playing;
-    let runtime = V3OnnxRuntime::from_files(model, metadata, BUNDLED_RULESET_ID, &ruleset_hash)
-        .expect("load strict V3 runtime");
+    let runtime = V3OnnxRuntime::from_files_with_options(
+        model,
+        metadata,
+        BUNDLED_RULESET_ID,
+        &ruleset_hash,
+        V3RuntimeOptions {
+            execution_provider,
+            intra_threads,
+        },
+    )
+    .expect("load strict V3 runtime");
 
     let mut batches = Vec::new();
-    for leaf_batch_size in [1, 8, 16] {
+    for leaf_batch_size in leaf_batch_sizes {
         let config = MctsV3Config {
             num_simulations: simulations,
             leaf_batch_size,
@@ -91,6 +110,8 @@ fn main() {
     println!(
         "{}",
         serde_json::to_string_pretty(&SearchBenchmarkReport {
+            execution_provider: execution_provider.as_str(),
+            intra_threads,
             session_instances: 1,
             session_runs: runtime.session_runs(),
             batches,
@@ -120,4 +141,17 @@ fn optional_usize(args: &[String], flag: &str, default: usize) -> usize {
         .and_then(|index| args.get(index + 1))
         .map(|value| value.parse().expect("numeric argument"))
         .unwrap_or(default)
+}
+
+fn optional_usize_value(args: &[String], flag: &str) -> Option<usize> {
+    args.windows(2)
+        .find(|pair| pair[0] == flag)
+        .map(|pair| pair[1].parse().expect("numeric argument"))
+}
+
+fn optional_string(args: &[String], flag: &str, default: &str) -> String {
+    args.windows(2)
+        .find(|pair| pair[0] == flag)
+        .map(|pair| pair[1].clone())
+        .unwrap_or_else(|| default.to_owned())
 }

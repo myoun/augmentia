@@ -88,13 +88,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         &ruleset_hash,
         runtime_options,
     )?;
-    let runtime_b = V3OnnxRuntime::from_files_with_options(
-        &model_b,
-        &metadata_b,
-        BUNDLED_RULESET_ID,
-        &ruleset_hash,
-        runtime_options,
-    )?;
+    let shared_runtime = model_a == model_b && metadata_a == metadata_b;
+    let runtime_b = if shared_runtime {
+        None
+    } else {
+        Some(V3OnnxRuntime::from_files_with_options(
+            &model_b,
+            &metadata_b,
+            BUNDLED_RULESET_ID,
+            &ruleset_hash,
+            runtime_options,
+        )?)
+    };
+    let runtime_b_ref = runtime_b.as_ref().unwrap_or(&runtime_a);
     let artifact_a = model_artifact(&model_a, &metadata_a, "agent-a")?;
     let artifact_b = model_artifact(&model_b, &metadata_b, "agent-b")?;
     let engine_commit = git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
@@ -121,9 +127,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let game_started = Instant::now();
         let swap = game_index % 2 == 1;
         let (white_runtime, white_artifact, black_runtime, black_artifact) = if swap {
-            (&runtime_b, &artifact_b, &runtime_a, &artifact_a)
+            (runtime_b_ref, &artifact_b, &runtime_a, &artifact_a)
         } else {
-            (&runtime_a, &artifact_a, &runtime_b, &artifact_b)
+            (&runtime_a, &artifact_a, runtime_b_ref, &artifact_b)
         };
         let white = SelfPlayAgentV3 {
             evaluator: white_runtime,
@@ -247,7 +253,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "model_a": artifact_a,
             "model_b": artifact_b,
             "runtime_runs_a": runtime_a.session_runs(),
-            "runtime_runs_b": runtime_b.session_runs(),
+            "runtime_runs_b": runtime_b.as_ref().map(V3OnnxRuntime::session_runs).unwrap_or(0),
+            "shared_runtime": shared_runtime,
             "game_index_start": game_index_start,
             "execution_provider": runtime_a.options().execution_provider.as_str(),
             "intra_threads": runtime_a.options().intra_threads,
