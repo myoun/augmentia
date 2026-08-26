@@ -175,6 +175,29 @@ class PipelineV3Tests(unittest.TestCase):
             )
             self.assertEqual(left.identity.to_json(), right.identity.to_json())
 
+    def test_lichess_selfplay_bootstrap_uses_only_available_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = _write_dataset(root)
+            config = root / "mixture.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "mixture_schema_id": MIXTURE_SCHEMA_ID,
+                        "profile": "lichess_selfplay_bootstrap",
+                        "seed": 41,
+                        "epoch_size": 20,
+                        "sources": {
+                            "lichess": str(manifest),
+                            "weak_selfplay": str(manifest),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            dataset = load_training_dataset(config)
+            self.assertEqual(dataset.quotas, {"lichess": 16, "weak_selfplay": 4})
+
     def test_mixture_keeps_virtual_references_instead_of_materializing_examples(
         self,
     ) -> None:
@@ -333,6 +356,72 @@ class PipelineV3Tests(unittest.TestCase):
             )
             with self.assertRaises(CheckpointMismatchError):
                 mismatch.resume_latest()
+
+    def test_parent_checkpoint_expands_text_rows_without_forgetting(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = ReplayDatasetV3(_write_dataset(root))
+            parent_vocabulary = dataset.build_vocabulary()
+            parent_model = AugmentNetV3(_model_config(parent_vocabulary))
+            parent_state = {
+                name: value.detach().clone()
+                for name, value in parent_model.state_dict().items()
+            }
+            checkpoint = root / "parent.pt"
+            torch.save(
+                {
+                    "checkpoint_schema_id": "augmentia.training-checkpoint.v3",
+                    "run_id": "parent-run",
+                    "global_step": 7,
+                    "run_identity": {
+                        "model_config": asdict(parent_model.config),
+                    },
+                    "model": parent_state,
+                },
+                checkpoint,
+            )
+            metadata = root / "parent.metadata.json"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "checkpoint_sha256": hashlib.sha256(
+                            checkpoint.read_bytes()
+                        ).hexdigest(),
+                        "vocabulary": parent_vocabulary.to_json(),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            target_vocabulary = V3Vocabulary(
+                (*parent_vocabulary.tokens, "zz_new_fine_tuning_token")
+            )
+            trainer = TrainerV3(
+                dataset,
+                target_vocabulary,
+                _model_config(target_vocabulary),
+                _training_config(),
+                root / "fine-tune",
+                parent_checkpoint=str(checkpoint),
+                parent_metadata=str(metadata),
+            )
+            loaded = trainer.model.state_dict()
+            for name, expected in parent_state.items():
+                if name == "text_embedding.weight":
+                    torch.testing.assert_close(
+                        loaded[name][: expected.shape[0]], expected
+                    )
+                    torch.testing.assert_close(
+                        loaded[name][expected.shape[0] :],
+                        torch.zeros_like(loaded[name][expected.shape[0] :]),
+                    )
+                else:
+                    torch.testing.assert_close(loaded[name], expected)
+            self.assertEqual(trainer.parent_identity["global_step"], 7)
+            self.assertEqual(
+                trainer.parent_migrations[0]["kind"],
+                "expand_zero_initialized_text_embedding",
+            )
+            self.assertEqual(trainer.run_identity["parent"], trainer.parent_identity)
 
     def test_validation_history_best_checkpoint_and_early_stopping(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -21,6 +21,12 @@ SOURCE_NAMES = (
     "champion_selfplay",
 )
 MIXTURE_PROFILES: dict[str, dict[str, float]] = {
+    "lichess_selfplay_bootstrap": {
+        "lichess": 0.80,
+        "solver": 0.0,
+        "weak_selfplay": 0.20,
+        "champion_selfplay": 0.0,
+    },
     "bootstrap": {
         "lichess": 0.50,
         "solver": 0.30,
@@ -378,15 +384,17 @@ def _validate_weights(
 
 
 def _allocate_quotas(weights: Mapping[str, float], epoch_size: int) -> dict[str, int]:
-    remaining = epoch_size - len(weights)
-    quotas = {name: 1 for name in weights}
-    raw = {name: remaining * weight for name, weight in weights.items()}
-    for name, value in raw.items():
-        quotas[name] += int(value)
+    names = tuple(sorted(weights))
+    ideal = {name: epoch_size * weights[name] for name in names}
+    quotas = {name: max(1, math.floor(ideal[name])) for name in names}
+    if sum(quotas.values()) > epoch_size:
+        raise ValueError(
+            "mixture epoch_size cannot provide one example for every active source"
+        )
     unallocated = epoch_size - sum(quotas.values())
-    order = sorted(weights, key=lambda name: (-(raw[name] % 1), name))
-    for name in order[:unallocated]:
-        quotas[name] += 1
+    order = sorted(names, key=lambda name: (-(ideal[name] % 1), name))
+    for index in range(unallocated):
+        quotas[order[index % len(order)]] += 1
     return quotas
 
 

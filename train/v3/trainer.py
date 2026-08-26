@@ -326,6 +326,7 @@ class TrainerV3:
         run_dir: str | Path,
         run_id: str | None = None,
         parent_checkpoint: str | None = None,
+        parent_metadata: str | None = None,
     ) -> None:
         self.dataset = dataset
         self.vocabulary = vocabulary
@@ -333,7 +334,30 @@ class TrainerV3:
         self.config = training_config
         self.device = _resolve_device(training_config.device)
         _seed_everything(training_config.seed)
-        self.model = AugmentNetV3(model_config).to(self.device)
+        if (parent_checkpoint is None) != (parent_metadata is None):
+            raise ValueError(
+                "parent_checkpoint and parent_metadata must be provided together"
+            )
+        self.model = AugmentNetV3(model_config)
+        self.parent_checkpoint = None
+        self.parent_metadata = None
+        self.parent_identity: dict[str, Any] | None = None
+        self.parent_migrations: tuple[dict[str, Any], ...] = ()
+        if parent_checkpoint is not None and parent_metadata is not None:
+            (
+                parent_state,
+                self.parent_identity,
+                self.parent_migrations,
+            ) = _load_parent_checkpoint(
+                Path(parent_checkpoint),
+                Path(parent_metadata),
+                self.model,
+                vocabulary,
+            )
+            self.model.load_state_dict(parent_state)
+            self.parent_checkpoint = str(Path(parent_checkpoint).resolve())
+            self.parent_metadata = str(Path(parent_metadata).resolve())
+        self.model = self.model.to(self.device)
         self.optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=training_config.learning_rate,
@@ -349,7 +373,6 @@ class TrainerV3:
         )
         self.checkpoints = CheckpointManagerV3(run_dir, training_config.checkpoint_keep)
         self.run_id = run_id or uuid.uuid4().hex
-        self.parent_checkpoint = parent_checkpoint
         self.global_step = 0
         self.samples_seen = 0
         self.last_metrics: dict[str, float] = {}
@@ -592,6 +615,7 @@ class TrainerV3:
             "model_config": asdict(self.model_config),
             "training_config": critical_config,
             "vocabulary": self.vocabulary.to_json(),
+            "parent": self.parent_identity,
         }
 
     def _checkpoint_payload(self) -> dict[str, Any]:
@@ -599,6 +623,8 @@ class TrainerV3:
             "checkpoint_schema_id": CHECKPOINT_SCHEMA_ID,
             "run_id": self.run_id,
             "parent_checkpoint": self.parent_checkpoint,
+            "parent_metadata": self.parent_metadata,
+            "parent_migrations": list(self.parent_migrations),
             "code_commit": self.code_commit,
             "run_identity": self._identity,
             "model": self.model.state_dict(),
@@ -841,6 +867,116 @@ def _base_dataset_identity(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 def _json_sha256(payload: Mapping[str, Any]) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _load_parent_checkpoint(
+    checkpoint_path: Path,
+    metadata_path: Path,
+    target_model: AugmentNetV3,
+    target_vocabulary: V3Vocabulary,
+) -> tuple[dict[str, torch.Tensor], dict[str, Any], tuple[dict[str, Any], ...]]:
+    """Load a verified parent while preserving every learned embedding row."""
+    checkpoint_path = checkpoint_path.resolve()
+    metadata_path = metadata_path.resolve()
+    checkpoint_sha256 = _sha256_file(checkpoint_path)
+    metadata_sha256 = _sha256_file(metadata_path)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if metadata.get("checkpoint_sha256") != checkpoint_sha256:
+        raise CheckpointMismatchError(
+            "parent checkpoint SHA-256 does not match its model metadata"
+        )
+    checksum_sidecar = checkpoint_path.with_suffix(checkpoint_path.suffix + ".sha256")
+    if checksum_sidecar.exists():
+        sidecar_sha256 = checksum_sidecar.read_text(encoding="utf-8").strip().split()[0]
+        if sidecar_sha256 != checkpoint_sha256:
+            raise CheckpointMismatchError(
+                "parent checkpoint SHA-256 does not match its checksum sidecar"
+            )
+
+    parent_vocabulary = V3Vocabulary.from_json(metadata["vocabulary"])
+    parent_size = parent_vocabulary.size
+    if target_vocabulary.tokens[:parent_size] != parent_vocabulary.tokens:
+        raise CheckpointMismatchError(
+            "fine-tuning vocabulary must preserve every parent token index"
+        )
+
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if checkpoint.get("checkpoint_schema_id") != CHECKPOINT_SCHEMA_ID:
+        raise CheckpointMismatchError("unsupported parent checkpoint schema")
+    parent_model_config = checkpoint.get("run_identity", {}).get("model_config")
+    if not isinstance(parent_model_config, Mapping):
+        raise CheckpointMismatchError("parent checkpoint has no model identity")
+    for name in ("channels", "residual_blocks", "model_dim", "runtime_message_passes"):
+        if parent_model_config.get(name) != getattr(target_model.config, name):
+            raise CheckpointMismatchError(
+                f"parent and target model structures differ at {name}"
+            )
+
+    source_state = checkpoint.get("model")
+    if not isinstance(source_state, Mapping):
+        raise CheckpointMismatchError("parent checkpoint has no model state")
+    target_state = target_model.state_dict()
+    if set(source_state) != set(target_state):
+        missing = sorted(set(target_state) - set(source_state))
+        extra = sorted(set(source_state) - set(target_state))
+        raise CheckpointMismatchError(
+            f"parent model state keys differ (missing={missing}, extra={extra})"
+        )
+
+    text_rows = int(source_state["text_embedding.weight"].shape[0])
+    extension = metadata.get("vocabulary_extension")
+    expected_text_rows = (
+        int(extension["base_size"])
+        if isinstance(extension, Mapping) and "base_size" in extension
+        else parent_size
+    )
+    if text_rows != expected_text_rows:
+        raise CheckpointMismatchError(
+            "parent text embedding rows do not match metadata vocabulary provenance"
+        )
+
+    migrations: list[dict[str, Any]] = []
+    migrated: dict[str, torch.Tensor] = {}
+    expandable = {
+        "text_embedding.weight": "expand_zero_initialized_text_embedding",
+        "piece_kind_embedding.weight": "expand_zero_initialized_piece_kind_embedding",
+    }
+    for name, target in target_state.items():
+        source = source_state[name]
+        if not isinstance(source, torch.Tensor):
+            raise CheckpointMismatchError(f"parent state {name} is not a tensor")
+        if source.shape == target.shape:
+            migrated[name] = source
+            continue
+        if (
+            name not in expandable
+            or source.ndim != target.ndim
+            or source.shape[1:] != target.shape[1:]
+            or source.shape[0] >= target.shape[0]
+        ):
+            raise CheckpointMismatchError(
+                f"parent tensor shape differs at {name}: {tuple(source.shape)} != {tuple(target.shape)}"
+            )
+        expanded = source.new_zeros(target.shape)
+        expanded[: source.shape[0]].copy_(source)
+        migrated[name] = expanded
+        migrations.append(
+            {
+                "kind": expandable[name],
+                "source_rows": source.shape[0],
+                "target_rows": target.shape[0],
+            }
+        )
+
+    identity = {
+        "checkpoint_path": str(checkpoint_path),
+        "checkpoint_sha256": checkpoint_sha256,
+        "metadata_path": str(metadata_path),
+        "metadata_sha256": metadata_sha256,
+        "global_step": int(checkpoint.get("global_step", 0)),
+        "run_id": str(checkpoint.get("run_id", "")),
+    }
+    return migrated, identity, tuple(migrations)
 
 
 def _atomic_json_write(path: Path, payload: Mapping[str, Any]) -> None:

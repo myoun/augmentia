@@ -44,19 +44,25 @@ def run_iteration(
     repository = Path(__file__).parents[2]
     ruleset_hash = config["ruleset_manifest_sha256"]
 
-    selfplay_dir = iteration_dir / "selfplay"
-    selfplay_manifest = selfplay_dir / "manifest.json"
-    if not selfplay_manifest.exists():
-        _run_selfplay(
-            repository,
-            config_path,
-            config,
-            selfplay_dir,
-            ruleset_hash,
-            resume=resume,
-        )
-    elif not resume:
-        raise FileExistsError("partial self-play artifacts already exist; use --resume")
+    configured_selfplay = config["selfplay"].get("manifest")
+    if configured_selfplay is not None:
+        selfplay_manifest = _resolve(config_path, configured_selfplay)
+    else:
+        selfplay_dir = iteration_dir / "selfplay"
+        selfplay_manifest = selfplay_dir / "manifest.json"
+        if not selfplay_manifest.exists():
+            _run_selfplay(
+                repository,
+                config_path,
+                config,
+                selfplay_dir,
+                ruleset_hash,
+                resume=resume,
+            )
+        elif not resume:
+            raise FileExistsError(
+                "partial self-play artifacts already exist; use --resume"
+            )
     _run_checked(
         [
             "cargo",
@@ -78,7 +84,12 @@ def run_iteration(
     mixture_bytes = _json_bytes(mixture_config)
     _write_once_or_match(mixture_path, mixture_bytes, resume)
     dataset = load_training_dataset(mixture_path)
-    vocabulary = dataset.build_vocabulary()
+    parent_checkpoint = config["training"].get("parent_checkpoint")
+    parent_metadata = config["training"].get("parent_metadata")
+    vocabulary = _fine_tuning_vocabulary(
+        dataset,
+        None if parent_metadata is None else _resolve(config_path, parent_metadata),
+    )
     training_config = _training_config(config["training"])
     model_config = V3ModelConfig(
         text_vocabulary_size=vocabulary.size,
@@ -91,7 +102,14 @@ def run_iteration(
         training_config,
         iteration_dir / "training",
         run_id=iteration_id,
-        parent_checkpoint=config["training"].get("parent_checkpoint"),
+        parent_checkpoint=(
+            None
+            if parent_checkpoint is None
+            else str(_resolve(config_path, parent_checkpoint))
+        ),
+        parent_metadata=(
+            None if parent_metadata is None else str(_resolve(config_path, parent_metadata))
+        ),
     )
     if resume and trainer.checkpoints.load_latest_valid() is not None:
         trainer.resume_latest()
@@ -122,8 +140,10 @@ def run_iteration(
             dataset.identity,
             checkpoint,
             trainer.code_commit,
+            checkpoint_migrations=trainer.parent_migrations,
         )
     equivalence = assert_onnx_equivalent(trainer.model, sample, candidate)
+    trainer.model.to(trainer.device)
     evaluation = _evaluate_training_slice(
         trainer, dataset, vocabulary, config["training"].get("evaluation_examples", 64)
     )
@@ -143,6 +163,7 @@ def run_iteration(
         "checkpoint": _file_identity(checkpoint),
         "candidate": _file_identity(candidate),
         "candidate_metadata": _file_identity(metadata),
+        "parent_training": trainer.parent_identity,
     }
     manifest = {
         "iteration_schema_id": ITERATION_MARKER_SCHEMA_ID,
@@ -295,6 +316,21 @@ def _training_config(payload: Mapping[str, Any]) -> TrainingConfigV3:
     return TrainingConfigV3(**values)
 
 
+def _fine_tuning_vocabulary(
+    dataset: Any, parent_metadata: Path | None
+) -> V3Vocabulary:
+    dataset_vocabulary = dataset.build_vocabulary()
+    if parent_metadata is None:
+        return dataset_vocabulary
+    metadata = json.loads(parent_metadata.read_text(encoding="utf-8"))
+    parent_vocabulary = V3Vocabulary.from_json(metadata["vocabulary"])
+    parent_tokens = set(parent_vocabulary.tokens)
+    appended = sorted(
+        token for token in dataset_vocabulary.tokens if token not in parent_tokens
+    )
+    return V3Vocabulary((*parent_vocabulary.tokens, *appended))
+
+
 def _evaluate_training_slice(
     trainer: TrainerV3,
     dataset: Any,
@@ -370,6 +406,16 @@ def _validate_config(config: Any) -> None:
     source = config["selfplay"].get("source")
     if source not in {"weak_selfplay", "champion_selfplay"}:
         raise ValueError("selfplay source must identify weak or champion data")
+    if "manifest" in config["selfplay"] and not isinstance(
+        config["selfplay"]["manifest"], str
+    ):
+        raise ValueError("selfplay manifest must be a path string")
+    parent_checkpoint = config["training"].get("parent_checkpoint")
+    parent_metadata = config["training"].get("parent_metadata")
+    if (parent_checkpoint is None) != (parent_metadata is None):
+        raise ValueError(
+            "training parent_checkpoint and parent_metadata must be provided together"
+        )
     retention = config["retention"]
     _positive_int(retention.get("keep_iterations"), "keep_iterations")
     _positive_int(retention.get("max_bytes"), "max_bytes")

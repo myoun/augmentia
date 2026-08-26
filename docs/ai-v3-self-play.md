@@ -33,6 +33,7 @@ policy에는 사용할 수 있지만 value target은 만들지 않는다.
 
 | profile | Lichess | solver | 약한 self-play | champion self-play |
 |---|---:|---:|---:|---:|
+| `lichess_selfplay_bootstrap` | 80% | 0% | 20% | 0% |
 | `bootstrap` | 50% | 30% | 20% | 0% |
 | `first_champion` | 20% | 20% | 10% | 50% |
 | `mature` | 10% | 15% | 5% | 70% |
@@ -41,6 +42,9 @@ policy에는 사용할 수 있지만 value target은 만들지 않는다.
 필요하면 모든 활성 source에 최소 한 sample을 준 뒤 largest-remainder 방식으로 나머지를
 배정하고 확정된 quota를 iteration manifest에 기록한다. Lichess record의 value supervision
 mask는 계속 꺼져 있으므로 일반 체스 결과가 증강체스 value로 유입되지 않는다.
+solver manifest가 아직 없는 첫 미세조정은 `lichess_selfplay_bootstrap`을 사용한다. 기존
+`bootstrap`의 self-play 20%를 유지하고 solver 30%를 Lichess에 돌려 작은 self-play corpus의
+과도한 반복을 피한다.
 
 ## iteration 설정과 실행
 
