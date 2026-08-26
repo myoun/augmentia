@@ -12,9 +12,11 @@ use augment_ai::{
     validate_manifest, verify_manifest_replays, write_jsonl_zstd_shard,
 };
 use augment_core::{BUNDLED_RULESET_ID, Engine, GameStatus, Mode};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -56,16 +58,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
     let dirty_worktree =
         git_output(["status", "--porcelain"]).is_some_and(|output| !output.is_empty());
-    let generator = GeneratorProvenanceV3 {
+    let _generator = GeneratorProvenanceV3 {
         run_id: run_id.clone(),
         engine_commit,
         engine_api_version: 1,
         collector_id: "augment-cli/solve_v3_tactics_m1".to_owned(),
         dirty_worktree,
     };
-    let ruleset = RulesetRefV3 {
+    let _ruleset = RulesetRefV3 {
         id: BUNDLED_RULESET_ID.to_owned(),
-        manifest_sha256: ruleset_hash,
+        manifest_sha256: ruleset_hash.clone(),
     };
     let split_policy = SplitPolicyV3 {
         algorithm: SPLIT_POLICY_V3_ALGORITHM.to_owned(),
@@ -100,101 +102,59 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let engine = Engine::bundled_20260807()?;
     let mut proven_records: Vec<DataRecordV3> = Vec::new();
-    let refuted_log = output_dir.join("refuted.jsonl");
     let mut seen_positions: BTreeSet<String> = BTreeSet::new();
+    let solved = AtomicU64::new(0);
+    let refuted = AtomicU64::new(0);
     let started = Instant::now();
-    let mut solved = 0u64;
-    let mut refuted = 0u64;
 
-    for candidate in &candidates {
-        let Some(state) = replay_to_decision(&engine, candidate)? else {
-            continue;
-        };
-        if state.status != GameStatus::Ongoing {
-            continue;
-        }
-        let position_key = fingerprint_hex(state.fingerprint());
-        if !seen_positions.insert(position_key.clone()) {
-            continue;
-        }
-        let solution = match solve_forced_win_v3(
-            &state,
-            &engine,
-            ForcedWinConfigV3 {
-                max_depth,
-                max_nodes: max_nodes_per_position,
+    let results: Vec<Result<Option<DecisionRecordV3>, ForcedWinErrorV3>> = candidates
+        .par_iter()
+        .map_init(
+            || Engine::bundled_20260807().expect("engine init"),
+            |engine, candidate| {
+                solve_candidate(
+                    engine,
+                    candidate,
+                    &ruleset_hash,
+                    max_depth,
+                    max_nodes_per_position,
+                )
             },
-        ) {
-            Ok(Some(solution)) => solution,
-            Ok(None) => {
-                refuted += 1;
+        )
+        .collect();
+
+    let refuted_log = output_dir.join("refuted.jsonl");
+    let mut budget_exceeded = 0u64;
+    for (candidate, result) in candidates.iter().zip(results) {
+        match result {
+            Ok(Some(record)) => {
+                if seen_positions.insert(record.state_fingerprint.clone()) {
+                    solved.fetch_add(1, Ordering::Relaxed);
+                    proven_records.push(DataRecordV3::Decision(Box::new(record)));
+                } else {
+                    refuted.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+            Err(ForcedWinErrorV3::NodeBudgetExceeded { .. }) => {
+                budget_exceeded += 1;
                 append_refuted(
                     &refuted_log,
                     &candidate.game_id,
                     candidate.decision_index,
-                    &position_key,
+                    "budget",
                 )?;
-                continue;
             }
-            Err(ForcedWinErrorV3::NodeBudgetExceeded { .. }) => {
-                refuted += 1;
-                continue;
+            Ok(None) => {
+                refuted.fetch_add(1, Ordering::Relaxed);
+                append_refuted(
+                    &refuted_log,
+                    &candidate.game_id,
+                    candidate.decision_index,
+                    "",
+                )?;
             }
             Err(error) => return Err(error.into()),
-        };
-        solved += 1;
-        let proof_source = format!(
-            "solver-m1/depth={}/nodes={}",
-            max_depth, solution.searched_nodes
-        );
-        let legal_actions = LegalActionSetV3::from_state(&state, &engine)?;
-        let record = DecisionRecordV3 {
-            record_schema_id: DECISION_RECORD_V3_SCHEMA_ID.to_owned(),
-            decision_id: format!(
-                "solver-{}",
-                sha256_bytes(position_key.as_bytes())
-            ),
-            provenance: DecisionProvenanceV3 {
-                source_kind: DecisionSourceKindV3::EngineSearch,
-                source_domain: SourceDomainV3::AugmentChess,
-                source_id: format!("{}#{}", candidate.game_id, candidate.decision_index),
-                split_group_id: format!("game\0{}\0{}\0{}", BUNDLED_RULESET_ID, candidate.mode_id, candidate.seed_hex),
-                generator_commit: Some(generator.engine_commit.clone()),
-                license: None,
-            },
-            ruleset: ruleset.clone(),
-            observation_schema_id: OBSERVATION_V3_SCHEMA_ID.to_owned(),
-            action_schema_id: ACTION_V3_SCHEMA_ID.to_owned(),
-            actor: absolute_player(state.turn),
-            state_fingerprint: position_key,
-            observation: encode_observation_v3(&state),
-            legal_actions,
-            targets: DecisionTargetsV3 {
-                policy: Some(DecisionPolicySupervisionV3 {
-                    scope: PolicyTrainingScopeV3::AugmentPolicy,
-                    target: DecisionPolicyTargetV3::OptimalActionSet {
-                        action_indices: solution.optimal_action_indices,
-                        proof_source: proof_source.clone(),
-                    },
-                }),
-                value: Some(DecisionValueTargetV3::Proven {
-                    value: 1.0,
-                    proof_source: proof_source.clone(),
-                }),
-                auxiliary: vec![
-                    AuxiliaryTargetV3 {
-                        name: "forced_win_distance_decisions".to_owned(),
-                        value: AuxiliaryTargetValueV3::Integer(i64::from(solution.distance_decisions)),
-                    },
-                    AuxiliaryTargetV3 {
-                        name: "proof_searched_nodes".to_owned(),
-                        value: AuxiliaryTargetValueV3::Integer(solution.searched_nodes as i64),
-                    },
-                ],
-            },
-        };
-        record.validate()?;
-        proven_records.push(DataRecordV3::Decision(Box::new(record)));
+        }
     }
 
     if proven_records.is_empty() {
@@ -255,6 +215,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "candidates": candidates.len(),
             "proven": solved,
             "refuted": refuted,
+            "budget_exceeded": budget_exceeded,
             "elapsed_seconds": started.elapsed().as_secs_f64(),
         }))?
     );
@@ -299,6 +260,89 @@ fn replay_to_decision(
         decision_index += 1;
     }
     Ok(Some(state))
+}
+
+fn solve_candidate(
+    engine: &Engine,
+    candidate: &CandidatePosition,
+    ruleset_hash: &str,
+    max_depth: u8,
+    max_nodes: u64,
+) -> Result<Option<DecisionRecordV3>, ForcedWinErrorV3> {
+    let state = match replay_to_decision(engine, candidate) {
+        Ok(Some(state)) => state,
+        Ok(None) => return Ok(None),
+        Err(error) => return Err(ForcedWinErrorV3::Engine(error.to_string())),
+    };
+    if state.status != GameStatus::Ongoing {
+        return Ok(None);
+    }
+    let solution = solve_forced_win_v3(
+        &state,
+        engine,
+        ForcedWinConfigV3 {
+            max_depth,
+            max_nodes,
+        },
+    )?;
+    let Some(solution) = solution else {
+        return Ok(None);
+    };
+    let proof_source = format!(
+        "solver-m1/depth={}/nodes={}",
+        max_depth, solution.searched_nodes
+    );
+    let legal_actions =
+        LegalActionSetV3::from_state(&state, engine).map_err(ForcedWinErrorV3::Action)?;
+    let position_key = fingerprint_hex(state.fingerprint());
+    let record = DecisionRecordV3 {
+        record_schema_id: DECISION_RECORD_V3_SCHEMA_ID.to_owned(),
+        decision_id: format!("solver-{}", sha256_bytes(position_key.as_bytes())),
+        provenance: DecisionProvenanceV3 {
+            source_kind: DecisionSourceKindV3::EngineSearch,
+            source_domain: SourceDomainV3::AugmentChess,
+            source_id: format!("{}#{}", candidate.game_id, candidate.decision_index),
+            split_group_id: format!(
+                "game\0{}\0{}\0{}",
+                BUNDLED_RULESET_ID, candidate.mode_id, candidate.seed_hex
+            ),
+            generator_commit: None,
+            license: None,
+        },
+        ruleset: RulesetRefV3 {
+            id: BUNDLED_RULESET_ID.to_owned(),
+            manifest_sha256: ruleset_hash.to_owned(),
+        },
+        observation_schema_id: OBSERVATION_V3_SCHEMA_ID.to_owned(),
+        action_schema_id: ACTION_V3_SCHEMA_ID.to_owned(),
+        actor: absolute_player(state.turn),
+        state_fingerprint: position_key,
+        observation: encode_observation_v3(&state),
+        legal_actions,
+        targets: DecisionTargetsV3 {
+            policy: Some(DecisionPolicySupervisionV3 {
+                scope: PolicyTrainingScopeV3::AugmentPolicy,
+                target: DecisionPolicyTargetV3::OptimalActionSet {
+                    action_indices: solution.optimal_action_indices,
+                    proof_source: proof_source.clone(),
+                },
+            }),
+            value: Some(DecisionValueTargetV3::Proven {
+                value: 1.0,
+                proof_source,
+            }),
+            auxiliary: vec![AuxiliaryTargetV3 {
+                name: "forced_win_distance_decisions".to_owned(),
+                value: AuxiliaryTargetValueV3::Integer(i64::from(
+                    solution.distance_decisions,
+                )),
+            }],
+        },
+    };
+    record
+        .validate()
+        .map_err(|error| ForcedWinErrorV3::Engine(error.to_string()))?;
+    Ok(Some(record))
 }
 
 fn append_refuted(
