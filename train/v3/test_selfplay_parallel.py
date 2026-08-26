@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ import zstandard
 from .selfplay_parallel import (
     ParallelSelfPlayConfig,
     _commit_root_manifest,
+    _run_contract,
     _validate_part_manifest,
     _validate_part_manifest_payload,
     _worker_command,
@@ -18,6 +20,21 @@ from .selfplay_parallel import (
 
 
 class ParallelSelfPlayTests(unittest.TestCase):
+    def test_run_contract_locks_generation_and_artifact_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ("a.onnx", "a.json", "b.onnx", "b.json"):
+                (root / name).write_bytes(name.encode())
+            config = _config(root)
+            first = _run_contract(config, "c" * 40)
+            changed = _run_contract(replace(config, simulations=401), "c" * 40)
+            self.assertNotEqual(first, changed)
+            self.assertEqual(first["generation"]["simulations"], 400)
+            self.assertNotEqual(
+                first["models"][0]["onnx_sha256"],
+                first["models"][1]["onnx_sha256"],
+            )
+
     def test_worker_uses_absolute_game_index_with_common_seed(self) -> None:
         config = _config(Path("root"))
         command = _worker_command(config, 17, Path("part"))

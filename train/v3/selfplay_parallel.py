@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -68,6 +69,16 @@ def run_parallel_selfplay(
     if config.require_clean:
         _require_clean_worktree(config.repository)
     expected_commit = _git_head(config.repository)
+    contract = _run_contract(config, expected_commit)
+    contract_path = output / "run-config.json"
+    if contract_path.exists():
+        if _load_json(contract_path) != contract:
+            raise RuntimeError("existing self-play run-config differs from this invocation")
+    elif output.exists() and any(output.iterdir()):
+        raise RuntimeError("self-play artifacts exist without a matching run-config")
+    else:
+        output.mkdir(parents=True, exist_ok=True)
+        _atomic_json(contract_path, contract)
     if root_manifest.exists():
         if not resume:
             raise FileExistsError(f"self-play dataset already exists: {root_manifest}")
@@ -81,7 +92,6 @@ def run_parallel_selfplay(
                 expected_commit,
             )
         return root_manifest
-    output.mkdir(parents=True, exist_ok=True)
     parts = output / "parts"
     logs = output / "logs"
     parts.mkdir(exist_ok=True)
@@ -455,6 +465,53 @@ def _validated(config: ParallelSelfPlayConfig) -> ParallelSelfPlayConfig:
     return config
 
 
+def _run_contract(
+    config: ParallelSelfPlayConfig, engine_commit: str
+) -> dict[str, Any]:
+    return {
+        "schema_id": "augmentia.selfplay-run-config.v3",
+        "engine_commit": engine_commit,
+        "run_id": config.run_id,
+        "created_at_utc": config.created_at_utc,
+        "ruleset_hash": config.ruleset_hash,
+        "models": [
+            {
+                "onnx_sha256": _sha256_file(config.model_a),
+                "metadata_sha256": _sha256_file(config.metadata_a),
+            },
+            {
+                "onnx_sha256": _sha256_file(config.model_b),
+                "metadata_sha256": _sha256_file(config.metadata_b),
+            },
+        ],
+        "generation": {
+            "games": config.games,
+            "base_seed": config.base_seed,
+            "simulations": config.simulations,
+            "leaf_batch_size": config.leaf_batch_size,
+            "max_decisions": config.max_decisions,
+            "temperature_decisions": config.temperature_decisions,
+            "temperature": config.temperature,
+            "noise_alpha": config.noise_alpha,
+            "noise_epsilon": config.noise_epsilon,
+            "train_bp": config.train_bp,
+            "validation_bp": config.validation_bp,
+            "holdout_bp": config.holdout_bp,
+            "compression_level": config.compression_level,
+        },
+        "execution": {
+            "workers": config.workers,
+            "provider": config.execution_provider,
+            "intra_threads": config.intra_threads,
+            "ort_dylib_sha256": (
+                _sha256_file(config.ort_dylib)
+                if config.ort_dylib is not None
+                else None
+            ),
+        },
+    }
+
+
 def _require_clean_worktree(repository: Path) -> None:
     completed = subprocess.run(
         ["git", "status", "--porcelain"],
@@ -500,6 +557,23 @@ def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
     )
     with path.open("r+b") as handle:
         os.fsync(handle.fileno())
+
+
+def _atomic_json(path: Path, payload: Mapping[str, Any]) -> None:
+    temporary = path.with_name(f"{path.name}.partial-{os.getpid()}")
+    _write_json(temporary, payload)
+    try:
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _tail(path: Path, lines: int) -> str:

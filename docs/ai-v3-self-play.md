@@ -116,6 +116,10 @@ worker 하나가 실패하면 아직 실행 중인 다른 worker를 즉시 종�
 루트 `manifest.json`을 원자적으로 공개하므로 중단 시 완료 대국을 잃거나 불완전 dataset을
 학습에 넘기지 않는다.
 
+루트의 `run-config.json`은 생성 전에 엔진 커밋, 두 모델과 metadata hash, ruleset hash,
+모든 탐색·온도·split 설정, worker/provider/thread 수와 ONNX Runtime DLL hash를 원자적으로
+잠근다. 재개 요청이 이 계약과 하나라도 다르면 기존 part와 새 part를 섞지 않고 실패한다.
+
 `execution_provider`는 `cpu` 또는 `cuda`만 허용한다. `cuda`는 CUDA EP 등록 실패를 오류로
 처리하며 CPU로 자동 fallback하지 않는다. CUDA 실행에는 `ORT_DYLIB_PATH`가 가리키는 ONNX
 Runtime과 설치된 CUDA/cuDNN의 major 버전이 일치해야 한다.
