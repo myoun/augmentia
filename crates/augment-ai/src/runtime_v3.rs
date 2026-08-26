@@ -17,6 +17,36 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub const MODEL_METADATA_V3_SCHEMA_ID: &str = "augmentia.onnx-model-metadata.v3";
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum V3ExecutionProvider {
+    Cpu,
+    Cuda,
+}
+
+impl V3ExecutionProvider {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Cpu => "cpu",
+            Self::Cuda => "cuda",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct V3RuntimeOptions {
+    pub execution_provider: V3ExecutionProvider,
+    pub intra_threads: usize,
+}
+
+impl Default for V3RuntimeOptions {
+    fn default() -> Self {
+        Self {
+            execution_provider: V3ExecutionProvider::Cpu,
+            intra_threads: 1,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum V3RuntimeError {
     Io(String),
@@ -110,6 +140,7 @@ pub struct V3OnnxRuntime {
     metadata: ModelMetadataV3,
     vocabulary: VocabularyV3,
     session_runs: AtomicU64,
+    options: V3RuntimeOptions,
 }
 
 impl V3OnnxRuntime {
@@ -119,6 +150,27 @@ impl V3OnnxRuntime {
         expected_ruleset_id: &str,
         expected_ruleset_manifest_sha256: &str,
     ) -> Result<Self, V3RuntimeError> {
+        Self::from_files_with_options(
+            model_path,
+            metadata_path,
+            expected_ruleset_id,
+            expected_ruleset_manifest_sha256,
+            V3RuntimeOptions::default(),
+        )
+    }
+
+    pub fn from_files_with_options(
+        model_path: impl AsRef<Path>,
+        metadata_path: impl AsRef<Path>,
+        expected_ruleset_id: &str,
+        expected_ruleset_manifest_sha256: &str,
+        options: V3RuntimeOptions,
+    ) -> Result<Self, V3RuntimeError> {
+        if options.intra_threads == 0 {
+            return Err(V3RuntimeError::Inference(
+                "ONNX intra_threads must be positive".to_owned(),
+            ));
+        }
         let model_path = model_path.as_ref();
         let metadata: ModelMetadataV3 = serde_json::from_slice(
             &fs::read(metadata_path.as_ref())
@@ -133,10 +185,17 @@ impl V3OnnxRuntime {
         )?;
         let vocabulary = VocabularyV3::from_artifact(&metadata.vocabulary)?;
         validate_required_runtime_vocabulary(&vocabulary)?;
-        let session = Session::builder()
+        let builder = Session::builder()
             .map_err(|error| V3RuntimeError::Inference(error.to_string()))?
-            .with_intra_threads(1)
-            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?
+            .with_intra_threads(options.intra_threads)
+            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+        let mut builder = match options.execution_provider {
+            V3ExecutionProvider::Cpu => builder,
+            V3ExecutionProvider::Cuda => builder
+                .with_execution_providers([ort::ep::CUDA::default().build().error_on_failure()])
+                .map_err(|error| V3RuntimeError::Inference(error.to_string()))?,
+        };
+        let session = builder
             .commit_from_file(model_path)
             .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
         Ok(Self {
@@ -144,11 +203,16 @@ impl V3OnnxRuntime {
             metadata,
             vocabulary,
             session_runs: AtomicU64::new(0),
+            options,
         })
     }
 
     pub fn session_runs(&self) -> u64 {
         self.session_runs.load(Ordering::Relaxed)
+    }
+
+    pub fn options(&self) -> V3RuntimeOptions {
+        self.options
     }
 
     pub fn evaluate(

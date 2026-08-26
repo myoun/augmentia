@@ -60,8 +60,11 @@ mask는 계속 꺼져 있으므로 일반 체스 결과가 증강체스 value로
   "selfplay": {
     "source": "weak_selfplay",
     "games": 1000,
+    "workers": 4,
     "simulations": 400,
     "leaf_batch_size": 16,
+    "execution_provider": "cpu",
+    "intra_threads": 1,
     "max_decisions": 512,
     "temperature_decisions": 30,
     "temperature": 1.0,
@@ -105,6 +108,17 @@ uv run python -m v3.iteration path\to\iteration.json ..\runs\v3-iterations
 SIGINT 등으로 학습이 멈춘 경우 같은 설정으로 `--resume`을 붙인다. 기존 input config와
 mixture가 byte 단위로 다르면 이어가지 않는다. self-play manifest가 이미 완성됐다면 다시
 생성하지 않고 replay 검증하며, checkpoint는 마지막 정상 optimizer step부터 이어간다.
+
+self-play는 절대 game index별로 독립 프로세스를 실행하고 `parts/game-NNNNNNNN`에 한 대국씩
+checksum manifest를 원자적으로 확정한다. 기본 CPU 프로필은 worker 4개와 worker당 ONNX
+thread 1개다. 완료된 part는 `--resume`에서 전체 엔진 replay를 다시 통과한 뒤 재사용하고,
+worker 하나가 실패하면 아직 실행 중인 다른 worker를 즉시 종료한다. 모든 part가 검증된 뒤에만
+루트 `manifest.json`을 원자적으로 공개하므로 중단 시 완료 대국을 잃거나 불완전 dataset을
+학습에 넘기지 않는다.
+
+`execution_provider`는 `cpu` 또는 `cuda`만 허용한다. `cuda`는 CUDA EP 등록 실패를 오류로
+처리하며 CPU로 자동 fallback하지 않는다. CUDA 실행에는 `ORT_DYLIB_PATH`가 가리키는 ONNX
+Runtime과 설치된 CUDA/cuDNN의 major 버전이 일치해야 한다.
 
 ## lineage와 보존
 

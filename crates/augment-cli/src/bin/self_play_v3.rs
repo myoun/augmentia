@@ -5,7 +5,8 @@ use augment_ai::data_v3::{
 };
 use augment_ai::{
     ACTION_V3_SCHEMA_ID, OBSERVATION_V3_SCHEMA_ID, SelfPlayAgentV3, SelfPlayGameConfigV3,
-    V3OnnxRuntime, generate_self_play_game_v3, verify_manifest_replays, write_jsonl_zstd_shard,
+    V3ExecutionProvider, V3OnnxRuntime, V3RuntimeOptions, generate_self_play_game_v3,
+    verify_manifest_replays, write_jsonl_zstd_shard,
 };
 use augment_core::{BUNDLED_RULESET_ID, Engine, Mode};
 use serde::Serialize;
@@ -15,6 +16,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Instant;
 
 fn main() {
     if let Err(error) = run() {
@@ -34,6 +36,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let run_id = required(&args, "--run-id")?;
     let created_at_utc = required(&args, "--created-at-utc")?;
     let games = numeric(&args, "--games", 32usize)?;
+    let game_index_start = numeric(&args, "--game-index-start", 0usize)?;
     let base_seed = numeric(&args, "--base-seed", 2026082101u64)?;
     let simulations = numeric(&args, "--simulations", 400usize)?;
     let leaf_batch_size = numeric(&args, "--leaf-batch-size", 16usize)?;
@@ -46,9 +49,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let validation_bp = numeric(&args, "--validation-bp", 500u16)?;
     let holdout_bp = numeric(&args, "--holdout-bp", 500u16)?;
     let compression_level = numeric(&args, "--compression-level", 3i32)?;
+    let execution_provider = execution_provider(&args)?;
+    let intra_threads = numeric(&args, "--intra-threads", 1usize)?;
     if games == 0 {
         return Err("--games must be positive".into());
     }
+    if intra_threads == 0 {
+        return Err("--intra-threads must be positive".into());
+    }
+    game_index_start
+        .checked_add(games)
+        .ok_or("--game-index-start + --games overflowed")?;
     if output_dir.join("manifest.json").exists() {
         return Err(format!(
             "refusing to overwrite {}",
@@ -66,10 +77,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         holdout_basis_points: holdout_bp,
     };
     let engine = Engine::bundled_20260807()?;
-    let runtime_a =
-        V3OnnxRuntime::from_files(&model_a, &metadata_a, BUNDLED_RULESET_ID, &ruleset_hash)?;
-    let runtime_b =
-        V3OnnxRuntime::from_files(&model_b, &metadata_b, BUNDLED_RULESET_ID, &ruleset_hash)?;
+    let runtime_options = V3RuntimeOptions {
+        execution_provider,
+        intra_threads,
+    };
+    let runtime_a = V3OnnxRuntime::from_files_with_options(
+        &model_a,
+        &metadata_a,
+        BUNDLED_RULESET_ID,
+        &ruleset_hash,
+        runtime_options,
+    )?;
+    let runtime_b = V3OnnxRuntime::from_files_with_options(
+        &model_b,
+        &metadata_b,
+        BUNDLED_RULESET_ID,
+        &ruleset_hash,
+        runtime_options,
+    )?;
     let artifact_a = model_artifact(&model_a, &metadata_a, "agent-a")?;
     let artifact_b = model_artifact(&model_b, &metadata_b, "agent-b")?;
     let engine_commit = git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
@@ -90,7 +115,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "mcts-v3:sims={simulations}:batch={leaf_batch_size}:alpha={noise_alpha}:epsilon={noise_epsilon}"
     );
     let mut split_records: BTreeMap<DatasetSplitV3, Vec<DataRecordV3>> = BTreeMap::new();
-    for game_index in 0..games {
+    let run_started = Instant::now();
+    for local_game_index in 0..games {
+        let game_index = game_index_start + local_game_index;
+        let game_started = Instant::now();
         let swap = game_index % 2 == 1;
         let (white_runtime, white_artifact, black_runtime, black_artifact) = if swap {
             (&runtime_b, &artifact_b, &runtime_a, &artifact_a)
@@ -137,10 +165,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .into());
         }
         let split = split_policy.assign(&game.split_group_key())?;
+        let game_steps = game.steps.len();
         split_records
             .entry(split)
             .or_default()
             .push(DataRecordV3::Game(Box::new(game)));
+        let elapsed_seconds = run_started.elapsed().as_secs_f64();
+        let completed = local_game_index + 1;
+        let remaining = games - completed;
+        let eta_seconds = elapsed_seconds / completed as f64 * remaining as f64;
+        eprintln!(
+            "{}",
+            serde_json::to_string(&serde_json::json!({
+                "event": "selfplay_game_complete",
+                "game_index": game_index,
+                "completed": completed,
+                "games": games,
+                "game_steps": game_steps,
+                "game_seconds": game_started.elapsed().as_secs_f64(),
+                "elapsed_seconds": elapsed_seconds,
+                "eta_seconds": eta_seconds,
+                "execution_provider": execution_provider.as_str(),
+                "intra_threads": intra_threads,
+            }))?
+        );
     }
 
     let mut shards = Vec::new();
@@ -200,9 +248,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "model_b": artifact_b,
             "runtime_runs_a": runtime_a.session_runs(),
             "runtime_runs_b": runtime_b.session_runs(),
+            "game_index_start": game_index_start,
+            "execution_provider": runtime_a.options().execution_provider.as_str(),
+            "intra_threads": runtime_a.options().intra_threads,
         }))?
     );
     Ok(())
+}
+
+fn execution_provider(args: &[String]) -> Result<V3ExecutionProvider, String> {
+    match args
+        .iter()
+        .position(|item| item == "--execution-provider")
+        .and_then(|index| args.get(index + 1))
+        .map(String::as_str)
+        .unwrap_or("cpu")
+    {
+        "cpu" => Ok(V3ExecutionProvider::Cpu),
+        "cuda" => Ok(V3ExecutionProvider::Cuda),
+        value => Err(format!(
+            "--execution-provider must be cpu or cuda, got {value:?}"
+        )),
+    }
 }
 
 fn player_agent(

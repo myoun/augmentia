@@ -6,7 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 augment-core = { path = "../augment-core" }
-ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic", "std", "ndarray"] }
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic", "std", "ndarray", "cuda"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

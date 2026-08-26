@@ -19,6 +19,7 @@ from .model import V3ModelConfig, compute_v3_loss
 from .onnx_export import assert_onnx_equivalent, export_onnx_v3
 from .replay import collate_examples
 from .retention import ITERATION_MARKER_SCHEMA_ID, apply_iteration_retention
+from .selfplay_parallel import ParallelSelfPlayConfig, run_parallel_selfplay
 from .tensorize import V3Vocabulary
 from .trainer import TrainerV3, TrainingConfigV3
 
@@ -46,7 +47,14 @@ def run_iteration(
     selfplay_dir = iteration_dir / "selfplay"
     selfplay_manifest = selfplay_dir / "manifest.json"
     if not selfplay_manifest.exists():
-        _run_selfplay(repository, config_path, config, selfplay_dir, ruleset_hash)
+        _run_selfplay(
+            repository,
+            config_path,
+            config,
+            selfplay_dir,
+            ruleset_hash,
+            resume=resume,
+        )
     elif not resume:
         raise FileExistsError("partial self-play artifacts already exist; use --resume")
     _run_checked(
@@ -172,39 +180,29 @@ def _run_selfplay(
     config: Mapping[str, Any],
     output: Path,
     ruleset_hash: str,
+    *,
+    resume: bool,
 ) -> None:
+    _run_checked(
+        [
+            "cargo",
+            "build",
+            "-q",
+            "--release",
+            "-p",
+            "augment-cli",
+            "--bin",
+            "self_play_v3",
+            "--bin",
+            "validate_v3_dataset",
+        ],
+        cwd=repository,
+    )
     models = config["models"]
     selfplay = config["selfplay"]
-    command = [
-        "cargo",
-        "run",
-        "-q",
-        "-p",
-        "augment-cli",
-        "--bin",
-        "self_play_v3",
-        "--",
-        "--model-a",
-        str(_resolve(config_path, models[0]["onnx"])),
-        "--metadata-a",
-        str(_resolve(config_path, models[0]["metadata"])),
-        "--model-b",
-        str(_resolve(config_path, models[1]["onnx"])),
-        "--metadata-b",
-        str(_resolve(config_path, models[1]["metadata"])),
-        "--output-dir",
-        str(output),
-        "--ruleset-hash",
-        ruleset_hash,
-        "--run-id",
-        config["iteration_id"],
-        "--created-at-utc",
-        config["created_at_utc"],
-        "--base-seed",
-        str(config["seed"]),
-    ]
     options = {
         "games": 32,
+        "workers": 4,
         "simulations": 400,
         "leaf_batch_size": 16,
         "max_decisions": 512,
@@ -216,11 +214,44 @@ def _run_selfplay(
         "validation_bp": 500,
         "holdout_bp": 500,
         "compression_level": 3,
+        "execution_provider": "cpu",
+        "intra_threads": 1,
     }
-    for name, default in options.items():
-        flag = "--" + name.replace("_", "-")
-        command.extend([flag, str(selfplay.get(name, default))])
-    _run_checked(command, cwd=repository, rust_onnx=True)
+    values = {name: selfplay.get(name, default) for name, default in options.items()}
+    executable_suffix = ".exe" if os.name == "nt" else ""
+    ort_dylib = (
+        Path(sys.prefix)
+        / "Lib"
+        / "site-packages"
+        / "onnxruntime"
+        / "capi"
+        / ("onnxruntime.dll" if os.name == "nt" else "libonnxruntime.so")
+    )
+    run_parallel_selfplay(
+        ParallelSelfPlayConfig(
+            repository=repository,
+            binary=repository
+            / "target"
+            / "release"
+            / f"self_play_v3{executable_suffix}",
+            validator=repository
+            / "target"
+            / "release"
+            / f"validate_v3_dataset{executable_suffix}",
+            output_dir=output,
+            model_a=_resolve(config_path, models[0]["onnx"]),
+            metadata_a=_resolve(config_path, models[0]["metadata"]),
+            model_b=_resolve(config_path, models[1]["onnx"]),
+            metadata_b=_resolve(config_path, models[1]["metadata"]),
+            ruleset_hash=ruleset_hash,
+            run_id=config["iteration_id"],
+            created_at_utc=config["created_at_utc"],
+            base_seed=config["seed"],
+            ort_dylib=ort_dylib,
+            **values,
+        ),
+        resume=resume,
+    )
 
 
 def _build_mixture_config(

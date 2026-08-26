@@ -50,7 +50,10 @@ pub use observation_v3::{
     V2_BASELINE_MODEL_ID,
 };
 pub use quiescence::QuiescenceSearch;
-pub use runtime_v3::{EvaluationV3, MODEL_METADATA_V3_SCHEMA_ID, V3OnnxRuntime, V3RuntimeError};
+pub use runtime_v3::{
+    EvaluationV3, MODEL_METADATA_V3_SCHEMA_ID, V3ExecutionProvider, V3OnnxRuntime, V3RuntimeError,
+    V3RuntimeOptions,
+};
 pub use self_play_v3::{
     SelfPlayAgentV3, SelfPlayGameConfigV3, SelfPlayV3Error, generate_self_play_game_v3,
 };

@@ -6,6 +6,11 @@ ObservationV3/ActionV3 schema, ruleset ID와 manifest hash, vocabulary, tensor i
 contract가 하나라도 다르면 로드 또는 추론을 실패시킨다. V2 heuristic으로의 암묵적
 fallback은 없다.
 
+Rust runtime은 `V3RuntimeOptions`로 `cpu`/`cuda` execution provider와 intra-op thread 수를
+명시한다. 기본값은 재현 가능한 CPU 1-thread이며, CUDA 요청은 provider 등록에 실패하면 즉시
+오류를 반환해 CPU fallback을 숨기지 않는다. 동적 ONNX Runtime DLL은 실행 환경의
+`ORT_DYLIB_PATH`로 고정한다.
+
 Rust `evaluate_batch`는 여러 `GameState`를 한 번에 ObservationV3와 가변 LegalActionSetV3로
 바꾸고 하나의 ONNX call로 평가한다. 반환 policy는 각 상태의 실제 합법 행동 길이에만
 softmax하며 ActionV3 index와 원래 `Action`을 함께 보존한다. terminal state는 모델 입력이
