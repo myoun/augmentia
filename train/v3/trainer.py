@@ -1038,6 +1038,8 @@ def main() -> None:
     parser.add_argument("--max-steps-this-run", type=int)
     parser.add_argument("--checkpoint-interval", type=int, default=500)
     parser.add_argument("--prefetch-batches", type=int, choices=(0, 1), default=1)
+    parser.add_argument("--parent-checkpoint", type=Path)
+    parser.add_argument("--parent-metadata", type=Path)
     parser.add_argument("--log-interval", type=int, default=10)
     parser.add_argument("--validation-manifest", type=Path)
     parser.add_argument(
@@ -1061,6 +1063,10 @@ def main() -> None:
         parser.error("--validation-batch-size must be positive")
     if args.early_stopping_patience < 0:
         parser.error("--early-stopping-patience must be non-negative")
+    if (args.parent_checkpoint is None) != (args.parent_metadata is None):
+        parser.error(
+            "--parent-checkpoint and --parent-metadata must be provided together"
+        )
     if (
         not math.isfinite(args.early_stopping_min_delta)
         or args.early_stopping_min_delta < 0
@@ -1081,6 +1087,12 @@ def main() -> None:
         V3ModelConfig(text_vocabulary_size=vocabulary.size),
         config,
         args.run_dir,
+        parent_checkpoint=(
+            None if args.parent_checkpoint is None else str(args.parent_checkpoint)
+        ),
+        parent_metadata=(
+            None if args.parent_metadata is None else str(args.parent_metadata)
+        ),
     )
     if args.resume:
         print(f"resumed {trainer.resume_latest()}")
