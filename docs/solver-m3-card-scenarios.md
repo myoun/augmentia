@@ -76,3 +76,27 @@ cargo run --release -p augment-cli --bin solve_v3_tactics -- `
 
 `not_proven`은 설정한 깊이 안에서 강제승을 증명하지 못했다는 뜻이지 패배가 증명됐다는 뜻이
 아니다. 따라서 현재는 sidecar에만 보존한다.
+
+## 2026-08-27 전체 생성 결과
+
+- generator commit: `8f700bec537651df1eff9679aa97607286b64691`
+- 입력 playing positions: 4,041
+- 카드 변형 후보: 12,123
+- depth: 3
+- position당 node budget: 300,000
+- proven: 392
+- not proven: 11,719
+- node budget exceeded: 12
+- 계산 시간: 472.33초
+- split: train 353 / validation 10 / holdout 29
+- manifest SHA-256: `9cc5d553868ac29085dfa7cc8bbaeda63a2b47a6a4fbc030f5281ff8f27d54c0`
+- 전체 artifact 크기: 3,660,059 bytes
+
+카드별 후보 수는 1,346~1,348로 균등했고, 12종 모두 proven record가 생성됐다. 카드별 proven
+수는 26~66이었다. `scenario-summary.json`의 generator `dirty_worktree`는 false이며 dataset
+validator도 통과했다.
+
+validation 10개와 holdout 29개는 정식 promotion 평가에는 여전히 작다. 또한 이 데이터는
+기존 104개 self-play 대국에서 파생됐으므로, 이전 M2 학습과 완전히 독립적인 sealed 평가
+자료로 사용해서는 안 된다. 다음 확장은 학습에 사용하지 않은 새로운 source game group 또는
+별도 합성 board family를 먼저 확보해야 한다.
