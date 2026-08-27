@@ -8012,7 +8012,9 @@ impl std::error::Error for EngineError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BUNDLED_RULESET_ID, Board, CardInstance, ChoiceHandler, EffectHandler};
+    use crate::{
+        BUNDLED_RULESET_ID, Board, CHESS_344200, CardInstance, ChoiceHandler, EffectHandler,
+    };
     use std::str::FromStr;
 
     fn movement(from: &str, to: &str) -> Action {
@@ -8082,7 +8084,12 @@ mod tests {
     #[test]
     fn standard_game_runs_white_then_black_opening_draft_before_play() {
         let engine = Engine::bundled_20260807().unwrap();
-        let state = engine.new_game(Mode::Standard, 7).unwrap();
+        // This test covers the ordinary opening-draft flow, so select a seed
+        // where the optional global opening rule did not rewrite the board.
+        let state = (0..100)
+            .map(|seed| engine.new_game(Mode::Standard, seed).unwrap())
+            .find(|state| state.applied_rules.is_empty())
+            .expect("a 40% RULE check must miss within the first 100 seeds");
         let GamePhase::Draft(draft) = &state.phase else {
             panic!("standard game must start in the opening draft")
         };
@@ -8359,6 +8366,26 @@ mod tests {
             .position(|event| matches!(event, Event::DraftStarted { .. }))
             .unwrap();
         assert!(rule_index < draft_index);
+    }
+
+    #[test]
+    fn chess_344200_opening_rule_relocates_without_duplicate_piece_ids() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = engine.new_game(Mode::Standard, 202_608_280_008).unwrap();
+
+        assert!(state.applied_rules.iter().any(|rule| rule == CHESS_344200));
+        let piece_ids = state
+            .board
+            .iter()
+            .map(|(_, piece)| piece.id)
+            .collect::<Vec<_>>();
+        let unique_ids = piece_ids.iter().copied().collect::<BTreeSet<_>>();
+
+        assert_eq!(piece_ids.len(), 32);
+        assert_eq!(unique_ids.len(), piece_ids.len());
+        assert!(state.board.iter().all(|(square, piece)| {
+            state.card_runtime.piece_origins.get(&piece.id) == Some(&square)
+        }));
     }
 
     #[test]

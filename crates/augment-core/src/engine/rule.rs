@@ -295,9 +295,15 @@ impl Engine {
             CHESS_344200 => {
                 let pieces = state.board.iter().map(|(_, p)| p).collect::<Vec<_>>();
                 let mut squares = (0..64).filter_map(Square::from_index).collect::<Vec<_>>();
+                // Relocate the existing pieces instead of copying them over the
+                // still-occupied board. Keeping the old cells here duplicates
+                // stable piece IDs whenever a destination differs from its source.
+                state.board = Board::empty();
+                state.card_runtime.piece_origins.clear();
                 for piece in pieces {
                     if let Some(sq) = squares.pop() {
                         state.board.set(sq, Some(piece));
+                        state.card_runtime.piece_origins.insert(piece.id, sq);
                     }
                 }
             }
