@@ -293,19 +293,60 @@ impl Engine {
                 state.card_runtime.camouflage_color = true;
             }
             CHESS_344200 => {
-                let pieces = state.board.iter().map(|(_, p)| p).collect::<Vec<_>>();
-                let mut squares = (0..64).filter_map(Square::from_index).collect::<Vec<_>>();
-                // Relocate the existing pieces instead of copying them over the
-                // still-occupied board. Keeping the old cells here duplicates
-                // stable piece IDs whenever a destination differs from its source.
-                state.board = Board::empty();
-                state.card_runtime.piece_origins.clear();
-                for piece in pieces {
-                    if let Some(sq) = squares.pop() {
-                        state.board.set(sq, Some(piece));
-                        state.card_runtime.piece_origins.insert(piece.id, sq);
+                let mut kings = [None, None];
+                let mut other_pieces = Vec::new();
+                for (_, piece) in state.board.iter() {
+                    if piece.kind == PieceKind::King && kings[piece.owner.index()].is_none() {
+                        kings[piece.owner.index()] = Some(piece);
+                    } else {
+                        other_pieces.push(piece);
                     }
                 }
+                if kings.iter().any(Option::is_none) {
+                    return Err(EngineError::Invariant(
+                        "344200 chess requires one king per player".to_owned(),
+                    ));
+                }
+
+                let mut available = (0..64).filter_map(Square::from_index).collect::<Vec<_>>();
+                state.board = Board::empty();
+                state.card_runtime.piece_origins.clear();
+
+                for player in [Player::White, Player::Black] {
+                    let home_rank = if player == Player::White { 0 } else { 7 };
+                    let candidates = available
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(index, square)| (square.rank() == home_rank).then_some(index))
+                        .collect::<Vec<_>>();
+                    let (roll, choice) = state.rng_mut().web_choice_index(candidates.len());
+                    events.push(Event::RandomSample {
+                        purpose: format!("chess-344200-{}-king", player.index()),
+                        roll_53: roll,
+                    });
+                    let available_index = candidates[choice.ok_or_else(|| {
+                        EngineError::Invariant("344200 chess has no king square".to_owned())
+                    })?];
+                    let square = available.remove(available_index);
+                    let king = kings[player.index()].expect("king presence was validated");
+                    state.board.set(square, Some(king));
+                    state.card_runtime.piece_origins.insert(king.id, square);
+                }
+
+                for (index, piece) in other_pieces.into_iter().enumerate() {
+                    let (roll, choice) = state.rng_mut().web_choice_index(available.len());
+                    events.push(Event::RandomSample {
+                        purpose: format!("chess-344200-piece-{index}"),
+                        roll_53: roll,
+                    });
+                    let square = available.remove(choice.ok_or_else(|| {
+                        EngineError::Invariant("344200 chess ran out of squares".to_owned())
+                    })?);
+                    state.board.set(square, Some(piece));
+                    state.card_runtime.piece_origins.insert(piece.id, square);
+                }
+                state.en_passant = None;
+                state.reset_repetition_history();
             }
             CHESS_960 => {
                 for player in [Player::White, Player::Black] {

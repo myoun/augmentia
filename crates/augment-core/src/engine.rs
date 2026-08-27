@@ -8408,9 +8408,12 @@ mod tests {
     }
 
     #[test]
-    fn chess_344200_opening_rule_relocates_without_duplicate_piece_ids() {
+    fn chess_344200_randomizes_all_pieces_with_kings_on_home_ranks() {
         let engine = Engine::bundled_20260818().unwrap();
-        let state = engine.new_game(Mode::Standard, 202_608_280_008).unwrap();
+        let transition = engine
+            .new_game_transition(Mode::Standard, 202_608_280_008)
+            .unwrap();
+        let state = &transition.state;
 
         assert!(state.applied_rules.iter().any(|rule| rule == CHESS_344200));
         let piece_ids = state
@@ -8422,9 +8425,34 @@ mod tests {
 
         assert_eq!(piece_ids.len(), 32);
         assert_eq!(unique_ids.len(), piece_ids.len());
+        assert!(state.board.iter().any(|(square, _)| square.index() < 32));
+        for player in [Player::White, Player::Black] {
+            let (square, _) = state
+                .board
+                .iter()
+                .find(|(_, piece)| piece.owner == player && piece.kind == PieceKind::King)
+                .unwrap();
+            assert_eq!(square.rank(), if player == Player::White { 0 } else { 7 });
+        }
         assert!(state.board.iter().all(|(square, piece)| {
             state.card_runtime.piece_origins.get(&piece.id) == Some(&square)
         }));
+        assert_eq!(
+            transition
+                .events
+                .iter()
+                .filter(|event| matches!(
+                    event,
+                    Event::RandomSample { purpose, .. }
+                        if purpose.starts_with("chess-344200-")
+                ))
+                .count(),
+            32
+        );
+        assert_eq!(
+            engine.new_game(Mode::Standard, 202_608_280_008).unwrap(),
+            *state
+        );
     }
 
     #[test]
