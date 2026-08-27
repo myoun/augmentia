@@ -92,9 +92,7 @@ pub fn solve_forced_win_v3(
 
     for action_index in 0..legal.len() {
         context.consume_node()?;
-        let transition = legal
-            .apply(action_index, state, engine)
-            .map_err(ForcedWinErrorV3::Action)?;
+        let transition = apply_legal_action(&legal, action_index, state, engine)?;
         let Some(child_distance) =
             context.prove_forced_win(&transition.state, config.max_depth.saturating_sub(1))?
         else {
@@ -172,9 +170,7 @@ impl SearchContext<'_> {
         let result = if state.turn == self.root_player {
             let mut shortest: Option<u8> = None;
             for action_index in 0..legal.len() {
-                let transition = legal
-                    .apply(action_index, state, self.engine)
-                    .map_err(ForcedWinErrorV3::Action)?;
+                let transition = apply_legal_action(&legal, action_index, state, self.engine)?;
                 if let Some(distance) =
                     self.prove_forced_win(&transition.state, depth_remaining - 1)?
                 {
@@ -185,9 +181,7 @@ impl SearchContext<'_> {
         } else {
             let mut longest = 0u8;
             for action_index in 0..legal.len() {
-                let transition = legal
-                    .apply(action_index, state, self.engine)
-                    .map_err(ForcedWinErrorV3::Action)?;
+                let transition = apply_legal_action(&legal, action_index, state, self.engine)?;
                 let Some(distance) =
                     self.prove_forced_win(&transition.state, depth_remaining - 1)?
                 else {
@@ -201,6 +195,20 @@ impl SearchContext<'_> {
         self.memo.insert(key, result);
         Ok(result)
     }
+}
+
+fn apply_legal_action(
+    legal: &LegalActionSetV3,
+    action_index: usize,
+    state: &GameState,
+    engine: &Engine,
+) -> Result<augment_core::Transition, ForcedWinErrorV3> {
+    legal.apply(action_index, state, engine).map_err(|error| {
+        ForcedWinErrorV3::Engine(format!(
+            "legal action {action_index} {:?} failed: {error}",
+            legal.descriptor(action_index)
+        ))
+    })
 }
 
 #[cfg(test)]

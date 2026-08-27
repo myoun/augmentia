@@ -36,4 +36,4 @@ cargo fmt --all -- --check
 cargo test --workspace
 
 $env:PYTHONPATH = "$repo\train"
-& $python -m unittest discover -s train\v3 -p "test_*.py"
+& $python -m unittest discover -s train\v3 -t train -p "test_*.py"

@@ -4,14 +4,17 @@ use augment_ai::data_v3::{
     DatasetSplitV3, DatasetTotalsV3, DecisionPolicySupervisionV3, DecisionPolicyTargetV3,
     DecisionProvenanceV3, DecisionRecordV3, DecisionSourceKindV3, DecisionTargetsV3,
     DecisionValueTargetV3, GeneratorProvenanceV3, PolicyTrainingScopeV3, RulesetRefV3,
-    SPLIT_POLICY_V3_ALGORITHM, SourceDomainV3, SplitPolicyV3, fingerprint_hex,
+    SourceDomainV3, fingerprint_hex,
 };
 use augment_ai::{
     ACTION_V3_SCHEMA_ID, ForcedWinConfigV3, ForcedWinErrorV3, LegalActionSetV3,
-    OBSERVATION_V3_SCHEMA_ID, encode_observation_v3, solve_forced_win_v3, validate_manifest,
-    verify_manifest_replays, write_jsonl_zstd_shard,
+    OBSERVATION_V3_SCHEMA_ID, PhaseV3, encode_observation_v3, solve_forced_win_v3,
+    validate_manifest, verify_manifest_replays, write_jsonl_zstd_shard,
 };
-use augment_core::{BUNDLED_RULESET_ID, Engine, GameStatus, Mode};
+use augment_core::{
+    BUNDLED_RULESET_ID, CardActivation, CardInstance, CardPhase, Engine, GamePhase, GameStatus,
+    Mode, implemented_card,
+};
 use rayon::prelude::*;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -20,7 +23,24 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-#[derive(Debug)]
+const DEFAULT_ATTACKER_CARDS: &str = "disarm,freeze,gale,panic,reposition,vortex";
+const DEFAULT_DEFENDER_CARDS: &str =
+    "parry,evasion,retreat,emergency-evacuation,sacrifice,suspicious-potion";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ScenarioOwner {
+    Actor,
+    Opponent,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+struct CardGrant {
+    definition_id: String,
+    owner: ScenarioOwner,
+}
+
+#[derive(Clone, Debug)]
 struct CandidatePosition {
     game_id: String,
     seed_hex: String,
@@ -28,11 +48,13 @@ struct CandidatePosition {
     decision_index: u32,
     played_action_prefix: Vec<u32>,
     expected_state_fingerprint: String,
+    scenario_id: String,
+    card_grants: Vec<CardGrant>,
 }
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("V3 solver M1 failed: {error}");
+        eprintln!("V3 tactics solver failed: {error}");
         std::process::exit(1);
     }
 }
@@ -47,6 +69,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let max_depth = numeric(&args, "--max-depth", 1u8)?;
     let max_nodes_per_position = numeric(&args, "--max-nodes-per-position", 2_000_000u64)?;
     let compression_level = numeric(&args, "--compression-level", 3i32)?;
+    let card_scenarios = has_flag(&args, "--card-scenarios");
+    let card_scenario_stride = numeric(&args, "--card-scenario-stride", 1usize)?;
+    let max_candidates = numeric(&args, "--max-candidates", usize::MAX)?;
+    if card_scenario_stride == 0 || max_candidates == 0 {
+        return Err("card scenario stride and max candidates must be positive".into());
+    }
+    let attacker_cards = if card_scenarios {
+        card_ids(&args, "--attacker-cards", DEFAULT_ATTACKER_CARDS)?
+    } else {
+        Vec::new()
+    };
+    let defender_cards = if card_scenarios {
+        card_ids(&args, "--defender-cards", DEFAULT_DEFENDER_CARDS)?
+    } else {
+        Vec::new()
+    };
     if output_dir.join("manifest.json").exists() {
         return Err(format!(
             "refusing to overwrite existing dataset {}",
@@ -59,54 +97,70 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let engine_commit = git_output(["rev-parse", "HEAD"]).unwrap_or_else(|| "0".repeat(40));
     let dirty_worktree =
         git_output(["status", "--porcelain"]).is_some_and(|output| !output.is_empty());
-    let _generator = GeneratorProvenanceV3 {
+    let generator = GeneratorProvenanceV3 {
         run_id: run_id.clone(),
-        engine_commit,
+        engine_commit: engine_commit.clone(),
         engine_api_version: 1,
-        collector_id: "augment-cli/solve_v3_tactics_m1".to_owned(),
+        collector_id: if card_scenarios {
+            "augment-cli/solve_v3_tactics_m3"
+        } else {
+            "augment-cli/solve_v3_tactics_m2"
+        }
+        .to_owned(),
         dirty_worktree,
-    };
-    let _ruleset = RulesetRefV3 {
-        id: BUNDLED_RULESET_ID.to_owned(),
-        manifest_sha256: ruleset_hash.clone(),
-    };
-    let split_policy = SplitPolicyV3 {
-        algorithm: SPLIT_POLICY_V3_ALGORITHM.to_owned(),
-        salt: format!("solver-v3:{run_id}"),
-        train_basis_points: 9_000,
-        validation_basis_points: 500,
-        holdout_basis_points: 500,
     };
 
     let engine = Engine::bundled_20260807()?;
     let manifest_bytes = std::fs::read(&selfplay_manifest)?;
     let dataset_manifest: DatasetManifestV3 = serde_json::from_slice(&manifest_bytes)?;
     validate_manifest(&dataset_manifest)?;
+    let split_policy = dataset_manifest.split_policy.clone();
     let selfplay_root = selfplay_manifest.parent().unwrap_or_else(|| Path::new("."));
     verify_manifest_replays(selfplay_root, &dataset_manifest, &engine)?;
-    let mut candidates: Vec<CandidatePosition> = Vec::new();
+    let mut base_candidates: Vec<CandidatePosition> = Vec::new();
     for shard in &dataset_manifest.shards {
         let records = read_records(&selfplay_manifest, &shard.path)?;
         for record in records {
             if let DataRecordV3::Game(game) = record {
                 let mut played_action_prefix = Vec::with_capacity(game.steps.len());
                 for step in &game.steps {
-                    candidates.push(CandidatePosition {
-                        game_id: game.game_id.clone(),
-                        seed_hex: game.seed_hex.clone(),
-                        mode_id: game.mode_id.clone(),
-                        decision_index: step.decision_index,
-                        played_action_prefix: played_action_prefix.clone(),
-                        expected_state_fingerprint: step.state_fingerprint.clone(),
-                    });
+                    if !card_scenarios || matches!(step.observation.phase, PhaseV3::Playing) {
+                        base_candidates.push(CandidatePosition {
+                            game_id: game.game_id.clone(),
+                            seed_hex: game.seed_hex.clone(),
+                            mode_id: game.mode_id.clone(),
+                            decision_index: step.decision_index,
+                            played_action_prefix: played_action_prefix.clone(),
+                            expected_state_fingerprint: step.state_fingerprint.clone(),
+                            scenario_id: "base".to_owned(),
+                            card_grants: Vec::new(),
+                        });
+                    }
                     played_action_prefix.push(step.played_action_index);
                 }
             }
         }
     }
+    let candidates = if card_scenarios {
+        build_card_scenarios(
+            &base_candidates,
+            &attacker_cards,
+            &defender_cards,
+            card_scenario_stride,
+            max_candidates,
+        )
+    } else {
+        base_candidates.into_iter().take(max_candidates).collect()
+    };
     eprintln!(
         "{}",
-        serde_json::json!({"event": "candidates_loaded", "count": candidates.len()})
+        serde_json::json!({
+            "event": "candidates_loaded",
+            "count": candidates.len(),
+            "card_scenarios": card_scenarios,
+            "attacker_cards": attacker_cards,
+            "defender_cards": defender_cards,
+        })
     );
 
     let mut proven_records: Vec<DataRecordV3> = Vec::new();
@@ -114,6 +168,20 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let solved = AtomicU64::new(0);
     let refuted = AtomicU64::new(0);
     let started = Instant::now();
+    let mut candidate_scenarios = BTreeMap::<String, u64>::new();
+    let mut candidate_cards = BTreeMap::<String, u64>::new();
+    let mut proven_scenarios = BTreeMap::<String, u64>::new();
+    let mut proven_cards = BTreeMap::<String, u64>::new();
+    for candidate in &candidates {
+        *candidate_scenarios
+            .entry(candidate.scenario_id.clone())
+            .or_default() += 1;
+        for grant in &candidate.card_grants {
+            *candidate_cards
+                .entry(grant.definition_id.clone())
+                .or_default() += 1;
+        }
+    }
 
     let results: Vec<Result<Option<DecisionRecordV3>, ForcedWinErrorV3>> = candidates
         .par_iter()
@@ -124,6 +192,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     engine,
                     candidate,
                     &ruleset_hash,
+                    &engine_commit,
                     max_depth,
                     max_nodes_per_position,
                 )
@@ -138,30 +207,33 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             Ok(Some(record)) => {
                 if seen_positions.insert(record.state_fingerprint.clone()) {
                     solved.fetch_add(1, Ordering::Relaxed);
+                    *proven_scenarios
+                        .entry(candidate.scenario_id.clone())
+                        .or_default() += 1;
+                    for grant in &candidate.card_grants {
+                        *proven_cards.entry(grant.definition_id.clone()).or_default() += 1;
+                    }
                     proven_records.push(DataRecordV3::Decision(Box::new(record)));
                 } else {
                     refuted.fetch_add(1, Ordering::Relaxed);
+                    append_refuted(&refuted_log, candidate, "duplicate_position")?;
                 }
             }
             Err(ForcedWinErrorV3::NodeBudgetExceeded { .. }) => {
                 budget_exceeded += 1;
-                append_refuted(
-                    &refuted_log,
-                    &candidate.game_id,
-                    candidate.decision_index,
-                    "budget",
-                )?;
+                append_refuted(&refuted_log, candidate, "node_budget_exceeded")?;
             }
             Ok(None) => {
                 refuted.fetch_add(1, Ordering::Relaxed);
-                append_refuted(
-                    &refuted_log,
-                    &candidate.game_id,
-                    candidate.decision_index,
-                    "",
-                )?;
+                append_refuted(&refuted_log, candidate, "not_proven")?;
             }
-            Err(error) => return Err(error.into()),
+            Err(error) => {
+                return Err(format!(
+                    "candidate {}#{}#{} failed: {error}",
+                    candidate.game_id, candidate.decision_index, candidate.scenario_id
+                )
+                .into());
+            }
         }
     }
 
@@ -213,8 +285,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         totals,
     };
     validate_manifest(&manifest)?;
-    atomic_json(&output_dir.join("manifest.json"), &manifest)?;
     verify_manifest_replays(&output_dir, &manifest, &engine)?;
+    atomic_json(
+        &output_dir.join("scenario-summary.json"),
+        &serde_json::json!({
+            "schema_id": "augmentia.solver-scenario-summary.v3",
+            "dataset_id": manifest.dataset_id,
+            "source_manifest_sha256": sha256_bytes(&manifest_bytes),
+            "source_split_policy": &manifest.split_policy,
+            "generator": generator,
+            "max_depth": max_depth,
+            "max_nodes_per_position": max_nodes_per_position,
+            "card_scenarios": card_scenarios,
+            "card_scenario_stride": card_scenario_stride,
+            "candidate_scenarios": candidate_scenarios,
+            "candidate_cards": candidate_cards,
+            "proven_scenarios": proven_scenarios,
+            "proven_cards": proven_cards,
+            "candidates": candidates.len(),
+            "proven": solved.load(Ordering::Relaxed),
+            "refuted": refuted.load(Ordering::Relaxed),
+            "budget_exceeded": budget_exceeded,
+        }),
+    )?;
+    atomic_json(&output_dir.join("manifest.json"), &manifest)?;
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
@@ -238,6 +332,68 @@ fn read_records(
     let base = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     let path = base.join(relative);
     Ok(read_jsonl_zstd_shard(path)?)
+}
+
+fn build_card_scenarios(
+    bases: &[CandidatePosition],
+    attacker_cards: &[String],
+    defender_cards: &[String],
+    stride: usize,
+    max_candidates: usize,
+) -> Vec<CandidatePosition> {
+    let eligible: Vec<_> = bases.iter().step_by(stride).collect();
+    let requested_bases = max_candidates / 3 + usize::from(max_candidates % 3 != 0);
+    let selected: Vec<_> = if requested_bases < eligible.len() {
+        (0..requested_bases)
+            .map(|index| eligible[index.saturating_mul(eligible.len()) / requested_bases])
+            .collect()
+    } else {
+        eligible
+    };
+    let mut scenarios = Vec::with_capacity(max_candidates.min(selected.len().saturating_mul(3)));
+    for (index, base) in selected.into_iter().enumerate() {
+        let attacker = &attacker_cards[index % attacker_cards.len()];
+        let defender = &defender_cards[(index.saturating_mul(7) + 3) % defender_cards.len()];
+        let variants = [
+            (
+                format!("attacker:{attacker}"),
+                vec![CardGrant {
+                    definition_id: attacker.clone(),
+                    owner: ScenarioOwner::Actor,
+                }],
+            ),
+            (
+                format!("defender:{defender}"),
+                vec![CardGrant {
+                    definition_id: defender.clone(),
+                    owner: ScenarioOwner::Opponent,
+                }],
+            ),
+            (
+                format!("both:{attacker}+{defender}"),
+                vec![
+                    CardGrant {
+                        definition_id: attacker.clone(),
+                        owner: ScenarioOwner::Actor,
+                    },
+                    CardGrant {
+                        definition_id: defender.clone(),
+                        owner: ScenarioOwner::Opponent,
+                    },
+                ],
+            ),
+        ];
+        for (scenario_id, card_grants) in variants {
+            let mut scenario = base.clone();
+            scenario.scenario_id = scenario_id;
+            scenario.card_grants = card_grants;
+            scenarios.push(scenario);
+            if scenarios.len() == max_candidates {
+                return scenarios;
+            }
+        }
+    }
+    scenarios
 }
 
 fn replay_to_decision(
@@ -291,13 +447,62 @@ fn replay_to_decision(
         )
         .into());
     }
+    state = apply_card_grants(state, engine, &candidate.card_grants)?;
     Ok(Some(state))
+}
+
+fn apply_card_grants(
+    mut state: augment_core::GameState,
+    engine: &Engine,
+    grants: &[CardGrant],
+) -> Result<augment_core::GameState, Box<dyn std::error::Error>> {
+    if !matches!(state.phase, GamePhase::Playing) {
+        return Err("synthetic cards require a playing-phase state".into());
+    }
+    let actor = state.turn;
+    let mut next_instance_id = u32::MAX;
+    for grant in grants {
+        while state
+            .cards
+            .iter()
+            .any(|card| card.instance_id == next_instance_id)
+        {
+            next_instance_id = next_instance_id
+                .checked_sub(1)
+                .ok_or("no free synthetic card instance id")?;
+        }
+        let owner = match grant.owner {
+            ScenarioOwner::Actor => actor,
+            ScenarioOwner::Opponent => actor.opponent(),
+        };
+        let definition = implemented_card(&grant.definition_id)
+            .ok_or_else(|| format!("unknown synthetic card {:?}", grant.definition_id))?;
+        if definition.activation == CardActivation::Passive {
+            state = engine
+                .grant_card(&state, next_instance_id, &grant.definition_id, owner)?
+                .state;
+        } else {
+            state.add_card(CardInstance {
+                instance_id: next_instance_id,
+                definition_id: grant.definition_id.clone(),
+                owner,
+                half_stars: definition.half_stars,
+                charges: 1,
+                available_after_turn: None,
+            });
+        }
+        next_instance_id = next_instance_id
+            .checked_sub(1)
+            .ok_or("no free synthetic card instance id")?;
+    }
+    Ok(state)
 }
 
 fn solve_candidate(
     engine: &Engine,
     candidate: &CandidatePosition,
     ruleset_hash: &str,
+    engine_commit: &str,
     max_depth: u8,
     max_nodes: u64,
 ) -> Result<Option<DecisionRecordV3>, ForcedWinErrorV3> {
@@ -316,13 +521,30 @@ fn solve_candidate(
             max_depth,
             max_nodes,
         },
-    )?;
+    )
+    .map_err(|error| {
+        ForcedWinErrorV3::Engine(format!(
+            "{error}; cards={:?}; opening_auto_card_ids={:?}; turns_taken={:?}",
+            state
+                .cards
+                .iter()
+                .map(|card| (
+                    card.instance_id,
+                    card.definition_id.as_str(),
+                    card.owner,
+                    card.charges
+                ))
+                .collect::<Vec<_>>(),
+            state.card_runtime.opening_auto_card_ids,
+            state.turns_taken,
+        ))
+    })?;
     let Some(solution) = solution else {
         return Ok(None);
     };
     let proof_source = format!(
-        "solver-m1/depth={}/nodes={}",
-        max_depth, solution.searched_nodes
+        "solver-m3/scenario={}/depth={}/nodes={}",
+        candidate.scenario_id, max_depth, solution.searched_nodes
     );
     let legal_actions =
         LegalActionSetV3::from_state(&state, engine).map_err(ForcedWinErrorV3::Action)?;
@@ -333,12 +555,15 @@ fn solve_candidate(
         provenance: DecisionProvenanceV3 {
             source_kind: DecisionSourceKindV3::EngineSearch,
             source_domain: SourceDomainV3::AugmentChess,
-            source_id: format!("{}#{}", candidate.game_id, candidate.decision_index),
+            source_id: format!(
+                "{}#{}#{}",
+                candidate.game_id, candidate.decision_index, candidate.scenario_id
+            ),
             split_group_id: format!(
                 "game\0{}\0{}\0{}",
                 BUNDLED_RULESET_ID, candidate.mode_id, candidate.seed_hex
             ),
-            generator_commit: None,
+            generator_commit: Some(engine_commit.to_owned()),
             license: None,
         },
         ruleset: RulesetRefV3 {
@@ -377,16 +602,29 @@ fn solve_candidate(
 
 fn append_refuted(
     log: &Path,
-    game_id: &str,
-    decision_index: u32,
-    fingerprint: &str,
+    candidate: &CandidatePosition,
+    reason: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::io::Write;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(log)?;
-    writeln!(file, "{game_id}\t{decision_index}\t{fingerprint}")?;
+    serde_json::to_writer(
+        &mut file,
+        &serde_json::json!({
+            "source_id": format!(
+                "{}#{}#{}",
+                candidate.game_id, candidate.decision_index, candidate.scenario_id
+            ),
+            "game_id": candidate.game_id,
+            "decision_index": candidate.decision_index,
+            "scenario_id": candidate.scenario_id,
+            "card_grants": candidate.card_grants,
+            "reason": reason,
+        }),
+    )?;
+    file.write_all(b"\n")?;
     Ok(())
 }
 
@@ -447,6 +685,43 @@ fn required_path(args: &[String], flag: &str) -> Result<PathBuf, String> {
     required(args, flag).map(PathBuf::from)
 }
 
+fn has_flag(args: &[String], flag: &str) -> bool {
+    args.iter().any(|item| item == flag)
+}
+
+fn card_ids(args: &[String], flag: &str, default: &str) -> Result<Vec<String>, String> {
+    let raw = args
+        .iter()
+        .position(|item| item == flag)
+        .and_then(|index| args.get(index + 1))
+        .map_or(default, String::as_str);
+    let ids: Vec<_> = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(str::to_owned)
+        .collect();
+    if ids.is_empty() {
+        return Err(format!("{flag} must contain at least one card id"));
+    }
+    let unique: BTreeSet<_> = ids.iter().collect();
+    if unique.len() != ids.len() {
+        return Err(format!("{flag} contains duplicate card ids"));
+    }
+    for id in &ids {
+        let definition = implemented_card(id)
+            .ok_or_else(|| format!("{flag} contains unknown card id {id:?}"))?;
+        if definition.activation == CardActivation::Rule
+            || !matches!(definition.phase, CardPhase::Middle | CardPhase::End)
+        {
+            return Err(format!(
+                "{flag} card id {id:?} cannot be injected into a playing-state scenario"
+            ));
+        }
+    }
+    Ok(ids)
+}
+
 fn numeric<T>(args: &[String], flag: &str, default: T) -> Result<T, String>
 where
     T: std::str::FromStr,
@@ -458,4 +733,88 @@ where
         .map_or(Ok(default), |value| {
             value.parse().map_err(|error| format!("{flag}: {error}"))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use augment_core::{GamePhase, GameState, Player};
+
+    fn candidate(index: u32) -> CandidatePosition {
+        CandidatePosition {
+            game_id: "game-1".to_owned(),
+            seed_hex: "0000000000000001".to_owned(),
+            mode_id: "standard".to_owned(),
+            decision_index: index,
+            played_action_prefix: vec![0; index as usize],
+            expected_state_fingerprint: format!("fingerprint-{index}"),
+            scenario_id: "base".to_owned(),
+            card_grants: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn card_scenarios_are_deterministic_strided_and_bounded() {
+        let bases: Vec<_> = (0..4).map(candidate).collect();
+        let attackers = card_ids(&[], "--attacker-cards", DEFAULT_ATTACKER_CARDS).unwrap();
+        let defenders = card_ids(&[], "--defender-cards", DEFAULT_DEFENDER_CARDS).unwrap();
+        let scenarios = build_card_scenarios(&bases, &attackers, &defenders, 2, 5);
+
+        assert_eq!(scenarios.len(), 5);
+        assert_eq!(scenarios[0].scenario_id, "attacker:disarm");
+        assert_eq!(scenarios[1].scenario_id, "defender:emergency-evacuation");
+        assert_eq!(scenarios[2].scenario_id, "both:disarm+emergency-evacuation");
+        assert_eq!(scenarios[3].decision_index, 2);
+        assert_eq!(scenarios[3].scenario_id, "attacker:freeze");
+        assert_eq!(scenarios[4].scenario_id, "defender:sacrifice");
+
+        let wide_bases: Vec<_> = (0..12).map(candidate).collect();
+        let sampled = build_card_scenarios(&wide_bases, &attackers, &defenders, 1, 6);
+        assert_eq!(sampled[0].decision_index, 0);
+        assert_eq!(sampled[3].decision_index, 6);
+    }
+
+    #[test]
+    fn synthetic_cards_are_granted_to_actor_relative_owners() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
+        state.phase = GamePhase::Playing;
+        let grants = vec![
+            CardGrant {
+                definition_id: "parry".to_owned(),
+                owner: ScenarioOwner::Actor,
+            },
+            CardGrant {
+                definition_id: "evasion".to_owned(),
+                owner: ScenarioOwner::Opponent,
+            },
+        ];
+        let state = apply_card_grants(state, &engine, &grants).unwrap();
+
+        assert!(
+            state
+                .cards
+                .iter()
+                .any(|card| { card.definition_id == "parry" && card.owner == Player::White })
+        );
+        assert!(
+            state
+                .cards
+                .iter()
+                .any(|card| { card.definition_id == "evasion" && card.owner == Player::Black })
+        );
+        for action in engine.legal_actions(&state).unwrap() {
+            engine.apply(&state, action).unwrap();
+        }
+    }
+
+    #[test]
+    fn card_cli_rejects_rule_cards_and_duplicates() {
+        let rule = vec!["--cards".to_owned(), "platform".to_owned()];
+        assert!(card_ids(&rule, "--cards", "parry").is_err());
+        let piece_phase = vec!["--cards".to_owned(), "assassin".to_owned()];
+        assert!(card_ids(&piece_phase, "--cards", "parry").is_err());
+        let duplicate = vec!["--cards".to_owned(), "parry,parry".to_owned()];
+        assert!(card_ids(&duplicate, "--cards", "evasion").is_err());
+    }
 }
