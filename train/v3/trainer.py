@@ -757,9 +757,14 @@ def assert_validation_compatible(
     vocabulary: V3Vocabulary,
 ) -> None:
     validation_vocabulary = validation_dataset.build_vocabulary()
-    if validation_vocabulary != vocabulary:
+    if hasattr(validation_dataset, "collate_indices"):
+        if validation_vocabulary != vocabulary:
+            raise CheckpointMismatchError(
+                "pre-tensorized validation vocabulary differs from the training vocabulary"
+            )
+    elif not set(validation_vocabulary.tokens).issubset(vocabulary.tokens):
         raise CheckpointMismatchError(
-            "validation vocabulary differs from the training vocabulary"
+            "raw validation vocabulary contains tokens absent from training"
         )
     training_identity = _base_dataset_identity(training_dataset.identity.to_json())
     validation_identity = _base_dataset_identity(validation_dataset.identity.to_json())
