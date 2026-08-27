@@ -15,8 +15,8 @@ use std::time::Instant;
 
 pub const DEFAULT_SEED: u64 = 20_260_807;
 const V2_BASELINE_MODEL_PATH: &str = "models/baseline/augment_net_v2_canonical_baseline.onnx";
-const V3_MODEL_PATH: &str = "artifacts/models/v3-20260818-best4500-contractfix.onnx";
-const V3_METADATA_PATH: &str = "artifacts/models/v3-20260818-best4500-contractfix.metadata.json";
+const V3_MODEL_PATH: &str = "artifacts/models/v3-champion-20260828-m3-v5.onnx";
+const V3_METADATA_PATH: &str = "artifacts/models/v3-champion-20260828-m3-v5.metadata.json";
 const RULESET_MANIFEST_PATH: &str = "rulesets/augment_chess_20260818/manifest.json";
 
 #[derive(Clone, Debug)]
@@ -160,7 +160,7 @@ impl GameSession {
                 second.join().unwrap_or_else(|_| {
                     suggestion_error(
                         "model-2",
-                        "2번 모델 · V3 best4500",
+                        "2번 모델 · V3 M3 champion",
                         "탐색 스레드가 중단됐습니다.",
                     )
                 }),
@@ -1172,7 +1172,7 @@ fn model_2_suggestion(
 ) -> Value {
     let evaluator = match evaluator {
         Ok(evaluator) => evaluator,
-        Err(error) => return suggestion_error("model-2", "2번 모델 · V3 best4500", error),
+        Err(error) => return suggestion_error("model-2", "2번 모델 · V3 M3 champion", error),
     };
     let started = Instant::now();
     let mut tree = match MctsV3Tree::new(MctsV3Config {
@@ -1182,13 +1182,13 @@ fn model_2_suggestion(
     }) {
         Ok(tree) => tree,
         Err(error) => {
-            return suggestion_error("model-2", "2번 모델 · V3 best4500", &error.to_string());
+            return suggestion_error("model-2", "2번 모델 · V3 M3 champion", &error.to_string());
         }
     };
     let result = match tree.search(state, engine, evaluator) {
         Ok(result) => result,
         Err(error) => {
-            return suggestion_error("model-2", "2번 모델 · V3 best4500", &error.to_string());
+            return suggestion_error("model-2", "2번 모델 · V3 M3 champion", &error.to_string());
         }
     };
     let Some(action_index) = legal_actions
@@ -1197,7 +1197,7 @@ fn model_2_suggestion(
     else {
         return suggestion_error(
             "model-2",
-            "2번 모델 · V3 best4500",
+            "2번 모델 · V3 M3 champion",
             "제안 행동이 현재 합법 행동 목록에 없습니다.",
         );
     };
@@ -1212,7 +1212,7 @@ fn model_2_suggestion(
         .map_or(0.0, |diagnostics| diagnostics.root_raw_value);
     suggestion_ready(
         "model-2",
-        "2번 모델 · V3 best4500",
+        "2번 모델 · V3 M3 champion",
         state,
         action_index,
         &result.action,
@@ -1220,7 +1220,7 @@ fn model_2_suggestion(
         root_value,
         simulations,
         started.elapsed().as_secs_f64() * 1_000.0,
-        Some("일반 체스 policy-only smoke 모델 · value/카드/드래프트 미학습"),
+        Some("일반 체스 사전학습 후 M3 증강체스 데이터로 미세조정한 operational champion"),
     )
 }
 
