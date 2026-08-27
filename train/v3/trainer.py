@@ -735,6 +735,22 @@ def load_validation_dataset(
     return ReplayDatasetV3(candidate, split=split)
 
 
+def fine_tuning_vocabulary(
+    dataset: ReplayDatasetV3, parent_metadata: str | Path | None
+) -> V3Vocabulary:
+    """Keep parent token indices stable and append only newly observed tokens."""
+    dataset_vocabulary = dataset.build_vocabulary()
+    if parent_metadata is None:
+        return dataset_vocabulary
+    metadata = json.loads(Path(parent_metadata).read_text(encoding="utf-8"))
+    parent_vocabulary = V3Vocabulary.from_json(metadata["vocabulary"])
+    parent_tokens = set(parent_vocabulary.tokens)
+    appended = sorted(
+        token for token in dataset_vocabulary.tokens if token not in parent_tokens
+    )
+    return V3Vocabulary((*parent_vocabulary.tokens, *appended))
+
+
 def assert_validation_compatible(
     training_dataset: ReplayDatasetV3,
     validation_dataset: ReplayDatasetV3,
@@ -1073,7 +1089,7 @@ def main() -> None:
     ):
         parser.error("--early-stopping-min-delta must be finite and non-negative")
     dataset = load_training_dataset(args.manifest)
-    vocabulary = dataset.build_vocabulary()
+    vocabulary = fine_tuning_vocabulary(dataset, args.parent_metadata)
     config = TrainingConfigV3(
         batch_size=args.batch_size,
         total_steps=args.steps,
