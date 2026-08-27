@@ -522,23 +522,7 @@ fn solve_candidate(
             max_nodes,
         },
     )
-    .map_err(|error| {
-        ForcedWinErrorV3::Engine(format!(
-            "{error}; cards={:?}; opening_auto_card_ids={:?}; turns_taken={:?}",
-            state
-                .cards
-                .iter()
-                .map(|card| (
-                    card.instance_id,
-                    card.definition_id.as_str(),
-                    card.owner,
-                    card.charges
-                ))
-                .collect::<Vec<_>>(),
-            state.card_runtime.opening_auto_card_ids,
-            state.turns_taken,
-        ))
-    })?;
+    .map_err(|error| contextualize_solver_error(error, &state))?;
     let Some(solution) = solution else {
         return Ok(None);
     };
@@ -598,6 +582,30 @@ fn solve_candidate(
         .validate()
         .map_err(|error| ForcedWinErrorV3::Engine(error.to_string()))?;
     Ok(Some(record))
+}
+
+fn contextualize_solver_error(
+    error: ForcedWinErrorV3,
+    state: &augment_core::GameState,
+) -> ForcedWinErrorV3 {
+    match error {
+        ForcedWinErrorV3::NodeBudgetExceeded { .. } => error,
+        other => ForcedWinErrorV3::Engine(format!(
+            "{other}; cards={:?}; opening_auto_card_ids={:?}; turns_taken={:?}",
+            state
+                .cards
+                .iter()
+                .map(|card| (
+                    card.instance_id,
+                    card.definition_id.as_str(),
+                    card.owner,
+                    card.charges
+                ))
+                .collect::<Vec<_>>(),
+            state.card_runtime.opening_auto_card_ids,
+            state.turns_taken,
+        )),
+    }
 }
 
 fn append_refuted(
@@ -816,5 +824,25 @@ mod tests {
         assert!(card_ids(&piece_phase, "--cards", "parry").is_err());
         let duplicate = vec!["--cards".to_owned(), "parry,parry".to_owned()];
         assert!(card_ids(&duplicate, "--cards", "evasion").is_err());
+    }
+
+    #[test]
+    fn node_budget_errors_remain_classifiable_after_context_enrichment() {
+        let state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 9);
+        let error = contextualize_solver_error(
+            ForcedWinErrorV3::NodeBudgetExceeded { max_nodes: 17 },
+            &state,
+        );
+        assert!(matches!(
+            error,
+            ForcedWinErrorV3::NodeBudgetExceeded { max_nodes: 17 }
+        ));
+
+        let enriched =
+            contextualize_solver_error(ForcedWinErrorV3::Engine("broken".to_owned()), &state);
+        assert!(matches!(
+            enriched,
+            ForcedWinErrorV3::Engine(message) if message.contains("broken") && message.contains("cards=[]")
+        ));
     }
 }
