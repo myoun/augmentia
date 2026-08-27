@@ -1715,7 +1715,7 @@ impl Engine {
             return Err(EngineError::IllegalAction(format!("{action:?}")));
         }
 
-        match action.clone() {
+        let mut transition = match action.clone() {
             Action::Move(movement) => self.apply_move(state, action, movement),
             Action::UsePieceAbility {
                 piece_id,
@@ -1731,7 +1731,46 @@ impl Engine {
                 choice_id,
                 option_index,
             } => self.apply_choice(state, action, choice_id, option_index),
+        }?;
+        self.resolve_empty_forced_move(&mut transition.state, &mut transition.events)?;
+        Ok(transition)
+    }
+
+    /// Forced-move effects can become empty after later commands in the same
+    /// transition remove or block the selected piece. Such a phase is not an
+    /// actionable state and must honor its continuation before it is exposed
+    /// to callers (and, in particular, before MCTS tries to evaluate it).
+    fn resolve_empty_forced_move(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        for _ in 0..MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION {
+            let (piece_id, continuation) = match &state.phase {
+                GamePhase::ForcedMove {
+                    piece_id,
+                    continuation,
+                    ..
+                } => (*piece_id, *continuation),
+                _ => return Ok(()),
+            };
+            if !self.generate_piece_move_actions(state, piece_id).is_empty() {
+                return Ok(());
+            }
+
+            let actor = state.turn;
+            state.phase = GamePhase::Playing;
+            match continuation {
+                ForcedMoveContinuation::FinishTurn => self.finish_turn(state, actor, events)?,
+                ForcedMoveContinuation::ResumeTurn => {
+                    self.resolve_no_action_loss(state, actor, events);
+                    return Ok(());
+                }
+            }
         }
+        Err(EngineError::AutomaticTurnEndLimit(
+            MAX_AUTOMATIC_TURN_ENDS_PER_TRANSITION,
+        ))
     }
 
     fn is_dynamic_card_action_legal(&self, state: &GameState, action: &Action) -> bool {
@@ -10215,6 +10254,52 @@ mod tests {
         }
     }
 
+    struct ForceBlockedRookAfterLanding;
+
+    impl EffectHandler for ForceBlockedRookAfterLanding {
+        fn definition_id(&self) -> &str {
+            "test.force_blocked_rook"
+        }
+
+        fn react(
+            &self,
+            card: &CardInstance,
+            event: &Event,
+            state: &GameState,
+        ) -> Vec<EffectCommand> {
+            if matches!(
+                event,
+                Event::ActionApplied {
+                    actor,
+                    action: Action::Move(movement),
+                } if *actor == card.owner
+                    && movement.from == "a1".parse().unwrap()
+                    && movement.to == "a2".parse().unwrap()
+            ) {
+                let piece_id = state.board.get("a2".parse().unwrap()).unwrap().id;
+                vec![
+                    EffectCommand::SpawnPiece {
+                        square: "a1".parse().unwrap(),
+                        piece: Piece::new(card.owner, PieceKind::Pawn),
+                        replace: false,
+                    },
+                    EffectCommand::GrantActions {
+                        player: card.owner,
+                        count: 1,
+                    },
+                    EffectCommand::ForceMove {
+                        player: card.owner,
+                        piece_id,
+                        source: card.definition_id.clone(),
+                        finish_turn: false,
+                    },
+                ]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
     #[test]
     fn forced_move_can_resume_the_remaining_normal_action_budget() {
         let mut engine = Engine::bundled_20260807().unwrap();
@@ -10260,6 +10345,41 @@ mod tests {
         state = engine.apply(&state, movement("h1", "g1")).unwrap().state;
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
+    }
+
+    #[test]
+    fn empty_forced_move_resumes_before_the_transition_is_exposed() {
+        let mut engine = Engine::bundled_20260807().unwrap();
+        engine
+            .effects_mut()
+            .register(ForceBlockedRookAfterLanding)
+            .unwrap();
+        let mut state = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::Rook),
+                ("a3", Player::White, PieceKind::Pawn),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            44,
+        );
+        state.add_card(CardInstance {
+            instance_id: 10,
+            definition_id: "test.force_blocked_rook".to_owned(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+
+        let next = engine.apply(&state, movement("a1", "a2")).unwrap().state;
+
+        assert_eq!(next.phase, GamePhase::Playing);
+        assert_eq!(next.turn, Player::White);
+        assert_eq!(next.actions_remaining, 1);
+        assert!(!engine.legal_actions(&next).unwrap().is_empty());
     }
 
     #[test]

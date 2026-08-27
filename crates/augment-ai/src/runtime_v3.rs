@@ -244,7 +244,13 @@ impl V3OnnxRuntime {
             let legal = LegalActionSetV3::from_state(state, engine)
                 .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
             if legal.is_empty() {
-                return tensor_error("terminal states with no legal actions must bypass the model");
+                return tensor_error(format!(
+                    "states with no legal actions must bypass the model: ply={} phase={:?} status={:?} fingerprint={:016x}",
+                    state.ply,
+                    state.phase,
+                    state.status,
+                    state.fingerprint(),
+                ));
             }
             observations.push(encode_observation_v3(state));
             legal_sets.push(legal);
