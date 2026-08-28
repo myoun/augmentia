@@ -35,12 +35,7 @@ impl Engine {
                     .ok_or_else(|| {
                         EngineError::Invariant("replay has no recorded move".to_owned())
                     })?;
-                if !replay
-                    .cells
-                    .iter()
-                    .all(|cell| state.board.get(cell.square) == cell.after)
-                    || !replay_piece_runtime_matches(&state.card_runtime, &replay)
-                {
+                if !replay_move_matches_state(state, &replay) {
                     return Err(EngineError::Invariant(
                         "replay cells no longer match the recorded move".to_owned(),
                     ));
@@ -477,12 +472,7 @@ impl Engine {
             REPLAY => {
                 if state.card_runtime.move_replays[actor.index()]
                     .as_ref()
-                    .is_some_and(|replay| {
-                        replay
-                            .cells
-                            .iter()
-                            .all(|cell| state.board.get(cell.square) == cell.after)
-                    })
+                    .is_some_and(|replay| replay_move_matches_state(state, replay))
                 {
                     push_none(actions);
                 }
@@ -945,6 +935,14 @@ impl Engine {
             }
         }
     }
+}
+
+fn replay_move_matches_state(state: &GameState, replay: &MoveReplayState) -> bool {
+    replay
+        .cells
+        .iter()
+        .all(|cell| state.board.get(cell.square) == cell.after)
+        && replay_piece_runtime_matches(&state.card_runtime, replay)
 }
 
 fn replay_piece_ids(replay: &MoveReplayState) -> Vec<u32> {

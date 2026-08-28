@@ -12481,4 +12481,55 @@ mod tests {
                 .contains(&pawn.id)
         );
     }
+
+    #[test]
+    fn replay_is_not_legal_after_the_moved_large_piece_loses_hp() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a1", Player::White, PieceKind::BigRook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            213,
+        );
+        let rook = state.board.get("a1".parse().unwrap()).unwrap();
+        state.card_runtime.large_pieces.insert(
+            rook.id,
+            LargePieceStatus {
+                anchor: "a1".parse().unwrap(),
+                hp: 2,
+                max_hp: 2,
+            },
+        );
+        grant_test_card(&mut state, crate::REPLAY, 5);
+
+        let rook_move = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| {
+                matches!(
+                    action,
+                    Action::Move(movement) if movement.from == "a1".parse().unwrap()
+                )
+            })
+            .expect("Big Rook must have a legal move");
+        state = engine.apply(&state, rook_move).unwrap().state;
+        state = engine.apply(&state, movement("h8", "h7")).unwrap().state;
+        state
+            .card_runtime
+            .large_pieces
+            .get_mut(&rook.id)
+            .unwrap()
+            .hp = 1;
+
+        let replay = use_card_without_target(5);
+        assert!(!engine.legal_actions(&state).unwrap().contains(&replay));
+        assert!(matches!(
+            engine.apply(&state, replay),
+            Err(EngineError::IllegalAction(_))
+        ));
+    }
 }
