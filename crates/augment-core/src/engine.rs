@@ -3300,19 +3300,17 @@ impl Engine {
             });
         }
 
-        if matches!(
+        let checker_jump = if matches!(
             moved_ability_kind,
             PieceKind::Checker | PieceKind::CheckerKing
-        ) && movement.from.file().abs_diff(movement.to.file()) == 2
-        {
-            let mid = Square::new(
-                (movement.from.file() + movement.to.file()) / 2,
-                (movement.from.rank() + movement.to.rank()) / 2,
-            )
-            .expect("checker midpoint is on board");
-            let captured = self.board_piece_at(&next, mid).ok_or_else(|| {
-                EngineError::Invariant("checker jump has no captured piece".to_owned())
-            })?;
+        ) {
+            let mut checker = moving_piece;
+            checker.kind = moved_ability_kind;
+            self.checker_jump_capture(&next, movement.from, movement.to, checker)
+        } else {
+            None
+        };
+        if let Some((mid, captured)) = checker_jump {
             let captured_square = next
                 .board
                 .find_by_id(captured.id)
@@ -6766,6 +6764,34 @@ impl Engine {
         }
     }
 
+    fn checker_jump_capture(
+        &self,
+        state: &GameState,
+        from: Square,
+        to: Square,
+        piece: Piece,
+    ) -> Option<(Square, Piece)> {
+        if !matches!(piece.kind, PieceKind::Checker | PieceKind::CheckerKing)
+            || from.file().abs_diff(to.file()) != 2
+            || from.rank().abs_diff(to.rank()) != 2
+        {
+            return None;
+        }
+
+        let rank_delta = i16::from(to.rank()) - i16::from(from.rank());
+        let moves_in_allowed_direction = piece.kind == PieceKind::CheckerKing
+            || (piece.owner == Player::White && rank_delta == 2)
+            || (piece.owner == Player::Black && rank_delta == -2);
+        if !moves_in_allowed_direction || self.board_piece_at(state, to).is_some() {
+            return None;
+        }
+
+        let mid = Square::new((from.file() + to.file()) / 2, (from.rank() + to.rank()) / 2)?;
+        self.board_piece_at(state, mid)
+            .filter(|target| self.can_capture(state, piece, *target))
+            .map(|captured| (mid, captured))
+    }
+
     fn generate_checker_moves(
         &self,
         state: &GameState,
@@ -6782,16 +6808,12 @@ impl Engine {
         };
         let mut captures = Vec::new();
         for &(rank_delta, file_delta) in directions {
-            let Some(mid) = from.offset(file_delta, rank_delta) else {
-                continue;
-            };
             let Some(landing) = from.offset(file_delta * 2, rank_delta * 2) else {
                 continue;
             };
-            if self.board_piece_at(state, landing).is_none()
-                && self
-                    .board_piece_at(state, mid)
-                    .is_some_and(|target| self.can_capture(state, piece, target))
+            if self
+                .checker_jump_capture(state, from, landing, piece)
+                .is_some()
             {
                 captures.push(Action::Move(MoveAction::new(from, landing, None)));
             }
@@ -11273,6 +11295,31 @@ mod tests {
         );
         assert_eq!(state.board.get("d4".parse().unwrap()), Some(shielded));
         assert!(!state.card_runtime.shielded_piece_ids.contains(&shielded.id));
+    }
+
+    #[test]
+    fn promotion_rush_checker_two_square_diagonal_is_not_a_capture_jump() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Checker),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            109,
+        );
+        let checker = state.board.get("a2".parse().unwrap()).unwrap();
+        state
+            .card_runtime
+            .promotion_rush_piece_ids
+            .insert(checker.id);
+
+        assert!(has_move(&engine, &state, "a2", "c4"));
+        let state = engine.apply(&state, movement("a2", "c4")).unwrap().state;
+
+        assert_eq!(state.board.get("c4".parse().unwrap()), Some(checker));
+        assert_eq!(state.board.get("b3".parse().unwrap()), None);
     }
 
     #[test]
