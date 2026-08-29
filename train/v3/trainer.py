@@ -806,14 +806,9 @@ def assert_validation_compatible(
     vocabulary: V3Vocabulary,
 ) -> None:
     validation_vocabulary = validation_dataset.build_vocabulary()
-    if hasattr(validation_dataset, "collate_indices"):
-        if validation_vocabulary != vocabulary:
-            raise CheckpointMismatchError(
-                "pre-tensorized validation vocabulary differs from the training vocabulary"
-            )
-    elif not set(validation_vocabulary.tokens).issubset(vocabulary.tokens):
+    if not set(validation_vocabulary.tokens).issubset(vocabulary.tokens):
         raise CheckpointMismatchError(
-            "raw validation vocabulary contains tokens absent from training"
+            "validation vocabulary contains tokens absent from training"
         )
     training_identity = _base_dataset_identity(training_dataset.identity.to_json())
     validation_identity = _base_dataset_identity(validation_dataset.identity.to_json())
@@ -1245,6 +1240,8 @@ def main() -> None:
         parser.error("--early-stopping-min-delta must be finite and non-negative")
     dataset = load_training_dataset(args.manifest)
     vocabulary = fine_tuning_vocabulary(dataset, args.parent_metadata)
+    if hasattr(dataset, "set_collation_vocabulary"):
+        dataset.set_collation_vocabulary(vocabulary)
     config = TrainingConfigV3(
         batch_size=args.batch_size,
         total_steps=args.steps,
@@ -1284,6 +1281,8 @@ def main() -> None:
             args.validation_manifest, args.validation_split
         )
         assert_validation_compatible(dataset, validation_dataset, vocabulary)
+        if hasattr(validation_dataset, "set_collation_vocabulary"):
+            validation_dataset.set_collation_vocabulary(vocabulary)
         validation_identity_sha256 = _json_sha256(validation_dataset.identity.to_json())
         for event in journal.validation_events:
             early_stopping.observe(float(event["cross_entropy"]))

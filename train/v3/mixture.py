@@ -6,11 +6,16 @@ import hashlib
 import json
 import math
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .replay import DeterministicSamplerV3, ReplayDatasetV3, TrainingExampleV3
+from .replay import (
+    DeterministicSamplerV3,
+    ReplayDatasetV3,
+    TrainingBatchV3,
+    TrainingExampleV3,
+)
 from .pretensor import _merge_training_batches
 from .schema import SchemaError
 from .tensorize import V3Vocabulary
@@ -22,6 +27,15 @@ SOURCE_NAMES = (
     "solver",
     "weak_selfplay",
     "champion_selfplay",
+)
+_VOCABULARY_INDEX_FIELDS = (
+    "state_text",
+    "card_definition",
+    "phase_text",
+    "runtime_text",
+    "action_definition",
+    "action_handler",
+    "action_option",
 )
 MIXTURE_PROFILES: dict[str, dict[str, float]] = {
     "lichess_selfplay_bootstrap": {
@@ -194,6 +208,7 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
             group_total += len(dataset.sampler_group_sizes)
         self._sampler_group_offsets = tuple(group_offsets)
         self._sampler_group_sizes = tuple(sampler_groups)
+        self._collation_vocabulary = self.build_vocabulary()
         self.identity = ConcatIdentityV3(
             dataset_id=f"concat-v3:{identity_hash}",
             manifest_path=config_path,
@@ -258,7 +273,9 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
             dataset = self.datasets[source_index]
             local_indices = [row[1] for row in rows]
             if hasattr(dataset, "collate_indices"):
-                batch = dataset.collate_indices(local_indices)
+                batch = _collate_with_vocabulary(
+                    dataset, local_indices, self._collation_vocabulary
+                )
                 batch.decision_ids = tuple(
                     f"dataset-{source_index}:{identifier}"
                     for identifier in batch.decision_ids
@@ -279,7 +296,7 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
                             forced_win_distance=example.forced_win_distance,
                         )
                     )
-                batch = collate_examples(examples, self.build_vocabulary())
+                batch = collate_examples(examples, self._collation_vocabulary)
             pieces.append((rows, batch))
         ordered = sorted(pieces, key=lambda piece: piece[0][0][0])
         merged = _merge_training_batches([piece[1] for piece in ordered])
@@ -314,6 +331,10 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
 
     def build_vocabulary(self) -> V3Vocabulary:
         return V3Vocabulary.from_tokens(self.vocabulary_tokens)
+
+    def set_collation_vocabulary(self, vocabulary: V3Vocabulary) -> None:
+        _assert_vocabulary_superset(self, vocabulary)
+        self._collation_vocabulary = vocabulary
 
     def clear_cache(self) -> None:
         for dataset in self.datasets:
@@ -441,6 +462,7 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
         self._sampler_group_sizes = _run_lengths(entry_groups)
         self.quotas = quotas
         self.weights = dict(active)
+        self._collation_vocabulary = self.build_vocabulary()
         self.identity = MixtureIdentityV3(
             dataset_id=f"mixture-v3:{identity_hash}",
             manifest_path=config_path,
@@ -508,7 +530,9 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
             dataset = self.datasets[source_name]
             local_indices = [row[1] for row in rows]
             if hasattr(dataset, "collate_indices"):
-                batch = dataset.collate_indices(local_indices)
+                batch = _collate_with_vocabulary(
+                    dataset, local_indices, self._collation_vocabulary
+                )
                 batch.decision_ids = tuple(
                     f"{source_name}:{identifier}"
                     for identifier in batch.decision_ids
@@ -529,7 +553,7 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
                             forced_win_distance=example.forced_win_distance,
                         )
                     )
-                batch = collate_examples(examples, self.build_vocabulary())
+                batch = collate_examples(examples, self._collation_vocabulary)
             pieces.append((rows, batch))
         ordered = sorted(pieces, key=lambda piece: piece[0][0][0])
         merged = _merge_training_batches([piece[1] for piece in ordered])
@@ -561,6 +585,10 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
 
     def build_vocabulary(self) -> V3Vocabulary:
         return V3Vocabulary.from_tokens(self.vocabulary_tokens)
+
+    def set_collation_vocabulary(self, vocabulary: V3Vocabulary) -> None:
+        _assert_vocabulary_superset(self, vocabulary)
+        self._collation_vocabulary = vocabulary
 
     def clear_cache(self) -> None:
         for dataset in self.datasets.values():
@@ -658,6 +686,64 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
                 "checkpoint mixture provenance no longer matches its sources"
             )
         return mixture
+
+
+def _collate_with_vocabulary(
+    dataset: Any, indices: Sequence[int], vocabulary: V3Vocabulary
+) -> TrainingBatchV3:
+    configure = getattr(dataset, "set_collation_vocabulary", None)
+    if configure is not None:
+        configure(vocabulary)
+        return dataset.collate_indices(indices)
+    batch = dataset.collate_indices(indices)
+    source_vocabulary = getattr(dataset, "vocabulary", None)
+    if source_vocabulary is None:
+        source_vocabulary = dataset.build_vocabulary()
+    return _remap_training_batch_vocabulary(batch, source_vocabulary, vocabulary)
+
+
+def _remap_training_batch_vocabulary(
+    batch: TrainingBatchV3,
+    source: V3Vocabulary,
+    target: V3Vocabulary,
+) -> TrainingBatchV3:
+    if source == target:
+        return batch
+    _assert_tokens_present(source.tokens, target)
+    import torch
+
+    lookup = torch.tensor(
+        [target.index(token, "source vocabulary") for token in source.tokens],
+        dtype=torch.long,
+    )
+    remapped = {
+        name: lookup[getattr(batch.inputs, name)]
+        for name in _VOCABULARY_INDEX_FIELDS
+    }
+    return TrainingBatchV3(
+        inputs=replace(batch.inputs, **remapped),
+        policy_targets=batch.policy_targets,
+        policy_supervision=batch.policy_supervision,
+        value_targets=batch.value_targets,
+        value_supervision=batch.value_supervision,
+        auxiliary_targets=batch.auxiliary_targets,
+        auxiliary_supervision=batch.auxiliary_supervision,
+        decision_ids=batch.decision_ids,
+    )
+
+
+def _assert_vocabulary_superset(dataset: Any, target: V3Vocabulary) -> None:
+    _assert_tokens_present(dataset.build_vocabulary().tokens, target)
+
+
+def _assert_tokens_present(
+    source_tokens: Sequence[str], target: V3Vocabulary
+) -> None:
+    missing = sorted(set(source_tokens) - set(target.tokens))
+    if missing:
+        raise SchemaError(
+            f"collation vocabulary is missing source tokens: {missing[:8]}"
+        )
 
 
 def load_training_dataset(

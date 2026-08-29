@@ -205,6 +205,9 @@ class PipelineV3Tests(unittest.TestCase):
             right_root.mkdir()
             left = _write_dataset(left_root)
             right_raw = _write_dataset(right_root)
+            right_mode = "test-right-only-mode"
+            _rewrite_state_mode(right_root, right_mode)
+            _refresh_manifest_hashes(right_raw)
             right = build_pretensor_artifact(
                 right_raw, root / "pretensorized", chunk_size=2, workers=1
             )
@@ -232,6 +235,11 @@ class PipelineV3Tests(unittest.TestCase):
                 dataset.shard_index(3),
                 len(ReplayDatasetV3(left).sampler_group_sizes),
             )
+            local_vocabulary = dataset.build_vocabulary()
+            target_vocabulary = V3Vocabulary(
+                ("<none>", *reversed(local_vocabulary.tokens[1:]))
+            )
+            dataset.set_collation_vocabulary(target_vocabulary)
             batch = dataset.collate_indices([4, 0, 3])
             self.assertEqual(
                 batch.decision_ids,
@@ -240,6 +248,15 @@ class PipelineV3Tests(unittest.TestCase):
                     "dataset-0:decision-0",
                     "dataset-1:decision-0",
                 ),
+            )
+            left_mode = ReplayDatasetV3(left)[0].observation["state"]["mode_id"]
+            self.assertEqual(
+                batch.inputs.state_text[:, 0].tolist(),
+                [
+                    target_vocabulary.index(right_mode, "test"),
+                    target_vocabulary.index(left_mode, "test"),
+                    target_vocabulary.index(right_mode, "test"),
+                ],
             )
             self.assertEqual(sum(dataset.sampler_group_sizes), len(dataset))
 
@@ -862,6 +879,22 @@ def _rewrite_first_probability(root: Path, probability: float) -> None:
     records = [json.loads(line) for line in raw.splitlines()]
     probabilities = records[0]["targets"]["policy"]["target"]["probabilities"]
     probabilities[0] = probability
+    encoded = (
+        b"\n".join(
+            json.dumps(record, separators=(",", ":"), allow_nan=True).encode()
+            for record in records
+        )
+        + b"\n"
+    )
+    shard.write_bytes(zstandard.ZstdCompressor(level=1).compress(encoded))
+
+
+def _rewrite_state_mode(root: Path, mode_id: str) -> None:
+    shard = root / "train.jsonl.zst"
+    raw = zstandard.ZstdDecompressor().decompress(shard.read_bytes())
+    records = [json.loads(line) for line in raw.splitlines()]
+    for record in records:
+        record["observation"]["state"]["mode_id"] = mode_id
     encoded = (
         b"\n".join(
             json.dumps(record, separators=(",", ":"), allow_nan=True).encode()
