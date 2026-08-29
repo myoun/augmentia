@@ -191,6 +191,7 @@ class PretensorizedReplayDatasetV3(Sequence[PretensorizedExampleRefV3]):
             raise SchemaError("pre-tensor example total mismatch")
 
         self.manifest = manifest
+        self.split = manifest["split"]
         self.frames = tuple(frames)
         self._frame_ends = tuple(
             frame.start_index + frame.examples for frame in self.frames

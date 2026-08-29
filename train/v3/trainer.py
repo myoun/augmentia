@@ -768,7 +768,20 @@ def load_validation_dataset(
         from .pretensor import PretensorizedReplayDatasetV3
 
         return PretensorizedReplayDatasetV3(candidate)
+    if isinstance(payload, dict) and payload.get("concat_schema_id"):
+        dataset = load_training_dataset(candidate)
+        if not _dataset_uses_split(dataset, split):
+            raise ValueError(f"concat validation sources must all use split {split!r}")
+        return dataset
     return ReplayDatasetV3(candidate, split=split)
+
+
+def _dataset_uses_split(dataset: Any, split: str) -> bool:
+    dataset_split = getattr(dataset, "split", None)
+    if dataset_split is not None:
+        return dataset_split == split
+    sources = getattr(dataset, "datasets", None)
+    return bool(sources) and all(_dataset_uses_split(source, split) for source in sources)
 
 
 def fine_tuning_vocabulary(

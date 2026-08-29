@@ -232,6 +232,7 @@ class ReplayDatasetV3(Sequence[TrainingExampleV3]):
             raise SchemaError(f"dataset split {split!r} contains no decision records")
         ruleset_id, ruleset_hash = ruleset
         self.manifest = manifest
+        self.split = split
         self.shards = tuple(shards)
         self._example_count = example_count
         self._shard_ends = tuple(
