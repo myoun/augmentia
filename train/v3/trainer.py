@@ -1191,6 +1191,7 @@ def main() -> None:
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--max-padded-actions", type=int)
     parser.add_argument("--steps", type=int, default=100_000)
     parser.add_argument("--max-steps-this-run", type=int)
@@ -1216,6 +1217,8 @@ def main() -> None:
         parser.error("--max-steps-this-run must be positive")
     if args.log_interval <= 0:
         parser.error("--log-interval must be positive")
+    if not math.isfinite(args.learning_rate) or args.learning_rate <= 0:
+        parser.error("--learning-rate must be finite and positive")
     if args.validation_interval <= 0:
         parser.error("--validation-interval must be positive")
     if args.validation_batch_size is not None and args.validation_batch_size <= 0:
@@ -1244,6 +1247,7 @@ def main() -> None:
         dataset.set_collation_vocabulary(vocabulary)
     config = TrainingConfigV3(
         batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
         total_steps=args.steps,
         checkpoint_interval=args.checkpoint_interval,
         device=args.device,
