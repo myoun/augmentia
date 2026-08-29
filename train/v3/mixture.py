@@ -169,7 +169,10 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
         shard_hashes = tuple(
             (f"dataset-{source_index}:{path}", digest)
             for source_index, dataset in enumerate(datasets)
-            for path, digest in dataset.identity.shard_sha256
+            for path, digest in (
+                getattr(dataset.identity, "shard_sha256", ())
+                or getattr(dataset, "shard_sha256", ())
+            )
         )
         ruleset_id, ruleset_hash = next(iter(rulesets))
         observation_schema_id, action_schema_id = next(iter(schemas))
@@ -181,7 +184,15 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
             ends.append(total)
             sampler_groups.extend(dataset.sampler_group_sizes)
         self.datasets = tuple(datasets)
+        splits = {getattr(dataset, "split", None) for dataset in datasets}
+        self.split = next(iter(splits)) if len(splits) == 1 else None
         self._ends = tuple(ends)
+        group_offsets = []
+        group_total = 0
+        for dataset in datasets:
+            group_offsets.append(group_total)
+            group_total += len(dataset.sampler_group_sizes)
+        self._sampler_group_offsets = tuple(group_offsets)
         self._sampler_group_sizes = tuple(sampler_groups)
         self.identity = ConcatIdentityV3(
             dataset_id=f"concat-v3:{identity_hash}",
@@ -228,6 +239,12 @@ class ReplayConcatV3(Sequence[TrainingExampleV3]):
             value=example.value,
             forced_win_distance=example.forced_win_distance,
         )
+
+    def shard_index(self, index: int) -> int:
+        source_index, local_index = self._source_index(index)
+        return self._sampler_group_offsets[source_index] + self.datasets[
+            source_index
+        ].shard_index(local_index)
 
     def collate_indices(self, indices: Sequence[int]) -> Any:
         if not indices:

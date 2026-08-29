@@ -204,7 +204,10 @@ class PipelineV3Tests(unittest.TestCase):
             left_root.mkdir()
             right_root.mkdir()
             left = _write_dataset(left_root)
-            right = _write_dataset(right_root)
+            right_raw = _write_dataset(right_root)
+            right = build_pretensor_artifact(
+                right_raw, root / "pretensorized", chunk_size=2, workers=1
+            )
             config = root / "concat.json"
             config.write_text(
                 json.dumps(
@@ -221,7 +224,13 @@ class PipelineV3Tests(unittest.TestCase):
             self.assertEqual(dataset[0].decision_id, "dataset-0:decision-0")
             self.assertEqual(dataset[3].decision_id, "dataset-1:decision-0")
             self.assertEqual(
-                dataset.action_count(3), ReplayDatasetV3(right).action_count(0)
+                dataset.action_count(3), ReplayDatasetV3(right_raw).action_count(0)
+            )
+            self.assertEqual(dataset.split, "train")
+            self.assertEqual(dataset.shard_index(0), 0)
+            self.assertEqual(
+                dataset.shard_index(3),
+                len(ReplayDatasetV3(left).sampler_group_sizes),
             )
             batch = dataset.collate_indices([4, 0, 3])
             self.assertEqual(
