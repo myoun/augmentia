@@ -49,6 +49,7 @@ class TrainingConfigV3:
     amp: bool = True
     device: str = "cuda"
     prefetch_batches: int = 1
+    max_padded_actions: int | None = None
 
     def __post_init__(self) -> None:
         positive = (
@@ -63,6 +64,8 @@ class TrainingConfigV3:
             raise ValueError("training sizes, rates and intervals must be positive")
         if self.prefetch_batches not in {0, 1}:
             raise ValueError("prefetch_batches must be zero or one")
+        if self.max_padded_actions is not None and self.max_padded_actions <= 0:
+            raise ValueError("max_padded_actions must be positive when configured")
 
 
 @dataclass
@@ -208,7 +211,7 @@ class TrainingMetricsJournalV3:
 class _PrefetchedBatchV3:
     base_sampler_state: dict[str, Any]
     committed_sampler_state: dict[str, Any]
-    future: Future[TrainingBatchV3]
+    future: Future[tuple[TrainingBatchV3, ...]]
 
 
 class CheckpointMismatchError(RuntimeError):
@@ -394,58 +397,78 @@ class TrainerV3:
         if self.global_step >= self.config.total_steps:
             raise StopIteration("configured optimizer step limit reached")
         self.model.train()
-        cached_batches: list[TrainingBatchV3] = []
+        cached_batch_groups: list[tuple[TrainingBatchV3, ...]] = []
         overflow_retries = 0
         while True:
             self.optimizer.zero_grad(set_to_none=True)
             accumulated_ids: list[str] = []
             totals = torch.zeros(4, dtype=torch.float64)
-            microbatches = 0
+            logical_batches = 0
             samples = 0
-            for microbatch_index in range(self.config.gradient_accumulation_steps):
+            for accumulation_index in range(self.config.gradient_accumulation_steps):
                 if overflow_retries == 0:
-                    source_batch = self._next_training_batch()
-                    cached_batches.append(source_batch)
+                    source_batches = self._next_training_batches()
+                    cached_batch_groups.append(source_batches)
                 else:
-                    source_batch = cached_batches[microbatch_index]
-                batch = _move_training_batch(
-                    source_batch,
-                    self.device,
-                    non_blocking=self._prefetch_executor is not None,
-                )
-                accumulated_ids.extend(batch.decision_ids)
-                with torch.autocast(
-                    device_type=self.device.type,
-                    enabled=self.scaler.is_enabled(),
-                    dtype=torch.float16,
-                ):
-                    output = self.model(batch.inputs)
-                    loss = compute_v3_loss(
-                        output,
-                        batch.inputs.action_mask,
-                        batch.policy_targets,
-                        batch.policy_supervision,
-                        batch.value_targets,
-                        batch.value_supervision,
-                        self.config.value_weight,
-                        batch.auxiliary_targets,
-                        batch.auxiliary_supervision,
+                    source_batches = cached_batch_groups[accumulation_index]
+                supervision_totals = _supervision_totals(source_batches)
+                logical_losses = torch.zeros(4, dtype=torch.float64)
+                for source_batch in source_batches:
+                    batch = _move_training_batch(
+                        source_batch,
+                        self.device,
+                        non_blocking=self._prefetch_executor is not None,
                     )
-                    scaled_loss = loss.total / self.config.gradient_accumulation_steps
-                if not torch.isfinite(loss.total):
-                    raise FloatingPointError("training loss became NaN or infinite")
-                self.scaler.scale(scaled_loss).backward()
-                totals += torch.tensor(
-                    [
-                        loss.total.item(),
-                        loss.policy.item(),
-                        loss.value.item(),
-                        loss.auxiliary.item(),
-                    ],
-                    dtype=torch.float64,
-                )
-                microbatches += 1
-                samples += len(batch.decision_ids)
+                    accumulated_ids.extend(batch.decision_ids)
+                    with torch.autocast(
+                        device_type=self.device.type,
+                        enabled=self.scaler.is_enabled(),
+                        dtype=torch.float16,
+                    ):
+                        output = self.model(batch.inputs)
+                        loss = compute_v3_loss(
+                            output,
+                            batch.inputs.action_mask,
+                            batch.policy_targets,
+                            batch.policy_supervision,
+                            batch.value_targets,
+                            batch.value_supervision,
+                            self.config.value_weight,
+                            batch.auxiliary_targets,
+                            batch.auxiliary_supervision,
+                        )
+                        policy_weight = _supervision_weight(
+                            loss.policy_samples, supervision_totals[0]
+                        )
+                        value_weight = _supervision_weight(
+                            loss.value_samples, supervision_totals[1]
+                        )
+                        auxiliary_weight = _supervision_weight(
+                            loss.auxiliary_samples, supervision_totals[2]
+                        )
+                        combined_loss = (
+                            loss.policy * policy_weight
+                            + self.config.value_weight * loss.value * value_weight
+                            + 0.25 * loss.auxiliary * auxiliary_weight
+                        )
+                        scaled_loss = (
+                            combined_loss / self.config.gradient_accumulation_steps
+                        )
+                    if not torch.isfinite(combined_loss):
+                        raise FloatingPointError("training loss became NaN or infinite")
+                    self.scaler.scale(scaled_loss).backward()
+                    logical_losses += torch.tensor(
+                        [
+                            combined_loss.item(),
+                            loss.policy.item() * policy_weight,
+                            loss.value.item() * value_weight,
+                            loss.auxiliary.item() * auxiliary_weight,
+                        ],
+                        dtype=torch.float64,
+                    )
+                    samples += len(batch.decision_ids)
+                totals += logical_losses
+                logical_batches += 1
             self.scaler.unscale_(self.optimizer)
             invalid_gradient = next(
                 (
@@ -478,7 +501,7 @@ class TrainerV3:
         self.scheduler.step()
         self.global_step += 1
         self.samples_seen += samples
-        averages = totals / microbatches
+        averages = totals / logical_batches
         result = StepMetricsV3(
             self.global_step,
             samples,
@@ -547,16 +570,23 @@ class TrainerV3:
         _restore_rng(payload["rng"])
         return path
 
-    def _next_indices(self, count: int) -> list[int]:
-        return _take_sampler_indices(self.sampler, count)
+    def _next_index_batches(
+        self, sampler: DeterministicSamplerV3
+    ) -> list[list[int]]:
+        return _take_action_budgeted_sampler_indices(
+            sampler,
+            self.config.batch_size,
+            self.dataset,
+            self.config.max_padded_actions,
+        )
 
-    def _next_training_batch(self) -> TrainingBatchV3:
+    def _next_training_batches(self) -> tuple[TrainingBatchV3, ...]:
         prefetched = self._prefetched_batch
         if prefetched is None:
-            indices = self._next_indices(self.config.batch_size)
-            batch = _collate_dataset_indices(
+            index_batches = self._next_index_batches(self.sampler)
+            batches = _collate_dataset_index_batches(
                 self.dataset,
-                indices,
+                index_batches,
                 self.vocabulary,
                 pin_memory=self._prefetch_executor is not None
                 and self.device.type == "cuda",
@@ -564,11 +594,11 @@ class TrainerV3:
         else:
             if self.sampler.state_dict() != prefetched.base_sampler_state:
                 raise RuntimeError("prefetched batch sampler state became stale")
-            batch = prefetched.future.result()
+            batches = prefetched.future.result()
             self.sampler.load_state_dict(prefetched.committed_sampler_state)
             self._prefetched_batch = None
         self._schedule_prefetch()
-        return batch
+        return batches
 
     def _schedule_prefetch(self) -> None:
         if self._prefetch_executor is None or self._prefetched_batch is not None:
@@ -580,14 +610,14 @@ class TrainerV3:
             self.dataset.sampler_group_sizes,
         )
         preview.load_state_dict(base_state)
-        indices = _take_sampler_indices(preview, self.config.batch_size)
+        index_batches = self._next_index_batches(preview)
         self._prefetched_batch = _PrefetchedBatchV3(
             base_sampler_state=base_state,
             committed_sampler_state=preview.state_dict(),
             future=self._prefetch_executor.submit(
-                _collate_dataset_indices,
+                _collate_dataset_index_batches,
                 self.dataset,
-                indices,
+                index_batches,
                 self.vocabulary,
                 self.device.type == "cuda",
             ),
@@ -650,6 +680,7 @@ def evaluate_policy_v3(
     *,
     batch_size: int,
     step: int,
+    max_padded_actions: int | None = None,
 ) -> PolicyValidationMetricsV3:
     """Evaluate policy calibration and ranking on a stable sequential split."""
     if batch_size <= 0:
@@ -664,33 +695,38 @@ def evaluate_policy_v3(
     try:
         with torch.inference_mode():
             for start in range(0, len(dataset), batch_size):
-                indices = list(range(start, min(start + batch_size, len(dataset))))
-                source = _collate_dataset_indices(
-                    dataset, indices, vocabulary, pin_memory=False
+                logical_indices = list(
+                    range(start, min(start + batch_size, len(dataset)))
                 )
-                batch = _move_training_batch(source, device, non_blocking=False)
-                output = model(batch.inputs)
-                logits = output.policy_logits.float()
-                log_probabilities = torch.log_softmax(logits, dim=1)
-                per_sample = -(batch.policy_targets * log_probabilities).sum(dim=1)
-                supervised = batch.policy_supervision
-                targets = batch.policy_targets.argmax(dim=1)
-                top1 = logits.argmax(dim=1)
-                top3 = logits.topk(min(3, logits.shape[1]), dim=1).indices
-                cross_entropy_sum += (
-                    per_sample.masked_select(supervised).double().sum().item()
-                )
-                supervised_examples += int(supervised.sum().item())
-                top1_correct += int(
-                    top1.eq(targets).logical_and(supervised).sum().item()
-                )
-                top3_correct += int(
-                    top3.eq(targets.unsqueeze(1))
-                    .any(dim=1)
-                    .logical_and(supervised)
-                    .sum()
-                    .item()
-                )
+                for indices in _partition_indices_by_action_budget(
+                    dataset, logical_indices, max_padded_actions
+                ):
+                    source = _collate_dataset_indices(
+                        dataset, indices, vocabulary, pin_memory=False
+                    )
+                    batch = _move_training_batch(source, device, non_blocking=False)
+                    output = model(batch.inputs)
+                    logits = output.policy_logits.float()
+                    log_probabilities = torch.log_softmax(logits, dim=1)
+                    per_sample = -(batch.policy_targets * log_probabilities).sum(dim=1)
+                    supervised = batch.policy_supervision
+                    targets = batch.policy_targets.argmax(dim=1)
+                    top1 = logits.argmax(dim=1)
+                    top3 = logits.topk(min(3, logits.shape[1]), dim=1).indices
+                    cross_entropy_sum += (
+                        per_sample.masked_select(supervised).double().sum().item()
+                    )
+                    supervised_examples += int(supervised.sum().item())
+                    top1_correct += int(
+                        top1.eq(targets).logical_and(supervised).sum().item()
+                    )
+                    top3_correct += int(
+                        top3.eq(targets.unsqueeze(1))
+                        .any(dim=1)
+                        .logical_and(supervised)
+                        .sum()
+                        .item()
+                    )
     finally:
         model.train(previous_training)
     if supervised_examples == 0:
@@ -797,6 +833,98 @@ def _take_sampler_indices(sampler: DeterministicSamplerV3, count: int) -> list[i
         indices.extend(sampler.take(count - len(indices)))
         sampler.advance_epoch_if_complete()
     return indices
+
+
+def _take_action_budgeted_sampler_indices(
+    sampler: DeterministicSamplerV3,
+    count: int,
+    dataset: Any,
+    max_padded_actions: int | None,
+) -> list[list[int]]:
+    if max_padded_actions is None:
+        return [_take_sampler_indices(sampler, count)]
+    batches: list[list[int]] = []
+    remaining = count
+    while remaining > 0:
+        indices: list[int] = []
+        maximum_actions = 0
+        for index in sampler.remaining_indices():
+            action_count = _dataset_action_count(dataset, index)
+            projected = (len(indices) + 1) * max(maximum_actions, action_count)
+            if indices and projected > max_padded_actions:
+                break
+            indices.append(index)
+            maximum_actions = max(maximum_actions, action_count)
+            if len(indices) == remaining:
+                break
+        if not indices:
+            raise RuntimeError("action-budgeted sampler made no progress")
+        sampler.cursor += len(indices)
+        sampler.advance_epoch_if_complete()
+        batches.append(indices)
+        remaining -= len(indices)
+    return batches
+
+
+def _dataset_action_count(dataset: Any, index: int) -> int:
+    if hasattr(dataset, "action_count"):
+        count = int(dataset.action_count(index))
+    else:
+        example = dataset[index]
+        count = len(example.legal_actions["actions"])
+    if count <= 0:
+        raise ValueError(f"dataset example {index} has no legal actions")
+    return count
+
+
+def _partition_indices_by_action_budget(
+    dataset: Any,
+    indices: list[int],
+    max_padded_actions: int | None,
+) -> list[list[int]]:
+    if max_padded_actions is None:
+        return [indices]
+    batches: list[list[int]] = []
+    pending: list[int] = []
+    maximum_actions = 0
+    for index in indices:
+        action_count = _dataset_action_count(dataset, index)
+        projected = (len(pending) + 1) * max(maximum_actions, action_count)
+        if pending and projected > max_padded_actions:
+            batches.append(pending)
+            pending = []
+            maximum_actions = 0
+        pending.append(index)
+        maximum_actions = max(maximum_actions, action_count)
+    if pending:
+        batches.append(pending)
+    return batches
+
+
+def _collate_dataset_index_batches(
+    dataset: ReplayDatasetV3,
+    index_batches: list[list[int]],
+    vocabulary: V3Vocabulary,
+    pin_memory: bool,
+) -> tuple[TrainingBatchV3, ...]:
+    return tuple(
+        _collate_dataset_indices(dataset, indices, vocabulary, pin_memory)
+        for indices in index_batches
+    )
+
+
+def _supervision_totals(
+    batches: tuple[TrainingBatchV3, ...],
+) -> tuple[int, int, int]:
+    return (
+        sum(int(batch.policy_supervision.sum().item()) for batch in batches),
+        sum(int(batch.value_supervision.sum().item()) for batch in batches),
+        sum(int(batch.auxiliary_supervision.sum().item()) for batch in batches),
+    )
+
+
+def _supervision_weight(samples: int, total: int) -> float:
+    return 0.0 if total == 0 else samples / total
 
 
 def _collate_dataset_indices(
@@ -1055,6 +1183,7 @@ def main() -> None:
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--max-padded-actions", type=int)
     parser.add_argument("--steps", type=int, default=100_000)
     parser.add_argument("--max-steps-this-run", type=int)
     parser.add_argument("--checkpoint-interval", type=int, default=500)
@@ -1070,6 +1199,7 @@ def main() -> None:
     )
     parser.add_argument("--validation-interval", type=int, default=500)
     parser.add_argument("--validation-batch-size", type=int)
+    parser.add_argument("--validation-max-padded-actions", type=int)
     parser.add_argument("--early-stopping-patience", type=int, default=4)
     parser.add_argument("--early-stopping-min-delta", type=float, default=0.0)
     parser.add_argument("--resume", action="store_true")
@@ -1082,6 +1212,13 @@ def main() -> None:
         parser.error("--validation-interval must be positive")
     if args.validation_batch_size is not None and args.validation_batch_size <= 0:
         parser.error("--validation-batch-size must be positive")
+    if args.max_padded_actions is not None and args.max_padded_actions <= 0:
+        parser.error("--max-padded-actions must be positive")
+    if (
+        args.validation_max_padded_actions is not None
+        and args.validation_max_padded_actions <= 0
+    ):
+        parser.error("--validation-max-padded-actions must be positive")
     if args.early_stopping_patience < 0:
         parser.error("--early-stopping-patience must be non-negative")
     if (args.parent_checkpoint is None) != (args.parent_metadata is None):
@@ -1101,6 +1238,7 @@ def main() -> None:
         checkpoint_interval=args.checkpoint_interval,
         device=args.device,
         prefetch_batches=args.prefetch_batches,
+        max_padded_actions=args.max_padded_actions,
     )
     trainer = TrainerV3(
         dataset,
@@ -1211,6 +1349,9 @@ def main() -> None:
             trainer.device,
             batch_size=validation_batch_size,
             step=trainer.global_step,
+            max_padded_actions=(
+                args.validation_max_padded_actions or args.max_padded_actions
+            ),
         )
         improved, should_stop = early_stopping.observe(metrics.cross_entropy)
         event = {

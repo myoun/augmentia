@@ -14,7 +14,13 @@ import zstandard
 
 from v3.model import AugmentNetV3, V3ModelConfig
 from v3.iteration import _collate_dataset_indices, _training_metric_event
-from v3.mixture import MIXTURE_SCHEMA_ID, ReplayMixtureV3, load_training_dataset
+from v3.mixture import (
+    CONCAT_SCHEMA_ID,
+    MIXTURE_SCHEMA_ID,
+    ReplayConcatV3,
+    ReplayMixtureV3,
+    load_training_dataset,
+)
 from v3.onnx_export import (
     assert_onnx_equivalent,
     export_onnx_v3,
@@ -32,6 +38,7 @@ from v3.trainer import (
     TrainerV3,
     TrainingConfigV3,
     TrainingMetricsJournalV3,
+    _take_action_budgeted_sampler_indices,
     evaluate_policy_v3,
 )
 
@@ -188,6 +195,44 @@ class PipelineV3Tests(unittest.TestCase):
                 [item.decision_id for item in right],
             )
             self.assertEqual(left.identity.to_json(), right.identity.to_json())
+
+    def test_concat_preserves_source_order_collation_and_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            left_root = root / "left"
+            right_root = root / "right"
+            left_root.mkdir()
+            right_root.mkdir()
+            left = _write_dataset(left_root)
+            right = _write_dataset(right_root)
+            config = root / "concat.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "concat_schema_id": CONCAT_SCHEMA_ID,
+                        "datasets": [str(left), str(right)],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            dataset = load_training_dataset(config)
+            self.assertIsInstance(dataset, ReplayConcatV3)
+            self.assertEqual(len(dataset), 6)
+            self.assertEqual(dataset[0].decision_id, "dataset-0:decision-0")
+            self.assertEqual(dataset[3].decision_id, "dataset-1:decision-0")
+            self.assertEqual(
+                dataset.action_count(3), ReplayDatasetV3(right).action_count(0)
+            )
+            batch = dataset.collate_indices([4, 0, 3])
+            self.assertEqual(
+                batch.decision_ids,
+                (
+                    "dataset-1:decision-1",
+                    "dataset-0:decision-0",
+                    "dataset-1:decision-0",
+                ),
+            )
+            self.assertEqual(sum(dataset.sampler_group_sizes), len(dataset))
 
     def test_lichess_selfplay_bootstrap_uses_only_available_sources(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -368,6 +413,63 @@ class PipelineV3Tests(unittest.TestCase):
             _assert_nested_equal(
                 self, continuous.optimizer.state_dict(), resumed.optimizer.state_dict()
             )
+
+    def test_action_budget_splits_padding_without_changing_logical_batch_loss(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = ReplayDatasetV3(_write_dataset(root))
+            vocabulary = dataset.build_vocabulary()
+            model_config = _model_config(vocabulary)
+            action_counts = [dataset.action_count(index) for index in range(len(dataset))]
+            budget = 1
+            sampler = DeterministicSamplerV3(
+                len(dataset), seed=17, group_sizes=dataset.sampler_group_sizes
+            )
+            batches = _take_action_budgeted_sampler_indices(
+                sampler, 2, dataset, budget
+            )
+            self.assertEqual(sum(map(len, batches)), 2)
+            self.assertGreater(len(batches), 1)
+            self.assertTrue(
+                all(
+                    len(batch) == 1
+                    or len(batch)
+                    * max(dataset.action_count(index) for index in batch)
+                    <= budget
+                    for batch in batches
+                )
+            )
+
+            baseline_config = TrainingConfigV3(
+                **{**_training_config().__dict__, "prefetch_batches": 0}
+            )
+            budgeted_config = TrainingConfigV3(
+                **{**baseline_config.__dict__, "max_padded_actions": budget}
+            )
+            baseline = TrainerV3(
+                dataset,
+                vocabulary,
+                model_config,
+                baseline_config,
+                root / "baseline",
+            )
+            budgeted = TrainerV3(
+                dataset,
+                vocabulary,
+                model_config,
+                budgeted_config,
+                root / "budgeted",
+            )
+            baseline_metrics = baseline.train_step()
+            budgeted_metrics = budgeted.train_step()
+            self.assertEqual(baseline_metrics.decision_ids, budgeted_metrics.decision_ids)
+            self.assertAlmostEqual(baseline_metrics.loss, budgeted_metrics.loss, places=6)
+            for name, expected in baseline.model.state_dict().items():
+                torch.testing.assert_close(
+                    expected, budgeted.model.state_dict()[name], rtol=1e-3, atol=5e-6
+                )
 
     def test_corrupt_latest_checkpoint_is_ignored_and_mismatch_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

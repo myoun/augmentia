@@ -241,6 +241,15 @@ class PretensorizedReplayDatasetV3(Sequence[PretensorizedExampleRefV3]):
     def clear_cache(self) -> None:
         self._cache.clear()
 
+    def action_count(self, index: int) -> int:
+        frame_index = self.shard_index(index)
+        local_index = index - self.frames[frame_index].start_index
+        batch = self._load_frame(frame_index)
+        count = int(batch.inputs.action_mask[local_index].sum().item())
+        if count <= 0:
+            raise SchemaError(f"pre-tensor example {index} has no legal actions")
+        return count
+
     def collate_indices(self, indices: Sequence[int]) -> TrainingBatchV3:
         if not indices:
             raise ValueError("cannot collate an empty batch")

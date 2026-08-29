@@ -291,6 +291,13 @@ class ReplayDatasetV3(Sequence[TrainingExampleV3]):
     def clear_cache(self) -> None:
         self._cache.clear()
 
+    def action_count(self, index: int) -> int:
+        example = self[index]
+        actions = example.legal_actions.get("actions")
+        if not isinstance(actions, list) or not actions:
+            raise SchemaError(f"example {index} has no legal actions")
+        return len(actions)
+
     def _load_shard(self, shard_index: int) -> tuple[TrainingExampleV3, ...]:
         cached = self._cache.pop(shard_index, None)
         if cached is not None:

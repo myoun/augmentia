@@ -332,6 +332,65 @@ def _commit_root_manifest(
     return root_manifest
 
 
+def consolidate_completed_selfplay(
+    output_dir: str | Path,
+    validator: str | Path,
+    repository: str | Path,
+) -> Path:
+    """Atomically seal every completed part without requiring a contiguous run."""
+    output = Path(output_dir).resolve()
+    root_manifest = output / "manifest.json"
+    part_manifests = sorted((output / "parts").glob("game-*/manifest.json"))
+    if not part_manifests:
+        raise ValueError(f"self-play run has no completed parts: {output}")
+    merged: dict[str, Any] | None = None
+    shards: list[dict[str, Any]] = []
+    totals: dict[str, int] = {}
+    fixed_fields = (
+        "manifest_schema_id",
+        "dataset_id",
+        "observation_schema_id",
+        "action_schema_id",
+        "split_policy",
+        "compression",
+    )
+    for manifest_path in part_manifests:
+        payload = _load_json(manifest_path)
+        if merged is None:
+            merged = {name: payload[name] for name in fixed_fields}
+            merged["created_at_utc"] = payload["created_at_utc"]
+            totals = {name: 0 for name in payload["totals"]}
+        else:
+            for name in fixed_fields:
+                if payload[name] != merged[name]:
+                    raise ValueError(f"part manifest {manifest_path} differs in {name}")
+            if set(payload["totals"]) != set(totals):
+                raise ValueError(f"part manifest {manifest_path} totals drifted")
+        relative_part = manifest_path.parent.relative_to(output)
+        for shard in payload["shards"]:
+            entry = dict(shard)
+            entry["path"] = str(
+                PurePosixPath(relative_part.as_posix()) / PurePosixPath(shard["path"])
+            )
+            shards.append(entry)
+        for name, value in payload["totals"].items():
+            totals[name] += value
+    assert merged is not None
+    merged["shards"] = sorted(shards, key=lambda item: item["path"])
+    merged["totals"] = totals
+    if totals.get("games") != len(part_manifests) or totals.get("shards") != len(shards):
+        raise ValueError("consolidated self-play totals do not match completed parts")
+    temporary = root_manifest.with_name(f"manifest.json.partial-{os.getpid()}")
+    _write_json(temporary, merged)
+    try:
+        _validate_dataset(Path(validator).resolve(), temporary, Path(repository).resolve())
+        os.replace(temporary, root_manifest)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    return root_manifest
+
+
 def _validate_part_manifest(
     path: Path,
     config: ParallelSelfPlayConfig,

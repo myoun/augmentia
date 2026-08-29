@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -15,6 +16,7 @@ from .schema import SchemaError
 from .tensorize import V3Vocabulary
 
 MIXTURE_SCHEMA_ID = "augmentia.training-mixture.v3"
+CONCAT_SCHEMA_ID = "augmentia.training-concat.v3"
 SOURCE_NAMES = (
     "lichess",
     "solver",
@@ -108,6 +110,236 @@ class MixtureIdentityV3:
 class MixtureEntryV3:
     source_name: str
     dataset_index: int
+
+
+@dataclass(frozen=True)
+class ConcatIdentityV3:
+    dataset_id: str
+    manifest_path: str
+    manifest_sha256: str
+    shard_sha256: tuple[tuple[str, str], ...]
+    ruleset_id: str
+    ruleset_manifest_sha256: str
+    observation_schema_id: str
+    action_schema_id: str
+    datasets: tuple[dict[str, Any], ...]
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "identity_kind": "concat_v3",
+            "dataset_id": self.dataset_id,
+            "manifest_path": self.manifest_path,
+            "manifest_sha256": self.manifest_sha256,
+            "shard_sha256": [list(item) for item in self.shard_sha256],
+            "ruleset_id": self.ruleset_id,
+            "ruleset_manifest_sha256": self.ruleset_manifest_sha256,
+            "observation_schema_id": self.observation_schema_id,
+            "action_schema_id": self.action_schema_id,
+            "datasets": list(self.datasets),
+        }
+
+
+class ReplayConcatV3(Sequence[TrainingExampleV3]):
+    """A deterministic concatenation that preserves every source identity."""
+
+    def __init__(
+        self,
+        datasets: Sequence[Any],
+        *,
+        config_path: str,
+        config_sha256: str,
+    ) -> None:
+        if not datasets or any(len(dataset) == 0 for dataset in datasets):
+            raise ValueError("concat datasets must be non-empty")
+        rulesets = {
+            (dataset.identity.ruleset_id, dataset.identity.ruleset_manifest_sha256)
+            for dataset in datasets
+        }
+        schemas = {
+            (dataset.identity.observation_schema_id, dataset.identity.action_schema_id)
+            for dataset in datasets
+        }
+        if len(rulesets) != 1 or len(schemas) != 1:
+            raise SchemaError("concat datasets must use one ruleset and schema pair")
+        identities = tuple(dataset.identity.to_json() for dataset in datasets)
+        canonical = json.dumps(
+            identities, sort_keys=True, separators=(",", ":")
+        ).encode()
+        identity_hash = hashlib.sha256(canonical).hexdigest()
+        shard_hashes = tuple(
+            (f"dataset-{source_index}:{path}", digest)
+            for source_index, dataset in enumerate(datasets)
+            for path, digest in dataset.identity.shard_sha256
+        )
+        ruleset_id, ruleset_hash = next(iter(rulesets))
+        observation_schema_id, action_schema_id = next(iter(schemas))
+        ends = []
+        total = 0
+        sampler_groups = []
+        for dataset in datasets:
+            total += len(dataset)
+            ends.append(total)
+            sampler_groups.extend(dataset.sampler_group_sizes)
+        self.datasets = tuple(datasets)
+        self._ends = tuple(ends)
+        self._sampler_group_sizes = tuple(sampler_groups)
+        self.identity = ConcatIdentityV3(
+            dataset_id=f"concat-v3:{identity_hash}",
+            manifest_path=config_path,
+            manifest_sha256=config_sha256,
+            shard_sha256=shard_hashes,
+            ruleset_id=ruleset_id,
+            ruleset_manifest_sha256=ruleset_hash,
+            observation_schema_id=observation_schema_id,
+            action_schema_id=action_schema_id,
+            datasets=identities,
+        )
+
+    def __len__(self) -> int:
+        return self._ends[-1]
+
+    def _source_index(self, index: int) -> tuple[int, int]:
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError(index)
+        source_index = bisect_right(self._ends, index)
+        offset = 0 if source_index == 0 else self._ends[source_index - 1]
+        return source_index, index - offset
+
+    def __getitem__(self, index: int) -> TrainingExampleV3:
+        source_index, local_index = self._source_index(index)
+        example = self.datasets[source_index][local_index]
+        if hasattr(example, "_example"):
+            batch, row = example._example()
+            return TrainingExampleV3(
+                decision_id=f"dataset-{source_index}:{batch.decision_ids[row]}",
+                observation=None,
+                legal_actions=None,
+                policy=None,
+                value=None,
+                forced_win_distance=None,
+            )
+        return TrainingExampleV3(
+            decision_id=f"dataset-{source_index}:{example.decision_id}",
+            observation=example.observation,
+            legal_actions=example.legal_actions,
+            policy=example.policy,
+            value=example.value,
+            forced_win_distance=example.forced_win_distance,
+        )
+
+    def collate_indices(self, indices: Sequence[int]) -> Any:
+        if not indices:
+            raise ValueError("cannot collate an empty batch")
+        grouped: dict[int, list[tuple[int, int]]] = {}
+        for output_index, index in enumerate(indices):
+            source_index, local_index = self._source_index(index)
+            grouped.setdefault(source_index, []).append((output_index, local_index))
+        pieces = []
+        for source_index, rows in grouped.items():
+            dataset = self.datasets[source_index]
+            local_indices = [row[1] for row in rows]
+            if hasattr(dataset, "collate_indices"):
+                batch = dataset.collate_indices(local_indices)
+                batch.decision_ids = tuple(
+                    f"dataset-{source_index}:{identifier}"
+                    for identifier in batch.decision_ids
+                )
+            else:
+                from .replay import collate_examples
+
+                examples = []
+                for index in local_indices:
+                    example = dataset[index]
+                    examples.append(
+                        TrainingExampleV3(
+                            decision_id=f"dataset-{source_index}:{example.decision_id}",
+                            observation=example.observation,
+                            legal_actions=example.legal_actions,
+                            policy=example.policy,
+                            value=example.value,
+                            forced_win_distance=example.forced_win_distance,
+                        )
+                    )
+                batch = collate_examples(examples, self.build_vocabulary())
+            pieces.append((rows, batch))
+        ordered = sorted(pieces, key=lambda piece: piece[0][0][0])
+        merged = _merge_training_batches([piece[1] for piece in ordered])
+        current_order = [position for piece in ordered for position, _ in piece[0]]
+        restore = [0] * len(current_order)
+        for slot, position in enumerate(current_order):
+            restore[position] = slot
+        from .pretensor import _select_training_batch
+
+        import torch
+
+        return _select_training_batch(merged, torch.tensor(restore, dtype=torch.long))
+
+    def action_count(self, index: int) -> int:
+        source_index, local_index = self._source_index(index)
+        dataset = self.datasets[source_index]
+        if hasattr(dataset, "action_count"):
+            return dataset.action_count(local_index)
+        return len(dataset[local_index].legal_actions["actions"])
+
+    @property
+    def sampler_group_sizes(self) -> tuple[int, ...]:
+        return self._sampler_group_sizes
+
+    @property
+    def vocabulary_tokens(self) -> frozenset[str]:
+        return frozenset(
+            token
+            for dataset in self.datasets
+            for token in dataset.vocabulary_tokens
+        )
+
+    def build_vocabulary(self) -> V3Vocabulary:
+        return V3Vocabulary.from_tokens(self.vocabulary_tokens)
+
+    def clear_cache(self) -> None:
+        for dataset in self.datasets:
+            dataset.clear_cache()
+
+    @classmethod
+    def from_config(cls, path: str | Path) -> "ReplayConcatV3":
+        config_path = Path(path).resolve()
+        raw = config_path.read_bytes()
+        payload = json.loads(raw)
+        if not isinstance(payload, dict) or set(payload) != {
+            "concat_schema_id",
+            "datasets",
+        }:
+            raise SchemaError("concat config fields do not match the V3 contract")
+        if payload["concat_schema_id"] != CONCAT_SCHEMA_ID:
+            raise SchemaError("unsupported concat config schema")
+        paths = payload["datasets"]
+        if not isinstance(paths, list) or not paths:
+            raise SchemaError("concat config must list datasets")
+        datasets = [
+            load_training_dataset(_resolve_config_path(config_path, item))
+            for item in paths
+        ]
+        return cls(
+            datasets,
+            config_path=str(config_path),
+            config_sha256=hashlib.sha256(raw).hexdigest(),
+        )
+
+    @classmethod
+    def from_identity(cls, payload: Mapping[str, Any]) -> "ReplayConcatV3":
+        if payload.get("identity_kind") != "concat_v3":
+            raise SchemaError("checkpoint does not contain a concat identity")
+        datasets = [load_dataset_from_identity(item) for item in payload["datasets"]]
+        concat = cls(
+            datasets,
+            config_path=str(payload["manifest_path"]),
+            config_sha256=str(payload["manifest_sha256"]),
+        )
+        if concat.identity.to_json() != dict(payload):
+            raise RuntimeError("checkpoint concat provenance no longer matches sources")
+        return concat
 
 
 class ReplayMixtureV3(Sequence[TrainingExampleV3]):
@@ -317,6 +549,18 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
         for dataset in self.datasets.values():
             dataset.clear_cache()
 
+    def action_count(self, index: int) -> int:
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError(index)
+        entry = self.entries[index]
+        dataset = self.datasets[entry.source_name]
+        if hasattr(dataset, "action_count"):
+            return dataset.action_count(entry.dataset_index)
+        example = dataset[entry.dataset_index]
+        return len(example.legal_actions["actions"])
+
     @classmethod
     def from_config(cls, path: str | Path) -> ReplayMixtureV3:
         config_path = Path(path).resolve()
@@ -399,7 +643,9 @@ class ReplayMixtureV3(Sequence[TrainingExampleV3]):
         return mixture
 
 
-def load_training_dataset(path: str | Path) -> ReplayDatasetV3 | ReplayMixtureV3:
+def load_training_dataset(
+    path: str | Path,
+) -> ReplayDatasetV3 | ReplayMixtureV3 | ReplayConcatV3:
     candidate = Path(path).resolve()
     try:
         payload = json.loads(candidate.read_bytes())
@@ -412,6 +658,11 @@ def load_training_dataset(path: str | Path) -> ReplayDatasetV3 | ReplayMixtureV3
         return ReplayMixtureV3.from_config(candidate)
     if (
         isinstance(payload, dict)
+        and payload.get("concat_schema_id") == CONCAT_SCHEMA_ID
+    ):
+        return ReplayConcatV3.from_config(candidate)
+    if (
+        isinstance(payload, dict)
         and payload.get("artifact_schema_id") == "augmentia.pretensor-manifest.v3.1"
     ):
         from .pretensor import PretensorizedReplayDatasetV3
@@ -422,7 +673,7 @@ def load_training_dataset(path: str | Path) -> ReplayDatasetV3 | ReplayMixtureV3
 
 def load_dataset_from_identity(
     payload: Mapping[str, Any],
-) -> ReplayDatasetV3 | ReplayMixtureV3:
+) -> ReplayDatasetV3 | ReplayMixtureV3 | ReplayConcatV3:
     if payload.get("identity_kind") == "pretensorized_v3":
         from .pretensor import PretensorizedReplayDatasetV3
 
@@ -434,6 +685,8 @@ def load_dataset_from_identity(
         return dataset
     if payload.get("identity_kind") == "mixture_v3":
         return ReplayMixtureV3.from_identity(payload)
+    if payload.get("identity_kind") == "concat_v3":
+        return ReplayConcatV3.from_identity(payload)
     dataset = ReplayDatasetV3(payload["manifest_path"])
     if dataset.identity.to_json() != dict(payload):
         raise RuntimeError(

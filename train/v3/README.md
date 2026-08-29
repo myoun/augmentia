@@ -13,7 +13,7 @@ cargo run -p augment-cli --bin export_v3_fixtures
 Run Python parity tests from `train`:
 
 ```powershell
-uv run python -m unittest discover -s v3 -p "test_*.py"
+uv run python -m unittest discover -s . -p "test_*.py"
 ```
 
 The Rust workspace test compares the checked-in bytes with a freshly generated suite. Any change
