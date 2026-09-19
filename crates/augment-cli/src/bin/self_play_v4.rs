@@ -179,15 +179,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(output_dir.join("games"))?;
 
     let ruleset_path = format!("rulesets/{RULESET_ID}/manifest.json");
-    let sealed_ruleset_hash = git_blob_sha256(&repo_root, SOURCE_SEAL_COMMIT, &ruleset_path)?;
-    let head_ruleset_hash = git_blob_sha256(&repo_root, "HEAD", &ruleset_path)?;
-    if head_ruleset_hash != sealed_ruleset_hash {
-        return Err(format!(
-            "HEAD ruleset manifest differs from source seal: head={head_ruleset_hash} sealed={sealed_ruleset_hash}"
-        )
-        .into());
+    let sealed_ruleset = git_blob(&repo_root, SOURCE_SEAL_COMMIT, &ruleset_path)?;
+    let head_ruleset = git_blob(&repo_root, "HEAD", &ruleset_path)?;
+    if head_ruleset != sealed_ruleset {
+        return Err("HEAD ruleset manifest content differs from source seal".into());
     }
-    let ruleset_hash = sealed_ruleset_hash;
+    let ruleset_hash = sealed_ruleset_manifest_sha256(&repo_root)?;
     let engine = Arc::new(Engine::bundled_20260915()?);
     if engine.ruleset().id != RULESET_ID {
         return Err(format!(
@@ -606,11 +603,11 @@ fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn git_blob_sha256(
+fn git_blob(
     repo_root: &Path,
     revision: &str,
     relative_path: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let spec = format!("{revision}:{relative_path}");
     let output = Command::new("git")
         .current_dir(repo_root)
@@ -619,7 +616,35 @@ fn git_blob_sha256(
     if !output.status.success() {
         return Err(format!("failed to read Git blob {spec}").into());
     }
-    Ok(sha256_bytes(&output.stdout))
+    Ok(output.stdout)
+}
+
+fn sealed_ruleset_manifest_sha256(repo_root: &Path) -> Result<String, Box<dyn std::error::Error>> {
+    let bytes = git_blob(
+        repo_root,
+        SOURCE_SEAL_COMMIT,
+        "artifacts/v4-training-base-20260919/seal.json",
+    )?;
+    let seal: Value = serde_json::from_slice(&bytes)?;
+    if seal.get("tag").and_then(Value::as_str) != Some(SOURCE_SEAL_TAG)
+        || seal.get("commit").and_then(Value::as_str) != Some(SOURCE_SEAL_COMMIT)
+        || seal
+            .get("ruleset")
+            .and_then(|value| value.get("id"))
+            .and_then(Value::as_str)
+            != Some(RULESET_ID)
+    {
+        return Err("source seal identity is inconsistent".into());
+    }
+    let hash = seal
+        .get("ruleset")
+        .and_then(|value| value.get("manifest_sha256"))
+        .and_then(Value::as_str)
+        .ok_or("source seal ruleset manifest SHA-256 is missing")?;
+    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("source seal ruleset manifest SHA-256 is invalid".into());
+    }
+    Ok(hash.to_owned())
 }
 
 fn sha256_bytes(bytes: &[u8]) -> String {
