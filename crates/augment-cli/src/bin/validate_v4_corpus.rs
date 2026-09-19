@@ -107,15 +107,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let manifest: RunManifestV4 = serde_json::from_slice(&manifest_bytes)?;
     validate_manifest_identity(&manifest)?;
 
-    let ruleset_path = find_repo_root(&manifest_path)?
-        .join("rulesets")
-        .join(RULESET_ID)
-        .join("manifest.json");
-    let actual_ruleset_hash = sha256_file(&ruleset_path)?;
-    if actual_ruleset_hash != manifest.ruleset.manifest_sha256 {
+    let repo_root = find_repo_root(&manifest_path)?;
+    let ruleset_path = format!("rulesets/{RULESET_ID}/manifest.json");
+    let sealed_ruleset_hash = git_blob_sha256(&repo_root, SOURCE_SEAL_COMMIT, &ruleset_path)?;
+    let head_ruleset_hash = git_blob_sha256(&repo_root, "HEAD", &ruleset_path)?;
+    if head_ruleset_hash != sealed_ruleset_hash
+        || manifest.ruleset.manifest_sha256 != sealed_ruleset_hash
+    {
         return Err(format!(
-            "ruleset manifest SHA-256 mismatch: corpus={} current={actual_ruleset_hash}",
-            manifest.ruleset.manifest_sha256
+            "ruleset manifest SHA-256 mismatch: corpus={} head={} sealed={}",
+            manifest.ruleset.manifest_sha256, head_ruleset_hash, sealed_ruleset_hash
         )
         .into());
     }
@@ -455,8 +456,20 @@ fn validate_relative_path(path: &str) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
-    Ok(sha256_bytes(&std::fs::read(path)?))
+fn git_blob_sha256(
+    repo_root: &Path,
+    revision: &str,
+    relative_path: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let spec = format!("{revision}:{relative_path}");
+    let output = std::process::Command::new("git")
+        .current_dir(repo_root)
+        .args(["show", &spec])
+        .output()?;
+    if !output.status.success() {
+        return Err(format!("failed to read Git blob {spec}").into());
+    }
+    Ok(sha256_bytes(&output.stdout))
 }
 
 fn sha256_bytes(bytes: &[u8]) -> String {

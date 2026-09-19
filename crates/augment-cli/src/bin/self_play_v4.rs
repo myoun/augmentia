@@ -178,11 +178,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     refuse_overwrite(&output_dir)?;
     std::fs::create_dir_all(output_dir.join("games"))?;
 
-    let ruleset_manifest = repo_root
-        .join("rulesets")
-        .join(RULESET_ID)
-        .join("manifest.json");
-    let ruleset_hash = sha256_file(&ruleset_manifest)?;
+    let ruleset_path = format!("rulesets/{RULESET_ID}/manifest.json");
+    let sealed_ruleset_hash = git_blob_sha256(&repo_root, SOURCE_SEAL_COMMIT, &ruleset_path)?;
+    let head_ruleset_hash = git_blob_sha256(&repo_root, "HEAD", &ruleset_path)?;
+    if head_ruleset_hash != sealed_ruleset_hash {
+        return Err(format!(
+            "HEAD ruleset manifest differs from source seal: head={head_ruleset_hash} sealed={sealed_ruleset_hash}"
+        )
+        .into());
+    }
+    let ruleset_hash = sealed_ruleset_hash;
     let engine = Arc::new(Engine::bundled_20260915()?);
     if engine.ruleset().id != RULESET_ID {
         return Err(format!(
@@ -601,9 +606,20 @@ fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
-    let bytes = std::fs::read(path)?;
-    Ok(sha256_bytes(&bytes))
+fn git_blob_sha256(
+    repo_root: &Path,
+    revision: &str,
+    relative_path: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let spec = format!("{revision}:{relative_path}");
+    let output = Command::new("git")
+        .current_dir(repo_root)
+        .args(["show", &spec])
+        .output()?;
+    if !output.status.success() {
+        return Err(format!("failed to read Git blob {spec}").into());
+    }
+    Ok(sha256_bytes(&output.stdout))
 }
 
 fn sha256_bytes(bytes: &[u8]) -> String {
