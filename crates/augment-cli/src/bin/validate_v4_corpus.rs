@@ -430,18 +430,37 @@ fn validate_replay(game: &GameRecordV4, engine: &Engine) -> Result<(), Box<dyn s
     Ok(())
 }
 
-fn find_repo_root(start: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let mut current = start
-        .canonicalize()?
-        .parent()
-        .ok_or("manifest has no parent directory")?
-        .to_path_buf();
+fn find_repo_root(manifest_path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let mut candidates = Vec::new();
+    if let Ok(current_dir) = std::env::current_dir() {
+        candidates.push(current_dir);
+    }
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(parent) = current_exe.parent() {
+            candidates.push(parent.to_path_buf());
+        }
+    }
+    if let Ok(canonical_manifest) = manifest_path.canonicalize() {
+        if let Some(parent) = canonical_manifest.parent() {
+            candidates.push(parent.to_path_buf());
+        }
+    }
+
+    for candidate in candidates {
+        if let Some(root) = find_repo_root_from(candidate) {
+            return Ok(root);
+        }
+    }
+    Err("could not locate repository root from current directory, executable, or manifest".into())
+}
+
+fn find_repo_root_from(mut current: PathBuf) -> Option<PathBuf> {
     loop {
         if current.join("Cargo.toml").exists() && current.join("rulesets").exists() {
-            return Ok(current);
+            return Some(current);
         }
         if !current.pop() {
-            return Err("could not locate repository root".into());
+            return None;
         }
     }
 }
