@@ -24,6 +24,8 @@ use std::time::Instant;
 const RULESET_ID: &str = "augment_chess_20260915";
 const SOURCE_SEAL_TAG: &str = "ai/v4-training-base-20260919";
 const SOURCE_SEAL_COMMIT: &str = "f4e64c35f5adcb7f361ed845fb55eb4d123b370b";
+const RULESET_MANIFEST_SHA256: &str =
+    "7b2736f8e9f727db818d8c8f4aaf7742a23a717e2f31d749ea293a3dfc051b13";
 const RUN_MANIFEST_SCHEMA_ID: &str = "augmentia.self-play-v4-run.v1";
 
 #[derive(Clone, Debug, Serialize)]
@@ -184,7 +186,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if head_ruleset != sealed_ruleset {
         return Err("HEAD ruleset manifest content differs from source seal".into());
     }
-    let ruleset_hash = sealed_ruleset_manifest_sha256(&repo_root)?;
+    if crlf_normalized_sha256(&sealed_ruleset) != RULESET_MANIFEST_SHA256 {
+        return Err(
+            "source-seal ruleset manifest hash no longer matches the sealed identity".into(),
+        );
+    }
+    let ruleset_hash = RULESET_MANIFEST_SHA256.to_owned();
     let engine = Arc::new(Engine::bundled_20260915()?);
     if engine.ruleset().id != RULESET_ID {
         return Err(format!(
@@ -619,32 +626,22 @@ fn git_blob(
     Ok(output.stdout)
 }
 
-fn sealed_ruleset_manifest_sha256(repo_root: &Path) -> Result<String, Box<dyn std::error::Error>> {
-    let bytes = git_blob(
-        repo_root,
-        SOURCE_SEAL_COMMIT,
-        "artifacts/v4-training-base-20260919/seal.json",
-    )?;
-    let seal: Value = serde_json::from_slice(&bytes)?;
-    if seal.get("tag").and_then(Value::as_str) != Some(SOURCE_SEAL_TAG)
-        || seal.get("commit").and_then(Value::as_str) != Some(SOURCE_SEAL_COMMIT)
-        || seal
-            .get("ruleset")
-            .and_then(|value| value.get("id"))
-            .and_then(Value::as_str)
-            != Some(RULESET_ID)
-    {
-        return Err("source seal identity is inconsistent".into());
+fn crlf_normalized_sha256(bytes: &[u8]) -> String {
+    let mut normalized = Vec::with_capacity(bytes.len() + 128);
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'\r' && bytes.get(index + 1) == Some(&b'\n') {
+            normalized.extend_from_slice(b"\r\n");
+            index += 2;
+        } else if bytes[index] == b'\n' {
+            normalized.extend_from_slice(b"\r\n");
+            index += 1;
+        } else {
+            normalized.push(bytes[index]);
+            index += 1;
+        }
     }
-    let hash = seal
-        .get("ruleset")
-        .and_then(|value| value.get("manifest_sha256"))
-        .and_then(Value::as_str)
-        .ok_or("source seal ruleset manifest SHA-256 is missing")?;
-    if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err("source seal ruleset manifest SHA-256 is invalid".into());
-    }
-    Ok(hash.to_owned())
+    sha256_bytes(&normalized)
 }
 
 fn sha256_bytes(bytes: &[u8]) -> String {
