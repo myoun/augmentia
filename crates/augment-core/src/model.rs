@@ -167,6 +167,16 @@ pub enum PieceKind {
     Siren,
     Trickster,
     Undead,
+    Clockwork,
+    Parrot,
+    Paladin,
+    Princess,
+    Octopus,
+    Hedgehog,
+    Campfire,
+    Thief,
+    Brutus,
+    BigBishop,
 }
 
 impl PieceKind {
@@ -230,6 +240,16 @@ impl PieceKind {
             Self::Siren => 56,
             Self::Trickster => 57,
             Self::Undead => 58,
+            Self::Clockwork => 59,
+            Self::Parrot => 60,
+            Self::Paladin => 61,
+            Self::Princess => 62,
+            Self::Octopus => 63,
+            Self::Hedgehog => 64,
+            Self::Campfire => 65,
+            Self::Thief => 66,
+            Self::Brutus => 67,
+            Self::BigBishop => 68,
         }
     }
 

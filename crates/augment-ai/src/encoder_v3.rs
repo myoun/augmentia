@@ -12,7 +12,8 @@ use augment_core::{
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 116;
+// Preserve legacy planes0..117; kinds60..68 append self/opponent pairs at118..135.
+pub const OBSERVATION_V3_SPATIAL_PLANES: usize = 136;
 pub const OBSERVATION_V3_SPATIAL_SIZE: usize = OBSERVATION_V3_SPATIAL_PLANES * 64;
 pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
 
@@ -20,7 +21,7 @@ pub const OBSERVATION_V3_GLOBAL_FEATURES: usize = 32;
 /// card catalog data. Keep this list in Rust, next to the encoder that owns the
 /// semantics, so ONNX export does not infer runtime coverage from a few sample
 /// positions.
-pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 78] = [
+pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 80] = [
     "age_shared_turns",
     "anchor",
     "bishop",
@@ -40,6 +41,7 @@ pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 78] = [
     "count",
     "draw",
     "effect",
+    "effective",
     "elapsed_turns",
     "end",
     "equal_stars_after_deathmatch",
@@ -67,6 +69,7 @@ pub const OBSERVATION_V3_REQUIRED_TEXT_TOKENS: [&str; 78] = [
     "next_in_shared_turns",
     "no_legal_actions",
     "nonce",
+    "occupation",
     "ongoing",
     "opening",
     "origin",
@@ -629,11 +632,13 @@ fn encode_status(status: &GameStatus, perspective: Player) -> StatusV3 {
 fn encode_spatial(pieces: &[BoardPieceV3]) -> Vec<f32> {
     let mut spatial = vec![0.0; OBSERVATION_V3_SPATIAL_SIZE];
     for piece in pieces {
-        let owner_offset = match piece.owner {
-            RelativePlayerV3::SelfPlayer => 0,
-            RelativePlayerV3::Opponent => 58,
+        let plane = match (piece.kind_code, piece.owner) {
+            (59..=68, RelativePlayerV3::SelfPlayer) => 116 + 2 * usize::from(piece.kind_code - 59),
+            (59..=68, RelativePlayerV3::Opponent) => 117 + 2 * usize::from(piece.kind_code - 59),
+            (1..=58, RelativePlayerV3::SelfPlayer) => usize::from(piece.kind_code - 1),
+            (1..=58, RelativePlayerV3::Opponent) => 58 + usize::from(piece.kind_code - 1),
+            _ => panic!("unreviewed spatial piece kind {}", piece.kind_code),
         };
-        let plane = owner_offset + usize::from(piece.kind_code - 1);
         spatial[plane * 64 + usize::from(piece.square)] = 1.0;
     }
     spatial
@@ -1637,6 +1642,188 @@ fn encode_runtime_fields(
         })
     );
 
+    // Append-only contract: these fields were added after the original 169.
+    push!(
+        "capture_the_flag",
+        match &runtime.capture_the_flag {
+            None => RuntimeValueV3::None,
+            Some(flags) => pair_with_player(&flags.flags, state.turn, |owner, square| {
+                record(vec![
+                    (
+                        "owner",
+                        RuntimeValueV3::Player(relative_player(owner, state.turn)),
+                    ),
+                    (
+                        "square",
+                        RuntimeValueV3::Square(square_value(*square, state.turn)),
+                    ),
+                    (
+                        "occupation",
+                        match flags.occupations[owner.index()] {
+                            None => RuntimeValueV3::None,
+                            Some(occupation) => record(vec![
+                                (
+                                    "piece",
+                                    RuntimeValueV3::Piece(ids.piece(occupation.piece_id)),
+                                ),
+                                // CTF resolves only when owner turns are strictly greater than
+                                // this threshold. Keep overdue (-1) distinct from due (0).
+                                (
+                                    "trigger_in_turns",
+                                    RuntimeValueV3::Signed(
+                                        i64::from(occupation.after_owner_turn)
+                                            - i64::from(state.turns_taken[owner.index()]),
+                                    ),
+                                ),
+                            ]),
+                        },
+                    ),
+                ])
+            }),
+        }
+    );
+    push!(
+        "pending_lobsters",
+        RuntimeValueV3::List(
+            runtime
+                .pending_lobsters
+                .iter()
+                .map(|pending| record(vec![
+                    (
+                        "owner",
+                        RuntimeValueV3::Player(relative_player(pending.owner, state.turn))
+                    ),
+                    (
+                        "square",
+                        RuntimeValueV3::Square(square_value(pending.square, state.turn))
+                    ),
+                    (
+                        "remaining_ply",
+                        RuntimeValueV3::Signed(i64::from(pending.due_ply) - i64::from(state.ply),)
+                    ),
+                ]))
+                .collect(),
+        )
+    );
+    // Queue order is meaningful: the last eligible portal replaces earlier ones.
+    push!(
+        "pending_portals",
+        RuntimeValueV3::List(
+            runtime
+                .pending_portals
+                .iter()
+                .map(|pending| record(vec![
+                    (
+                        "owner",
+                        RuntimeValueV3::Player(relative_player(pending.owner, state.turn))
+                    ),
+                    (
+                        "squares",
+                        RuntimeValueV3::List(
+                            pending
+                                .squares
+                                .iter()
+                                .map(|square| {
+                                    RuntimeValueV3::Square(square_value(*square, state.turn))
+                                })
+                                .collect()
+                        )
+                    ),
+                    (
+                        "trigger_in_turns",
+                        RuntimeValueV3::Signed(
+                            i64::from(pending.due_turn)
+                                - i64::from(state.turns_taken[pending.owner.index()]),
+                        )
+                    ),
+                ]))
+                .collect(),
+        )
+    );
+
+    push!("majesty", bool_pair(runtime.majesty, state.turn));
+    push!("proficiency", bool_pair(runtime.proficiency, state.turn));
+    push!("killer_king", bool_pair(runtime.killer_king, state.turn));
+    push!("disassembly", bool_pair(runtime.disassembly, state.turn));
+    push!("overtake", bool_pair(runtime.overtake, state.turn));
+    push!("reversal", bool_pair(runtime.reversal, state.turn));
+    push!(
+        "outpost_protected_piece_ids",
+        piece_set(&runtime.outpost_protected_piece_ids, ids)
+    );
+    push!("symmetry", bool_pair(runtime.symmetry, state.turn));
+    push!("mutation", bool_pair(runtime.mutation, state.turn));
+    push!(
+        "long_en_passant",
+        bool_pair(runtime.long_en_passant, state.turn)
+    );
+    push!(
+        "parrot_memory",
+        pair_with(&runtime.parrot_memory, state.turn, |memory| {
+            match memory {
+                None => RuntimeValueV3::None,
+                Some(memory) => record(vec![
+                    (
+                        "source",
+                        RuntimeValueV3::PieceKind(memory.source.stable_code()),
+                    ),
+                    (
+                        "effective",
+                        RuntimeValueV3::PieceKind(memory.effective.stable_code()),
+                    ),
+                ]),
+            }
+        })
+    );
+    push!(
+        "nullification_piece_ids",
+        piece_set(&runtime.nullification_piece_ids, ids)
+    );
+    push!("vanguard", bool_pair(runtime.vanguard, state.turn));
+    push!("infiltration", bool_pair(runtime.infiltration, state.turn));
+    push!("resolve", bool_pair(runtime.resolve, state.turn));
+    push!(
+        "resolve_ready",
+        bool_pair(runtime.resolve_ready, state.turn)
+    );
+    push!(
+        "resolve_move_credit",
+        bool_pair(runtime.resolve_move_credit, state.turn)
+    );
+    push!(
+        "locust_swarm_piece_ids",
+        piece_set(&runtime.locust_swarm_piece_ids, ids)
+    );
+    push!(
+        "metalized_piece_ids",
+        piece_set(&runtime.metalized_piece_ids, ids)
+    );
+    push!(
+        "metal_cooldowns",
+        piece_map(&runtime.metal_cooldowns, ids, |_, remaining, _| {
+            RuntimeValueV3::Unsigned(u64::from(*remaining))
+        })
+    );
+    push!(
+        "recurrence_piece_ids",
+        piece_set(&runtime.recurrence_piece_ids, ids)
+    );
+    push!(
+        "pending_recurrences",
+        RuntimeValueV3::List(
+            runtime
+                .pending_recurrences
+                .iter()
+                .map(|pending| {
+                    record(vec![(
+                        "piece",
+                        runtime_piece_value(&pending.piece, ids, state.turn),
+                    )])
+                })
+                .collect(),
+        )
+    );
+
     assert_eq!(fields.len(), CARD_RUNTIME_SOURCE_FIELDS.len());
     fields
 }
@@ -2309,6 +2496,680 @@ mod tests {
     }
 
     #[test]
+    fn proficiency_is_public_canonical_and_distinguishes_both_owners() {
+        let mut signatures = BTreeSet::new();
+        for flags in [[false, false], [true, false], [false, true], [true, true]] {
+            let mut white = september_state(Player::White, 3, 100);
+            white.card_runtime.proficiency = flags;
+            let mut black = september_state(Player::Black, 900, 700);
+            black.card_runtime.proficiency = [flags[1], flags[0]];
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(
+            signatures.len(),
+            4,
+            "both public owner flags must survive encoding"
+        );
+    }
+
+    #[test]
+    fn killer_king_is_public_canonical_and_distinguishes_both_owners() {
+        let mut signatures = BTreeSet::new();
+        for flags in [[false, false], [true, false], [false, true], [true, true]] {
+            let mut white = september_state(Player::White, 3, 100);
+            white.card_runtime.killer_king = flags;
+            let mut black = september_state(Player::Black, 900, 700);
+            black.card_runtime.killer_king = [flags[1], flags[0]];
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(
+            signatures.len(),
+            4,
+            "both public owner flags must survive encoding"
+        );
+    }
+
+    #[test]
+    fn disassembly_field_176_survives_observation_json_roundtrip() {
+        let mut state = september_state(Player::Black, 81, 200);
+        state.card_runtime.disassembly = [true, false];
+        let observation = encode_observation_v3(&state);
+        assert_eq!(observation.runtime.len(), 194);
+        assert_eq!(observation.runtime[175].field_id, 176);
+        assert_eq!(observation.runtime[175].field_name(), Some("disassembly"));
+        assert_eq!(
+            observation.runtime[175].value,
+            RuntimeValueV3::List(vec![
+                RuntimeValueV3::Bool(false),
+                RuntimeValueV3::Bool(true),
+            ])
+        );
+        let restored: ObservationV3 =
+            serde_json::from_slice(&serde_json::to_vec(&observation).unwrap()).unwrap();
+        assert_eq!(observation, restored);
+    }
+
+    #[test]
+    fn overtake_field_177_survives_observation_json_roundtrip() {
+        let mut state = september_state(Player::White, 91, 300);
+        state.card_runtime.overtake = [false, true];
+        let observation = encode_observation_v3(&state);
+        assert_eq!(observation.runtime.len(), 194);
+        assert_eq!(observation.runtime[176].field_id, 177);
+        assert_eq!(observation.runtime[176].field_name(), Some("overtake"));
+        assert_eq!(
+            observation.runtime[176].value,
+            RuntimeValueV3::List(vec![
+                RuntimeValueV3::Bool(false),
+                RuntimeValueV3::Bool(true),
+            ])
+        );
+        let restored: ObservationV3 =
+            serde_json::from_slice(&serde_json::to_vec(&observation).unwrap()).unwrap();
+        assert_eq!(observation, restored);
+    }
+
+    #[test]
+    fn disassembly_is_public_canonical_and_distinguishes_both_owners() {
+        let mut signatures = BTreeSet::new();
+        for flags in [[false, false], [true, false], [false, true], [true, true]] {
+            let mut white = september_state(Player::White, 3, 100);
+            white.card_runtime.disassembly = flags;
+            let mut black = september_state(Player::Black, 900, 700);
+            black.card_runtime.disassembly = [flags[1], flags[0]];
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(
+            signatures.len(),
+            4,
+            "both public owner flags must survive encoding"
+        );
+    }
+
+    #[test]
+    fn overtake_is_public_canonical_and_distinguishes_both_owners() {
+        let mut signatures = BTreeSet::new();
+        for flags in [[false, false], [true, false], [false, true], [true, true]] {
+            let mut white = september_state(Player::White, 3, 100);
+            white.card_runtime.overtake = flags;
+            let mut black = september_state(Player::Black, 900, 700);
+            black.card_runtime.overtake = [flags[1], flags[0]];
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(
+            signatures.len(),
+            4,
+            "both public owner flags must survive encoding"
+        );
+    }
+
+    #[test]
+    fn latest_public_flags_outpost_and_clockwork_are_canonical() {
+        for flag in 0..4 {
+            let mut signatures = BTreeSet::new();
+            for values in [[false, false], [false, true], [true, false], [true, true]] {
+                let mut white = september_state(Player::White, 1, 100);
+                let mut black = september_state(Player::Black, 999, 800);
+                let reversed = [values[1], values[0]];
+                match flag {
+                    0 => {
+                        white.card_runtime.reversal = values;
+                        black.card_runtime.reversal = reversed;
+                    }
+                    1 => {
+                        white.card_runtime.symmetry = values;
+                        black.card_runtime.symmetry = reversed;
+                    }
+                    2 => {
+                        white.card_runtime.mutation = values;
+                        black.card_runtime.mutation = reversed;
+                    }
+                    _ => {
+                        white.card_runtime.long_en_passant = values;
+                        black.card_runtime.long_en_passant = reversed;
+                    }
+                }
+                assert_eq!(public_bytes(&white), public_bytes(&black));
+                signatures.insert(public_bytes(&white));
+            }
+            assert_eq!(signatures.len(), 4, "flag {flag}");
+        }
+        let mut signatures = BTreeSet::new();
+        for protected in [vec![], vec![0], vec![1], vec![0, 1]] {
+            let mut white = september_state(Player::White, 1, 100);
+            let mut black = september_state(Player::Black, 999, 800);
+            for slot in protected {
+                white
+                    .card_runtime
+                    .outpost_protected_piece_ids
+                    .insert([110, 120][slot]);
+                black
+                    .card_runtime
+                    .outpost_protected_piece_ids
+                    .insert([810, 820][slot]);
+            }
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(signatures.len(), 4);
+        // Reversing raw IDs must not change the sorted canonical set of board references.
+        let mut white = september_state(Player::White, 1, 100);
+        white
+            .card_runtime
+            .outpost_protected_piece_ids
+            .extend([110, 120]);
+        let mut permuted = white.clone();
+        for (square, mut piece) in white.board.iter() {
+            piece.id = if piece.id == 110 { 990 } else { 2 };
+            permuted.board.set(square, Some(piece));
+        }
+        // Other public runtime references in this fixture must follow the same rename.
+        let flags = permuted.card_runtime.capture_the_flag.as_mut().unwrap();
+        for occupation in flags.occupations.iter_mut().flatten() {
+            occupation.piece_id = if occupation.piece_id == 110 { 990 } else { 2 };
+        }
+        permuted.card_runtime.outpost_protected_piece_ids = [990, 2].into_iter().collect();
+        permuted.card_runtime.piece_origins = white
+            .card_runtime
+            .piece_origins
+            .iter()
+            .map(|(id, square)| (if *id == 110 { 990 } else { 2 }, *square))
+            .collect();
+        assert_eq!(public_bytes(&white), public_bytes(&permuted));
+        for owner in [Player::White, Player::Black] {
+            let mut white_board = Board::empty();
+            let mut black_board = Board::empty();
+            white_board.set(
+                "c4".parse().unwrap(),
+                Some(Piece::new(owner, PieceKind::Clockwork).with_id(3)),
+            );
+            black_board.set(
+                "c5".parse().unwrap(),
+                Some(Piece::new(owner.opponent(), PieceKind::Clockwork).with_id(900)),
+            );
+            assert_eq!(
+                public_bytes(&playing_state(white_board, Player::White, 7)),
+                public_bytes(&playing_state(black_board, Player::Black, 800))
+            );
+        }
+    }
+
+    #[test]
+    fn clockwork_planes_append_without_shifting_existing_opponent_kinds() {
+        for owner in [Player::White, Player::Black] {
+            for (code, kind) in PIECE_KIND_VOCABULARY {
+                let mut board = Board::empty();
+                board.set(
+                    "d4".parse().unwrap(),
+                    Some(Piece::new(owner, kind).with_id(90)),
+                );
+                let observation = encode_observation_v3(&playing_state(board, Player::White, 7));
+                let plane = if code >= 59 {
+                    116 + 2 * usize::from(code - 59) + owner.index()
+                } else {
+                    owner.index() * 58 + usize::from(code - 1)
+                };
+                assert_eq!(
+                    observation.spatial[plane * 64 + 27],
+                    1.0,
+                    "{owner:?} {kind:?}"
+                );
+                assert_eq!(
+                    observation
+                        .spatial
+                        .iter()
+                        .filter(|value| **value != 0.0)
+                        .count(),
+                    1
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn parrot_memory_uses_piece_kinds_not_piece_refs_and_roundtrips() {
+        let mut state = september_state(Player::Black, 73, 100);
+        state.card_runtime.parrot_memory = [
+            None,
+            Some(augment_core::ParrotMemoryStatus {
+                source: PieceKind::Trickster,
+                effective: PieceKind::Campfire,
+            }),
+        ];
+        let observation = encode_observation_v3(&state);
+        assert_eq!(observation.runtime[182].field_id, 183);
+        assert_eq!(observation.runtime[182].field_name(), Some("parrot_memory"));
+        assert_eq!(
+            observation.runtime[182].value,
+            RuntimeValueV3::List(vec![
+                record(vec![
+                    (
+                        "source",
+                        RuntimeValueV3::PieceKind(PieceKind::Trickster.stable_code())
+                    ),
+                    ("effective", RuntimeValueV3::PieceKind(65)),
+                ]),
+                RuntimeValueV3::None,
+            ])
+        );
+        assert_eq!(observation.piece_slot_count, 2);
+        let restored: ObservationV3 =
+            serde_json::from_slice(&serde_json::to_vec(&observation).unwrap()).unwrap();
+        assert_eq!(restored, observation);
+        assert!(observation_v3_runtime_text_tokens().contains(&"effective"));
+    }
+
+    #[test]
+    fn parrot_memory_public_source_effective_and_owner_do_not_collapse() {
+        let mut signatures = BTreeSet::new();
+        let choices = [
+            None,
+            Some(augment_core::ParrotMemoryStatus {
+                source: PieceKind::Rook,
+                effective: PieceKind::Bishop,
+            }),
+            Some(augment_core::ParrotMemoryStatus {
+                source: PieceKind::Queen,
+                effective: PieceKind::Bishop,
+            }),
+            Some(augment_core::ParrotMemoryStatus {
+                source: PieceKind::Rook,
+                effective: PieceKind::Knight,
+            }),
+        ];
+        for own in choices {
+            for opponent in choices {
+                let mut white = september_state(Player::White, 1, 100);
+                let mut black = september_state(Player::Black, 999, 800);
+                white.card_runtime.parrot_memory = [own, opponent];
+                black.card_runtime.parrot_memory = [opponent, own];
+                assert_eq!(public_bytes(&white), public_bytes(&black));
+                let observation = encode_observation_v3(&white);
+                assert_eq!(
+                    observation.piece_slot_count, 2,
+                    "owner memory must not create piece refs"
+                );
+                signatures.insert(public_bytes(&white));
+            }
+        }
+        assert_eq!(
+            signatures.len(),
+            16,
+            "every owner/source/effective/presence must survive"
+        );
+    }
+
+    #[test]
+    fn six_new_piece_kinds_have_distinct_appended_planes_and_canonical_json() {
+        let kinds = [
+            PieceKind::Parrot,
+            PieceKind::Paladin,
+            PieceKind::Princess,
+            PieceKind::Octopus,
+            PieceKind::Hedgehog,
+            PieceKind::Campfire,
+        ];
+        let mut seen_planes = BTreeSet::new();
+        for (index, kind) in kinds.into_iter().enumerate() {
+            assert_eq!(kind.stable_code(), 60 + index as u8);
+            for owner in [Player::White, Player::Black] {
+                let mut board = Board::empty();
+                board.set(
+                    "c4".parse().unwrap(),
+                    Some(Piece::new(owner, kind).with_id(91)),
+                );
+                let mut mirrored = Board::empty();
+                mirrored.set(
+                    "c5".parse().unwrap(),
+                    Some(Piece::new(owner.opponent(), kind).with_id(701)),
+                );
+                let observation = encode_observation_v3(&playing_state(board, Player::White, 1));
+                assert_eq!(
+                    observation,
+                    encode_observation_v3(&playing_state(mirrored, Player::Black, 999))
+                );
+                assert_eq!(observation.spatial_shape, [136, 8, 8]);
+                let plane = 118 + index * 2 + owner.index();
+                seen_planes.insert(plane);
+                assert_eq!(observation.spatial[plane * 64 + 26], 1.0);
+                assert_eq!(
+                    observation
+                        .spatial
+                        .iter()
+                        .filter(|value| **value != 0.0)
+                        .count(),
+                    1
+                );
+                assert!(
+                    observation.spatial[..118 * 64]
+                        .iter()
+                        .all(|value| *value == 0.0)
+                );
+                assert_eq!(observation.pieces[0].kind_code, 60 + index as u8);
+                let restored: ObservationV3 =
+                    serde_json::from_slice(&serde_json::to_vec(&observation).unwrap()).unwrap();
+                assert_eq!(restored, observation);
+            }
+        }
+        assert_eq!(seen_planes, (118..130).collect());
+    }
+
+    #[test]
+    fn latest_public_fields_and_clockwork_survive_roundtrip() {
+        let mut state = september_state(Player::White, 1, 100);
+        let original = public_bytes(&state);
+        for flag in 0..4 {
+            let mut changed = state.clone();
+            match flag {
+                0 => changed.card_runtime.reversal[0] = true,
+                1 => changed.card_runtime.symmetry[0] = true,
+                2 => changed.card_runtime.mutation[0] = true,
+                _ => changed.card_runtime.long_en_passant[0] = true,
+            }
+            assert_ne!(original, public_bytes(&changed), "flag {flag}");
+        }
+        state.card_runtime.outpost_protected_piece_ids.insert(110);
+        assert_ne!(original, public_bytes(&state));
+        state.board.set(
+            "c4".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Clockwork).with_id(300)),
+        );
+        state.board.set(
+            "f5".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::Clockwork).with_id(400)),
+        );
+        let observation = encode_observation_v3(&state);
+        assert_eq!(observation.spatial_shape, [136, 8, 8]);
+        assert_eq!(observation.spatial[116 * 64 + 26], 1.0);
+        assert_eq!(observation.spatial[117 * 64 + 37], 1.0);
+        assert_eq!(observation.runtime.len(), 194);
+        let restored: ObservationV3 =
+            serde_json::from_slice(&serde_json::to_vec(&observation).unwrap()).unwrap();
+        assert_eq!(restored, observation);
+    }
+
+    #[test]
+    fn majesty_is_public_canonical_and_distinguishes_both_owners() {
+        let mut signatures = BTreeSet::new();
+        for flags in [[false, false], [true, false], [false, true], [true, true]] {
+            let mut white = september_state(Player::White, 3, 100);
+            white.card_runtime.majesty = flags;
+            let mut black = september_state(Player::Black, 900, 700);
+            black.card_runtime.majesty = [flags[1], flags[0]];
+            assert_eq!(public_bytes(&white), public_bytes(&black));
+            signatures.insert(public_bytes(&white));
+        }
+        assert_eq!(
+            signatures.len(),
+            4,
+            "both public owner flags must survive encoding"
+        );
+    }
+
+    fn september_state(perspective: Player, seed: u64, id_offset: u32) -> GameState {
+        let square = |value: &str| canonical_square(value.parse().unwrap(), perspective);
+        let mut board = Board::empty();
+        board.set(
+            square("b2"),
+            Some(Piece::new(perspective, PieceKind::Pawn).with_id(id_offset + 10)),
+        );
+        board.set(
+            square("g7"),
+            Some(Piece::new(perspective.opponent(), PieceKind::Rook).with_id(id_offset + 20)),
+        );
+        let mut state = playing_state(board, perspective, seed);
+        state.ply = 23;
+        state.turns_taken[perspective.index()] = 11;
+        state.turns_taken[perspective.opponent().index()] = 8;
+        let mut flags = augment_core::CaptureTheFlagState {
+            flags: [square("c1"); 2],
+            occupations: [None, None],
+        };
+        flags.flags[perspective.opponent().index()] = square("f8");
+        flags.occupations[perspective.index()] = Some(augment_core::FlagOccupation {
+            piece_id: id_offset + 20,
+            after_owner_turn: 11,
+        });
+        flags.occupations[perspective.opponent().index()] = Some(augment_core::FlagOccupation {
+            piece_id: id_offset + 10,
+            after_owner_turn: 9,
+        });
+        state.card_runtime.capture_the_flag = Some(flags);
+        for (owner, cell, due_ply) in [(perspective, "c4", 25), (perspective.opponent(), "e5", 22)]
+        {
+            state
+                .card_runtime
+                .pending_lobsters
+                .push(augment_core::PendingLobster {
+                    owner,
+                    square: square(cell),
+                    due_ply,
+                });
+        }
+        for (owner, cells, due_turn) in [
+            (perspective, ["a3", "h4"], 12),
+            (perspective.opponent(), ["b4", "g5"], 7),
+        ] {
+            state
+                .card_runtime
+                .pending_portals
+                .push(augment_core::PendingPortal {
+                    owner,
+                    squares: cells.map(square),
+                    due_turn,
+                });
+        }
+        state
+    }
+
+    fn public_bytes(state: &GameState) -> Vec<u8> {
+        serde_json::to_vec(&encode_observation_v3(state)).unwrap()
+    }
+
+    #[test]
+    fn september_public_fields_each_change_serialized_observation() {
+        let state = september_state(Player::White, 3, 100);
+        let original = public_bytes(&state);
+        // Presence, both flag squares, both occupation presences/references/timers.
+        for change in 0..11 {
+            let mut changed = state.clone();
+            if change == 0 {
+                changed.card_runtime.capture_the_flag = None;
+            } else {
+                let flags = changed.card_runtime.capture_the_flag.as_mut().unwrap();
+                let owner = (change - 1) / 5;
+                match (change - 1) % 5 {
+                    0 => flags.flags[owner] = "d3".parse().unwrap(),
+                    1 => flags.occupations[owner] = None,
+                    2 => {
+                        flags.occupations[owner].as_mut().unwrap().piece_id =
+                            if owner == 0 { 110 } else { 120 }
+                    }
+                    3 => flags.occupations[owner].as_mut().unwrap().after_owner_turn += 1,
+                    _ => flags.occupations[owner].as_mut().unwrap().after_owner_turn -= 1,
+                }
+            }
+            assert_ne!(original, public_bytes(&changed), "CTF change {change}");
+        }
+        // Queue presence, owner, each square, and timer are independent public facts.
+        for index in 0..2 {
+            for change in 0..5 {
+                let mut changed = state.clone();
+                if change == 0 {
+                    changed.card_runtime.pending_portals.remove(index);
+                } else {
+                    let pending = &mut changed.card_runtime.pending_portals[index];
+                    match change {
+                        1 => pending.owner = pending.owner.opponent(),
+                        2 => pending.squares[0] = "d3".parse().unwrap(),
+                        3 => pending.squares[1] = "d3".parse().unwrap(),
+                        _ => pending.due_turn += 1,
+                    }
+                }
+                assert_ne!(
+                    original,
+                    public_bytes(&changed),
+                    "portal {index} change {change}"
+                );
+            }
+            for change in 0..4 {
+                let mut changed = state.clone();
+                if change == 0 {
+                    changed.card_runtime.pending_lobsters.remove(index);
+                } else {
+                    let pending = &mut changed.card_runtime.pending_lobsters[index];
+                    match change {
+                        1 => pending.owner = pending.owner.opponent(),
+                        2 => pending.square = "d3".parse().unwrap(),
+                        _ => pending.due_ply += 1,
+                    }
+                }
+                assert_ne!(
+                    original,
+                    public_bytes(&changed),
+                    "lobster {index} change {change}"
+                );
+            }
+        }
+        let mut reordered = state.clone();
+        reordered.card_runtime.pending_portals.reverse();
+        assert_ne!(original, public_bytes(&reordered));
+        let mut reordered = state.clone();
+        reordered.card_runtime.pending_lobsters.reverse();
+        assert_ne!(original, public_bytes(&reordered));
+    }
+
+    #[test]
+    fn september_public_state_is_canonical_without_rng_or_raw_ids() {
+        let white = september_state(Player::White, 10, 9000);
+        let other_rng = september_state(Player::White, 900, 9000);
+        let black = september_state(Player::Black, 999, 70);
+        assert_ne!(white.fingerprint(), other_rng.fingerprint());
+        assert_eq!(public_bytes(&white), public_bytes(&other_rng));
+        assert_eq!(public_bytes(&white), public_bytes(&black));
+        let encoded = encode_observation_v3(&white);
+        assert_eq!(encoded.piece_slot_count, 2);
+        assert_eq!(
+            encoded.runtime[169].value,
+            RuntimeValueV3::List(vec![
+                record(vec![
+                    (
+                        "owner",
+                        RuntimeValueV3::Player(RelativePlayerV3::SelfPlayer)
+                    ),
+                    ("square", RuntimeValueV3::Square(2)),
+                    (
+                        "occupation",
+                        record(vec![
+                            ("piece", RuntimeValueV3::Piece(1)),
+                            ("trigger_in_turns", RuntimeValueV3::Signed(0)),
+                        ])
+                    ),
+                ]),
+                record(vec![
+                    ("owner", RuntimeValueV3::Player(RelativePlayerV3::Opponent)),
+                    ("square", RuntimeValueV3::Square(61)),
+                    (
+                        "occupation",
+                        record(vec![
+                            ("piece", RuntimeValueV3::Piece(0)),
+                            ("trigger_in_turns", RuntimeValueV3::Signed(1)),
+                        ])
+                    ),
+                ]),
+            ])
+        );
+    }
+
+    fn runtime_named<'a>(value: &'a RuntimeValueV3, name: &str) -> &'a RuntimeValueV3 {
+        let RuntimeValueV3::Record(fields) = value else {
+            panic!("expected record")
+        };
+        &fields
+            .iter()
+            .find(|field| field.name == name)
+            .unwrap()
+            .value
+    }
+
+    #[test]
+    fn september_timers_use_correct_clock_and_signed_widened_subtraction() {
+        // Both CTF strict-greater and portal/lobster greater-or-equal boundaries
+        // retain -1/0/+1. Large counts must not underflow or wrap through i32.
+        for (now, due, expected) in [
+            (11, 10, -1),
+            (11, 11, 0),
+            (11, 12, 1),
+            (u32::MAX, 0, -i64::from(u32::MAX)),
+            (0, u32::MAX, i64::from(u32::MAX)),
+        ] {
+            let mut state = september_state(Player::Black, 30, 1);
+            state.turns_taken[Player::Black.index()] = now;
+            state.ply = now;
+            state
+                .card_runtime
+                .capture_the_flag
+                .as_mut()
+                .unwrap()
+                .occupations[Player::Black.index()]
+            .as_mut()
+            .unwrap()
+            .after_owner_turn = due;
+            state.card_runtime.pending_lobsters[0].due_ply = due;
+            state.card_runtime.pending_portals[0].due_turn = due;
+            let observation = encode_observation_v3(&state);
+            for (field, timer, nested) in [
+                (169, "trigger_in_turns", true),
+                (170, "remaining_ply", false),
+                (171, "trigger_in_turns", false),
+            ] {
+                let RuntimeValueV3::List(items) = &observation.runtime[field].value else {
+                    panic!("list")
+                };
+                let item = if nested {
+                    runtime_named(&items[0], "occupation")
+                } else {
+                    &items[0]
+                };
+                assert_eq!(
+                    *runtime_named(item, timer),
+                    RuntimeValueV3::Signed(expected)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn public_pending_lobster_fields_change_observation() {
+        let base = playing_state(Board::empty(), Player::White, 7);
+        let mut state = base.clone();
+        state
+            .card_runtime
+            .pending_lobsters
+            .push(augment_core::PendingLobster {
+                owner: Player::White,
+                square: "c4".parse().unwrap(),
+                due_ply: 2,
+            });
+        assert_ne!(encode_observation_v3(&base), encode_observation_v3(&state));
+        let original = encode_observation_v3(&state);
+        for change in 0..3 {
+            let mut changed = state.clone();
+            let pending = &mut changed.card_runtime.pending_lobsters[0];
+            match change {
+                0 => pending.owner = Player::Black,
+                1 => pending.square = "d4".parse().unwrap(),
+                _ => pending.due_ply += 1,
+            }
+            assert_ne!(original, encode_observation_v3(&changed), "field {change}");
+        }
+    }
+
+    #[test]
     fn dynamic_choice_labels_are_not_observation_text_tokens() {
         let mut state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 77);
         state.phase = GamePhase::AwaitingChoice(PendingChoice {
@@ -2374,7 +3235,7 @@ mod tests {
         let observation = encode_observation_v3(&state);
 
         assert_eq!(observation.schema_id, OBSERVATION_V3_SCHEMA_ID);
-        assert_eq!(observation.spatial_shape, [116, 8, 8]);
+        assert_eq!(observation.spatial_shape, [136, 8, 8]);
         assert_eq!(observation.spatial.len(), OBSERVATION_V3_SPATIAL_SIZE);
         assert_eq!(observation.global_shape, [32]);
         assert_eq!(observation.global.len(), OBSERVATION_V3_GLOBAL_FEATURES);
@@ -2385,7 +3246,7 @@ mod tests {
                 .chain(&observation.global)
                 .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
         );
-        assert_eq!(observation.runtime.len(), 169);
+        assert_eq!(observation.runtime.len(), 194);
         assert_eq!(
             observation
                 .runtime
@@ -2404,34 +3265,40 @@ mod tests {
     }
 
     #[test]
-    fn all_58_piece_kinds_have_distinct_self_planes() {
-        let mut board = Board::empty();
-        for (index, (_, kind)) in PIECE_KIND_VOCABULARY.iter().enumerate() {
-            let square = Square::from_index(index as u8).unwrap();
+    fn all_68_piece_kinds_have_distinct_self_planes() {
+        // Per-kind boards avoid trying to fit68 distinct pieces in64 squares.
+        let mut seen_codes = BTreeSet::new();
+        let mut seen_planes = BTreeSet::new();
+        for (code, kind) in PIECE_KIND_VOCABULARY {
+            let mut board = Board::empty();
             board.set(
-                square,
-                Some(Piece::new(Player::White, *kind).with_id(index as u32 + 10)),
+                "d4".parse().unwrap(),
+                Some(Piece::new(Player::White, kind).with_id(10)),
+            );
+            let observation = encode_observation_v3(&playing_state(board, Player::White, 1));
+            seen_codes.insert(observation.pieces[0].kind_code);
+            let plane = if code <= 58 {
+                usize::from(code - 1)
+            } else {
+                116 + 2 * usize::from(code - 59)
+            };
+            seen_planes.insert(plane);
+            assert_eq!(observation.spatial[plane * 64 + 27], 1.0);
+            assert_eq!(
+                observation
+                    .spatial
+                    .iter()
+                    .filter(|value| **value != 0.0)
+                    .count(),
+                1
             );
         }
-        let observation = encode_observation_v3(&playing_state(board, Player::White, 1));
-
-        for plane in 0..58 {
-            let values = &observation.spatial[plane * 64..(plane + 1) * 64];
-            assert_eq!(values.iter().filter(|value| **value == 1.0).count(), 1);
-        }
-        assert_eq!(
-            observation
-                .pieces
-                .iter()
-                .map(|piece| piece.kind_code)
-                .collect::<BTreeSet<_>>()
-                .len(),
-            58
-        );
+        assert_eq!(seen_codes, (1..=68).collect());
+        assert_eq!(seen_planes.len(), 68);
     }
 
     #[test]
-    fn all_208_card_ids_survive_without_hashing_or_truncation() {
+    fn all_implemented_card_ids_survive_without_hashing_or_truncation() {
         let mut state = playing_state(Board::empty(), Player::White, 3);
         for (index, definition) in IMPLEMENTED_CARDS.iter().enumerate() {
             state.add_card(CardInstance {
@@ -2459,8 +3326,16 @@ mod tests {
             .map(|definition| definition.id)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(observation.cards.len(), 208);
-        assert_eq!(observation.card_slot_count, 208);
+        assert_eq!(
+            expected_ids.len(),
+            IMPLEMENTED_CARDS.len(),
+            "card IDs must be unique"
+        );
+        assert_eq!(observation.cards.len(), IMPLEMENTED_CARDS.len());
+        assert_eq!(
+            observation.card_slot_count as usize,
+            IMPLEMENTED_CARDS.len()
+        );
         assert_eq!(observed_ids, expected_ids);
     }
 

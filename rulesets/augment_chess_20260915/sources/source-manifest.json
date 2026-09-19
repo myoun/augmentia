@@ -1,0 +1,35 @@
+{
+  "ruleset_id": "augment_chess_20260915",
+  "upstream_update_date": "2026-09-15",
+  "page_url": "https://augmentchess.org/",
+  "bundle": {
+    "url": "https://augmentchess.org/assets/main-6qeAcxbX.js",
+    "byte_length": 12097393,
+    "sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+    "path": "sources/raw/main-6qeAcxbX.js"
+  },
+  "updates_page": {
+    "url": "https://augmentchess.org/updates/",
+    "byte_length": 48797,
+    "sha256": "ba2570f034e9c59f66afb621ef4512698e08d6c11abb92dafacc2f3a58461e57",
+    "path": "sources/raw/updates.html"
+  },
+  "card_definitions_evidence": {
+    "path": "artifacts/ruleset-0915-card-definitions.json",
+    "sha256": "abad68689a9f092ab0bff82f81ac3e3a2632b196f8964fce26dcce65d47f9612"
+  },
+  "extraction_probe": {
+    "raw_card_definitions": 241,
+    "default_visible_cards": 240,
+    "hidden_by_default_ids": [
+      "shotgun-king"
+    ]
+  },
+  "notes": [
+    "Bundle and updates page bytes are the immutable provenance for this ruleset.",
+    "Live audit uses ruleset_id augment_chess_live_audit; announced ruleset data derives from the 2026-08-18 snapshot plus explicit 2026-09-15 announcement deltas.",
+    "This bundle contains unannounced live overrides; announced ruleset construction excludes them.",
+    "Catalog extraction is declarative definition metadata plus recognized balance patches, not a JavaScript runtime or proof of all UI mutation behavior."
+  ],
+  "capture_note": "Original bundle capture time was not recorded. Updates bytes were retrieved in this session on 2026-09-17; no historical 0915 bundle is available."
+}

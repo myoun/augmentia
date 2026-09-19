@@ -56,6 +56,19 @@ lowercase hexadecimal string으로 저장한다.
 원래 `u32` 방문 횟수를 저장한다. 그래야 합이 완료 simulation 수와 같은지 검증하고,
 나중에 정규화나 temperature를 다시 적용할 수 있다.
 
+progressive widening 또는 Gumbel 후보 제한을 사용한 step은 `sampled_mcts_visits` target을
+사용한다. 이 target은 전체 합법 행동 폭의 visit과 함께 다음을 저장한다.
+
+- 초기 `proposed_mask`와 최종 `opened_mask`;
+- 행동별 proposal inclusion probability;
+- 행동별 최초 open simulation;
+- `search_semantics_id`와 `candidate_proposal_id`.
+
+닫힌 행동은 visit 0의 부정 정답이 아니다. Python loader는 sampled target을 읽을 때 열린
+행동만 후보 단위 학습 case로 만들고 그 안에서 visit distribution을 정규화한다. mask 길이,
+양의 inclusion probability, 최초 open 시점 또는 닫힌 행동의 0 visit 계약이 맞지 않으면
+record를 거부한다.
+
 step마다 value label을 중복 저장하지 않는다. `engine_terminal` 종료 결과와 각 step의
 actor로부터 `+1`, `0`, `-1`을 계산한다. 다음 종료 종류에는 value target이 없다.
 

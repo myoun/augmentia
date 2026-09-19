@@ -419,6 +419,7 @@ impl Engine {
                     .filter(|(_, p)| p.kind == PieceKind::Knight)
                     .collect::<Vec<_>>();
                 for (sq, mut piece) in knights {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Camel;
                     state.board.set(sq, Some(piece));
                 }
@@ -471,6 +472,19 @@ impl Engine {
     ) {
         let actor = piece.owner;
 
+        if state.card_runtime.macho_chess
+            && state.status == GameStatus::Ongoing
+            && let Some((square, royal)) = state.board.find_by_id(piece.id)
+            && self.is_royal_piece(state, royal)
+            && square.rank() == if actor == Player::White { 7 } else { 0 }
+        {
+            state.status = GameStatus::Won {
+                winner: actor,
+                reason: WinReason::CardEffect(MACHO_CHESS.to_owned()),
+            };
+            return;
+        }
+
         // Black Hole check
         if state.card_runtime.black_holes.contains(&movement.to) {
             if let Some((sq, p)) = state.board.find_by_id(piece.id) {
@@ -495,6 +509,7 @@ impl Engine {
         // Transcendence: Pawn -> Knight -> Rook -> Queen upon direct capture
         if captured.is_some() && state.card_runtime.transcendence {
             if let Some((sq, mut p)) = state.board.find_by_id(piece.id) {
+                self.clear_queens_gambit_protection(state, p.id);
                 p.kind = match p.kind {
                     PieceKind::Pawn => PieceKind::Knight,
                     PieceKind::Knight => PieceKind::Rook,

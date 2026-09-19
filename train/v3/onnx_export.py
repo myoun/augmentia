@@ -9,6 +9,7 @@ import os
 import uuid
 from dataclasses import asdict, fields, replace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Sequence
 
 import numpy as np
@@ -16,7 +17,7 @@ import onnxruntime as ort
 import torch
 from torch import nn
 
-from .model import AugmentNetV3, V3ModelConfig
+from .model import AugmentNetV3, V3ModelConfig, V3StateEncoding
 from .mixture import load_dataset_from_identity
 from .replay import collate_examples
 from .schema import (
@@ -29,7 +30,20 @@ from .schema import (
 from .tensorize import V3Batch, V3Vocabulary
 
 MODEL_METADATA_SCHEMA_ID = "augmentia.onnx-model-metadata.v3"
+SPLIT_POLICY_BUNDLE_SCHEMA_ID = "augmentia.onnx-split-policy-bundle.v1"
 INPUT_NAMES = tuple(field.name for field in fields(V3Batch))
+ACTION_INPUT_NAMES = tuple(name for name in INPUT_NAMES if name.startswith("action_"))
+STATE_INPUT_NAMES = tuple(name for name in INPUT_NAMES if name not in ACTION_INPUT_NAMES)
+# Action reference lookup needs these state-side tensors in addition to the cached encoder outputs.
+SCORER_LOOKUP_INPUT_NAMES = ("piece_slot", "piece_mask", "card_slot", "card_mask")
+STATE_ENCODER_OUTPUT_NAMES = (
+    "state_embedding",
+    "board_tokens",
+    "piece_entities",
+    "card_entities",
+    "value",
+)
+CANDIDATE_SCORER_OUTPUT_NAMES = ("policy_logits",)
 
 
 class V3OnnxWrapper(nn.Module):
@@ -41,6 +55,58 @@ class V3OnnxWrapper(nn.Module):
         batch = V3Batch(**dict(zip(INPUT_NAMES, inputs, strict=True)))
         output = self.model._forward(batch)
         return output.policy_logits, output.value
+
+
+class V3StateEncoderOnnxWrapper(nn.Module):
+    """The reusable state half of the V3 policy network."""
+
+    def __init__(self, model: AugmentNetV3) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(
+        self, *inputs: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        batch = SimpleNamespace(**dict(zip(STATE_INPUT_NAMES, inputs, strict=True)))
+        encoding = self.model.encode_state(batch)
+        return (
+            encoding.state,
+            encoding.board_tokens,
+            encoding.piece_entities,
+            encoding.card_entities,
+            self.model.value_head(encoding.state).squeeze(-1),
+        )
+
+
+class V3CandidateScorerOnnxWrapper(nn.Module):
+    """Score an action subset from a previously exported state encoding."""
+
+    def __init__(self, model: AugmentNetV3) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, *inputs: torch.Tensor) -> torch.Tensor:
+        cached_count = len(STATE_ENCODER_OUTPUT_NAMES) - 1
+        cached = inputs[:cached_count]
+        lookup_end = cached_count + len(SCORER_LOOKUP_INPUT_NAMES)
+        lookup = inputs[cached_count:lookup_end]
+        action = inputs[lookup_end:]
+        batch = SimpleNamespace(
+            **dict(
+                zip(
+                    (*SCORER_LOOKUP_INPUT_NAMES, *ACTION_INPUT_NAMES),
+                    (*lookup, *action),
+                    strict=True,
+                )
+            )
+        )
+        encoding = V3StateEncoding(
+            state=cached[0],
+            board_tokens=cached[1],
+            piece_entities=cached[2],
+            card_entities=cached[3],
+        )
+        return self.model.score_actions(batch, encoding)
 
 
 def export_onnx_v3(
@@ -114,8 +180,151 @@ def export_onnx_v3(
         "checkpoint_migrations": list(checkpoint_migrations),
     }
     metadata_path = output.with_suffix(".metadata.json")
+    metadata["split_policy_bundle"] = export_split_policy_bundle(model, sample, output, opset)
     _atomic_json(metadata_path, metadata)
     return output, metadata_path
+
+
+def export_split_policy_bundle(
+    model: AugmentNetV3,
+    sample: V3Batch,
+    monolithic_output: str | Path,
+    opset: int = 18,
+) -> dict[str, Any]:
+    """Export co-versioned encoder/scorer graphs without changing the legacy model."""
+    output = Path(monolithic_output).resolve()
+    model = model.eval().cpu()
+    sample = sample.to("cpu")
+    encoder_path = output.with_suffix(".state-encoder.onnx")
+    scorer_path = output.with_suffix(".candidate-scorer.onnx")
+    _export_graph(
+        V3StateEncoderOnnxWrapper(model),
+        tuple(getattr(sample, name) for name in STATE_INPUT_NAMES),
+        encoder_path,
+        STATE_INPUT_NAMES,
+        STATE_ENCODER_OUTPUT_NAMES,
+        _state_encoder_dynamic_axes(sample),
+        opset,
+    )
+    scorer_inputs = (
+        *(
+            getattr(sample, name)
+            for name in SCORER_LOOKUP_INPUT_NAMES
+        ),
+        *(getattr(sample, name) for name in ACTION_INPUT_NAMES),
+    )
+    # These are tracing examples, not cached inference values. `inference_mode`
+    # tensors cannot participate in the scorer export trace.
+    with torch.no_grad():
+        encoding = model.encode_state(sample)
+    _export_graph(
+        V3CandidateScorerOnnxWrapper(model),
+        (
+            encoding.state,
+            encoding.board_tokens,
+            encoding.piece_entities,
+            encoding.card_entities,
+            *scorer_inputs,
+        ),
+        scorer_path,
+        (
+            *STATE_ENCODER_OUTPUT_NAMES[:-1],
+            *SCORER_LOOKUP_INPUT_NAMES,
+            *ACTION_INPUT_NAMES,
+        ),
+        CANDIDATE_SCORER_OUTPUT_NAMES,
+        _candidate_scorer_dynamic_axes(sample),
+        opset,
+    )
+    return {
+        "schema_id": SPLIT_POLICY_BUNDLE_SCHEMA_ID,
+        "state_encoder": _onnx_graph_contract(encoder_path),
+        "candidate_scorer": _onnx_graph_contract(scorer_path),
+    }
+
+
+def _export_graph(
+    module: nn.Module,
+    tensors: tuple[torch.Tensor, ...],
+    output: Path,
+    input_names: tuple[str, ...],
+    output_names: tuple[str, ...],
+    dynamic_axes: dict[str, dict[int, str]],
+    opset: int,
+) -> None:
+    temporary = output.with_suffix(f".onnx.tmp-{uuid.uuid4().hex}")
+    try:
+        torch.onnx.export(
+            module,
+            tensors,
+            temporary,
+            input_names=list(input_names),
+            output_names=list(output_names),
+            dynamic_axes=dynamic_axes,
+            opset_version=opset,
+            do_constant_folding=True,
+            dynamo=False,
+        )
+        _fsync(temporary)
+        os.replace(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _onnx_graph_contract(path: Path) -> dict[str, Any]:
+    session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+    return {
+        "path": path.name,
+        "sha256": _sha256(path),
+        "inputs": [
+            {"name": item.name, "rank": len(item.shape), "dtype": _ort_dtype(item.type)}
+            for item in session.get_inputs()
+        ],
+        "outputs": [
+            {"name": item.name, "rank": len(item.shape), "dtype": _ort_dtype(item.type)}
+            for item in session.get_outputs()
+        ],
+    }
+
+
+def _ort_dtype(type_name: str) -> str:
+    return {
+        "tensor(float)": "float32",
+        "tensor(int64)": "int64",
+        "tensor(bool)": "bool",
+    }.get(type_name, type_name)
+
+
+def _state_encoder_dynamic_axes(sample: V3Batch) -> dict[str, dict[int, str]]:
+    result = {name: axes for name, axes in _dynamic_axes(sample).items() if name in STATE_INPUT_NAMES}
+    result.update(
+        {
+            "state_embedding": {0: "batch"},
+            "board_tokens": {0: "batch"},
+            "piece_entities": {0: "batch", 1: "pieces"},
+            "card_entities": {0: "batch", 1: "cards"},
+            "value": {0: "batch"},
+        }
+    )
+    return result
+
+
+def _candidate_scorer_dynamic_axes(sample: V3Batch) -> dict[str, dict[int, str]]:
+    result = {name: axes for name, axes in _dynamic_axes(sample).items() if name in ACTION_INPUT_NAMES}
+    result.update(
+        {
+            "state_embedding": {0: "batch"},
+            "board_tokens": {0: "batch"},
+            "piece_entities": {0: "batch", 1: "pieces"},
+            "card_entities": {0: "batch", 1: "cards"},
+            "piece_slot": {0: "batch", 1: "pieces"},
+            "piece_mask": {0: "batch", 1: "pieces"},
+            "card_slot": {0: "batch", 1: "cards"},
+            "card_mask": {0: "batch", 1: "cards"},
+            "policy_logits": {0: "batch", 1: "legal_actions"},
+        }
+    )
+    return result
 
 
 def assert_onnx_equivalent(
@@ -134,6 +343,50 @@ def assert_onnx_equivalent(
     input_names = tuple(item.name for item in session.get_inputs())
     inputs = {name: getattr(batch, name).detach().cpu().numpy() for name in input_names}
     actual_policy, actual_value = session.run(["policy_logits", "value"], inputs)
+    expected_policy = expected.policy_logits.detach().numpy()
+    expected_value = expected.value.detach().numpy()
+    np.testing.assert_allclose(actual_policy, expected_policy, rtol=rtol, atol=atol)
+    np.testing.assert_allclose(actual_value, expected_value, rtol=rtol, atol=atol)
+    return {
+        "policy_max_abs_error": float(np.max(np.abs(actual_policy - expected_policy))),
+        "value_max_abs_error": float(np.max(np.abs(actual_value - expected_value))),
+    }
+
+
+def assert_split_onnx_equivalent(
+    model: AugmentNetV3,
+    batch: V3Batch,
+    monolithic_path: str | Path,
+    providers: Sequence[str] = ("CPUExecutionProvider",),
+    rtol: float = 2e-4,
+    atol: float = 2e-5,
+) -> dict[str, float]:
+    """Verify that encoder/scorer composition is numerically identical to eager V3."""
+    model.eval().cpu()
+    batch = batch.to("cpu")
+    with torch.inference_mode():
+        expected = model(batch)
+    output = Path(monolithic_path)
+    encoder = ort.InferenceSession(
+        str(output.with_suffix(".state-encoder.onnx")), providers=list(providers)
+    )
+    scorer = ort.InferenceSession(
+        str(output.with_suffix(".candidate-scorer.onnx")), providers=list(providers)
+    )
+    encoder_inputs = {
+        item.name: getattr(batch, item.name).detach().cpu().numpy()
+        for item in encoder.get_inputs()
+    }
+    encoder_values = encoder.run(None, encoder_inputs)
+    cached = dict(zip((item.name for item in encoder.get_outputs()), encoder_values, strict=True))
+    scorer_inputs: dict[str, np.ndarray] = {}
+    for item in scorer.get_inputs():
+        if item.name in cached:
+            scorer_inputs[item.name] = cached[item.name]
+        else:
+            scorer_inputs[item.name] = getattr(batch, item.name).detach().cpu().numpy()
+    (actual_policy,) = scorer.run(["policy_logits"], scorer_inputs)
+    actual_value = cached["value"]
     expected_policy = expected.policy_logits.detach().numpy()
     expected_value = expected.value.detach().numpy()
     np.testing.assert_allclose(actual_policy, expected_policy, rtol=rtol, atol=atol)

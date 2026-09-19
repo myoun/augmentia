@@ -35,8 +35,8 @@ from .tensorize import (
 MANIFEST_SCHEMA_ID = "augmentia.dataset.manifest.v3"
 DECISION_SCHEMA_ID = "augmentia.training.decision.v3"
 REPLAY_INDEX_SCHEMA_ID = "augmentia.replay-index.v3.1"
-REPLAY_PARSER_VERSION = "augmentia.replay-parser.v3.1"
-REPLAY_VERIFIER_VERSION = "augmentia.python-schema-verifier.v3.1"
+REPLAY_PARSER_VERSION = "augmentia.replay-parser.v3.2"
+REPLAY_VERIFIER_VERSION = "augmentia.python-schema-verifier.v3.2"
 
 
 @dataclass(frozen=True)
@@ -910,6 +910,31 @@ def _parse_game(
                 action_count,
                 path,
             )
+            if policy_payload.get("kind") == "sampled_mcts_visits":
+                opened = policy_payload.get("opened_mask")
+                if not isinstance(opened, list) or len(opened) != action_count:
+                    raise SchemaError(f"{path}: sampled MCTS opened mask has wrong width")
+                filtered_actions = [
+                    action
+                    for action, is_open in zip(
+                        case["legal_actions"]["actions"], opened, strict=True
+                    )
+                    if is_open
+                ]
+                if not filtered_actions:
+                    raise SchemaError(f"{path}: sampled MCTS opened no actions")
+                case = {
+                    **case,
+                    "legal_actions": {
+                        **case["legal_actions"],
+                        "actions": filtered_actions,
+                    },
+                }
+                policy = tuple(
+                    probability
+                    for probability, is_open in zip(policy, opened, strict=True)
+                    if is_open
+                )
         actor = step.get("actor")
         value = None
         if result == "draw":
@@ -1003,6 +1028,46 @@ def _policy_target(target: Any, count: int, path: str) -> tuple[float, ...] | No
         visits = value.get("visit_counts")
         if not isinstance(visits, list) or sum(visits) <= 0:
             raise SchemaError(f"{path}: MCTS visits must have positive mass")
+        probabilities = [item / sum(visits) for item in visits]
+    elif kind == "sampled_mcts_visits":
+        visits = value.get("visit_counts")
+        proposed = value.get("proposed_mask")
+        opened = value.get("opened_mask")
+        inclusion = value.get("inclusion_probabilities")
+        first_open = value.get("first_open_simulations")
+        if not isinstance(visits, list) or len(visits) != count or sum(visits) <= 0:
+            raise SchemaError(f"{path}: sampled MCTS visits must have positive full-width mass")
+        if not all(
+            isinstance(items, list) and len(items) == count
+            for items in (proposed, opened, inclusion, first_open)
+        ):
+            raise SchemaError(f"{path}: sampled MCTS proposal metadata has wrong width")
+        if any(not isinstance(item, bool) for item in proposed + opened):
+            raise SchemaError(f"{path}: sampled MCTS masks must contain booleans")
+        if any(
+            not isinstance(item, (int, float))
+            or not math.isfinite(item)
+            or not 0.0 < item <= 1.0
+            for item in inclusion
+        ):
+            raise SchemaError(f"{path}: sampled MCTS inclusion probabilities are invalid")
+        for index in range(count):
+            if proposed[index] and not opened[index]:
+                raise SchemaError(f"{path}: sampled MCTS proposed a closed action")
+            if opened[index] != (first_open[index] is not None):
+                raise SchemaError(f"{path}: sampled MCTS first-open metadata disagrees")
+            if proposed[index] != (first_open[index] == 0):
+                raise SchemaError(f"{path}: sampled MCTS initial proposal metadata disagrees")
+            if not opened[index] and visits[index] != 0:
+                raise SchemaError(f"{path}: sampled MCTS closed action has visits")
+        if not isinstance(value.get("search_semantics_id"), str) or not value[
+            "search_semantics_id"
+        ]:
+            raise SchemaError(f"{path}: sampled MCTS search semantics is missing")
+        if not isinstance(value.get("candidate_proposal_id"), str) or not value[
+            "candidate_proposal_id"
+        ]:
+            raise SchemaError(f"{path}: sampled MCTS proposal ID is missing")
         probabilities = [item / sum(visits) for item in visits]
     elif kind == "optimal_action_set":
         indices = value.get("action_indices")

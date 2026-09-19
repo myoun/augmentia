@@ -112,10 +112,12 @@ impl Evaluator for HeuristicEvaluator {
     }
 }
 
+type EvaluationCacheEntry = (Vec<(Action, ActionIndex, f32)>, f32);
+
 /// Tactical-enhanced AlphaZero Neural network evaluator with Quiescence search & Tactical channels.
 pub struct OnnxNeuralEvaluator {
     session: Arc<Mutex<ort::session::Session>>,
-    cache: Arc<Mutex<HashMap<u64, (Vec<(Action, ActionIndex, f32)>, f32)>>>,
+    cache: Arc<Mutex<HashMap<u64, EvaluationCacheEntry>>>,
     fallback: HeuristicEvaluator,
     inference_failures: AtomicU64,
 }

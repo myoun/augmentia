@@ -25,8 +25,8 @@ PROMOTION_REPORT_SCHEMA_ID = "augmentia.promotion-report.v3"
 ARENA_REPORT_SCHEMA_ID = "augmentia.arena.v3"
 REQUIRED_PHASES = {"playing", "forced_move", "draft", "awaiting_choice"}
 REQUIRED_ACTION_KINDS = {"move", "piece_ability", "card", "draft_pick", "resolve_choice"}
-REQUIRED_RUNTIME_FIELD_IDS = set(range(1, 148))
-REQUIRED_PIECE_KIND_COUNT = 51
+REQUIRED_RUNTIME_FIELD_IDS = set(range(1, 195))
+REQUIRED_PIECE_KIND_COUNT = 68
 
 
 def evaluate_candidate(config_path: str | Path, report_path: str | Path) -> dict[str, Any]:
@@ -850,7 +850,7 @@ def _validate_config(config: Any, config_path: Path) -> None:
     if set(thresholds["required_action_kinds"]) != REQUIRED_ACTION_KINDS:
         raise ValueError("required actions must cover the complete ActionV3 contract")
     if set(thresholds["required_runtime_field_ids"]) != REQUIRED_RUNTIME_FIELD_IDS:
-        raise ValueError("required runtime fields must cover all 169 V3 fields")
+        raise ValueError("required runtime fields must cover all 194 V3 fields")
     if config["evaluation_mode"] == "promotion":
         _validate_promotion_scale(config)
 

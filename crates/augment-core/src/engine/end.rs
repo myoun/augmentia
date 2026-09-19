@@ -78,6 +78,7 @@ impl Engine {
             BRIBE => {
                 let (_, knight) = piece_target(state, target)?;
                 if let Some((square, mut piece)) = state.board.find_by_id(knight.id) {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Amazon;
                     state.board.set(square, Some(piece));
                     state.card_runtime.bribe_reverts.push(BribeRevert {
@@ -133,6 +134,7 @@ impl Engine {
                 });
                 let chosen_kind = dead_candidates[index.unwrap_or(0)];
                 if let Some((square, mut piece)) = state.board.find_by_id(pawn.id) {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = chosen_kind;
                     state.board.set(square, Some(piece));
                     state
@@ -274,10 +276,11 @@ impl Engine {
             }
             LOBSTER => {
                 let square = square_target(target)?;
-                let lobster =
-                    Piece::new(actor, PieceKind::Lobster).with_id(state.allocate_piece_id());
-                state.board.set(square, Some(lobster));
-                self.mark_fresh_no_capture(state, lobster);
+                state.card_runtime.pending_lobsters.push(PendingLobster {
+                    owner: actor,
+                    square,
+                    due_ply: state.ply.saturating_add(2),
+                });
             }
             PALACE => {
                 if let Some((king_sq, _)) = state
@@ -299,7 +302,11 @@ impl Engine {
             }
             PORTAL_GUN => {
                 let [sq1, sq2] = two_square_target(target)?;
-                state.card_runtime.portals = Some([sq1, sq2]);
+                state.card_runtime.pending_portals.push(PendingPortal {
+                    owner: actor,
+                    squares: [sq1, sq2],
+                    due_turn: state.turns_taken[actor.index()].saturating_add(1),
+                });
             }
             UNDERGROUND_BUNKER => {
                 if let Some((_, king)) = state
@@ -336,6 +343,7 @@ impl Engine {
                     })
                     .collect::<Vec<_>>();
                 for (sq, mut pawn) in pawns {
+                    self.clear_queens_gambit_protection(state, pawn.id);
                     pawn.kind = PieceKind::Fanatic;
                     state.board.set(sq, Some(pawn));
                 }
@@ -363,6 +371,7 @@ impl Engine {
                     })
                     .collect::<Vec<_>>();
                 for (sq, mut piece) in promoted {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Pawn;
                     state.board.set(sq, Some(piece));
                 }
@@ -389,6 +398,19 @@ impl Engine {
                 state.card_runtime.prophecy[actor.index()] = Some(state.ply.saturating_add(3));
             }
             RACING_KING => state.card_runtime.racing_king[actor.index()] = true,
+            crate::REVERSAL => state.card_runtime.reversal[actor.index()] = true,
+            crate::EXTINCTION => {
+                let (_, selected) = piece_target(state, target)?;
+                let kind = selected.kind;
+                let victims = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.kind == kind)
+                    .collect::<Vec<_>>();
+                for (square, piece) in victims {
+                    self.delete_piece_for_card(state, square, piece, actor, EXTINCTION, events);
+                }
+            }
             BINA_MATE => state.card_runtime.bina_mate[actor.index()] = true,
             SPY => {
                 let (_, pawn) = piece_target(state, target)?;
@@ -468,7 +490,23 @@ impl Engine {
                     });
                 }
             }
-            GOMOKU => push_none(actions),
+            GOMOKU | crate::REVERSAL => push_none(actions),
+            crate::EXTINCTION => {
+                for (square, piece) in state.board.iter() {
+                    if piece.owner == actor
+                        && !self.is_royal_piece(state, piece)
+                        && matches!(
+                            piece.kind,
+                            PieceKind::Knight | PieceKind::Bishop | PieceKind::Camel
+                        )
+                    {
+                        actions.push(Action::UseCard {
+                            instance_id: card.instance_id,
+                            target: ActionTarget::PieceAt(square),
+                        });
+                    }
+                }
+            }
             REPLAY => {
                 if state.card_runtime.move_replays[actor.index()]
                     .as_ref()
@@ -555,7 +593,11 @@ impl Engine {
             BARRICADE | LOBSTER => {
                 for index in 0..64 {
                     let square = Square::from_index(index).unwrap();
-                    if state.board.get(square).is_none()
+                    let concealed = state.board.get(square).is_some_and(|piece| {
+                        state.card_runtime.stealth_piece_ids.contains(&piece.id)
+                            && !self.is_royal_piece(state, piece)
+                    });
+                    if (state.board.get(square).is_none() || concealed)
                         && !state.card_runtime.barricades.contains(&square)
                     {
                         actions.push(Action::UseCard {
@@ -614,8 +656,8 @@ impl Engine {
                     .filter_map(Square::from_index)
                     .filter(|sq| state.board.get(*sq).is_none())
                     .collect::<Vec<_>>();
-                for i in 0..empties.len().min(8) {
-                    for j in (i + 1)..empties.len().min(8) {
+                for i in 0..empties.len() {
+                    for j in (i + 1)..empties.len() {
                         actions.push(Action::UseCard {
                             instance_id: card.instance_id,
                             target: ActionTarget::Squares(vec![empties[i], empties[j]]),
@@ -820,11 +862,13 @@ impl Engine {
         events: &mut Vec<Event>,
     ) {
         state.card_runtime.zugzwang[actor.index()] = false;
+        state.card_runtime.reversal[actor.index()] = false;
 
         let mut remaining_bribes = Vec::new();
         for bribe in std::mem::take(&mut state.card_runtime.bribe_reverts) {
             if state.turns_taken[actor.index()] >= bribe.due_turn {
                 if let Some((sq, mut piece)) = state.board.find_by_id(bribe.piece_id) {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Knight;
                     state.board.set(sq, Some(piece));
                     events.push(Event::EffectApplied {
@@ -842,6 +886,7 @@ impl Engine {
         for necro in std::mem::take(&mut state.card_runtime.necromancy_reverts) {
             if state.ply >= necro.due_ply {
                 if let Some((sq, mut piece)) = state.board.find_by_id(necro.piece_id) {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Pawn;
                     state.board.set(sq, Some(piece));
                 }
@@ -855,6 +900,7 @@ impl Engine {
         for vip in std::mem::take(&mut state.card_runtime.vip_pending) {
             if state.ply >= vip.due_ply {
                 if let Some((sq, mut piece)) = state.board.find_by_id(vip.piece_id) {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Vip;
                     state.board.set(sq, Some(piece));
                 }
@@ -1102,8 +1148,20 @@ fn restore_replay_color_runtime(
         current.crown_pos = before.crown_pos;
         current.crown_holder = before.crown_holder;
     }
+    if current.capture_the_flag == after.capture_the_flag {
+        current.capture_the_flag = before.capture_the_flag.clone();
+    }
     if current.ultimatum == after.ultimatum {
         current.ultimatum = before.ultimatum;
+    }
+    if current.pending_portals == after.pending_portals {
+        current.pending_portals = before.pending_portals.clone();
+    }
+    if current.portals == after.portals {
+        current.portals = before.portals;
+    }
+    if current.pending_lobsters == after.pending_lobsters {
+        current.pending_lobsters = before.pending_lobsters.clone();
     }
     if current.undead_resurrections == after.undead_resurrections {
         current.undead_resurrections = before.undead_resurrections.clone();

@@ -91,6 +91,19 @@ pub enum PolicyTargetV3 {
         noise_seed_hex: Option<String>,
         sampling_temperature: f32,
     },
+    SampledMctsVisits {
+        visit_counts: Vec<u32>,
+        completed_simulations: u32,
+        root_value: f32,
+        noise_seed_hex: Option<String>,
+        sampling_temperature: f32,
+        proposed_mask: Vec<bool>,
+        opened_mask: Vec<bool>,
+        inclusion_probabilities: Vec<f32>,
+        first_open_simulations: Vec<Option<u32>>,
+        search_semantics_id: String,
+        candidate_proposal_id: String,
+    },
     BehaviorDistribution {
         probabilities: Vec<f32>,
         source: String,
@@ -1548,6 +1561,87 @@ fn validate_policy_target(
             if let Some(seed) = noise_seed_hex {
                 validate_hex(seed, 16, &format!("steps[{step_index}].noise_seed_hex"))?;
             }
+        }
+        PolicyTargetV3::SampledMctsVisits {
+            visit_counts,
+            completed_simulations,
+            root_value,
+            noise_seed_hex,
+            sampling_temperature,
+            proposed_mask,
+            opened_mask,
+            inclusion_probabilities,
+            first_open_simulations,
+            search_semantics_id,
+            candidate_proposal_id,
+        } => {
+            validate_visits(
+                visit_counts,
+                *completed_simulations,
+                action_count,
+                step_index,
+            )?;
+            if visit_counts[played] == 0 || !opened_mask.get(played).copied().unwrap_or(false) {
+                return validation(format!(
+                    "steps[{step_index}] played an unopened or unvisited sampled-MCTS action"
+                ));
+            }
+            validate_unit_value(*root_value, &format!("steps[{step_index}].root_value"))?;
+            if !sampling_temperature.is_finite() || *sampling_temperature < 0.0 {
+                return validation(format!(
+                    "steps[{step_index}].sampling_temperature is invalid"
+                ));
+            }
+            if let Some(seed) = noise_seed_hex {
+                validate_hex(seed, 16, &format!("steps[{step_index}].noise_seed_hex"))?;
+            }
+            if proposed_mask.len() != action_count
+                || opened_mask.len() != action_count
+                || inclusion_probabilities.len() != action_count
+                || first_open_simulations.len() != action_count
+            {
+                return validation(format!(
+                    "steps[{step_index}] sampled proposal metadata width differs from legal actions"
+                ));
+            }
+            for action_index in 0..action_count {
+                let probability = inclusion_probabilities[action_index];
+                if !probability.is_finite() || probability <= 0.0 || probability > 1.0 {
+                    return validation(format!(
+                        "steps[{step_index}] has an invalid proposal inclusion probability"
+                    ));
+                }
+                if proposed_mask[action_index] && !opened_mask[action_index] {
+                    return validation(format!(
+                        "steps[{step_index}] proposed action was not opened"
+                    ));
+                }
+                if opened_mask[action_index] != first_open_simulations[action_index].is_some() {
+                    return validation(format!(
+                        "steps[{step_index}] opened mask and first-open simulation disagree"
+                    ));
+                }
+                if proposed_mask[action_index]
+                    != matches!(first_open_simulations[action_index], Some(0))
+                {
+                    return validation(format!(
+                        "steps[{step_index}] proposed mask must equal initially opened actions"
+                    ));
+                }
+                if !opened_mask[action_index] && visit_counts[action_index] != 0 {
+                    return validation(format!(
+                        "steps[{step_index}] closed action has sampled-MCTS visits"
+                    ));
+                }
+            }
+            require_nonempty(
+                search_semantics_id,
+                &format!("steps[{step_index}].search_semantics_id"),
+            )?;
+            require_nonempty(
+                candidate_proposal_id,
+                &format!("steps[{step_index}].candidate_proposal_id"),
+            )?;
         }
         PolicyTargetV3::BehaviorDistribution {
             probabilities,

@@ -1,5 +1,14 @@
 # V3 MCTS 탐색
 
+> 이 문서는 현재 구현된 V3 MCTS의 의미와 측정을 기록한다. 조합형 행동 공간을 위한 후속
+> 설계 제안은 [V3.1 계층형 표본 PUCT와 확률적 Draft 탐색 제안](ai-v3-hierarchical-sampled-search.md)을
+> 참고한다.
+
+2026-08-29 V3.1 구현 후보에서 실제 RNG와 탐색 RNG 분리 및 제한 깊이 exact descendant
+reuse가 기본 경로에 추가됐다. progressive widening, Gumbel root와 chameleon 가상 계층은
+feature flag로 구현됐지만 100 paired seed arena 전에는 기본 채택하지 않는다. search semantics와
+후보 mask/probability는 self-play provenance에 기록한다.
+
 11단계는 V3의 가변 합법 행동 정책과 batch ONNX 런타임을 실제 탐색에 연결한다.
 `augment_ai::MctsV3Tree`는 각 노드의 정책을 전역 고정 인덱스가 아니라 해당 상태의
 `LegalActionSetV3` 순서에 맞춘 local action index로 저장한다. 합법성과 종료 여부는

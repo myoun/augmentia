@@ -250,8 +250,12 @@ fn main() {
                     temperature: 0.0,
                 };
 
-                let mut game_history: Vec<(GameState, Vec<(u16, f32)>, RootSearchTelemetry)> =
-                    Vec::new();
+                #[allow(clippy::type_complexity)]
+                let mut game_history: Vec<(
+                    GameState,
+                    Vec<(u16, f32)>,
+                    RootSearchTelemetry,
+                )> = Vec::new();
                 let mut ply = 0usize;
 
                 while state.status == GameStatus::Ongoing && ply < max_plies {

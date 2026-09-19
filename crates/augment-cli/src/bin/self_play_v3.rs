@@ -51,6 +51,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let compression_level = numeric(&args, "--compression-level", 3i32)?;
     let execution_provider = execution_provider(&args)?;
     let intra_threads = numeric(&args, "--intra-threads", 1usize)?;
+    let search_variant = optional_string(&args, "--search", "fair_puct");
+    let (progressive_widening, gumbel_root, virtual_chameleon_hierarchy, reuse_descendant_depth) =
+        match search_variant.as_str() {
+            "fair_puct" => (false, false, false, 0),
+            "reuse" => (false, false, false, 4),
+            "widening" => (true, false, false, 0),
+            "gumbel" => (false, true, false, 0),
+            "virtual_chameleon" => (false, false, true, 0),
+            "widening_virtual_chameleon" => (true, false, true, 0),
+            other => return Err(format!("unsupported --search variant {other:?}").into()),
+        };
     if games == 0 {
         return Err("--games must be positive".into());
     }
@@ -118,7 +129,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         manifest_sha256: ruleset_hash,
     };
     let search_config_id = format!(
-        "mcts-v3:sims={simulations}:batch={leaf_batch_size}:alpha={noise_alpha}:epsilon={noise_epsilon}"
+        "mcts-v3:{search_variant}:sims={simulations}:batch={leaf_batch_size}:alpha={noise_alpha}:epsilon={noise_epsilon}"
     );
     let mut split_records: BTreeMap<DatasetSplitV3, Vec<DataRecordV3>> = BTreeMap::new();
     let run_started = Instant::now();
@@ -155,6 +166,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 root_noise_epsilon: noise_epsilon,
                 sampling_temperature,
                 temperature_decisions,
+                progressive_widening,
+                gumbel_root,
+                virtual_chameleon_hierarchy,
+                reuse_descendant_depth,
             },
         )?;
         if let TerminationV3::Error {
@@ -358,6 +373,13 @@ fn optional_path(args: &[String], flag: &str) -> Option<PathBuf> {
         .position(|item| item == flag)
         .and_then(|index| args.get(index + 1))
         .map(PathBuf::from)
+}
+
+fn optional_string(args: &[String], flag: &str, default: &str) -> String {
+    args.windows(2)
+        .find(|pair| pair[0] == flag)
+        .map(|pair| pair[1].clone())
+        .unwrap_or_else(|| default.to_owned())
 }
 
 fn numeric<T>(args: &[String], flag: &str, default: T) -> Result<T, String>

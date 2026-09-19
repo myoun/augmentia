@@ -1,3 +1,5 @@
+mod declarative;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,6 +12,8 @@ struct CatalogSnapshot {
     ruleset_id: String,
     schema_version: u32,
     source_bundle_sha256: String,
+    #[serde(default)]
+    source_bundle_byte_length: usize,
     raw_card_definitions: usize,
     visible_card_count: usize,
     hidden_by_default_ids: Vec<String>,
@@ -121,19 +125,55 @@ fn usage() -> &'static str {
 
 fn extract_catalog(source: &[u8], ruleset_id: String) -> Result<CatalogSnapshot, Box<dyn Error>> {
     let javascript = std::str::from_utf8(source)?;
-    let definitions = assignment_collection(javascript, "const CARD_DEFS =", '[', ']')?;
+    let mut evaluator = declarative::Evaluator::new(javascript);
+    let mut definitions = evaluator.named("CARD_DEFS")?;
+    evaluator.apply_metadata_overrides(&mut definitions)?;
     let category_groups = assignment_collection(
         javascript,
         "const CARD_CATEGORY_GROUPS = Object.freeze(",
         '{',
         '}',
     )?;
-    let categories = parse_category_groups(category_groups)?;
-    let raw_cards = split_top_level(strip_collection(definitions, '[', ']')?, ',')
-        .into_iter()
-        .filter(|item| item.trim_start().starts_with('{'))
-        .map(|object| parse_card(object, &categories, javascript))
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut categories = parse_category_groups(category_groups)?;
+    // This is the only supported dynamic category mutation. Any changed loop fails closed.
+    let dynamic_marker = "for (const card2 of [...SEPTEMBER_ALL_DEFINITIONS";
+    if javascript.contains("CARD_CATEGORY_GROUPS[card2.phase].push")
+        && !javascript.contains(dynamic_marker)
+    {
+        return Err("unsupported dynamic category loop".into());
+    }
+    if let Some(start) = javascript.find(dynamic_marker) {
+        let tail = &javascript[start + "for (const card2 of ".len()..];
+        let end = tail
+            .find(") CARD_CATEGORY_GROUPS[card2.phase].push(card2.id);")
+            .ok_or("unsupported dynamic category assignment")?;
+        let dynamic = evaluator.eval(&tail[..end], &BTreeMap::new())?;
+        for card in dynamic
+            .as_array()
+            .ok_or("dynamic categories must be an array")?
+        {
+            let id = card["id"].as_str().ok_or("dynamic category id missing")?;
+            let phase = card["phase"]
+                .as_str()
+                .ok_or("dynamic category phase missing")?;
+            if categories.insert(id.to_owned(), phase.to_owned()).is_some() {
+                return Err(format!("duplicate dynamic category {id}").into());
+            }
+        }
+    }
+    let raw_cards = definitions
+        .as_array()
+        .ok_or("CARD_DEFS must be an array")?
+        .iter()
+        .map(|value| parse_card(&serde_json::to_string(value)?, &categories, javascript))
+        .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
+    let ids: BTreeSet<_> = raw_cards.iter().map(|card| card.id.as_str()).collect();
+    if ids.len() != raw_cards.len() {
+        return Err("duplicate raw card IDs".into());
+    }
+    if categories.keys().any(|id| !ids.contains(id.as_str())) {
+        return Err("category group references an unknown card".into());
+    }
 
     let hidden_by_default_ids: Vec<_> = raw_cards
         .iter()
@@ -155,6 +195,7 @@ fn extract_catalog(source: &[u8], ruleset_id: String) -> Result<CatalogSnapshot,
         ruleset_id,
         schema_version: 1,
         source_bundle_sha256: format!("{:x}", Sha256::digest(source)),
+        source_bundle_byte_length: source.len(),
         raw_card_definitions: raw_cards.len(),
         visible_card_count: cards.len(),
         hidden_by_default_ids,
@@ -177,6 +218,7 @@ fn parse_card(
         effect: required_string_property(&properties, "effect")?,
         target: properties
             .get("target")
+            .filter(|value| value.trim() != "null")
             .map(|value| parse_js_string(value))
             .transpose()?,
         text_ko: required_string_property(&properties, "text")?,
@@ -208,11 +250,14 @@ fn parse_object_properties(source: &str) -> Result<BTreeMap<String, String>, Box
     let mut properties = BTreeMap::new();
     for property in split_top_level(inner, ',') {
         let property = property.trim();
-        if property.is_empty() || property.starts_with("...") {
+        if property.is_empty() {
             continue;
         }
+        if property.starts_with("...") {
+            return Err("unresolved object spread".into());
+        }
         let Some(colon) = find_top_level(property, ':') else {
-            continue;
+            return Err("unsupported object property".into());
         };
         let key = property[..colon]
             .trim()
@@ -541,6 +586,80 @@ const CARD_CATEGORY_GROUPS = Object.freeze({
             split_top_level(r#"a, { b: "x,y" }, [1, 2], call(1, 2)"#, ','),
             ["a", " { b: \"x,y\" }", " [1, 2]", " call(1, 2)"]
         );
+    }
+
+    #[test]
+    fn declarative_extract_covers_september_definitions() {
+        let source = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../rulesets/augment_chess_20260915/sources/raw/main-6qeAcxbX.js"
+        ))
+        .unwrap();
+        let javascript = std::str::from_utf8(&source).unwrap();
+        let snapshot = extract_catalog(javascript.as_bytes(), "live-audit".to_owned()).unwrap();
+        assert_eq!(snapshot.raw_card_definitions, 241);
+        assert_eq!(snapshot.visible_card_count, 240);
+        for id in [
+            "majesty",
+            "resolve",
+            "nullification",
+            "infiltration",
+            "outpost",
+            "hedgehog",
+            "princess",
+            "big-bishop",
+            "vanguard",
+            "killer-king",
+            "campfire",
+            "reversal",
+            "recurrence",
+            "miracle",
+            "overtake",
+            "capture-the-flag",
+            "long-en-passant",
+            "disassembly",
+            "proficiency",
+            "mutation",
+            "thief",
+            "locust-swarm",
+            "false-start",
+            "paladin",
+            "symmetry",
+            "metal",
+            "octopus",
+            "parrot",
+            "clockwork",
+            "extinction",
+            "brutus",
+            "highlander",
+        ] {
+            assert!(
+                snapshot.cards.iter().any(|card| card.id == id),
+                "missing {id}"
+            );
+        }
+        assert_eq!(snapshot.hidden_by_default_ids, ["shotgun-king"]);
+    }
+
+    #[test]
+    fn category_groups_must_reference_known_cards() {
+        let sample = r#"
+const CARD_DEFS = [
+  { id: "alpha", name: "알파", phase: "OPENING", stars: 2, text: "설명", art: "a", effect: "alphaEffect" }
+];
+const CARD_CATEGORY_GROUPS = Object.freeze({ OPENING: ["alpha"], MIDDLE: ["ghost"] });
+"#;
+        let error = extract_catalog(sample.as_bytes(), "x".to_owned()).unwrap_err();
+        assert!(error.to_string().contains("unknown card"));
+    }
+
+    #[test]
+    fn evaluator_rejects_unmodeled_constructions() {
+        let mut evaluator =
+            declarative::Evaluator::new("const A = [1].map(function(c){return c});");
+        assert!(evaluator.named("A").is_err());
+        let mut evaluator = declarative::Evaluator::new("const A = CARD_DEFS.concat();");
+        assert!(evaluator.named("A").is_err());
     }
 
     #[test]

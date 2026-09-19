@@ -116,6 +116,9 @@ docs/v3-rust-python-contract.md       V3 Rust/Python 골든 fixture와 검증 �
 docs/data-v3-format.md                V3 대국·독립 decision·shard·manifest 포맷
 docs/bootstrap-v3-data.md             PGN board-pretraining과 proven 전술 생성 계약
 docs/ai-v3-model.md                   첫 V3 신경망 구조·동적 policy·성능 기준
+docs/ai-v3-hierarchical-sampled-search.md  계층형 표본 PUCT와 확률적 Draft 후속 설계
+docs/ai-v4-factorized-policy.md       V4 factorized policy·조건부 visit target 계약
+docs/ai-v4-implementation-status.md   V4 Phase 0/1 구현 현황·검증 결과·후속 계획
 rulesets/augment_chess_20260818/      최신 불변 규칙 스냅숏
 rulesets/augment_chess_20260807/      이전 불변 규칙 스냅숏
 ```

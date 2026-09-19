@@ -36,7 +36,7 @@ impl Engine {
                 let squares = squares_target(target)?.to_vec();
                 for square in squares {
                     if let Some(piece) = state.board.get(square) {
-                        self.remove_piece_for_card(
+                        self.delete_piece_for_card(
                             state,
                             square,
                             piece,
@@ -382,6 +382,58 @@ impl Engine {
                 let (_, piece) = piece_target(state, target)?;
                 state.card_runtime.explosive_piece_ids.insert(piece.id);
             }
+            crate::OUTPOST => {
+                let (_, piece) = piece_target(state, target)?;
+                state
+                    .card_runtime
+                    .outpost_protected_piece_ids
+                    .insert(piece.id);
+            }
+            crate::SYMMETRY => state.card_runtime.symmetry[actor.index()] = true,
+            crate::MIRACLE => {
+                // Miracle (live JS:91144-91179): every enemy piece currently capturable by a
+                // friendly bishop switches owners; every friendly bishop is then sacrificed.
+                let bishops = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Bishop)
+                    .collect::<Vec<_>>();
+                let mut capturable = Vec::new();
+                for (bishop_square, bishop) in &bishops {
+                    let moves = {
+                        let mut candidates = Vec::new();
+                        self.generate_slider_moves(
+                            state,
+                            *bishop_square,
+                            *bishop,
+                            &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                            &mut candidates,
+                        );
+                        candidates
+                    };
+                    for action in moves {
+                        if let Action::Move(move_action) = action {
+                            if let Some(target_piece) = state.board.get(move_action.to) {
+                                if target_piece.owner == opponent
+                                    && !capturable.iter().any(|(square, _): &(Square, Piece)| {
+                                        *square == move_action.to
+                                    })
+                                {
+                                    capturable.push((move_action.to, target_piece));
+                                }
+                            }
+                        }
+                    }
+                }
+                for (square, piece) in capturable {
+                    let mut converted = piece;
+                    converted.owner = actor;
+                    state.board.set(square, Some(converted));
+                }
+                for (square, bishop) in bishops {
+                    self.delete_piece_for_card(state, square, bishop, actor, MIRACLE, events);
+                }
+            }
             TROJAN_HORSE => {
                 let (_, piece) = piece_target(state, target)?;
                 state.card_runtime.trojan_piece_ids.insert(piece.id);
@@ -519,6 +571,8 @@ impl Engine {
                 state.card_runtime.submerged_piece_ids.insert(piece.id);
             }
             SUBSTITUTION => state.card_runtime.substitution[actor.index()] = true,
+            crate::OVERTAKE => state.card_runtime.overtake[actor.index()] = true,
+            crate::DISASSEMBLY => state.card_runtime.disassembly[actor.index()] = true,
             TWINS => {
                 let [first_square, second_square] = two_square_target(target)?;
                 let first = state
@@ -539,53 +593,19 @@ impl Engine {
                 });
             }
             BLACK_MAGIC => {
-                let pieces = web_ordered_pieces(state)
-                    .into_iter()
-                    .filter(|(_, piece)| piece.owner == actor)
-                    .collect::<Vec<_>>();
-                let royal = pieces
-                    .iter()
+                let Some(square) = self
+                    .black_magic_spawn_candidates(state, actor)
+                    .first()
                     .copied()
-                    .find(|(_, piece)| self.is_royal_piece(state, *piece))
-                    .ok_or_else(|| EngineError::Invariant("black magic has no king".to_owned()))?;
-                let mut removed = 0_usize;
-                for (square, mut piece) in pieces {
-                    if piece.id == royal.1.id {
-                        self.clear_piece_kind_runtime(state, piece.id);
-                        piece.kind = PieceKind::DarkWizard;
-                        state.board.set(square, Some(piece));
-                        state.card_runtime.moved_piece_ids.insert(piece.id);
-                        state.card_runtime.piece_origins.insert(piece.id, square);
-                        continue;
-                    }
-                    self.remove_piece_for_card(
-                        state,
-                        square,
-                        piece,
-                        actor.opponent(),
-                        BLACK_MAGIC,
-                        events,
-                    );
-                    removed += 1;
-                }
-                let spawn_count = removed.div_ceil(2);
-                let ranks: Vec<u8> = if actor == Player::White {
-                    (0..8).collect()
-                } else {
-                    (0..8).rev().collect()
+                else {
+                    return Err(EngineError::Invariant(
+                        "black magic has no adjacent open square".to_owned(),
+                    ));
                 };
-                let open = ranks
-                    .into_iter()
-                    .flat_map(|rank| (0..8).filter_map(move |file| Square::new(file, rank)))
-                    .filter(|square| state.board.get(*square).is_none())
-                    .take(spawn_count)
-                    .collect::<Vec<_>>();
-                for square in open {
-                    let monster =
-                        Piece::new(actor, PieceKind::Monster).with_id(state.allocate_piece_id());
-                    state.board.set(square, Some(monster));
-                    self.mark_fresh_no_capture(state, monster);
-                }
+                let monster =
+                    Piece::new(actor, PieceKind::Monster).with_id(state.allocate_piece_id());
+                state.board.set(square, Some(monster));
+                self.register_spawned_piece(state, square, monster, true);
             }
             FANATICAL_RITUAL => {
                 let candidates = web_ordered_pieces(state)
@@ -602,6 +622,7 @@ impl Engine {
                 let (square, mut piece) = candidates[index.ok_or_else(|| {
                     EngineError::Invariant("legal ritual has no candidate".to_owned())
                 })?];
+                self.clear_queens_gambit_protection(state, piece.id);
                 piece.kind = PieceKind::Fanatic;
                 state.board.set(square, Some(piece));
                 state.card_runtime.moved_piece_ids.insert(piece.id);
@@ -857,6 +878,10 @@ impl Engine {
                     }
                 }
             }
+            crate::NULLIFICATION => {
+                let (_, piece) = piece_target(state, target)?;
+                state.card_runtime.nullification_piece_ids.insert(piece.id);
+            }
             RULE_TICKET => {
                 let _ = self.install_rule_ext(state, ACCELERATION, events);
             }
@@ -903,10 +928,28 @@ impl Engine {
                     }
                 }
             }
-            BREAKTHROUGH_ORDER | EN_PASSANT_BANG | ARMISTICE | ROYAL_COMMAND | SOCIALISM
-            | TAUNT | MISTAKE_CARD | SNIPE | GALE | QUANTUM_MECHANICS | SUBSTITUTION
-            | WHITE_BOX | BLACK_BOX | INSIGHT | RULE_TICKET | SWITCHEROO | FRONTLINE_RESPONSE
-            | RELAY => push_none(actions),
+            BREAKTHROUGH_ORDER
+            | EN_PASSANT_BANG
+            | ARMISTICE
+            | ROYAL_COMMAND
+            | SOCIALISM
+            | TAUNT
+            | MISTAKE_CARD
+            | SNIPE
+            | GALE
+            | QUANTUM_MECHANICS
+            | SUBSTITUTION
+            | WHITE_BOX
+            | BLACK_BOX
+            | INSIGHT
+            | RULE_TICKET
+            | SWITCHEROO
+            | FRONTLINE_RESPONSE
+            | RELAY
+            | crate::OVERTAKE
+            | crate::DISASSEMBLY
+            | crate::SYMMETRY
+            | crate::MIRACLE => push_none(actions),
             SUSPICIOUS_POTION => {
                 for (square, piece) in state.board.iter() {
                     if !state.card_runtime.large_pieces.contains_key(&piece.id)
@@ -1075,6 +1118,24 @@ impl Engine {
                 for (square, piece) in state.board.iter() {
                     if piece.owner == actor
                         && matches!(piece.kind, PieceKind::Pawn | PieceKind::Fanatic)
+                    {
+                        push_piece(actions, square);
+                    }
+                }
+            }
+            crate::OUTPOST => {
+                for (square, piece) in state.board.iter() {
+                    let in_opponent_half = match actor {
+                        Player::White => square.rank() >= 4,
+                        Player::Black => square.rank() <= 3,
+                    };
+                    if piece.owner == actor
+                        && !self.is_royal_piece(state, piece)
+                        && in_opponent_half
+                        && !state
+                            .card_runtime
+                            .outpost_protected_piece_ids
+                            .contains(&piece.id)
                     {
                         push_piece(actions, square);
                     }
@@ -1259,6 +1320,7 @@ impl Engine {
                     .board
                     .iter()
                     .any(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, piece))
+                    && !self.black_magic_spawn_candidates(state, actor).is_empty()
                 {
                     push_none(actions);
                 }
@@ -1298,6 +1360,18 @@ impl Engine {
                     >= 2
                 {
                     push_none(actions);
+                }
+            }
+            crate::NULLIFICATION => {
+                for (square, piece) in state.board.iter() {
+                    if piece.owner == actor
+                        && !state
+                            .card_runtime
+                            .nullification_piece_ids
+                            .contains(&piece.id)
+                    {
+                        push_piece(actions, square);
+                    }
                 }
             }
             WITCH_TRIAL => {
@@ -1413,6 +1487,408 @@ impl Engine {
         })
     }
 
+    /// Submerged status is lost when an enemy becomes adjacent. It is not
+    /// restored when that enemy leaves; Octopus grants it only at turn completion.
+    /// Parrot base movement copied from the owner's remembered last move
+    /// (live parrotBaseMoves, JS 4205-4320). Quiet kinds never capture;
+    /// capture-only entries never move into empty squares.
+    pub(super) fn generate_parrot_memory_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        const KING: [(i8, i8); 8] = [
+            (-1, -1),
+            (-1, 1),
+            (1, -1),
+            (1, 1),
+            (-1, 0),
+            (1, 0),
+            (0, -1),
+            (0, 1),
+        ];
+        const ORTH: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        const DIAG: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+        const KNIGHT: [(i8, i8); 8] = [
+            (-2, -1),
+            (-2, 1),
+            (-1, -2),
+            (-1, 2),
+            (1, -2),
+            (1, 2),
+            (2, -1),
+            (2, 1),
+        ];
+        let Some(memory) = state.card_runtime.parrot_memory[piece.owner.index()] else {
+            return;
+        };
+        let owner = piece.owner;
+        let dir: i8 = if owner == Player::White { 1 } else { -1 };
+        #[allow(clippy::too_many_arguments)]
+        fn push_leap(
+            engine: &Engine,
+            state: &GameState,
+            piece: &Piece,
+            owner: Player,
+            from: Square,
+            actions: &mut Vec<Action>,
+            offsets: &[(i8, i8)],
+            quiet: bool,
+            capture_only: bool,
+        ) {
+            for &(df, dr) in offsets {
+                let Some(to) = from.offset(df, dr) else {
+                    continue;
+                };
+                match state.board.get(to) {
+                    None => {
+                        if !capture_only {
+                            actions.push(Action::Move(MoveAction {
+                                from,
+                                to,
+                                promotion: None,
+                            }));
+                        }
+                    }
+                    Some(target) => {
+                        if !quiet
+                            && target.owner != owner
+                            && engine.can_capture(state, *piece, target)
+                        {
+                            actions.push(Action::Move(MoveAction {
+                                from,
+                                to,
+                                promotion: None,
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+        fn push_ray(
+            engine: &Engine,
+            state: &GameState,
+            piece: &Piece,
+            owner: Player,
+            from: Square,
+            actions: &mut Vec<Action>,
+            directions: &[(i8, i8)],
+        ) {
+            for &(df, dr) in directions {
+                let mut step: i8 = 1;
+                loop {
+                    let file = i16::from(from.file()) + i16::from(df) * i16::from(step);
+                    let rank = i16::from(from.rank()) + i16::from(dr) * i16::from(step);
+                    let Some(to) = u8::try_from(file)
+                        .ok()
+                        .zip(u8::try_from(rank).ok())
+                        .and_then(|(f, r)| Square::new(f, r))
+                    else {
+                        break;
+                    };
+                    match state.board.get(to) {
+                        None => actions.push(Action::Move(MoveAction {
+                            from,
+                            to,
+                            promotion: None,
+                        })),
+                        Some(target) => {
+                            if target.owner != owner && engine.can_capture(state, *piece, target) {
+                                actions.push(Action::Move(MoveAction {
+                                    from,
+                                    to,
+                                    promotion: None,
+                                }));
+                            }
+                            break;
+                        }
+                    }
+                    step += 1;
+                }
+            }
+        }
+        match memory.source {
+            PieceKind::Queen | PieceKind::Bear | PieceKind::Clockwork => {
+                push_ray(self, state, &piece, owner, from, actions, &KING)
+            }
+            PieceKind::Rook => push_ray(self, state, &piece, owner, from, actions, &ORTH),
+            PieceKind::Bishop => push_ray(self, state, &piece, owner, from, actions, &DIAG),
+            PieceKind::Knight | PieceKind::Unicorn | PieceKind::Dragon | PieceKind::Assassin => {
+                push_leap(
+                    self, state, &piece, owner, from, actions, &KNIGHT, false, false,
+                )
+            }
+            PieceKind::Paladin => push_leap(
+                self, state, &piece, owner, from, actions, &KNIGHT, true, false,
+            ),
+            PieceKind::King
+            | PieceKind::Octopus
+            | PieceKind::Man
+            | PieceKind::Guard
+            | PieceKind::Reaper
+            | PieceKind::Recruiter
+            | PieceKind::Vip
+            | PieceKind::Crown
+            | PieceKind::DarkWizard
+            | PieceKind::MagicGirl
+            | PieceKind::Undead
+            | PieceKind::Hedgehog
+            | PieceKind::Siren
+            | PieceKind::Berserker
+            | PieceKind::Monster => push_leap(
+                self, state, &piece, owner, from, actions, &KING, false, false,
+            ),
+            PieceKind::Ferz | PieceKind::Knightmaster | PieceKind::Princess => push_leap(
+                self, state, &piece, owner, from, actions, &DIAG, false, false,
+            ),
+            PieceKind::Camel => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[
+                    (-3, -1),
+                    (-3, 1),
+                    (3, -1),
+                    (3, 1),
+                    (-1, -3),
+                    (-1, 3),
+                    (1, -3),
+                    (1, 3),
+                ],
+                false,
+                false,
+            ),
+            PieceKind::Alfil => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[(-2, -2), (-2, 2), (2, -2), (2, 2)],
+                false,
+                false,
+            ),
+            PieceKind::Lobster => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[(dir, -1), (dir, 0), (dir, 1)],
+                false,
+                false,
+            ),
+            PieceKind::Fanatic => {
+                push_leap(
+                    self,
+                    state,
+                    &piece,
+                    owner,
+                    from,
+                    actions,
+                    &[(dir, -1), (dir, 1)],
+                    true,
+                    false,
+                );
+                push_leap(
+                    self,
+                    state,
+                    &piece,
+                    owner,
+                    from,
+                    actions,
+                    &[(dir, 0)],
+                    false,
+                    true,
+                );
+            }
+            PieceKind::Slime => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[(-3, 0), (3, 0), (0, -3), (0, 3)],
+                false,
+                false,
+            ),
+            PieceKind::Colossus => push_leap(
+                self, state, &piece, owner, from, actions, &ORTH, false, false,
+            ),
+            PieceKind::SiegeRam => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[(-2, 0), (2, 0), (0, -2), (0, 2)],
+                false,
+                false,
+            ),
+            PieceKind::Campfire => push_leap(
+                self, state, &piece, owner, from, actions, &ORTH, true, false,
+            ),
+            PieceKind::Missionary => push_leap(
+                self, state, &piece, owner, from, actions, &DIAG, true, false,
+            ),
+            PieceKind::Herald => push_leap(
+                self,
+                state,
+                &piece,
+                owner,
+                from,
+                actions,
+                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                true,
+                false,
+            ),
+            PieceKind::Jester | PieceKind::Idol => {
+                // Quiet queen rays: walk manually to respect quiet semantics.
+                for &(df, dr) in KING.iter() {
+                    for n in 1..=7 {
+                        let Some(to) = Square::new(
+                            (from.file() as i8 + df * n) as u8,
+                            (from.rank() as i8 + dr * n) as u8,
+                        ) else {
+                            break;
+                        };
+                        if state.board.get(to).is_some() {
+                            break;
+                        }
+                        actions.push(Action::Move(MoveAction {
+                            from,
+                            to,
+                            promotion: None,
+                        }));
+                    }
+                }
+            }
+            PieceKind::Bat => {
+                for &(df, dr) in ORTH.iter() {
+                    for n in 1..=2 {
+                        let Some(to) = from.offset(df * n, dr * n) else {
+                            break;
+                        };
+                        match state.board.get(to) {
+                            None => actions.push(Action::Move(MoveAction {
+                                from,
+                                to,
+                                promotion: None,
+                            })),
+                            Some(target) => {
+                                if target.owner != owner && self.can_capture(state, piece, target) {
+                                    actions.push(Action::Move(MoveAction {
+                                        from,
+                                        to,
+                                        promotion: None,
+                                    }));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            PieceKind::Wizard => push_leap(
+                self, state, &piece, owner, from, actions, &KING, true, false,
+            ),
+            PieceKind::Parrot => {}
+            PieceKind::Pawn | PieceKind::Squire | PieceKind::StandardBearer => {
+                if let Some(to) = from.offset(0, dir)
+                    && state.board.get(to).is_none()
+                {
+                    actions.push(Action::Move(MoveAction {
+                        from,
+                        to,
+                        promotion: None,
+                    }));
+                }
+                for df in [-1i8, 1] {
+                    let Some(to) = from.offset(df, dir) else {
+                        continue;
+                    };
+                    if let Some(target) = state.board.get(to)
+                        && target.owner != owner
+                        && self.can_capture(state, piece, target)
+                    {
+                        actions.push(Action::Move(MoveAction {
+                            from,
+                            to,
+                            promotion: None,
+                        }));
+                    }
+                }
+            }
+            PieceKind::Grasshopper => {
+                for &(df, dr) in KING.iter() {
+                    let mut cursor = from;
+                    while let Some(next) = cursor.offset(df, dr)
+                        && state.board.get(next).is_none()
+                    {
+                        cursor = next;
+                    }
+                    if let Some(screen) = cursor.offset(df, dr)
+                        && state.board.get(screen).is_some()
+                        && let Some(to) = screen.offset(df, dr)
+                        && state.board.get(to).is_none()
+                    {
+                        actions.push(Action::Move(MoveAction {
+                            from,
+                            to,
+                            promotion: None,
+                        }));
+                    }
+                }
+            }
+            // Hook/Brutus/Protestant/Thief/Pegasus/Cannon/Windmill/Checker/PrimeMinister/
+            // Amazon/Cardinal/Eagle-style patterns have no Rust piece-kind equivalent or are
+            // out of this unit's evidence table; unhandled kinds yield no base moves.
+            _ => {}
+        }
+    }
+
+    pub(super) fn refresh_submerged_pieces(&self, state: &mut GameState) {
+        let revealed = state
+            .card_runtime
+            .submerged_piece_ids
+            .iter()
+            .copied()
+            .filter(|id| {
+                state
+                    .board
+                    .find_by_id(*id)
+                    .is_none_or(|(square, piece)| has_adjacent_enemy(state, square, piece.owner))
+            })
+            .collect::<Vec<_>>();
+        for id in revealed {
+            state.card_runtime.submerged_piece_ids.remove(&id);
+        }
+    }
+
+    pub(super) fn complete_octopus_turn(&self, state: &mut GameState, actor: Player) {
+        let submerged = state
+            .board
+            .iter()
+            .filter_map(|(square, piece)| {
+                (piece.owner == actor
+                    && self.piece_has_ability(state, piece, PieceKind::Octopus)
+                    && !has_adjacent_enemy(state, square, actor))
+                .then_some(piece.id)
+            })
+            .collect::<Vec<_>>();
+        state.card_runtime.submerged_piece_ids.extend(submerged);
+        self.refresh_submerged_pieces(state);
+    }
+
     pub(super) fn middle_submerged_protects(&self, state: &GameState, target: Piece) -> bool {
         state.card_runtime.submerged_piece_ids.contains(&target.id)
             && state
@@ -1452,6 +1928,9 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
+        if self.piece_has_ability(state, piece, PieceKind::Slime) {
+            return;
+        }
         let owner = piece.owner.index();
         if state
             .card_runtime
@@ -1468,6 +1947,19 @@ impl Engine {
             self.generate_slider_moves(state, from, piece, QUEEN_DIRECTIONS, actions);
         }
         if piece.kind == PieceKind::Pawn {
+            // Long en passant (live JS:4032-4051): an own pawn standing on the rank the
+            // just-double-stepped victim departed from may land on the en-passant target
+            // from any file when the card is armed.
+            if state.card_runtime.long_en_passant[owner]
+                && let Some(en_passant) = &state.en_passant
+                && en_passant.pawn_owner != piece.owner
+                && en_passant.captured.rank() == from.rank()
+            {
+                let landing = en_passant.target;
+                if state.board.get(landing).is_none() {
+                    actions.push(Action::Move(MoveAction::new(from, landing, None)));
+                }
+            }
             if state.card_runtime.pawn_leap[owner] {
                 self.generate_leaper_moves(state, from, piece, KNIGHT_OFFSETS, actions);
             }
@@ -1602,6 +2094,69 @@ impl Engine {
         }
     }
 
+    fn paladin_radiance_contains(
+        &self,
+        state: &GameState,
+        moving_owner: Player,
+        square: Square,
+    ) -> bool {
+        state.board.iter().any(|(source, candidate)| {
+            candidate.owner != moving_owner
+                && self.piece_has_ability(state, candidate, PieceKind::Paladin)
+                // JS lightSquare(row,col) uses row zero at rank 8; in Rust's
+                // rank-one origin this is the opposite parity.
+                && (source.file() + source.rank()) % 2 == 1
+                && KING_OFFSETS.iter().any(|&(df, dr)| source.offset(df, dr) == Some(square))
+        })
+    }
+
+    pub(super) fn paladin_radiance_blocks_move(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        movement: MoveAction,
+        check_path: bool,
+    ) -> bool {
+        if (movement.from.file() + movement.from.rank()) % 2 == 1 {
+            return false;
+        }
+        if self.paladin_radiance_contains(state, piece.owner, movement.to) {
+            return true;
+        }
+        if !check_path {
+            return false;
+        }
+        let kind = self.piece_ability_kind(state, piece);
+        if matches!(
+            kind,
+            PieceKind::Knight
+                | PieceKind::Paladin
+                | PieceKind::Camel
+                | PieceKind::Alfil
+                | PieceKind::Alibaba
+                | PieceKind::Lobster
+                | PieceKind::Slime
+                | PieceKind::Colossus
+                | PieceKind::SiegeRam
+        ) {
+            return false;
+        }
+        let df = movement.to.file() as i8 - movement.from.file() as i8;
+        let dr = movement.to.rank() as i8 - movement.from.rank() as i8;
+        if df != 0 && dr != 0 && df.abs() != dr.abs() {
+            return false;
+        }
+        let steps = df.abs().max(dr.abs());
+        let step_file = df.signum();
+        let step_rank = dr.signum();
+        (1..steps).any(|step| {
+            movement
+                .from
+                .offset(step_file * step, step_rank * step)
+                .is_some_and(|square| self.paladin_radiance_contains(state, piece.owner, square))
+        })
+    }
+
     pub(super) fn filter_middle_moves(
         &self,
         state: &GameState,
@@ -1614,12 +2169,18 @@ impl Engine {
             let Action::Move(movement) = action else {
                 return true;
             };
+            if self.paladin_radiance_blocks_move(state, piece, *movement, true) {
+                return false;
+            }
             if state
                 .card_runtime
                 .pending_scarecrows
                 .iter()
                 .any(|pending| pending.square == movement.to)
             {
+                return false;
+            }
+            if self.fianchetto_destination_blocked(state, piece, from, movement.to) {
                 return false;
             }
             let file_distance = movement.from.file().abs_diff(movement.to.file());
@@ -1779,6 +2340,7 @@ impl Engine {
                 .contains(&original_piece.id)
                 && let Some(mut attacker) = state.board.get(movement.to)
             {
+                self.clear_queens_gambit_protection(state, attacker.id);
                 attacker.kind = captured_piece.kind;
                 state.board.set(movement.to, Some(attacker));
             }
@@ -1978,6 +2540,8 @@ impl Engine {
             };
             if let Some((partner_square, partner)) = state.board.find_by_id(partner_id)
                 && let Some(moved) = state.board.get(movement.to)
+                && !self.piece_has_ability(state, partner, PieceKind::Slime)
+                && !self.piece_has_ability(state, moved, PieceKind::Slime)
             {
                 state.board.set(partner_square, Some(moved));
                 state.board.set(movement.to, Some(partner));
@@ -2034,6 +2598,9 @@ impl Engine {
         state.card_runtime.bishop_snipe[owner] = false;
         state.card_runtime.quantum_pending[owner] = false;
         state.card_runtime.substitution[owner] = false;
+        state.card_runtime.overtake[owner] = false;
+        state.card_runtime.disassembly[owner] = false;
+        state.card_runtime.symmetry[owner] = false;
         state.card_runtime.switcheroo[owner] = false;
         state.card_runtime.mistake_card[owner] = false;
         state.card_runtime.socialism[owner] = state.card_runtime.socialism[owner].saturating_sub(1);
@@ -2177,6 +2744,7 @@ impl Engine {
         for piece_id in grown {
             state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
             if let Some((square, mut piece)) = state.board.find_by_id(piece_id) {
+                self.clear_queens_gambit_protection(state, piece.id);
                 piece.kind = PieceKind::Bear;
                 state.board.set(square, Some(piece));
                 state.card_runtime.bear_retaliations.insert(piece.id, 2);
@@ -2443,6 +3011,8 @@ impl Engine {
                 }
                 state.board.set(movement.to, Some(piece));
                 state.card_runtime.moved_piece_ids.insert(piece.id);
+                // Each premove is a relocation, not an atomic multi-move teleport.
+                self.refresh_submerged_pieces(state);
                 events.push(Event::EffectApplied {
                     source_card_instance: 0,
                     command: format!("premove:{}:{}->{}", piece.id, movement.from, movement.to),

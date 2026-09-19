@@ -1,0 +1,118 @@
+{
+  "schema_id": "augmentia.factorized-policy.golden.v1",
+  "factorized_policy_schema_id": "augmentia.factorized-policy.v4",
+  "cases": [
+    {
+      "name": "move",
+      "action": {
+        "kind": "move",
+        "piece": 1,
+        "piece_kind": 2,
+        "from": 1,
+        "to": 16,
+        "promotion": null
+      },
+      "path": [
+        "family:move",
+        "piece:1",
+        "destination:16",
+        "promotion:none",
+        "complete:action"
+      ]
+    },
+    {
+      "name": "promotion",
+      "action": {
+        "kind": "move",
+        "piece": 4,
+        "piece_kind": 1,
+        "from": 55,
+        "to": 63,
+        "promotion": 5
+      },
+      "path": [
+        "family:move",
+        "piece:4",
+        "destination:63",
+        "promotion:5",
+        "complete:action"
+      ]
+    },
+    {
+      "name": "ability_square",
+      "action": {
+        "kind": "piece_ability",
+        "piece": 2,
+        "piece_kind": 21,
+        "from": 18,
+        "ability": "wizard_lightning",
+        "target": {
+          "kind": "square",
+          "square": 7
+        }
+      },
+      "path": [
+        "family:piece_ability",
+        "piece:2",
+        "ability:wizard_lightning",
+        "target_kind:square",
+        "target_square:7",
+        "complete:action"
+      ]
+    },
+    {
+      "name": "card_squares",
+      "action": {
+        "kind": "card",
+        "card": 3,
+        "definition_id": "gale",
+        "target": {
+          "kind": "squares",
+          "squares": [
+            1,
+            9,
+            18
+          ]
+        }
+      },
+      "path": [
+        "family:card",
+        "card:3",
+        "target_kind:squares",
+        "target_0:1",
+        "target_1:9",
+        "target_2:18",
+        "complete:action"
+      ]
+    },
+    {
+      "name": "draft",
+      "action": {
+        "kind": "draft_pick",
+        "offer_index": 1,
+        "definition_id": "windmill"
+      },
+      "path": [
+        "family:draft_pick",
+        "offer:1",
+        "complete:action"
+      ]
+    },
+    {
+      "name": "choice",
+      "action": {
+        "kind": "resolve_choice",
+        "choice_slot": 0,
+        "handler_id": "trolley",
+        "option_index": 2,
+        "option": "choice:trolley:2"
+      },
+      "path": [
+        "family:resolve_choice",
+        "choice:0",
+        "option:2",
+        "complete:action"
+      ]
+    }
+  ]
+}

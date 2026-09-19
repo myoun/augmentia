@@ -4,7 +4,7 @@ use augment_core::PieceKind;
 ///
 /// This identifier describes meaning, not a tensor layout. Changing field visibility,
 /// perspective, identity handling, or normalization requires a new identifier.
-pub const OBSERVATION_V3_SCHEMA_ID: &str = "augmentia.observation.v3.20260818";
+pub const OBSERVATION_V3_SCHEMA_ID: &str = "augmentia.observation.v3.20260917.10";
 
 /// Identifiers attached to retained V2 audit samples. They must never be used for V3 data.
 pub const OBSERVATION_V2_SCHEMA_ID: &str = "augmentia.observation.canonical-v2";
@@ -34,11 +34,12 @@ pub const GAME_STATE_SOURCE_FIELDS: [&str; 18] = [
     "card_runtime",
 ];
 
-/// All public `CardRuntimeState` fields in source order.
+/// All public `CardRuntimeState` fields in stable encoding order.
+/// New fields append, even when the engine inserts them elsewhere in source order.
 ///
 /// Step 3 may choose different physical tensors or token collections, but it must assign every
 /// entry here to an encoded or explicitly derived representation. No catch-all bucket is allowed.
-pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 169] = [
+pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 194] = [
     "opening_auto_card_ids",
     "hill_king",
     "geneva_convention",
@@ -208,6 +209,31 @@ pub const CARD_RUNTIME_SOURCE_FIELDS: [&str; 169] = [
     "transcendence",
     "winter_kingdom_next",
     "cloned_passives",
+    "capture_the_flag",
+    "pending_lobsters",
+    "pending_portals",
+    "majesty",
+    "proficiency",
+    "killer_king",
+    "disassembly",
+    "overtake",
+    "reversal",
+    "outpost_protected_piece_ids",
+    "symmetry",
+    "mutation",
+    "long_en_passant",
+    "parrot_memory",
+    "nullification_piece_ids",
+    "vanguard",
+    "infiltration",
+    "resolve",
+    "resolve_ready",
+    "resolve_move_credit",
+    "locust_swarm_piece_ids",
+    "metalized_piece_ids",
+    "metal_cooldowns",
+    "recurrence_piece_ids",
+    "pending_recurrences",
 ];
 
 /// Private engine values that a model must not receive directly.
@@ -233,7 +259,7 @@ pub const INTERNAL_STATE_EXCLUSIONS: [(&str, &str); 6] = [
 pub const DERIVED_SOURCE_FIELDS: [&str; 2] = ["shared_turn_count", "current_repetition_count"];
 
 /// Complete, collision-free piece vocabulary for ObservationV3.
-pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 58] = [
+pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 68] = [
     (1, PieceKind::Pawn),
     (2, PieceKind::Knight),
     (3, PieceKind::Bishop),
@@ -292,6 +318,16 @@ pub const PIECE_KIND_VOCABULARY: [(u8, PieceKind); 58] = [
     (56, PieceKind::Siren),
     (57, PieceKind::Trickster),
     (58, PieceKind::Undead),
+    (59, PieceKind::Clockwork),
+    (60, PieceKind::Parrot),
+    (61, PieceKind::Paladin),
+    (62, PieceKind::Princess),
+    (63, PieceKind::Octopus),
+    (64, PieceKind::Hedgehog),
+    (65, PieceKind::Campfire),
+    (66, PieceKind::Thief),
+    (67, PieceKind::Brutus),
+    (68, PieceKind::BigBishop),
 ];
 
 #[cfg(test)]
@@ -310,7 +346,7 @@ mod tests {
     #[test]
     fn source_field_inventories_are_unique_and_complete_at_the_frozen_count() {
         assert_eq!(GAME_STATE_SOURCE_FIELDS.len(), 18);
-        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS.len(), 169);
+        assert_eq!(CARD_RUNTIME_SOURCE_FIELDS.len(), 194);
         assert_eq!(
             GAME_STATE_SOURCE_FIELDS
                 .iter()
@@ -338,7 +374,7 @@ mod tests {
             .collect::<BTreeSet<_>>();
         assert_eq!(codes.len(), PIECE_KIND_VOCABULARY.len());
         assert_eq!(codes.first(), Some(&1));
-        assert_eq!(codes.last(), Some(&58));
+        assert_eq!(codes.last(), Some(&68));
     }
 
     #[test]
@@ -347,6 +383,9 @@ mod tests {
         let CardRuntimeState {
             opening_auto_card_ids: _,
             hill_king: _,
+            killer_king: _,
+            proficiency: _,
+            disassembly: _,
             geneva_convention: _,
             pawn_sprint: _,
             early_promotion: _,
@@ -363,6 +402,8 @@ mod tests {
             platform: _,
             herald_jump_locked_until: _,
             windmill_modes: _,
+            parrot_memory: _,
+            nullification_piece_ids: _,
             log_statuses: _,
             wizard_mana: _,
             reaper_souls: _,
@@ -514,6 +555,26 @@ mod tests {
             transcendence: _,
             winter_kingdom_next: _,
             cloned_passives: _,
+            capture_the_flag: _,
+            majesty: _,
+            pending_lobsters: _,
+            pending_portals: _,
+            overtake: _,
+            reversal: _,
+            symmetry: _,
+            outpost_protected_piece_ids: _,
+            mutation: _,
+            long_en_passant: _,
+            vanguard: _,
+            infiltration: _,
+            resolve: _,
+            resolve_ready: _,
+            resolve_move_credit: _,
+            locust_swarm_piece_ids: _,
+            metalized_piece_ids: _,
+            metal_cooldowns: _,
+            recurrence_piece_ids: _,
+            pending_recurrences: _,
         } = &runtime;
     }
 
@@ -716,7 +777,45 @@ mod tests {
             } = value;
         }
 
+        fn parrot_memory(value: &augment_core::ParrotMemoryStatus) {
+            let augment_core::ParrotMemoryStatus {
+                source: _,
+                effective: _,
+            } = value;
+        }
+        fn capture_flags(value: &augment_core::CaptureTheFlagState) {
+            let augment_core::CaptureTheFlagState {
+                flags: _,
+                occupations: _,
+            } = value;
+        }
+        fn flag_occupation(value: &augment_core::FlagOccupation) {
+            let augment_core::FlagOccupation {
+                piece_id: _,
+                after_owner_turn: _,
+            } = value;
+        }
+        fn lobster(value: &augment_core::PendingLobster) {
+            let augment_core::PendingLobster {
+                owner: _,
+                square: _,
+                due_ply: _,
+            } = value;
+        }
+        fn portal(value: &augment_core::PendingPortal) {
+            let augment_core::PendingPortal {
+                owner: _,
+                squares: _,
+                due_turn: _,
+            } = value;
+        }
+
         let _review_gates = (
+            parrot_memory as fn(&augment_core::ParrotMemoryStatus),
+            capture_flags as fn(&augment_core::CaptureTheFlagState),
+            flag_occupation as fn(&augment_core::FlagOccupation),
+            lobster as fn(&augment_core::PendingLobster),
+            portal as fn(&augment_core::PendingPortal),
             piece as fn(&Piece),
             draft as fn(&DraftState),
             choice as fn(&PendingChoice),

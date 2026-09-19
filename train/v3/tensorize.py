@@ -12,7 +12,7 @@ from typing import Any
 
 import torch
 
-from .schema import GLOBAL_SHAPE, RUNTIME_FIELD_COUNT, SPATIAL_SHAPE, SchemaError
+from .schema import GLOBAL_SHAPE, OBSERVATION_SCHEMA_ID, RUNTIME_FIELD_COUNT, SPATIAL_SHAPE, SchemaError
 
 PLAYER_IDS = {"self_player": 1, "opponent": 2}
 PHASE_IDS = {"playing": 1, "forced_move": 2, "draft": 3, "awaiting_choice": 4}
@@ -572,13 +572,17 @@ def tensorize_cases(
 def _flatten_runtime(
     observation: Mapping[str, Any], vocabulary: V3Vocabulary
 ) -> list[_RuntimeNode]:
+    if observation.get("schema_id") != OBSERVATION_SCHEMA_ID:
+        raise SchemaError(f"unsupported observation schema {observation.get('schema_id')!r}")
     nodes: list[_RuntimeNode] = []
     runtime = observation["runtime"]
     if len(runtime) != RUNTIME_FIELD_COUNT:
         raise SchemaError(
             f"runtime has {len(runtime)} fields; expected {RUNTIME_FIELD_COUNT}"
         )
-    for feature in runtime:
+    for index, feature in enumerate(runtime):
+        if feature["field_id"] != index + 1:
+            raise SchemaError(f"runtime[{index}].field_id must be {index + 1}")
         _append_runtime_node(
             nodes,
             feature["field_id"],

@@ -258,7 +258,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             records,
             compression_level,
         )?;
-        shards.push(summary.to_manifest_entry(relative, split.clone()));
+        shards.push(summary.to_manifest_entry(relative, *split));
     }
     let mut totals = DatasetTotalsV3 {
         shards: shards.len() as u64,

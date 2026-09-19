@@ -186,6 +186,15 @@ pub enum WindmillMode {
     Rook,
 }
 
+/// The movement kind an owner's last real relocation used, for Parrot memory.
+/// `source` records the ability-adjusted kind at move time; `piece` records the
+/// transformed kind (Trickster stores the sampled movement kind).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ParrotMemoryStatus {
+    pub source: PieceKind,
+    pub effective: PieceKind,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LogStatus {
     pub file_delta: i8,
@@ -257,6 +266,20 @@ pub struct PendingPremove {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingPortal {
+    pub owner: Player,
+    pub squares: [Square; 2],
+    pub due_turn: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingLobster {
+    pub owner: Player,
+    pub square: Square,
+    pub due_ply: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PendingScarecrow {
     pub owner: Player,
     pub square: Square,
@@ -315,6 +338,11 @@ pub struct UndeadResurrection {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingRecurrence {
+    pub piece: Piece,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ReplayCell {
     pub square: Square,
     pub before: Option<Piece>,
@@ -333,18 +361,51 @@ pub struct MoveReplayState {
     pub runtime_after: Box<CardRuntimeState>,
 }
 
+/// Public flag occupation. The defender loses only after completing a turn beyond this marker.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FlagOccupation {
+    pub piece_id: u32,
+    pub after_owner_turn: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CaptureTheFlagState {
+    pub flags: [Square; 2],
+    pub occupations: [Option<FlagOccupation>; 2],
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
+    pub capture_the_flag: Option<CaptureTheFlagState>,
+    pub majesty: [bool; 2],
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
     /// move instead of being exposed as manual card actions.
     pub opening_auto_card_ids: BTreeSet<u32>,
     pub hill_king: [bool; 2],
+    pub killer_king: [bool; 2],
+    pub proficiency: [bool; 2],
+    pub disassembly: [bool; 2],
+    pub overtake: [bool; 2],
+    pub reversal: [bool; 2],
+    pub symmetry: [bool; 2],
+    pub mutation: [bool; 2],
+    pub long_en_passant: [bool; 2],
+    pub vanguard: [bool; 2],
+    pub infiltration: [bool; 2],
+    pub resolve: [bool; 2],
+    pub resolve_ready: [bool; 2],
+    pub resolve_move_credit: [bool; 2],
     pub geneva_convention: [bool; 2],
     pub pawn_sprint: [bool; 2],
     pub early_promotion: [bool; 2],
     pub initiative: [Option<InitiativeStatus>; 2],
     pub dice_locks: [Option<DiceLockStatus>; 2],
     pub moved_piece_ids: BTreeSet<u32>,
+    pub locust_swarm_piece_ids: BTreeSet<u32>,
+    pub metalized_piece_ids: BTreeSet<u32>,
+    pub metal_cooldowns: BTreeMap<u32, u8>,
+    pub recurrence_piece_ids: BTreeSet<u32>,
+    pub pending_recurrences: Vec<PendingRecurrence>,
     pub fresh_no_capture_until: BTreeMap<u32, u32>,
     pub disarmed: BTreeMap<u32, u32>,
     pub frozen: BTreeMap<u32, FrozenStatus>,
@@ -355,10 +416,13 @@ pub struct CardRuntimeState {
     pub platform: Option<PlatformRuleState>,
     pub herald_jump_locked_until: BTreeMap<u32, u32>,
     pub windmill_modes: BTreeMap<u32, WindmillMode>,
+    pub parrot_memory: [Option<ParrotMemoryStatus>; 2],
     pub log_statuses: BTreeMap<u32, LogStatus>,
     pub wizard_mana: BTreeMap<u32, u8>,
     pub reaper_souls: BTreeMap<u32, u8>,
     pub shielded_piece_ids: BTreeSet<u32>,
+    pub outpost_protected_piece_ids: BTreeSet<u32>,
+    pub nullification_piece_ids: BTreeSet<u32>,
     pub protected_piece_ids: BTreeSet<u32>,
     pub idol_used_turn: BTreeMap<u32, u32>,
     pub idol_rest_piece_ids: BTreeSet<u32>,
@@ -474,6 +538,8 @@ pub struct CardRuntimeState {
     pub desperado_pieces: BTreeSet<u32>,
     pub palaces: BTreeMap<Player, [Square; 2]>,
     pub portals: Option<[Square; 2]>,
+    pub pending_lobsters: Vec<PendingLobster>,
+    pub pending_portals: Vec<PendingPortal>,
     pub bunkers: BTreeMap<u32, u8>,
     pub zugzwang: [bool; 2],
     pub bina_mate: [bool; 2],
@@ -605,6 +671,8 @@ impl CardRuntimeState {
             || !self.desperado_pieces.is_empty()
             || !self.palaces.is_empty()
             || self.portals.is_some()
+            || !self.pending_lobsters.is_empty()
+            || !self.pending_portals.is_empty()
             || !self.bunkers.is_empty()
             || self.zugzwang != [false, false]
             || self.bina_mate != [false, false]
@@ -882,6 +950,30 @@ impl GameState {
         for piece_id in &self.card_runtime.moved_piece_ids {
             hash.u32(*piece_id);
         }
+        for piece_id in &self.card_runtime.locust_swarm_piece_ids {
+            hash.bytes(b"locust-swarm");
+            hash.u32(*piece_id);
+        }
+        for piece_id in &self.card_runtime.metalized_piece_ids {
+            hash.bytes(b"metalized");
+            hash.u32(*piece_id);
+        }
+        for (piece_id, remaining) in &self.card_runtime.metal_cooldowns {
+            hash.bytes(b"metal-cooldown");
+            hash.u32(*piece_id);
+            hash.u8(*remaining);
+        }
+        for piece_id in &self.card_runtime.recurrence_piece_ids {
+            hash.bytes(b"recurrence");
+            hash.u32(*piece_id);
+        }
+        for pending in &self.card_runtime.pending_recurrences {
+            hash.bytes(b"pending-recurrence");
+            hash.u32(pending.piece.id);
+            hash.u8(pending.piece.kind.stable_code());
+            hash.u8(pending.piece.owner.index() as u8);
+            hash.u16(pending.piece.capture_count);
+        }
         for (piece_id, deadline) in &self.card_runtime.fresh_no_capture_until {
             hash.u32(*piece_id);
             let owner = self
@@ -973,6 +1065,12 @@ impl GameState {
             hash.u8(*souls);
         }
         for piece_id in &self.card_runtime.shielded_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for piece_id in &self.card_runtime.outpost_protected_piece_ids {
+            hash.u32(*piece_id);
+        }
+        for piece_id in &self.card_runtime.nullification_piece_ids {
             hash.u32(*piece_id);
         }
         for piece_id in &self.card_runtime.protected_piece_ids {
@@ -1198,6 +1296,8 @@ impl GameState {
                         &self.card_runtime.desperado_pieces,
                         &self.card_runtime.palaces,
                         self.card_runtime.portals,
+                        &self.card_runtime.pending_lobsters,
+                        &self.card_runtime.pending_portals,
                     )
                 )
                 .as_bytes(),
@@ -1262,6 +1362,94 @@ impl GameState {
         if self.card_runtime.skip_turns != [false, false] {
             hash.u8(u8::from(self.card_runtime.skip_turns[0]));
             hash.u8(u8::from(self.card_runtime.skip_turns[1]));
+        }
+        if self.card_runtime.majesty != [false, false] {
+            hash.bytes(b"majesty");
+            hash.u8(u8::from(self.card_runtime.majesty[0]));
+            hash.u8(u8::from(self.card_runtime.majesty[1]));
+        }
+        if self.card_runtime.killer_king != [false, false] {
+            hash.bytes(b"killer-king");
+            hash.u8(u8::from(self.card_runtime.killer_king[0]));
+            hash.u8(u8::from(self.card_runtime.killer_king[1]));
+        }
+        if self.card_runtime.proficiency != [false, false] {
+            hash.bytes(b"proficiency");
+            hash.u8(u8::from(self.card_runtime.proficiency[0]));
+            hash.u8(u8::from(self.card_runtime.proficiency[1]));
+        }
+        if self.card_runtime.disassembly != [false, false] {
+            hash.bytes(b"disassembly");
+            hash.u8(u8::from(self.card_runtime.disassembly[0]));
+            hash.u8(u8::from(self.card_runtime.disassembly[1]));
+        }
+        if self.card_runtime.overtake != [false, false] {
+            hash.bytes(b"overtake");
+            hash.u8(u8::from(self.card_runtime.overtake[0]));
+            hash.u8(u8::from(self.card_runtime.overtake[1]));
+        }
+        if self.card_runtime.reversal != [false, false] {
+            hash.bytes(b"reversal");
+            hash.u8(u8::from(self.card_runtime.reversal[0]));
+            hash.u8(u8::from(self.card_runtime.reversal[1]));
+        }
+        if self.card_runtime.symmetry != [false, false] {
+            hash.bytes(b"symmetry");
+            hash.u8(u8::from(self.card_runtime.symmetry[0]));
+            hash.u8(u8::from(self.card_runtime.symmetry[1]));
+        }
+        if self.card_runtime.mutation != [false, false] {
+            hash.bytes(b"mutation");
+            hash.u8(u8::from(self.card_runtime.mutation[0]));
+            hash.u8(u8::from(self.card_runtime.mutation[1]));
+        }
+        if self.card_runtime.long_en_passant != [false, false] {
+            hash.bytes(b"long-en-passant");
+            hash.u8(u8::from(self.card_runtime.long_en_passant[0]));
+            hash.u8(u8::from(self.card_runtime.long_en_passant[1]));
+        }
+        if self.card_runtime.vanguard != [false, false] {
+            hash.bytes(b"vanguard");
+            hash.u8(u8::from(self.card_runtime.vanguard[0]));
+            hash.u8(u8::from(self.card_runtime.vanguard[1]));
+        }
+        if self.card_runtime.infiltration != [false, false] {
+            hash.bytes(b"infiltration");
+            hash.u8(u8::from(self.card_runtime.infiltration[0]));
+            hash.u8(u8::from(self.card_runtime.infiltration[1]));
+        }
+        if self.card_runtime.resolve != [false, false] {
+            hash.bytes(b"resolve");
+            hash.u8(u8::from(self.card_runtime.resolve[0]));
+            hash.u8(u8::from(self.card_runtime.resolve[1]));
+        }
+        if self.card_runtime.resolve_ready != [false, false] {
+            hash.bytes(b"resolve_ready");
+            hash.u8(u8::from(self.card_runtime.resolve_ready[0]));
+            hash.u8(u8::from(self.card_runtime.resolve_ready[1]));
+        }
+        if self.card_runtime.resolve_move_credit != [false, false] {
+            hash.bytes(b"resolve_move_credit");
+            hash.u8(u8::from(self.card_runtime.resolve_move_credit[0]));
+            hash.u8(u8::from(self.card_runtime.resolve_move_credit[1]));
+        }
+        if let Some(flags) = &self.card_runtime.capture_the_flag {
+            hash.bytes(b"capture-the-flag");
+            for owner in [Player::White, Player::Black] {
+                hash.u8(flags.flags[owner.index()].index() as u8);
+                match flags.occupations[owner.index()] {
+                    Some(occupation) => {
+                        hash.u8(1);
+                        hash.u32(occupation.piece_id);
+                        hash.u32(
+                            occupation
+                                .after_owner_turn
+                                .saturating_sub(self.turns_taken[owner.index()]),
+                        );
+                    }
+                    None => hash.u8(0),
+                }
+            }
         }
         let has_0818_runtime = self.card_runtime.field_promotion != [false, false]
             || !self.card_runtime.field_promoted_piece_ids.is_empty()
@@ -1366,6 +1554,11 @@ impl GameState {
         hash.u32(self.turns_taken[0]);
         hash.u32(self.turns_taken[1]);
         hash.u32(self.next_piece_id);
+        if let Some(flags) = &self.card_runtime.capture_the_flag {
+            for occupation in flags.occupations.iter().flatten() {
+                hash.u32(occupation.after_owner_turn);
+            }
+        }
         hash.u32(self.next_card_instance_id);
         hash.u32(self.next_choice_id);
         for status in self.card_runtime.empty_lunchboxes.values() {
@@ -1392,6 +1585,10 @@ impl GameState {
                 hash.u8(2);
                 hash.bytes(format!("{reason:?}").as_bytes());
             }
+        }
+        for memory in self.card_runtime.parrot_memory.iter().flatten() {
+            hash.u8(memory.source.stable_code());
+            hash.u8(memory.effective.stable_code());
         }
         for (position, count) in &self.repetitions {
             hash.u64(*position);

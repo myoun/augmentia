@@ -23,13 +23,19 @@ from v3.mixture import (
 )
 from v3.onnx_export import (
     assert_onnx_equivalent,
+    assert_split_onnx_equivalent,
     export_onnx_v3,
     extend_model_for_runtime_vocabulary,
     migrate_piece_kind_embedding,
 )
 from v3.onnx_runtime import OnnxRuntimeV3
 from v3.pretensor import PretensorizedReplayDatasetV3, build_pretensor_artifact
-from v3.replay import DeterministicSamplerV3, ReplayDatasetV3, collate_examples
+from v3.replay import (
+    DeterministicSamplerV3,
+    ReplayDatasetV3,
+    _policy_target,
+    collate_examples,
+)
 from v3.schema import SchemaError, load_golden_suite
 from v3.tensorize import V3Vocabulary
 from v3.trainer import (
@@ -58,6 +64,29 @@ class PipelineV3Tests(unittest.TestCase):
             self.assertTrue(batch.value_supervision.all())
             self.assertEqual(int(batch.auxiliary_supervision.sum()), 1)
             torch.testing.assert_close(batch.policy_targets.sum(dim=1), torch.ones(3))
+
+    def test_sampled_mcts_target_validates_open_mask_and_normalizes_visits(self) -> None:
+        target = {
+            "scope": "augment_policy",
+            "target": {
+                "kind": "sampled_mcts_visits",
+                "visit_counts": [7, 0, 3, 0],
+                "completed_simulations": 10,
+                "root_value": 0.1,
+                "noise_seed_hex": None,
+                "sampling_temperature": 1.0,
+                "proposed_mask": [True, False, True, False],
+                "opened_mask": [True, False, True, False],
+                "inclusion_probabilities": [1.0, 0.25, 1.0, 0.25],
+                "first_open_simulations": [0, None, 0, None],
+                "search_semantics_id": "sampled-v1",
+                "candidate_proposal_id": "proposal-v1",
+            },
+        }
+        self.assertEqual(_policy_target(target, 4, "sample"), (0.7, 0.0, 0.3, 0.0))
+        target["target"]["visit_counts"][1] = 1
+        with self.assertRaisesRegex(SchemaError, "closed action has visits"):
+            _policy_target(target, 4, "sample")
 
     def test_pretensor_artifact_matches_raw_collation_across_frames(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -488,8 +517,21 @@ class PipelineV3Tests(unittest.TestCase):
                 budgeted_config,
                 root / "budgeted",
             )
+            frozen_names = ("runtime_attention.bias", "policy_scorer.4.bias")
+            frozen_initial = {
+                name: dict(baseline.model.named_parameters())[name].detach().clone()
+                for name in frozen_names
+            }
             baseline_metrics = baseline.train_step()
             budgeted_metrics = budgeted.train_step()
+            for trainer in (baseline, budgeted):
+                parameters = dict(trainer.model.named_parameters())
+                for name in frozen_names:
+                    self.assertFalse(parameters[name].requires_grad)
+                    self.assertIsNone(parameters[name].grad)
+                    torch.testing.assert_close(
+                        parameters[name], frozen_initial[name], rtol=0, atol=0
+                    )
             self.assertEqual(baseline_metrics.decision_ids, budgeted_metrics.decision_ids)
             self.assertAlmostEqual(baseline_metrics.loss, budgeted_metrics.loss, places=6)
             for name, expected in baseline.model.state_dict().items():
@@ -682,6 +724,13 @@ class PipelineV3Tests(unittest.TestCase):
             )
             errors = assert_onnx_equivalent(trainer.model, sample, model_path)
             self.assertLess(errors["policy_max_abs_error"], 2e-4)
+            split_errors = assert_split_onnx_equivalent(trainer.model, sample, model_path)
+            self.assertLess(split_errors["policy_max_abs_error"], 2e-4)
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            split = metadata["split_policy_bundle"]
+            self.assertEqual(split["schema_id"], "augmentia.onnx-split-policy-bundle.v1")
+            self.assertTrue((root / split["state_encoder"]["path"]).is_file())
+            self.assertTrue((root / split["candidate_scorer"]["path"]).is_file())
             runtime = OnnxRuntimeV3(
                 model_path,
                 expected_ruleset_id=dataset.identity.ruleset_id,

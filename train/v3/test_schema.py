@@ -16,7 +16,7 @@ class GoldenV3ParityTests(unittest.TestCase):
         vocabulary = load_runtime_vocabulary()
         self.assertIn("square", vocabulary["tokens"])
         self.assertIn("middle-extra-move", vocabulary["tokens"])
-        self.assertEqual(vocabulary["piece_kind_codes"], list(range(1, 59)))
+        self.assertEqual(vocabulary["piece_kind_codes"], list(range(1, 69)))
 
     def test_checked_in_rust_fixture_passes_python_validation(self) -> None:
         suite = load_golden_suite()
@@ -30,6 +30,8 @@ class GoldenV3ParityTests(unittest.TestCase):
                 "quantum_shadow",
                 "awaiting_choice",
                 "runtime_rich",
+                "public_pending",
+                "september_six_pieces",
                 "promotion",
                 "terminal_draw",
             ],

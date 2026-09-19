@@ -1,21 +1,22 @@
 use crate::{
-    AMAZON, APPRENTICE_KNIGHTS, ASSASSIN, Action, ActionTarget, BERSERKER, BIG_ROOK, CALLING_CARD,
-    CHECKER, CLEANUP, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, COOL_GUY, CardActivation,
-    CardInstance, CardPhase, CardRuntimeState, ChoiceContinuation, ChoiceRegistry, DEMOCRACY, DICE,
-    DISARM, DRAGON, DUTCH, DeathmatchState, DelayedHazard, DelayedHazardKind, DiceLockStatus,
-    DraftPhase, DraftState, DrawReason, EAGLE, EARLY_PROMOTION, EASTERN_POLICY, ELEPHANT_ESCAPE,
-    EMPTY_LUNCHBOX, EffectCommand, EffectRegistry, EmptyLunchboxStatus, EnPassantState, Event,
-    FAST_GROWTH, FIANCHETTO, FIELD_PROMOTION, FREEZE, ForcedMoveContinuation, ForcedMoveSource,
-    FrozenStatus, GENEVA_CONVENTION, GRASSHOPPER, GUARD, GamePhase, GameState, GameStatus, HERALD,
-    HOLDOUT, HOOK, HORDE, HYPOCRISY, IDOL, IMPLEMENTED_CARDS, INITIATIVE, IRON_MONARCH,
-    InitiativeStatus, JESTER, JUDGMENT, JudgmentExile, KING_OF_THE_HILL, KNIGHTMASTER, KNIGHTMATE,
-    LAST_STAND, LOCAL_CONSCRIPTION, LOG, LONDON_SYSTEM, LOYALIST, LargePieceStatus, LogStatus,
-    MAGIC_GIRL, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode, MoveAction, MoveReplayState,
-    ORDINATION, OTHERWORLD, PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM, PendingChoice,
-    PendingOtherworld, Piece, PieceAbility, PieceKind, PlatformRuleState, Player, QUEEN_CAVALRY,
-    QUEENS_GAMBIT, QXE1, REAPER, REFORMATION, REPOSITION, REVELATION, ReplayCell, RepositionStatus,
-    RulesetManifest, SIEGE_RAM, SIREN, SLIME, SPRINT, STANDARD_BEARER, SUMMON_COLOSSUS, Square,
-    TRICKSTER, Transition, UNDEAD, WINDMILL, WIZARD, WinReason, WindmillMode, implemented_card,
+    AMAZON, APPRENTICE_KNIGHTS, ASSASSIN, Action, ActionTarget, BERSERKER, BIG_BISHOP, BIG_ROOK,
+    BRUTUS, CALLING_CARD, CHECKER, CLEANUP, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, COOL_GUY,
+    CardActivation, CardInstance, CardPhase, CardRuntimeState, ChoiceContinuation, ChoiceRegistry,
+    DEMOCRACY, DICE, DISARM, DRAGON, DUTCH, DeathmatchState, DelayedHazard, DelayedHazardKind,
+    DiceLockStatus, DraftPhase, DraftState, DrawReason, EAGLE, EARLY_PROMOTION, EASTERN_POLICY,
+    ELEPHANT_ESCAPE, EMPTY_LUNCHBOX, EffectCommand, EffectRegistry, EmptyLunchboxStatus,
+    EnPassantState, Event, FAST_GROWTH, FIANCHETTO, FIELD_PROMOTION, FREEZE,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GENEVA_CONVENTION, GRASSHOPPER, GUARD,
+    GamePhase, GameState, GameStatus, HERALD, HOLDOUT, HOOK, HORDE, HYPOCRISY, IDOL,
+    IMPLEMENTED_CARDS, INITIATIVE, IRON_MONARCH, InitiativeStatus, JESTER, JUDGMENT, JudgmentExile,
+    KING_OF_THE_HILL, KNIGHTMASTER, KNIGHTMATE, LAST_STAND, LOCAL_CONSCRIPTION, LOG, LONDON_SYSTEM,
+    LOYALIST, LargePieceStatus, LogStatus, MAGIC_GIRL, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode,
+    MoveAction, MoveReplayState, ORDINATION, OTHERWORLD, PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM,
+    ParrotMemoryStatus, PendingChoice, PendingOtherworld, Piece, PieceAbility, PieceKind,
+    PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER, REFORMATION, REPOSITION,
+    REVELATION, ReplayCell, RepositionStatus, RulesetManifest, SIEGE_RAM, SIREN, SLIME, SPRINT,
+    STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD, WINDMILL,
+    WIZARD, WinReason, WindmillMode, implemented_card,
 };
 use std::collections::BTreeSet;
 use std::fmt;
@@ -23,6 +24,7 @@ use std::fmt;
 mod end;
 mod middle;
 mod rule;
+mod september;
 
 use crate::{
     BACKWARD_KNIGHT, CONVERSION, CORNER_KICK, ENCOURAGEMENT, EXHAUSTION, FILE_SURGE, GHOST,
@@ -34,6 +36,51 @@ pub struct Engine {
     ruleset: RulesetManifest,
     effects: EffectRegistry,
     choices: ChoiceRegistry,
+}
+
+/// Search-only random stream carried by one determinization.
+///
+/// The base seed must be derived from public search information. It must never contain the
+/// actual `GameState` RNG state. Each transition that really consumes randomness advances the
+/// event index exactly once; deterministic transitions leave the context untouched.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SearchChanceContext {
+    base_seed: u64,
+    event_index: u64,
+}
+
+impl SearchChanceContext {
+    pub const DERIVATION_VERSION: &'static str = "augmentia.search-chance.splitmix64.v1";
+
+    pub const fn new(base_seed: u64) -> Self {
+        Self {
+            base_seed,
+            event_index: 0,
+        }
+    }
+
+    pub const fn base_seed(&self) -> u64 {
+        self.base_seed
+    }
+
+    pub const fn event_index(&self) -> u64 {
+        self.event_index
+    }
+
+    fn next_event_seed(&mut self) -> u64 {
+        let index = self.event_index;
+        self.event_index = self.event_index.wrapping_add(1);
+        mix_search_seed(
+            self.base_seed ^ index.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ 0x4348_414e_4345_5f31,
+        )
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct SearchTransition {
+    pub transition: Transition,
+    pub sampled_chance: bool,
+    pub chance_event_index: Option<u64>,
 }
 
 const MAX_EFFECT_EVENTS_PER_RESOLUTION: usize = 4_096;
@@ -125,6 +172,10 @@ impl Engine {
         RulesetManifest::bundled_20260818().map(Self::new)
     }
 
+    pub fn bundled_20260915() -> Result<Self, crate::RulesetError> {
+        RulesetManifest::bundled_20260915().map(Self::new)
+    }
+
     pub fn ruleset(&self) -> &RulesetManifest {
         &self.ruleset
     }
@@ -191,6 +242,10 @@ impl Engine {
             let mut executable_rules: Vec<_> = IMPLEMENTED_CARDS
                 .iter()
                 .filter(|card| card.activation == CardActivation::Rule)
+                .filter(|card| {
+                    self.ruleset.id == "augment_chess_20260915"
+                        || card.id != crate::CAPTURE_THE_FLAG
+                })
                 .collect();
             executable_rules.sort_by_key(|card| card.name_ko);
             let (selection_roll, index) = state.rng_mut().web_choice_index(executable_rules.len());
@@ -246,12 +301,12 @@ impl Engine {
             charges: u16::from(definition.activation == CardActivation::Active),
             available_after_turn: None,
         });
-        self.apply_card_definition(&mut next, definition_id, owner);
         let mut events = vec![Event::CardGranted {
             owner,
             instance_id,
             definition_id: definition_id.to_owned(),
         }];
+        self.apply_card_definition(&mut next, definition_id, owner, &mut events);
         self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
         Ok(Transition {
             state: next,
@@ -292,9 +347,9 @@ impl Engine {
             }
             CHECKER => {
                 none()?;
-                for origin in opening_squares(actor, &["a2", "h2"], &["a7", "h7"]) {
+                for origin in opening_squares(actor.opponent(), &["a2", "h2"], &["a7", "h7"]) {
                     let found = state.board.iter().find(|(_, piece)| {
-                        piece.owner == actor
+                        piece.owner == actor.opponent()
                             && piece.kind == PieceKind::Pawn
                             && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
                     });
@@ -339,6 +394,7 @@ impl Engine {
                     .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Pawn)
                     .collect::<Vec<_>>();
                 for (square, mut pawn) in pawns {
+                    self.clear_queens_gambit_protection(state, pawn.id);
                     pawn.kind = PieceKind::Fanatic;
                     state.board.set(square, Some(pawn));
                 }
@@ -380,6 +436,7 @@ impl Engine {
                     })
                     .collect::<Vec<_>>();
                 for (square, mut piece) in pieces {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Windmill;
                     state.board.set(square, Some(piece));
                     state
@@ -428,6 +485,10 @@ impl Engine {
             BIG_ROOK => {
                 none()?;
                 self.apply_big_rook_layout(state, actor, events);
+            }
+            BIG_BISHOP => {
+                none()?;
+                self.apply_big_bishop_layout(state, actor, events);
             }
             CALLING_CARD => {
                 none()?;
@@ -556,7 +617,9 @@ impl Engine {
                     definition_id,
                     events,
                 );
-                let candidate_files = (0_u8..8).filter(|file| *file != 3).collect::<Vec<_>>();
+                let candidate_files = (0_u8..8)
+                    .filter(|file| ![2, 3, 4].contains(file))
+                    .collect::<Vec<_>>();
                 let (roll, index) = state.rng_mut().web_choice_index(candidate_files.len());
                 events.push(Event::RandomSample {
                     purpose: "queens-gambit-file".to_owned(),
@@ -577,12 +640,103 @@ impl Engine {
                 none()?;
                 self.apply_qxe1(state, actor, events)?;
             }
+            THIEF => {
+                none()?;
+                let candidates = web_ordered_pieces(state)
+                    .into_iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == actor
+                            && piece.kind == PieceKind::Queen
+                            && !self.is_royal_piece(state, *piece)
+                    })
+                    .collect::<Vec<_>>();
+                let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+                events.push(Event::RandomSample {
+                    purpose: "thief-target".to_owned(),
+                    roll_53: roll,
+                });
+                let (_, mut piece) = candidates[index.ok_or_else(|| {
+                    EngineError::Invariant("thief has no nonroyal queen".to_owned())
+                })?];
+                let square = state
+                    .board
+                    .find_by_id(piece.id)
+                    .expect("selected thief queen remains on board")
+                    .0;
+                self.clear_piece_kind_runtime(state, piece.id);
+                piece.kind = PieceKind::Thief;
+                state.board.set(square, Some(piece));
+                state.card_runtime.submerged_piece_ids.insert(piece.id);
+                self.mark_transformed_piece(state, piece);
+            }
+            crate::FALSE_START => {
+                none()?;
+                self.apply_false_start(state, actor);
+            }
+            crate::LOCUST_SWARM => {
+                none()?;
+                for (_, piece) in state.board.iter() {
+                    if piece.owner == actor
+                        && piece.kind != PieceKind::Pawn
+                        && !state.card_runtime.moved_piece_ids.contains(&piece.id)
+                    {
+                        state.card_runtime.locust_swarm_piece_ids.insert(piece.id);
+                    }
+                }
+            }
             _ => unreachable!("opening card dispatcher received {definition_id}"),
         }
         Ok(())
     }
 
+    fn apply_false_start(&self, state: &mut GameState, actor: Player) {
+        let direction = if actor == Player::White { 1 } else { -1 };
+        let pieces = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == actor)
+            .collect::<Vec<_>>();
+        let mut shifts = [0_i8; 8];
+        for file in 0..8_u8 {
+            let in_file = pieces
+                .iter()
+                .filter(|(square, _)| square.file() == file)
+                .collect::<Vec<_>>();
+            for step in 1..=2_i8 {
+                let clear = in_file.iter().all(|(square, _)| {
+                    square.offset(0, direction * step).is_some_and(|target| {
+                        state
+                            .board
+                            .get(target)
+                            .is_none_or(|occupant| occupant.owner == actor)
+                    })
+                });
+                if !clear {
+                    break;
+                }
+                shifts[usize::from(file)] = step;
+            }
+        }
+
+        let moving = pieces
+            .into_iter()
+            .filter(|(square, _)| shifts[usize::from(square.file())] > 0)
+            .collect::<Vec<_>>();
+        for (square, _) in &moving {
+            state.board.set(*square, None);
+        }
+        for (square, piece) in moving {
+            let shift = shifts[usize::from(square.file())];
+            let target = square
+                .offset(0, direction * shift)
+                .expect("false-start shift was checked");
+            state.board.set(target, Some(piece));
+        }
+        state.en_passant = None;
+    }
+
     fn mark_transformed_piece(&self, state: &mut GameState, piece: Piece) {
+        self.clear_queens_gambit_protection(state, piece.id);
         state.card_runtime.moved_piece_ids.insert(piece.id);
         self.mark_fresh_no_capture(state, piece);
     }
@@ -615,6 +769,26 @@ impl Engine {
         self.piece_ability_kind(state, piece) == kind
     }
 
+    fn is_ranged_piece(&self, state: &GameState, piece: Piece) -> bool {
+        matches!(
+            self.piece_ability_kind(state, piece),
+            PieceKind::Rook
+                | PieceKind::Bishop
+                | PieceKind::Queen
+                | PieceKind::Bear
+                | PieceKind::Amazon
+                | PieceKind::Cardinal
+                | PieceKind::Cannon
+                | PieceKind::Herald
+                | PieceKind::Hook
+                | PieceKind::Protestant
+                | PieceKind::Windmill
+                | PieceKind::BigRook
+                | PieceKind::Jester
+                | PieceKind::Idol
+        )
+    }
+
     fn register_spawned_piece(
         &self,
         state: &mut GameState,
@@ -627,6 +801,25 @@ impl Engine {
             state.card_runtime.moved_piece_ids.insert(piece.id);
         }
         self.mark_fresh_no_capture(state, piece);
+    }
+
+    fn delete_piece_for_card(
+        &self,
+        state: &mut GameState,
+        square: Square,
+        piece: Piece,
+        actor: Player,
+        cause: &str,
+        events: &mut Vec<Event>,
+    ) {
+        state.board.set(square, None);
+        self.clear_removed_piece_statuses(state, piece.id);
+        events.push(Event::PieceRemoved {
+            actor,
+            piece,
+            at: square,
+            cause: cause.to_owned(),
+        });
     }
 
     fn remove_piece_for_card(
@@ -653,6 +846,27 @@ impl Engine {
 
     fn record_new_capture_reactions(&self, state: &mut GameState, captured: Piece) {
         state.card_runtime.magic_girl_surge[captured.owner.index()] = true;
+        if captured.kind == PieceKind::Pawn && state.card_runtime.resolve[captured.owner.index()] {
+            state.card_runtime.resolve_ready[captured.owner.index()] = true;
+        }
+        if state.card_runtime.recurrence_piece_ids.remove(&captured.id) {
+            if !state
+                .card_runtime
+                .pending_recurrences
+                .iter()
+                .any(|pending| pending.piece.id == captured.id)
+            {
+                state
+                    .card_runtime
+                    .pending_recurrences
+                    .push(crate::PendingRecurrence { piece: captured });
+            }
+            state
+                .card_runtime
+                .undead_resurrections
+                .retain(|resurrection| resurrection.piece.id != captured.id);
+            return;
+        }
         let undead_ability = captured.kind == PieceKind::Undead
             || (captured.kind == PieceKind::Trickster
                 && state
@@ -666,7 +880,7 @@ impl Engine {
                 .undead_resurrections
                 .push(crate::UndeadResurrection {
                     piece: captured,
-                    due_ply: state.ply.saturating_add(9),
+                    due_ply: state.ply.saturating_add(6),
                 });
         }
     }
@@ -935,6 +1149,63 @@ impl Engine {
         self.register_spawned_piece(state, anchor, rook, false);
     }
 
+    fn apply_big_bishop_layout(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) {
+        let anchor = opening_square(actor, "f2", "f8");
+        let placements: &[(&str, PieceKind)] = if actor == Player::White {
+            &[
+                ("f3", PieceKind::Pawn),
+                ("g3", PieceKind::Pawn),
+                ("h3", PieceKind::Knight),
+            ]
+        } else {
+            &[
+                ("f6", PieceKind::Pawn),
+                ("g6", PieceKind::Pawn),
+                ("h6", PieceKind::Knight),
+            ]
+        };
+        let mut targets = large_piece_cells(anchor);
+        targets.extend(
+            placements
+                .iter()
+                .map(|(name, _)| name.parse::<Square>().expect("static BISHOP square")),
+        );
+        targets.sort();
+        targets.dedup();
+        for square in targets {
+            if let Some(piece) = state.board.get(square) {
+                let remover = if piece.owner == actor {
+                    actor.opponent()
+                } else {
+                    actor
+                };
+                self.remove_piece_for_card(state, square, piece, remover, BIG_BISHOP, events);
+            }
+        }
+        for &(name, kind) in placements {
+            let square = name.parse::<Square>().expect("static BISHOP square");
+            let piece = Piece::new(actor, kind).with_id(state.allocate_piece_id());
+            state.board.set(square, Some(piece));
+            self.register_spawned_piece(state, square, piece, true);
+        }
+        let bishop = Piece::new(actor, PieceKind::BigBishop).with_id(state.allocate_piece_id());
+        state.board.set(anchor, Some(bishop));
+        state.card_runtime.large_pieces.insert(
+            bishop.id,
+            LargePieceStatus {
+                anchor,
+                hp: 2,
+                max_hp: 2,
+            },
+        );
+        self.register_spawned_piece(state, anchor, bishop, false);
+    }
+
     fn apply_merchant_guild(
         &self,
         state: &mut GameState,
@@ -970,6 +1241,7 @@ impl Engine {
             );
         }
         state.board.set(from, None);
+        self.clear_queens_gambit_protection(state, king.id);
         king.kind = PieceKind::Merchant;
         state.board.set(to, Some(king));
         state.card_runtime.merchant_gold.insert(king.id, 0);
@@ -1056,11 +1328,11 @@ impl Engine {
                             && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
                     })
                 }),
-            CHECKER => opening_squares(actor, &["a2", "h2"], &["a7", "h7"])
+            CHECKER => opening_squares(actor.opponent(), &["a2", "h2"], &["a7", "h7"])
                 .into_iter()
                 .any(|origin| {
                     state.board.iter().any(|(_, piece)| {
-                        piece.owner == actor
+                        piece.owner == actor.opponent()
                             && piece.kind == PieceKind::Pawn
                             && state.card_runtime.piece_origins.get(&piece.id) == Some(&origin)
                     })
@@ -1144,7 +1416,19 @@ impl Engine {
                                 .is_none_or(|piece| pawns.contains(&piece.id))
                         })
             }
-            BIG_ROOK | DUTCH | FAST_GROWTH | IRON_MONARCH | LONDON_SYSTEM | PAWN_CONVERSION => true,
+            THIEF => state.board.iter().any(|(_, piece)| {
+                piece.owner == actor
+                    && piece.kind == PieceKind::Queen
+                    && !self.is_royal_piece(state, piece)
+            }),
+            crate::FALSE_START => state.board.iter().any(|(_, piece)| piece.owner == actor),
+            crate::LOCUST_SWARM => state.board.iter().any(|(_, piece)| {
+                piece.owner == actor
+                    && piece.kind != PieceKind::Pawn
+                    && !state.card_runtime.moved_piece_ids.contains(&piece.id)
+            }),
+            BIG_BISHOP | BIG_ROOK | DUTCH | FAST_GROWTH | IRON_MONARCH | LONDON_SYSTEM
+            | PAWN_CONVERSION => true,
             _ => false,
         }
     }
@@ -1190,6 +1474,7 @@ impl Engine {
             definition_id: definition_id.to_owned(),
         });
         match definition_id {
+            crate::CAPTURE_THE_FLAG => self.install_capture_the_flag(state, events),
             PLATFORM => {
                 let current_turn = state.shared_turn_count();
                 state.card_runtime.platform = Some(PlatformRuleState {
@@ -1418,9 +1703,196 @@ impl Engine {
         }
     }
 
-    fn apply_card_definition(&self, state: &mut GameState, definition_id: &str, owner: Player) {
+    #[allow(dead_code)] // Preserved campaign handler; public black-magic now summons an ally.
+    fn missionary_spawn_candidates(&self, state: &GameState, origin: Square) -> Vec<Square> {
+        let open = |square: &Square| {
+            self.board_piece_at(state, *square).is_none()
+                && !state.card_runtime.black_holes.contains(square)
+                && !state.card_runtime.barricades.contains(square)
+                && state.card_runtime.crown_pos != Some(*square)
+                && !state
+                    .card_runtime
+                    .pending_scarecrows
+                    .iter()
+                    .any(|pending| pending.square == *square)
+                && !(state.card_runtime.collapsed_files_ranks
+                    && (matches!(square.file(), 0 | 7) || matches!(square.rank(), 0 | 7)))
+        };
+        // Client row order runs from rank 8 to rank 1. Prefer diagonals, then
+        // orthogonals, then the first nonempty Chebyshev ring.
+        for offsets in [
+            &[(-1, 1), (1, 1), (-1, -1), (1, -1)][..],
+            &[(0, 1), (0, -1), (-1, 0), (1, 0)][..],
+        ] {
+            let candidates = offsets
+                .iter()
+                .filter_map(|&(df, dr)| origin.offset(df, dr))
+                .filter(open)
+                .collect::<Vec<_>>();
+            if !candidates.is_empty() {
+                return candidates;
+            }
+        }
+        for distance in 2_i8..8 {
+            let mut candidates = Vec::new();
+            for row_delta in -distance..=distance {
+                for file_delta in -distance..=distance {
+                    if row_delta.abs().max(file_delta.abs()) == distance
+                        && let Some(square) = origin.offset(file_delta, -row_delta)
+                        && open(&square)
+                    {
+                        candidates.push(square);
+                    }
+                }
+            }
+            if !candidates.is_empty() {
+                return candidates;
+            }
+        }
+        Vec::new()
+    }
+
+    pub(super) fn black_magic_spawn_candidates(
+        &self,
+        state: &GameState,
+        actor: Player,
+    ) -> Vec<Square> {
+        let Some((royal_square, _)) = web_ordered_pieces(state)
+            .into_iter()
+            .find(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, *piece))
+        else {
+            return Vec::new();
+        };
+        let rank = royal_square.rank() as i8;
+        let file = royal_square.file() as i8;
+        (-1_i8..=1)
+            .flat_map(move |dr| (-1_i8..=1).map(move |df| (dr, df)))
+            .filter(|(dr, df)| (*dr, *df) != (0, 0))
+            .map(|(dr, df)| (rank + dr, file + df))
+            .filter(|(dr, df)| (0..8).contains(dr) && (0..8).contains(df))
+            .map(|(dr, df)| Square::new(df as u8, dr as u8).unwrap())
+            .filter(|square| state.board.get(*square).is_none())
+            .collect()
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn resolve_black_tower_legacy(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+    ) -> Result<(), EngineError> {
+        let actor = state.turn;
+        let pieces = web_ordered_pieces(state)
+            .into_iter()
+            .filter(|(_, piece)| piece.owner == actor)
+            .collect::<Vec<_>>();
+        let royal = pieces
+            .iter()
+            .copied()
+            .find(|(_, piece)| self.is_royal_piece(state, *piece))
+            .ok_or_else(|| EngineError::Invariant("black magic has no king".to_owned()))?;
+        let mut removed = 0_usize;
+        for (square, mut piece) in pieces {
+            if piece.id == royal.1.id {
+                self.clear_piece_kind_runtime(state, piece.id);
+                piece.kind = PieceKind::DarkWizard;
+                state.board.set(square, Some(piece));
+                state.card_runtime.moved_piece_ids.insert(piece.id);
+                state.card_runtime.piece_origins.insert(piece.id, square);
+                continue;
+            }
+            self.remove_piece_for_card(
+                state,
+                square,
+                piece,
+                actor.opponent(),
+                crate::BLACK_MAGIC,
+                events,
+            );
+            removed += 1;
+        }
+        let spawn_count = removed.div_ceil(2);
+        let ranks: Vec<u8> = if actor == Player::White {
+            (0..8).collect()
+        } else {
+            (0..8).rev().collect()
+        };
+        let open = ranks
+            .into_iter()
+            .flat_map(|rank| (0..8).filter_map(move |file| Square::new(file, rank)))
+            .filter(|square| state.board.get(*square).is_none())
+            .take(spawn_count)
+            .collect::<Vec<_>>();
+        for square in open {
+            let monster = Piece::new(actor, PieceKind::Monster).with_id(state.allocate_piece_id());
+            state.board.set(square, Some(monster));
+            self.mark_fresh_no_capture(state, monster);
+        }
+        Ok(())
+    }
+
+    fn apply_card_definition(
+        &self,
+        state: &mut GameState,
+        definition_id: &str,
+        owner: Player,
+        events: &mut Vec<Event>,
+    ) {
         match definition_id {
+            crate::HIGHLANDER => self.resolve_highlander_victory(state),
+            BRUTUS => {
+                let candidates = web_ordered_pieces(state)
+                    .into_iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == owner
+                            && piece.kind == PieceKind::Rook
+                            && !self.is_royal_piece(state, *piece)
+                    })
+                    .collect::<Vec<_>>();
+                let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+                events.push(Event::RandomSample {
+                    purpose: "brutus-target".to_owned(),
+                    roll_53: roll,
+                });
+                if let Some(index) = index {
+                    let (square, mut piece) = candidates[index];
+                    self.clear_piece_kind_runtime(state, piece.id);
+                    piece.kind = PieceKind::Brutus;
+                    state.board.set(square, Some(piece));
+                    self.mark_transformed_piece(state, piece);
+                }
+            }
+            crate::RECURRENCE => {
+                let candidates = web_ordered_pieces(state)
+                    .into_iter()
+                    .filter(|(_, piece)| {
+                        piece.owner == owner
+                            && piece.kind != PieceKind::Pawn
+                            && !state.card_runtime.recurrence_piece_ids.contains(&piece.id)
+                    })
+                    .collect::<Vec<_>>();
+                let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+                events.push(Event::RandomSample {
+                    purpose: "recurrence-target".to_owned(),
+                    roll_53: roll,
+                });
+                if let Some(index) = index {
+                    state
+                        .card_runtime
+                        .recurrence_piece_ids
+                        .insert(candidates[index].1.id);
+                }
+            }
+            crate::MAJESTY => state.card_runtime.majesty[owner.index()] = true,
             KING_OF_THE_HILL => state.card_runtime.hill_king[owner.index()] = true,
+            crate::KILLER_KING => state.card_runtime.killer_king[owner.index()] = true,
+            crate::PROFICIENCY => state.card_runtime.proficiency[owner.index()] = true,
+            crate::DISASSEMBLY => {}
+            crate::MUTATION => state.card_runtime.mutation[owner.index()] = true,
+            crate::LONG_EN_PASSANT => state.card_runtime.long_en_passant[owner.index()] = true,
+            crate::VANGUARD => state.card_runtime.vanguard[owner.index()] = true,
+            crate::INFILTRATION => state.card_runtime.infiltration[owner.index()] = true,
+            crate::RESOLVE => state.card_runtime.resolve[owner.index()] = true,
             GENEVA_CONVENTION => state.card_runtime.geneva_convention[owner.index()] = true,
             SPRINT => state.card_runtime.pawn_sprint[owner.index()] = true,
             EARLY_PROMOTION => state.card_runtime.early_promotion[owner.index()] = true,
@@ -1435,7 +1907,17 @@ impl Engine {
             BACKWARD_KNIGHT => state.card_runtime.backward_knight[owner.index()] = true,
             CORNER_KICK => state.card_runtime.corner_kick[owner.index()] = true,
             FILE_SURGE => state.card_runtime.file_surge[owner.index()] = true,
-            HORSE_RIDING => state.card_runtime.horse_riding[owner.index()] = true,
+            HORSE_RIDING => {
+                let knights = state
+                    .board
+                    .iter()
+                    .filter(|(_, piece)| piece.owner == owner && piece.kind == PieceKind::Knight)
+                    .collect::<Vec<_>>();
+                for (square, piece) in knights {
+                    self.delete_piece_for_card(state, square, piece, owner, HORSE_RIDING, events);
+                }
+                state.card_runtime.horse_riding[owner.index()] = true;
+            }
             INJURY => state.card_runtime.knight_injury[owner.opponent().index()] = true,
             LEAP => state.card_runtime.pawn_leap[owner.index()] = true,
             RADICAL_CHARGE => state.card_runtime.radical_charge[owner.index()] = true,
@@ -1465,6 +1947,7 @@ impl Engine {
                     .filter(|(_, piece)| piece.owner == owner && piece.kind == PieceKind::Knight)
                     .collect::<Vec<_>>();
                 for (square, mut piece) in knights {
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Bishop;
                     state.board.set(square, Some(piece));
                     state.card_runtime.moved_piece_ids.insert(piece.id);
@@ -1482,6 +1965,7 @@ impl Engine {
                     .collect::<Vec<_>>();
                 for (square, mut piece) in pieces {
                     self.clear_piece_kind_runtime(state, piece.id);
+                    self.clear_queens_gambit_protection(state, piece.id);
                     piece.kind = PieceKind::Knight;
                     state.board.set(square, Some(piece));
                     state.card_runtime.moved_piece_ids.insert(piece.id);
@@ -1514,7 +1998,7 @@ impl Engine {
             if implemented_card(&definition_id)
                 .is_some_and(|definition| definition.activation == CardActivation::Passive)
             {
-                self.apply_card_definition(state, &definition_id, player);
+                self.apply_card_definition(state, &definition_id, player, events);
             }
             events.push(Event::CardActivated {
                 owner: player,
@@ -1565,10 +2049,6 @@ impl Engine {
         {
             next.card_runtime.opening_auto_card_ids.insert(instance_id);
         }
-        if !delayed && definition.activation == CardActivation::Passive {
-            self.apply_card_definition(&mut next, &definition_id, actor);
-        }
-
         let mut events = vec![
             Event::ActionApplied { actor, action },
             Event::DraftPicked {
@@ -1580,9 +2060,12 @@ impl Engine {
             Event::CardGranted {
                 owner: actor,
                 instance_id,
-                definition_id,
+                definition_id: definition_id.clone(),
             },
         ];
+        if !delayed && definition.activation == CardActivation::Passive {
+            self.apply_card_definition(&mut next, &definition_id, actor, &mut events);
+        }
 
         if actor == Player::White {
             self.start_draft(
@@ -1732,8 +2215,47 @@ impl Engine {
                 option_index,
             } => self.apply_choice(state, action, choice_id, option_index),
         }?;
+        self.refresh_submerged_pieces(&mut transition.state);
         self.resolve_empty_forced_move(&mut transition.state, &mut transition.events)?;
+        self.advance_capture_flags(&mut transition.state, state.turn, false);
+        self.refresh_submerged_pieces(&mut transition.state);
+        if transition.state.status != GameStatus::Ongoing {
+            self.push_game_ended(&transition.state, &mut transition.events);
+        }
         Ok(transition)
+    }
+
+    /// Apply an action for search without revealing the actual future RNG stream.
+    ///
+    /// A deterministic transition is returned byte-for-byte as the normal engine would produce
+    /// it. If the normal transition would consume RNG, the discarded probe is repeated from the
+    /// same public state with a seed supplied by `SearchChanceContext`. The probe is never exposed
+    /// to the caller, so the actual future outcome cannot enter tree statistics.
+    pub fn apply_for_search(
+        &self,
+        state: &GameState,
+        action: Action,
+        chance: &mut SearchChanceContext,
+    ) -> Result<SearchTransition, EngineError> {
+        let probed = self.apply(state, action.clone())?;
+        if probed.state.rng_state() == state.rng_state() {
+            return Ok(SearchTransition {
+                transition: probed,
+                sampled_chance: false,
+                chance_event_index: None,
+            });
+        }
+
+        let event_index = chance.event_index();
+        let seed = chance.next_event_seed();
+        let mut sampled_state = state.clone();
+        *sampled_state.rng_mut() = crate::DeterministicRng::new(seed);
+        let transition = self.apply(&sampled_state, action)?;
+        Ok(SearchTransition {
+            transition,
+            sampled_chance: true,
+            chance_event_index: Some(event_index),
+        })
     }
 
     /// Forced-move effects can become empty after later commands in the same
@@ -1798,6 +2320,7 @@ impl Engine {
         match card.definition_id.as_str() {
             CLEANUP => {
                 !squares.is_empty()
+                    && squares.len() <= 3
                     && squares.iter().all(|square| {
                         state.board.get(*square).is_some_and(|piece| {
                             piece.owner == state.turn
@@ -2048,11 +2571,35 @@ impl Engine {
             },
         ];
         match definition_id.as_str() {
-            APPRENTICE_KNIGHTS | BIG_ROOK | CALLING_CARD | CHECKER | DEMOCRACY | DUTCH
-            | ELEPHANT_ESCAPE | FAST_GROWTH | FIANCHETTO | GUARD | HOLDOUT | HORDE
-            | IRON_MONARCH | KNIGHTMATE | LAST_STAND | LONDON_SYSTEM | LOYALIST | MARTYRDOM
-            | MERCHANT_GUILD | OTHERWORLD | PAWN_CONVERSION | QUEEN_CAVALRY | QUEENS_GAMBIT
-            | QXE1 | SUMMON_COLOSSUS => {
+            APPRENTICE_KNIGHTS
+            | BIG_BISHOP
+            | BIG_ROOK
+            | CALLING_CARD
+            | CHECKER
+            | DEMOCRACY
+            | DUTCH
+            | ELEPHANT_ESCAPE
+            | FAST_GROWTH
+            | FIANCHETTO
+            | GUARD
+            | HOLDOUT
+            | HORDE
+            | IRON_MONARCH
+            | KNIGHTMATE
+            | LAST_STAND
+            | LONDON_SYSTEM
+            | LOYALIST
+            | MARTYRDOM
+            | MERCHANT_GUILD
+            | OTHERWORLD
+            | PAWN_CONVERSION
+            | QUEEN_CAVALRY
+            | QUEENS_GAMBIT
+            | QXE1
+            | SUMMON_COLOSSUS
+            | THIEF
+            | crate::FALSE_START
+            | crate::LOCUST_SWARM => {
                 self.apply_opening_card(&mut next, actor, &definition_id, &target, &mut events)?;
             }
             PARRY => {
@@ -2114,8 +2661,16 @@ impl Engine {
                     used: false,
                 });
             }
+            crate::METAL => {
+                let (_, target_piece) = piece_target(&next, &target)?;
+                next.card_runtime
+                    .metalized_piece_ids
+                    .insert(target_piece.id);
+                next.card_runtime.metal_cooldowns.remove(&target_piece.id);
+            }
             ASSASSIN | GRASSHOPPER => {
                 let (target_square, mut target_piece) = piece_target(&next, &target)?;
+                self.clear_queens_gambit_protection(&mut next, target_piece.id);
                 target_piece.kind = if definition_id == ASSASSIN {
                     PieceKind::Assassin
                 } else {
@@ -2145,8 +2700,34 @@ impl Engine {
             | SIREN
             | SLIME
             | TRICKSTER
-            | UNDEAD => {
+            | UNDEAD
+            | crate::CLOCKWORK
+            | crate::PARROT
+            | crate::PALADIN
+            | crate::PRINCESS
+            | crate::OCTOPUS
+            | crate::HEDGEHOG
+            | crate::CAMPFIRE => {
                 let (target_square, mut target_piece) = piece_target(&next, &target)?;
+                if definition_id == MISSIONARY {
+                    let candidates = self.missionary_spawn_candidates(&next, target_square);
+                    let (roll, index) = next.rng_mut().web_choice_index(candidates.len());
+                    let square = candidates[index.ok_or_else(|| {
+                        EngineError::Invariant(
+                            "legal missionary card has no spawn square".to_owned(),
+                        )
+                    })?];
+                    events.push(Event::RandomSample {
+                        purpose: "missionary-second-spawn".to_owned(),
+                        roll_53: roll,
+                    });
+                    let summoned =
+                        Piece::new(actor, PieceKind::Missionary).with_id(next.allocate_piece_id());
+                    next.board.set(square, Some(summoned));
+                    self.register_spawned_piece(&mut next, square, summoned, true);
+                    self.clear_queens_gambit_protection(&mut next, target_piece.id);
+                }
+                self.clear_queens_gambit_protection(&mut next, target_piece.id);
                 target_piece.kind = match definition_id.as_str() {
                     CONSTITUTIONAL_MONARCHY => PieceKind::PrimeMinister,
                     DRAGON => PieceKind::Dragon,
@@ -2169,12 +2750,24 @@ impl Engine {
                     SLIME => PieceKind::Slime,
                     TRICKSTER => PieceKind::Trickster,
                     UNDEAD => PieceKind::Undead,
+                    crate::CLOCKWORK => PieceKind::Clockwork,
+                    crate::PARROT => PieceKind::Parrot,
+                    crate::PALADIN => PieceKind::Paladin,
+                    crate::PRINCESS => PieceKind::Princess,
+                    crate::OCTOPUS => PieceKind::Octopus,
+                    crate::HEDGEHOG => PieceKind::Hedgehog,
+                    crate::CAMPFIRE => PieceKind::Campfire,
                     _ => unreachable!(),
                 };
                 next.board.set(target_square, Some(target_piece));
                 next.card_runtime.moved_piece_ids.insert(target_piece.id);
                 self.mark_fresh_no_capture(&mut next, target_piece);
                 match target_piece.kind {
+                    PieceKind::Hedgehog => {
+                        next.card_runtime
+                            .bear_retaliations
+                            .insert(target_piece.id, 2);
+                    }
                     PieceKind::Herald if next.shared_turn_count() >= 2 => {
                         next.card_runtime.herald_jump_locked_until.insert(
                             target_piece.id,
@@ -2214,6 +2807,7 @@ impl Engine {
                     ORDINATION,
                     &mut events,
                 );
+                self.clear_queens_gambit_protection(&mut next, target_piece.id);
                 target_piece.kind = PieceKind::Cardinal;
                 next.board.set(target_square, Some(target_piece));
                 next.card_runtime.moved_piece_ids.insert(target_piece.id);
@@ -2241,6 +2835,7 @@ impl Engine {
                     actor.opponent(),
                     &mut events,
                 );
+                self.clear_queens_gambit_protection(&mut next, queen.id);
                 queen.kind = if definition_id == AMAZON {
                     PieceKind::Amazon
                 } else {
@@ -2261,6 +2856,7 @@ impl Engine {
                     .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Knight)
                     .collect::<Vec<_>>();
                 for &(square, mut knight) in &knights {
+                    self.clear_queens_gambit_protection(&mut next, knight.id);
                     knight.kind = PieceKind::Alibaba;
                     next.board.set(square, Some(knight));
                     next.card_runtime.moved_piece_ids.insert(knight.id);
@@ -2295,6 +2891,7 @@ impl Engine {
                     .filter(|(_, piece)| piece.owner == actor && piece.kind == PieceKind::Bishop)
                     .collect::<Vec<_>>();
                 for (square, mut bishop) in bishops {
+                    self.clear_queens_gambit_protection(&mut next, bishop.id);
                     bishop.kind = PieceKind::Protestant;
                     next.board.set(square, Some(bishop));
                     next.card_runtime.moved_piece_ids.insert(bishop.id);
@@ -2307,6 +2904,7 @@ impl Engine {
                     let mut piece = next.board.get(square).ok_or_else(|| {
                         EngineError::Invariant("windmill has a missing selected piece".to_owned())
                     })?;
+                    self.clear_queens_gambit_protection(&mut next, piece.id);
                     piece.kind = PieceKind::Windmill;
                     next.board.set(square, Some(piece));
                     next.card_runtime.moved_piece_ids.insert(piece.id);
@@ -2744,10 +3342,27 @@ impl Engine {
         // A new forced move emitted while resolving this move must be distinguishable from the
         // forced move that is currently being fulfilled.
         next.phase = GamePhase::Playing;
+        if movement.from != movement.to {
+            let memory_piece = next.move_source_piece(movement.from);
+            let memory_source = memory_piece
+                .map(|piece| self.piece_ability_kind(&next, piece))
+                .unwrap_or(PieceKind::Pawn);
+            let memory_effective = memory_piece
+                .map(|piece| piece.kind)
+                .unwrap_or(PieceKind::Pawn);
+            // A Parrot relocating keeps the previous memory (live JS 4168-4177).
+            if memory_source != PieceKind::Parrot {
+                next.card_runtime.parrot_memory[actor.index()] = Some(ParrotMemoryStatus {
+                    source: memory_source,
+                    effective: memory_effective,
+                });
+            }
+        }
         let mut moving_piece = next
             .move_source_piece(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
         let moved_ability_kind = self.piece_ability_kind(&next, moving_piece);
+        let moved_as_kind = moving_piece.kind;
         if moved_ability_kind == PieceKind::SiegeRam {
             let file_delta = movement.to.file() as i8 - movement.from.file() as i8;
             let rank_delta = movement.to.rank() as i8 - movement.from.rank() as i8;
@@ -2793,7 +3408,8 @@ impl Engine {
             en_passant.target == movement.to
                 && en_passant.pawn_owner != actor
                 && en_passant.captured.rank() == movement.from.rank()
-                && en_passant.captured.file() == movement.to.file()
+                && (en_passant.captured.file() == movement.to.file()
+                    || next.card_runtime.long_en_passant[actor.index()])
         })
         .and_then(|en_passant| {
             next.board
@@ -2865,9 +3481,12 @@ impl Engine {
             && destination_piece
                 .is_some_and(|target| target.owner == actor && target.kind == PieceKind::Pawn);
         let relay_swap = next.card_runtime.relay[actor.index()]
+            && !self.piece_has_ability(&next, moving_piece, PieceKind::Slime)
             && (movement.from.file() == movement.to.file()
                 || movement.from.rank() == movement.to.rank())
-            && destination_piece.is_some_and(|target| target.owner == actor);
+            && destination_piece.is_some_and(|target| {
+                target.owner == actor && !self.piece_has_ability(&next, target, PieceKind::Slime)
+            });
         if substitution_swap || switcheroo_swap || relay_swap {
             let swapped = destination_piece.expect("swap destination was checked");
             next.board.set(movement.from, Some(swapped));
@@ -2954,6 +3573,7 @@ impl Engine {
                 let mut counter = counter;
                 counter.capture_count = counter.capture_count.saturating_add(1);
                 next.board.set(movement.from, Some(counter));
+                self.record_new_capture_reactions(&mut next, moving_piece);
                 self.clear_removed_piece_statuses(&mut next, moving_piece.id);
                 events.push(Event::PieceCaptured {
                     actor: counter.owner,
@@ -3001,6 +3621,7 @@ impl Engine {
                 *remaining = remaining.saturating_sub(1);
             }
             next.board.set(movement.from, None);
+            self.record_new_capture_reactions(&mut next, moving_piece);
             self.clear_removed_piece_statuses(&mut next, moving_piece.id);
             events.push(Event::PieceCaptured {
                 actor: bear.owner,
@@ -3209,6 +3830,7 @@ impl Engine {
             if defeated {
                 next.board.set(capture_square, None);
                 next.card_runtime.large_pieces.remove(&target.id);
+                self.record_new_capture_reactions(&mut next, target);
                 self.clear_removed_piece_statuses(&mut next, target.id);
                 events.push(Event::PieceCaptured {
                     actor,
@@ -3340,6 +3962,7 @@ impl Engine {
                 }
                 if defeated {
                     next.board.set(captured_square, None);
+                    self.record_new_capture_reactions(&mut next, captured);
                     self.clear_removed_piece_statuses(&mut next, captured.id);
                     checker.capture_count = checker.capture_count.saturating_add(1);
                     events.push(Event::PieceCaptured {
@@ -3494,9 +4117,31 @@ impl Engine {
                     &mut events,
                 );
                 if self.is_royal_piece(&next, moving_piece)
+                    && matches!(captured.kind, PieceKind::Pawn | PieceKind::Fanatic)
                     && next.card_runtime.iron_monarch[actor.index()]
                 {
                     next.actions_remaining = next.actions_remaining.saturating_add(1);
+                }
+                // Disassembly (live disassembleMovedQueen, guard order preserved): moved queen converts
+                // to a bishop on the destination; a fresh rook spawns on the origin only when that square
+                // is empty and unblocked (collapsed, black hole, crown ground, installation, quantum).
+                if moving_survived
+                    && moved_as_kind == PieceKind::Queen
+                    && placed_piece.kind == PieceKind::Queen
+                    && next.card_runtime.disassembly[actor.index()]
+                    && !self.is_royal_piece(&next, placed_piece)
+                    && movement.from != movement.to
+                {
+                    let mut bishop = placed_piece;
+                    bishop.kind = PieceKind::Bishop;
+                    next.board.set(movement.to, Some(bishop));
+                    if next.board.get(movement.from).is_none() {
+                        let mut rook = placed_piece;
+                        rook.kind = PieceKind::Rook;
+                        rook.id = next.allocate_piece_id();
+                        next.card_runtime.moved_piece_ids.insert(rook.id);
+                        next.board.set(movement.from, Some(rook));
+                    }
                 }
             }
         } else {
@@ -3505,9 +4150,64 @@ impl Engine {
                 placed_piece.kind = promotion;
             }
             next.board.set(movement.to, Some(placed_piece));
+            // Disassembly also applies to quiet queen moves (live disassembleMovedQueen).
+            if moving_survived
+                && next.card_runtime.disassembly[actor.index()]
+                && placed_piece.kind == PieceKind::Queen
+                && next.board.get(movement.from).is_none()
+            {
+                let mut bishop = placed_piece;
+                bishop.kind = PieceKind::Bishop;
+                next.board.set(movement.to, Some(bishop));
+                let mut rook = placed_piece;
+                rook.kind = PieceKind::Rook;
+                rook.id = next.allocate_piece_id();
+                next.card_runtime.moved_piece_ids.insert(rook.id);
+                next.board.set(movement.from, Some(rook));
+            }
         }
         if moving_survived && movement.promotion.is_some() {
             self.clear_promotion_inherited_traits(&mut next, moving_piece.id);
+        }
+        // Outpost protection ends when the protected piece itself moves.
+        next.card_runtime
+            .outpost_protected_piece_ids
+            .remove(&moving_piece.id);
+        if next.card_runtime.infiltration[actor.index()] {
+            let opponent_home_rank = match actor {
+                Player::White => 7,
+                Player::Black => 0,
+            };
+            if movement.to.rank() == opponent_home_rank {
+                let has_neighbor = [
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (0, -1),
+                    (0, 1),
+                    (1, -1),
+                    (1, 0),
+                    (1, 1),
+                ]
+                .iter()
+                .any(|(df, dr)| {
+                    movement
+                        .to
+                        .offset(*df, *dr)
+                        .and_then(|sq| next.board.get(sq))
+                        .is_some()
+                });
+                if !has_neighbor {
+                    next.card_runtime
+                        .submerged_piece_ids
+                        .insert(moving_piece.id);
+                }
+            }
+        }
+        if moving_survived && moved_ability_kind == PieceKind::Thief {
+            next.card_runtime
+                .submerged_piece_ids
+                .insert(moving_piece.id);
         }
         if let Some((rook_from, rook_to, rook)) = castling_rook {
             next.board.set(rook_from, None);
@@ -3575,6 +4275,13 @@ impl Engine {
         }
         if moving_survived {
             self.apply_idol_encore(&mut next, idol_source, moving_piece.id);
+            if moving_piece.kind == PieceKind::Pawn
+                && next.card_runtime.resolve[actor.index()]
+                && next.card_runtime.resolve_ready[actor.index()]
+            {
+                next.card_runtime.resolve_ready[actor.index()] = false;
+                next.actions_remaining = next.actions_remaining.saturating_add(1);
+            }
         }
         if moving_survived {
             self.resolve_end_after_move(
@@ -3798,6 +4505,33 @@ impl Engine {
         events: &mut Vec<Event>,
     ) {
         let moving_survives = state.board.find_by_id(moving_piece.id).is_some();
+        let relocated = |piece_id| {
+            before
+                .find_by_id(piece_id)
+                .zip(state.board.find_by_id(piece_id))
+                .is_some_and(|((before_square, _), (after_square, _))| {
+                    before_square != after_square
+                })
+        };
+        let spent_locusts = runtime_before
+            .locust_swarm_piece_ids
+            .iter()
+            .copied()
+            .filter(|piece_id| relocated(*piece_id))
+            .collect::<Vec<_>>();
+        for piece_id in spent_locusts {
+            state.card_runtime.locust_swarm_piece_ids.remove(&piece_id);
+        }
+        let moved_metals = state
+            .card_runtime
+            .metalized_piece_ids
+            .iter()
+            .copied()
+            .filter(|piece_id| relocated(*piece_id))
+            .collect::<Vec<_>>();
+        for piece_id in moved_metals {
+            state.card_runtime.metal_cooldowns.insert(piece_id, 4);
+        }
         if moving_survives {
             let captures = before
                 .iter()
@@ -3848,6 +4582,7 @@ impl Engine {
                 .trickster_move_kinds
                 .insert(moving_piece.id, kind);
         }
+        self.advance_capture_flags(state, actor, false);
         self.record_move_replay(state, actor, before, en_passant_before, runtime_before);
     }
 
@@ -3880,14 +4615,10 @@ impl Engine {
     }
 
     fn mark_fresh_no_capture(&self, state: &mut GameState, piece: Piece) {
-        if state.shared_turn_count() >= 2 {
-            state.card_runtime.fresh_no_capture_until.insert(
-                piece.id,
-                state.turns_taken[piece.owner.index()].saturating_add(1),
-            );
-        } else {
-            state.card_runtime.fresh_no_capture_until.remove(&piece.id);
-        }
+        state.card_runtime.fresh_no_capture_until.insert(
+            piece.id,
+            state.turns_taken[piece.owner.index()].saturating_add(1),
+        );
     }
 
     fn break_initiative_by_capture(
@@ -4335,7 +5066,18 @@ impl Engine {
     }
 
     fn clear_removed_piece_statuses(&self, state: &mut GameState, piece_id: u32) {
+        if let Some(flags) = &mut state.card_runtime.capture_the_flag {
+            for occupation in &mut flags.occupations {
+                if occupation.is_some_and(|entry| entry.piece_id == piece_id) {
+                    *occupation = None;
+                }
+            }
+        }
         state.card_runtime.moved_piece_ids.remove(&piece_id);
+        state.card_runtime.locust_swarm_piece_ids.remove(&piece_id);
+        state.card_runtime.metalized_piece_ids.remove(&piece_id);
+        state.card_runtime.metal_cooldowns.remove(&piece_id);
+        state.card_runtime.recurrence_piece_ids.remove(&piece_id);
         state.card_runtime.fresh_no_capture_until.remove(&piece_id);
         state.card_runtime.disarmed.remove(&piece_id);
         state.card_runtime.frozen.remove(&piece_id);
@@ -4419,6 +5161,7 @@ impl Engine {
         state.card_runtime.quantum_positions.remove(&piece_id);
         state.card_runtime.stealth_piece_ids.remove(&piece_id);
         state.card_runtime.submerged_piece_ids.remove(&piece_id);
+        state.card_runtime.nullification_piece_ids.remove(&piece_id);
         state.card_runtime.witch_trials.remove(&piece_id);
         state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
         state.card_runtime.bear_retaliations.remove(&piece_id);
@@ -4435,7 +5178,18 @@ impl Engine {
 
     /// Drops state that belongs to a piece's concrete type while retaining generic
     /// card statuses that remain attached to the physical piece after a transform.
+    fn clear_queens_gambit_protection(&self, state: &mut GameState, piece_id: u32) {
+        if state
+            .card_runtime
+            .queens_gambit_protection
+            .remove(&piece_id)
+        {
+            state.card_runtime.protected_piece_ids.remove(&piece_id);
+        }
+    }
+
     fn clear_piece_kind_runtime(&self, state: &mut GameState, piece_id: u32) {
+        self.clear_queens_gambit_protection(state, piece_id);
         state
             .card_runtime
             .herald_jump_locked_until
@@ -4540,6 +5294,25 @@ impl Engine {
             });
         }
         state.card_runtime.pending_otherworld = remaining;
+        let pending_lobsters = std::mem::take(&mut state.card_runtime.pending_lobsters);
+        for pending in pending_lobsters {
+            if state.ply < pending.due_ply {
+                state.card_runtime.pending_lobsters.push(pending);
+            } else if self.board_piece_at(state, pending.square).is_none()
+                && !state.card_runtime.barricades.contains(&pending.square)
+                && !state.card_runtime.black_holes.contains(&pending.square)
+                && state.card_runtime.crown_pos != Some(pending.square)
+            {
+                let lobster = Piece::new(pending.owner, PieceKind::Lobster)
+                    .with_id(state.allocate_piece_id());
+                state.board.set(pending.square, Some(lobster));
+                self.register_spawned_piece(state, pending.square, lobster, true);
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("lobster-spawn:{}:{}", lobster.id, pending.square),
+                });
+            }
+        }
         self.resolve_undead_resurrections(state, events);
         self.tick_siren_exposure(state, events);
         self.resolve_gomoku_victory(state);
@@ -4657,6 +5430,7 @@ impl Engine {
     }
 
     fn resolve_gomoku_victory(&self, state: &mut GameState) {
+        self.resolve_highlander_victory(state);
         if state.status != GameStatus::Ongoing {
             return;
         }
@@ -4729,7 +5503,49 @@ impl Engine {
         }
     }
 
-    fn resolve_missing_king(&self, state: &mut GameState, _events: &mut Vec<Event>) {
+    fn resolve_pending_recurrences(&self, state: &mut GameState, events: &mut Vec<Event>) {
+        let pending = std::mem::take(&mut state.card_runtime.pending_recurrences);
+        for recurrence in pending {
+            if state.board.find_by_id(recurrence.piece.id).is_some() {
+                continue;
+            }
+            let home_rank = if recurrence.piece.owner == Player::White {
+                0
+            } else {
+                7
+            };
+            let candidates = (0..8_u8)
+                .filter_map(|file| Square::new(file, home_rank))
+                .filter(|square| state.board.get(*square).is_none())
+                .collect::<Vec<_>>();
+            let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+            events.push(Event::RandomSample {
+                purpose: format!("recurrence-respawn:{}", recurrence.piece.id),
+                roll_53: roll,
+            });
+            let Some(index) = index else {
+                state.card_runtime.pending_recurrences.push(recurrence);
+                continue;
+            };
+            let square = candidates[index];
+            state.board.set(square, Some(recurrence.piece));
+            state
+                .card_runtime
+                .piece_origins
+                .insert(recurrence.piece.id, square);
+            state
+                .card_runtime
+                .moved_piece_ids
+                .insert(recurrence.piece.id);
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("recurrence:{}:{square}", recurrence.piece.id),
+            });
+        }
+    }
+
+    fn resolve_missing_king(&self, state: &mut GameState, events: &mut Vec<Event>) {
+        self.resolve_pending_recurrences(state, events);
         if state.status != GameStatus::Ongoing || !self.ruleset.base_rules.king_capture_wins {
             return;
         }
@@ -4750,7 +5566,20 @@ impl Engine {
                                     | PieceKind::DarkWizard
                             )
                             || state.card_runtime.royal_piece_ids.contains(&piece.id))
-                })
+                }) && !state
+                    .card_runtime
+                    .pending_recurrences
+                    .iter()
+                    .any(|pending| {
+                        pending.piece.owner == player
+                            && matches!(
+                                pending.piece.kind,
+                                PieceKind::King
+                                    | PieceKind::RoyalKnight
+                                    | PieceKind::Merchant
+                                    | PieceKind::DarkWizard
+                            )
+                    })
             }
         };
         if defeated(state, Player::White) {
@@ -4902,6 +5731,33 @@ impl Engine {
         self.finish_turn_chain(state, actor, events, 0)
     }
 
+    fn arrest_unsubmerged_thieves(
+        &self,
+        state: &mut GameState,
+        actor: Player,
+        events: &mut Vec<Event>,
+    ) {
+        let thieves = state
+            .board
+            .iter()
+            .filter(|(_, piece)| {
+                piece.owner == actor
+                    && piece.kind == PieceKind::Thief
+                    && !state.card_runtime.submerged_piece_ids.contains(&piece.id)
+            })
+            .collect::<Vec<_>>();
+        for (square, thief) in thieves {
+            state.board.set(square, None);
+            self.clear_removed_piece_statuses(state, thief.id);
+            events.push(Event::PieceRemoved {
+                actor,
+                piece: thief,
+                at: square,
+                cause: "thief-arrest".to_owned(),
+            });
+        }
+    }
+
     fn resolve_delayed_hazards(
         &self,
         state: &mut GameState,
@@ -4933,6 +5789,7 @@ impl Engine {
                     continue;
                 }
                 state.board.set(square, None);
+                self.record_new_capture_reactions(state, piece);
                 self.clear_removed_piece_statuses(state, piece.id);
                 events.push(Event::PieceRemoved {
                     actor: hazard.owner,
@@ -4998,6 +5855,7 @@ impl Engine {
                 {
                     state.board.set(from, None);
                     state.board.set(to, Some(log_piece));
+                    self.record_new_capture_reactions(state, target);
                     self.clear_removed_piece_statuses(state, target.id);
                     events.push(Event::PieceCaptured {
                         actor,
@@ -5042,6 +5900,11 @@ impl Engine {
         }
 
         self.emit_and_resolve(state, events, Event::TurnEnding { player: actor })?;
+        // Live refreshes the move result before delayed hazards resolve (JS 79897
+        // before 79971): an enemy that stepped adjacent is revealed even if a
+        // hazard removes it before the board is inspected again.
+        self.refresh_submerged_pieces(state);
+        self.arrest_unsubmerged_thieves(state, actor, events);
         self.resolve_delayed_hazards(state, actor, events);
         self.advance_logs_after_turn(state, actor, events);
         self.resolve_missing_king(state, events);
@@ -5058,6 +5921,11 @@ impl Engine {
         state.take_turn_end_request();
 
         state.turns_taken[actor.index()] = state.turns_taken[actor.index()].saturating_add(1);
+        self.advance_capture_flags(state, actor, true);
+        if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+            return Ok(());
+        }
         state.card_runtime.idol_rest_piece_ids.retain(|piece_id| {
             state
                 .board
@@ -5073,6 +5941,7 @@ impl Engine {
         self.tick_card_statuses_after_turn(state, actor);
         self.tick_middle_statuses_after_turn(state, actor, events);
         self.tick_end_statuses_after_turn(state, actor, events);
+        self.complete_octopus_turn(state, actor);
         state.card_runtime.free_move_no_capture[actor.index()] = false;
         state.card_runtime.relay[actor.index()] = false;
         state.card_runtime.magic_girl_surge[actor.index()] = false;
@@ -5118,6 +5987,7 @@ impl Engine {
             player: next_player,
             actions_remaining: state.actions_remaining,
         });
+        self.resolve_pending_portals_for_turn(state, next_player, events);
         self.resolve_middle_turn_start(state, next_player, events);
         self.resolve_effect_queue_from(state, events, next_turn_event_start)?;
         self.resolve_missing_king(state, events);
@@ -5159,6 +6029,37 @@ impl Engine {
             self.push_game_ended(state, events);
         }
         Ok(())
+    }
+
+    fn resolve_pending_portals_for_turn(
+        &self,
+        state: &mut GameState,
+        owner: Player,
+        events: &mut Vec<Event>,
+    ) {
+        let pending = std::mem::take(&mut state.card_runtime.pending_portals);
+        let mut selected = None;
+        for portal in pending {
+            if portal.owner == owner && state.turns_taken[owner.index()] >= portal.due_turn {
+                selected = Some(portal);
+            } else {
+                state.card_runtime.pending_portals.push(portal);
+            }
+        }
+        if let Some(portal) = selected
+            && portal.squares.iter().all(|square| {
+                !state.card_runtime.black_holes.contains(square)
+                    && state.card_runtime.crown_pos != Some(*square)
+                    && !(state.card_runtime.collapsed_files_ranks
+                        && (matches!(square.file(), 0 | 7) || matches!(square.rank(), 0 | 7)))
+            })
+        {
+            state.card_runtime.portals = Some(portal.squares);
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("portal-install:{}:{}", portal.squares[0], portal.squares[1]),
+            });
+        }
     }
 
     fn tick_card_statuses_after_turn(&self, state: &mut GameState, actor: Player) {
@@ -5252,6 +6153,26 @@ impl Engine {
                 .is_none_or(|(_, piece)| piece.owner == actor)
         }) {
             state.card_runtime.reposition = None;
+        }
+        let metal_ids = state
+            .card_runtime
+            .metal_cooldowns
+            .keys()
+            .copied()
+            .filter(|piece_id| {
+                state
+                    .board
+                    .find_by_id(*piece_id)
+                    .is_some_and(|(_, piece)| piece.owner == actor)
+            })
+            .collect::<Vec<_>>();
+        for piece_id in metal_ids {
+            if let Some(remaining) = state.card_runtime.metal_cooldowns.get_mut(&piece_id) {
+                *remaining = remaining.saturating_sub(1);
+                if *remaining == 0 {
+                    state.card_runtime.metal_cooldowns.remove(&piece_id);
+                }
+            }
         }
     }
 
@@ -5492,10 +6413,32 @@ impl Engine {
                 continue;
             }
             match card.definition_id.as_str() {
-                APPRENTICE_KNIGHTS | BIG_ROOK | CALLING_CARD | CHECKER | DEMOCRACY | DUTCH
-                | ELEPHANT_ESCAPE | FAST_GROWTH | FIANCHETTO | GUARD | HORDE | IRON_MONARCH
-                | KNIGHTMATE | LAST_STAND | LONDON_SYSTEM | MARTYRDOM | MERCHANT_GUILD
-                | OTHERWORLD | PAWN_CONVERSION | QUEEN_CAVALRY | QXE1 | SUMMON_COLOSSUS => {
+                APPRENTICE_KNIGHTS
+                | BIG_BISHOP
+                | BIG_ROOK
+                | CALLING_CARD
+                | CHECKER
+                | DEMOCRACY
+                | DUTCH
+                | ELEPHANT_ESCAPE
+                | FAST_GROWTH
+                | FIANCHETTO
+                | GUARD
+                | HORDE
+                | IRON_MONARCH
+                | KNIGHTMATE
+                | LAST_STAND
+                | LONDON_SYSTEM
+                | MARTYRDOM
+                | MERCHANT_GUILD
+                | OTHERWORLD
+                | PAWN_CONVERSION
+                | QUEEN_CAVALRY
+                | QXE1
+                | SUMMON_COLOSSUS
+                | THIEF
+                | crate::FALSE_START
+                | crate::LOCUST_SWARM => {
                     if self.opening_card_none_legal(state, &card.definition_id, state.turn) {
                         actions.push(Action::UseCard {
                             instance_id: card.instance_id,
@@ -5626,6 +6569,56 @@ impl Engine {
                         }
                     }
                 }
+                crate::METAL => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn
+                            && !self.is_royal_piece(state, piece)
+                            && self.is_ranged_piece(state, piece)
+                            && !state.card_runtime.metalized_piece_ids.contains(&piece.id)
+                        {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
+                crate::CLOCKWORK => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn
+                            && !self.is_royal_piece(state, piece)
+                            && matches!(
+                                piece.kind,
+                                PieceKind::Knight | PieceKind::Bishop | PieceKind::Camel
+                            )
+                        {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
+                crate::PALADIN => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn && piece.kind == PieceKind::Knight {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
+                crate::HEDGEHOG => {
+                    for (square, piece) in state.board.iter() {
+                        if piece.owner == state.turn && piece.kind == PieceKind::Queen {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
                 ASSASSIN => {
                     for (square, piece) in state.board.iter() {
                         if piece.owner == state.turn && piece.kind == PieceKind::Knight {
@@ -5638,7 +6631,9 @@ impl Engine {
                 }
                 GRASSHOPPER => {
                     for (square, piece) in state.board.iter() {
-                        if piece.owner == state.turn && piece.kind == PieceKind::Rook {
+                        if piece.owner == state.turn
+                            && matches!(piece.kind, PieceKind::Knight | PieceKind::Bishop)
+                        {
                             actions.push(Action::UseCard {
                                 instance_id: card.instance_id,
                                 target: ActionTarget::PieceAt(square),
@@ -5663,7 +6658,17 @@ impl Engine {
                         }
                     }
                 }
-                DRAGON | HERALD | BERSERKER | MAGIC_GIRL | SIEGE_RAM | SLIME | TRICKSTER => {
+                DRAGON
+                | HERALD
+                | BERSERKER
+                | MAGIC_GIRL
+                | SIEGE_RAM
+                | SLIME
+                | TRICKSTER
+                | crate::PARROT
+                | crate::PRINCESS
+                | crate::OCTOPUS
+                | crate::CAMPFIRE => {
                     for (square, piece) in state.board.iter() {
                         if piece.owner == state.turn && piece.kind == PieceKind::Rook {
                             actions.push(Action::UseCard {
@@ -5717,6 +6722,8 @@ impl Engine {
                         if piece.owner == state.turn
                             && piece.kind == PieceKind::Bishop
                             && (card.definition_id != ORDINATION || bishop_count >= 2)
+                            && (card.definition_id != MISSIONARY
+                                || !self.missionary_spawn_candidates(state, square).is_empty())
                         {
                             actions.push(Action::UseCard {
                                 instance_id: card.instance_id,
@@ -5915,7 +6922,15 @@ impl Engine {
         piece: Piece,
         all_actions: &mut Vec<Action>,
     ) {
+        if state.card_runtime.zugzwang[piece.owner.index()] && !self.is_royal_piece(state, piece) {
+            return;
+        }
         if state.card_runtime.frozen.contains_key(&piece.id)
+            || state
+                .card_runtime
+                .metal_cooldowns
+                .get(&piece.id)
+                .is_some_and(|remaining| *remaining > 0)
             || state.card_runtime.poison_stun_turns.contains_key(&piece.id)
             || state.card_runtime.idol_rest_piece_ids.contains(&piece.id)
             || state.card_runtime.dice_locks[piece.owner.index()]
@@ -5924,6 +6939,23 @@ impl Engine {
             return;
         }
         if self.middle_piece_is_exhausted(state, piece) {
+            return;
+        }
+        // Live getLegalMoves gates Clockwork before all movement providers and
+        // before materializing quantum shadows. Only physical board allies count.
+        if self.piece_has_ability(state, piece, PieceKind::Clockwork)
+            && !(-1..=1).any(|df| {
+                (-1..=1).any(|dr| {
+                    (df != 0 || dr != 0)
+                        && from
+                            .offset(df, dr)
+                            .and_then(|square| state.board.get(square))
+                            .is_some_and(|neighbor| {
+                                neighbor.owner == piece.owner && neighbor.id != piece.id
+                            })
+                })
+            })
+        {
             return;
         }
         // A trickster remains a trickster for identity, targeting, death and reroll semantics,
@@ -5939,10 +6971,12 @@ impl Engine {
         let mut generated = Vec::new();
         let actions = &mut generated;
         if state.card_runtime.socialism[piece.owner.index()] > 0
+            && !self.piece_has_ability(state, piece, PieceKind::Slime)
             && !self.is_royal_piece(state, piece)
         {
             self.generate_socialism_moves(state, from, piece, actions);
             self.filter_middle_moves(state, from, piece, actions);
+            self.filter_metal_moves(state, piece, from, actions);
             all_actions.extend(generated);
             return;
         }
@@ -5970,14 +7004,34 @@ impl Engine {
                 state,
                 from,
                 piece,
-                &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                // Reversal: an original board bishop moves as a rook for the armed turn.
+                if state.card_runtime.reversal[piece.owner.index()]
+                    && state
+                        .board
+                        .get(from)
+                        .is_some_and(|origin| origin.kind == PieceKind::Bishop)
+                {
+                    &[(-1, 0), (1, 0), (0, -1), (0, 1)]
+                } else {
+                    &[(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                },
                 actions,
             ),
             PieceKind::Rook => self.generate_slider_moves(
                 state,
                 from,
                 piece,
-                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                // Reversal: an original board rook moves as a bishop for the armed turn.
+                if state.card_runtime.reversal[piece.owner.index()]
+                    && state
+                        .board
+                        .get(from)
+                        .is_some_and(|origin| origin.kind == PieceKind::Rook)
+                {
+                    &[(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                } else {
+                    &[(-1, 0), (1, 0), (0, -1), (0, 1)]
+                },
                 actions,
             ),
             PieceKind::Queen => self.generate_slider_moves(
@@ -6014,6 +7068,9 @@ impl Engine {
                     actions,
                 );
                 self.generate_castling_moves(state, from, piece, actions);
+                if state.card_runtime.killer_king[piece.owner.index()] {
+                    self.generate_killer_king_rook_captures(state, from, piece, actions);
+                }
                 if state.card_runtime.hill_king[piece.owner.index()] && is_center_two_by_two(from) {
                     self.generate_slider_moves(
                         state,
@@ -6031,6 +7088,7 @@ impl Engine {
                         ],
                         actions,
                     );
+                    self.generate_knight_moves(state, from, piece, actions);
                 }
             }
             PieceKind::Assassin => {
@@ -6080,7 +7138,10 @@ impl Engine {
             PieceKind::Dragon => {
                 self.generate_knight_moves(state, from, piece, actions);
                 for (target, target_piece) in state.board.iter() {
-                    if target != from && target_piece.owner == piece.owner {
+                    if target != from
+                        && target_piece.owner == piece.owner
+                        && !self.piece_has_ability(state, target_piece, PieceKind::Slime)
+                    {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
                     }
                 }
@@ -6267,6 +7328,28 @@ impl Engine {
                 actions,
             ),
             PieceKind::BigRook => self.generate_big_rook_moves(state, from, piece, actions),
+            PieceKind::BigBishop => self.generate_big_bishop_moves(state, from, piece, actions),
+            PieceKind::Brutus => self.generate_brutus_moves(state, from, piece, actions),
+            PieceKind::Thief => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-3, 0),
+                    (-2, 0),
+                    (-1, 0),
+                    (1, 0),
+                    (2, 0),
+                    (3, 0),
+                    (0, -3),
+                    (0, -2),
+                    (0, -1),
+                    (0, 1),
+                    (0, 2),
+                    (0, 3),
+                ],
+                actions,
+            ),
             PieceKind::Colossus => self.generate_large_step_moves(state, from, piece, actions),
             PieceKind::Merchant => {}
             PieceKind::DarkWizard => self.generate_leaper_moves(
@@ -6405,6 +7488,97 @@ impl Engine {
                 &[(-3, 0), (3, 0), (0, -3), (0, 3)],
                 actions,
             ),
+            PieceKind::Clockwork => self.generate_slider_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-1, -1),
+                    (-1, 1),
+                    (1, -1),
+                    (1, 1),
+                    (-1, 0),
+                    (1, 0),
+                    (0, -1),
+                    (0, 1),
+                ],
+                actions,
+            ),
+            // Parrot base movement mirrors the owner's remembered last move
+            // (live parrotBaseMoves, JS 4205-4320).
+            PieceKind::Parrot => self.generate_parrot_memory_moves(state, from, piece, actions),
+            // Paladin (live L82172): extended knight jumps.
+            PieceKind::Paladin => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-2, -1),
+                    (-2, 1),
+                    (-1, -2),
+                    (-1, 2),
+                    (1, -2),
+                    (1, 2),
+                    (2, -1),
+                    (2, 1),
+                ],
+                actions,
+            ),
+            // Princess (live L1275-1277): full queen rays only while no own queen
+            // exists on the board; otherwise one-step diagonal jumps.
+            PieceKind::Princess
+                if !state.board.iter().any(|(_, existing)| {
+                    existing.owner == piece.owner && existing.kind == PieceKind::Queen
+                }) =>
+            {
+                self.generate_slider_moves(
+                    state,
+                    from,
+                    piece,
+                    &[
+                        (-1, -1),
+                        (-1, 1),
+                        (1, -1),
+                        (1, 1),
+                        (-1, 0),
+                        (1, 0),
+                        (0, -1),
+                        (0, 1),
+                    ],
+                    actions,
+                )
+            }
+            PieceKind::Princess => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                actions,
+            ),
+            PieceKind::Octopus => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[
+                    (-1, -1),
+                    (-1, 1),
+                    (1, -1),
+                    (1, 1),
+                    (-1, 0),
+                    (1, 0),
+                    (0, -1),
+                    (0, 1),
+                ],
+                actions,
+            ),
+            PieceKind::Hedgehog => self.generate_king_step_moves(state, from, piece, actions),
+            PieceKind::Campfire => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                actions,
+            ),
             PieceKind::Siren | PieceKind::Undead => {
                 self.generate_king_step_moves(state, from, piece, actions)
             }
@@ -6417,20 +7591,82 @@ impl Engine {
         }
         self.generate_loyalist_moves(state, from, piece, actions);
         self.augment_middle_moves(state, from, piece, actions);
+        if state
+            .card_runtime
+            .locust_swarm_piece_ids
+            .contains(&piece.id)
+        {
+            self.generate_locust_swarm_moves(state, from, piece, actions);
+        }
         self.filter_middle_moves(state, from, piece, actions);
-        if state.card_runtime.relay[piece.owner.index()] {
+        if state.card_runtime.relay[piece.owner.index()]
+            && !self.piece_has_ability(state, piece, PieceKind::Slime)
+        {
             for (square, ally) in state.board.iter() {
                 if ally.owner == piece.owner
                     && ally.id != piece.id
+                    && !self.piece_has_ability(state, ally, PieceKind::Slime)
                     && (square.file() == from.file() || square.rank() == from.rank())
                     && !state.card_runtime.large_pieces.contains_key(&ally.id)
                     && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                    && !self.paladin_radiance_blocks_move(
+                        state,
+                        piece,
+                        MoveAction::new(from, square, None),
+                        false,
+                    )
                 {
                     generated.push(Action::Move(MoveAction::new(from, square, None)));
                 }
             }
         }
+        // Symmetry: alongside normal moves, a mirror move across the vertical center
+        // line (file 7 - file, same rank) ignores intermediate blockers. Own-piece
+        // destinations are rejected; enemy destinations become captures
+        // (live symmetryMoves JS:82366 with normal move generation, 101339-101341).
+        if state.card_runtime.symmetry[piece.owner.index()] {
+            let mirror_file = 7 - from.file();
+            if let Some(mirror) = Square::new(mirror_file, from.rank())
+                && mirror != from
+                && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                && !self.paladin_radiance_blocks_move(
+                    state,
+                    piece,
+                    MoveAction::new(from, mirror, None),
+                    false,
+                )
+            {
+                match state.board.get(mirror) {
+                    None => generated.push(Action::Move(MoveAction::new(from, mirror, None))),
+                    Some(target_piece) if target_piece.owner != piece.owner => {
+                        if self.can_capture(state, piece, target_piece) {
+                            generated.push(Action::Move(MoveAction::new(from, mirror, None)));
+                        }
+                    }
+                    Some(_) => {}
+                }
+            }
+        }
+        self.filter_metal_moves(state, piece, from, &mut generated);
         all_actions.extend(generated);
+    }
+
+    fn filter_metal_moves(
+        &self,
+        state: &GameState,
+        piece: Piece,
+        from: Square,
+        actions: &mut Vec<Action>,
+    ) {
+        if !state.card_runtime.metalized_piece_ids.contains(&piece.id) {
+            return;
+        }
+        actions.retain(|action| {
+            matches!(action, Action::Move(movement)
+                if movement.from == from
+                    && from.file().abs_diff(movement.to.file()) <= 1
+                    && from.rank().abs_diff(movement.to.rank()) <= 1)
+        });
     }
 
     fn generate_king_step_moves(
@@ -6616,19 +7852,49 @@ impl Engine {
             return;
         }
 
+        // A concealed enemy piece (stealth, non-royal) is invisible to this mover: the pawn may
+        // step onto or through its square (live addPawnDirectionalMoves.movementTarget).
+        let forward_open = |square: Square| {
+            self.board_piece_at(state, square).is_none_or(|target| {
+                target.owner != piece.owner
+                    && state.card_runtime.stealth_piece_ids.contains(&target.id)
+                    && !self.is_royal_piece(state, target)
+            })
+        };
+        // Proficiency (live addInternalPawnMoves): a pawn on the promotion-adjacent rank may
+        // capture straight ahead, which standard pawn rules forbid.
+        if state.card_runtime.proficiency[piece.owner.index()]
+            && from.rank()
+                == match piece.owner {
+                    Player::White => 6,
+                    Player::Black => 1,
+                }
+            && let Some(promotion_capture) = from.offset(0, direction)
+            && let Some(target_piece) = self.board_piece_at(state, promotion_capture)
+            && self.can_capture(state, piece, target_piece)
+        {
+            self.push_card_pawn_move(
+                state,
+                piece,
+                from,
+                promotion_capture,
+                promotion_rank,
+                actions,
+            );
+        }
         if let Some(one_step) = from.offset(0, direction)
-            && self.board_piece_at(state, one_step).is_none()
+            && forward_open(one_step)
         {
             self.push_card_pawn_move(state, piece, from, one_step, promotion_rank, actions);
             if !state.card_runtime.moved_piece_ids.contains(&piece.id)
                 && double_step_ranks.contains(&from.rank())
                 && let Some(two_steps) = from.offset(0, direction * 2)
-                && self.board_piece_at(state, two_steps).is_none()
+                && forward_open(two_steps)
             {
                 actions.push(Action::Move(MoveAction::new(from, two_steps, None)));
                 if state.card_runtime.pawn_sprint[piece.owner.index()]
                     && let Some(three_steps) = from.offset(0, direction * 3)
-                    && self.board_piece_at(state, three_steps).is_none()
+                    && forward_open(three_steps)
                 {
                     self.push_card_pawn_move(
                         state,
@@ -6680,6 +7946,41 @@ impl Engine {
             }
         }
 
+        if piece.kind == PieceKind::Pawn && state.card_runtime.vanguard[piece.owner.index()] {
+            let own_pawns = state
+                .board
+                .iter()
+                .filter(|(_, candidate)| {
+                    candidate.owner == piece.owner && candidate.kind == PieceKind::Pawn
+                })
+                .collect::<Vec<_>>();
+            let unique_on_rank = own_pawns
+                .iter()
+                .filter(|(square, _)| square.rank() == from.rank())
+                .count()
+                == 1;
+            let foremost = own_pawns.iter().all(|(square, _)| match piece.owner {
+                Player::White => square.rank() <= from.rank(),
+                Player::Black => square.rank() >= from.rank(),
+            });
+            if unique_on_rank && foremost {
+                for file_delta in [-1, 1] {
+                    if let Some(target) = from.offset(file_delta, direction)
+                        && state.board.get(target).is_none()
+                    {
+                        self.push_card_pawn_move(
+                            state,
+                            piece,
+                            from,
+                            target,
+                            promotion_rank,
+                            actions,
+                        );
+                    }
+                }
+            }
+        }
+
         let same_rank_bearers = state
             .board
             .iter()
@@ -6726,16 +8027,22 @@ impl Engine {
             actions.push(Action::Move(MoveAction::new(from, to, None)));
             return;
         }
-        let promotions: &[PieceKind] = if state.card_runtime.fast_growth[piece.owner.index()] {
-            &[PieceKind::Knight, PieceKind::Bishop]
+        // Mutation (live JS:4136 passive, 95714+ adds "monster" to promotion choices).
+        let mut promotions: Vec<PieceKind> = if state.card_runtime.fast_growth[piece.owner.index()]
+        {
+            vec![PieceKind::Knight, PieceKind::Bishop]
         } else {
-            &[
+            vec![
                 PieceKind::Knight,
                 PieceKind::Bishop,
                 PieceKind::Rook,
                 PieceKind::Queen,
             ]
         };
+        if state.card_runtime.mutation[piece.owner.index()] {
+            promotions.push(PieceKind::Monster);
+        }
+        let promotions = &promotions[..];
         for &promotion in promotions {
             actions.push(Action::Move(MoveAction::new(from, to, Some(promotion))));
         }
@@ -6838,7 +8145,9 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
-        if !state.card_runtime.loyalist_piece_ids.contains(&piece.id) {
+        if !state.card_runtime.loyalist_piece_ids.contains(&piece.id)
+            || self.piece_has_ability(state, piece, PieceKind::Slime)
+        {
             return;
         }
         let anchors = state
@@ -6899,6 +8208,60 @@ impl Engine {
                     break;
                 }
                 cursor = anchor;
+            }
+        }
+    }
+
+    fn generate_big_bishop_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        for &(file_delta, rank_delta) in &[(-1, -1), (-1, 1), (1, -1), (1, 1)] {
+            let mut cursor = from;
+            while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
+                if !self.large_landing_is_legal(state, piece, anchor, 2) {
+                    break;
+                }
+                actions.push(Action::Move(MoveAction::new(from, anchor, None)));
+                if !self.large_landing_targets(state, piece, anchor).is_empty() {
+                    break;
+                }
+                cursor = anchor;
+            }
+        }
+    }
+
+    fn generate_brutus_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        self.generate_slider_moves(
+            state,
+            from,
+            piece,
+            &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+            actions,
+        );
+        for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            let mut cursor = from;
+            while let Some(target) = cursor.offset(file_delta, rank_delta) {
+                match self.board_piece_at(state, target) {
+                    None => cursor = target,
+                    Some(target_piece) => {
+                        if target_piece.owner == piece.owner
+                            && self.is_royal_piece(state, target_piece)
+                        {
+                            actions.push(Action::Move(MoveAction::new(from, target, None)));
+                        }
+                        break;
+                    }
+                }
             }
         }
     }
@@ -6993,7 +8356,8 @@ impl Engine {
             }
         };
         let target_diagonal = diagonal(to);
-        target_diagonal != 0
+        piece.kind == PieceKind::Pawn
+            && target_diagonal != 0
             && diagonal(from) != target_diagonal
             && state.card_runtime.fianchetto[piece.owner.opponent().index()]
             && state.board.iter().any(|(square, candidate)| {
@@ -7001,6 +8365,30 @@ impl Engine {
                     && candidate.kind == PieceKind::Bishop
                     && diagonal(square) == target_diagonal
             })
+    }
+
+    /// Killer King: the king may capture along rook lines, but rook-style quiet moves stay illegal.
+    fn generate_killer_king_rook_captures(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            let mut cursor = from;
+            while let Some(target) = cursor.offset(file_delta, rank_delta) {
+                if let Some(target_piece) = self.board_piece_at(state, target) {
+                    if self.can_capture(state, piece, target_piece)
+                        && !self.majesty_destination_blocked(state, piece, target)
+                    {
+                        actions.push(Action::Move(MoveAction::new(from, target, None)));
+                    }
+                    break;
+                }
+                cursor = target;
+            }
+        }
     }
 
     fn generate_leaper_moves(
@@ -7016,11 +8404,15 @@ impl Engine {
                 continue;
             };
             match self.board_piece_at(state, target) {
-                None if !self.fianchetto_destination_blocked(state, piece, from, target) => {
+                None if !self.fianchetto_destination_blocked(state, piece, from, target)
+                    && !self.majesty_destination_blocked(state, piece, target) =>
+                {
                     actions.push(Action::Move(MoveAction::new(from, target, None)))
                 }
                 Some(target_piece) if self.can_capture(state, piece, target_piece) => {
-                    if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                    if !self.fianchetto_destination_blocked(state, piece, from, target)
+                        && !self.majesty_destination_blocked(state, piece, target)
+                    {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
                     }
                 }
@@ -7043,15 +8435,52 @@ impl Engine {
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
                 match self.board_piece_at(state, target) {
                     None => {
-                        if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                        if !self.fianchetto_destination_blocked(state, piece, from, target)
+                            && !self.majesty_destination_blocked(state, piece, target)
+                        {
                             actions.push(Action::Move(MoveAction::new(from, target, None)));
                         }
                     }
+                    Some(target_piece)
+                        if target_piece.owner != piece.owner
+                            && state
+                                .card_runtime
+                                .stealth_piece_ids
+                                .contains(&target_piece.id)
+                            && !self.is_royal_piece(state, target_piece) =>
+                    {
+                        if self.can_capture(state, piece, target_piece)
+                            && !self.fianchetto_destination_blocked(state, piece, from, target)
+                        {
+                            actions.push(Action::Move(MoveAction::new(from, target, None)));
+                        }
+                        cursor = target;
+                        continue;
+                    }
                     Some(target_piece) if self.can_capture(state, piece, target_piece) => {
-                        if !self.fianchetto_destination_blocked(state, piece, from, target) {
+                        if !self.fianchetto_destination_blocked(state, piece, from, target)
+                            && !self.majesty_destination_blocked(state, piece, target)
+                        {
                             actions.push(Action::Move(MoveAction::new(from, target, None)));
                         }
                         break;
+                    }
+                    Some(target_piece)
+                        if piece.kind == PieceKind::Rook
+                            && state
+                                .board
+                                .get(from)
+                                .is_some_and(|origin| origin.kind == PieceKind::Rook)
+                            && state.card_runtime.overtake[piece.owner.index()]
+                            && target_piece.owner == piece.owner
+                            && !matches!(
+                                target_piece.kind,
+                                PieceKind::Monster | PieceKind::Football
+                            )
+                            && !state.card_runtime.black_holes.contains(&target) =>
+                    {
+                        cursor = target;
+                        continue;
                     }
                     Some(target_piece)
                         if target_piece.owner == piece.owner
@@ -7098,6 +8527,42 @@ impl Engine {
                     break;
                 }
                 cursor = target;
+            }
+        }
+    }
+
+    fn generate_locust_swarm_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        for (file_delta, rank_delta) in [
+            (-1, -1),
+            (-1, 1),
+            (1, -1),
+            (1, 1),
+            (-1, 0),
+            (1, 0),
+            (0, -1),
+            (0, 1),
+        ] {
+            let Some(hurdle) = from.offset(file_delta, rank_delta) else {
+                continue;
+            };
+            if state.board.get(hurdle).is_none() {
+                continue;
+            }
+            let Some(landing) = hurdle.offset(file_delta, rank_delta) else {
+                continue;
+            };
+            match state.board.get(landing) {
+                None => actions.push(Action::Move(MoveAction::new(from, landing, None))),
+                Some(target) if self.can_capture(state, piece, target) => {
+                    actions.push(Action::Move(MoveAction::new(from, landing, None)));
+                }
+                Some(_) => {}
             }
         }
     }
@@ -7681,6 +9146,13 @@ impl Engine {
     }
 
     fn can_capture(&self, state: &GameState, attacker: Piece, target: Piece) -> bool {
+        if state
+            .card_runtime
+            .outpost_protected_piece_ids
+            .contains(&target.id)
+        {
+            return false;
+        }
         self.can_capture_ignoring_fresh(state, attacker, target)
             && self.capture_status_allows(state, attacker)
     }
@@ -7733,6 +9205,25 @@ impl Engine {
             })
     }
 
+    fn campfire_protects(&self, state: &GameState, target: Piece) -> bool {
+        if self.is_royal_piece(state, target) || target.kind == PieceKind::Scarecrow {
+            return false;
+        }
+        let Some((square, _)) = state.board.find_by_id(target.id) else {
+            return false;
+        };
+        [(-1, 0), (1, 0), (0, -1), (0, 1)].iter().any(|&(df, dr)| {
+            square
+                .offset(df, dr)
+                .and_then(|cell| state.board.get(cell))
+                .is_some_and(|fire| {
+                    fire.owner == target.owner
+                        && fire.id != target.id
+                        && self.piece_has_ability(state, fire, PieceKind::Campfire)
+                })
+        })
+    }
+
     fn can_capture_ignoring_fresh(
         &self,
         state: &GameState,
@@ -7753,16 +9244,25 @@ impl Engine {
             && state.card_runtime.armistice_remaining_ply == 0
             && !state.card_runtime.frozen.contains_key(&target.id)
             && !self.middle_submerged_protects(state, target)
-            && (!state.card_runtime.stealth_piece_ids.contains(&target.id)
-                || self.is_royal_piece(state, attacker))
             && !(state.card_runtime.overwhelm[target.owner.index()]
                 && self.is_royal_piece(state, attacker)
                 && (target.kind == PieceKind::Queen || self.is_royal_piece(state, target)))
             && !self.middle_encouragement_protects(state, target)
+            && !self.campfire_protects(state, target)
+            && !(state
+                .card_runtime
+                .nullification_piece_ids
+                .contains(&target.id)
+                && attacker.kind == target.kind)
             && target.kind != PieceKind::Guard
             && !matches!(
                 attacker.kind,
-                PieceKind::Idol | PieceKind::Recruiter | PieceKind::Wizard | PieceKind::Herald
+                PieceKind::Idol
+                    | PieceKind::Recruiter
+                    | PieceKind::Wizard
+                    | PieceKind::Herald
+                    | PieceKind::Paladin
+                    | PieceKind::Campfire
             )
             && (attacker.kind != PieceKind::Jester || self.is_royal_piece(state, target))
             && (target.kind != PieceKind::Jester || self.is_royal_piece(state, attacker))
@@ -7770,6 +9270,12 @@ impl Engine {
                 && target.kind == PieceKind::Pawn
                 && state.card_runtime.geneva_convention[target.owner.index()])
     }
+}
+
+fn mix_search_seed(mut value: u64) -> u64 {
+    value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    value = (value ^ (value >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    value ^ (value >> 31)
 }
 
 fn piece_target(state: &GameState, target: &ActionTarget) -> Result<(Square, Piece), EngineError> {
@@ -7887,6 +9393,8 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         | PieceKind::Cardinal
         | PieceKind::RoyalKnight => 5,
         PieceKind::BigRook
+        | PieceKind::BigBishop
+        | PieceKind::Brutus
         | PieceKind::Wizard
         | PieceKind::Queen
         | PieceKind::PrimeMinister
@@ -7906,6 +9414,7 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         | PieceKind::CheckerKing
         | PieceKind::StandardBearer => 2,
         PieceKind::Grasshopper
+        | PieceKind::Thief
         | PieceKind::Knightmaster
         | PieceKind::Unicorn
         | PieceKind::Missionary => 4,
@@ -7915,10 +9424,14 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         PieceKind::Ferz | PieceKind::Lobster => 2,
         PieceKind::BabyBear => 1,
         PieceKind::Bear => 9,
-        PieceKind::SiegeRam | PieceKind::Slime => 5,
+        PieceKind::SiegeRam | PieceKind::Slime | PieceKind::Clockwork => 5,
+        PieceKind::Parrot | PieceKind::Campfire => 5,
+        PieceKind::Paladin => 4,
+        PieceKind::Princess => 6,
+        PieceKind::Octopus => 5,
         PieceKind::MagicGirl => 6,
         PieceKind::Berserker => 7,
-        PieceKind::Siren | PieceKind::Trickster | PieceKind::Undead => 9,
+        PieceKind::Siren | PieceKind::Trickster | PieceKind::Undead | PieceKind::Hedgehog => 9,
         PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Crown | PieceKind::Football => 0,
         PieceKind::Vip => 4,
     }
@@ -8108,6 +9621,14 @@ mod tests {
         GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, turn, seed)
     }
 
+    fn september_state(pieces: &[(&str, Player, PieceKind)], turn: Player, seed: u64) -> GameState {
+        let mut board = Board::empty();
+        for (square, owner, kind) in pieces {
+            board.set(square.parse().unwrap(), Some(Piece::new(*owner, *kind)));
+        }
+        GameState::from_board("augment_chess_20260915", Mode::Standard, board, turn, seed)
+    }
+
     fn grant_test_card(state: &mut GameState, definition_id: &str, instance_id: u32) {
         let definition = implemented_card(definition_id).unwrap();
         state.add_card(CardInstance {
@@ -8208,27 +9729,53 @@ mod tests {
     #[test]
     fn initial_draft_opening_card_is_hidden_then_used_after_the_first_move() {
         let engine = Engine::bundled_20260807().unwrap();
-        let (state, offer_index, opening_id) = (0..1_000)
+        // Adding implemented cards shifts the seeded draft pools, so the seed search
+        // validates the full hidden-then-auto-used invariant instead of pinning a seed.
+        let (state, opening_id) = (0..1_000)
             .find_map(|seed| {
                 let state = engine.new_game(Mode::Standard, seed).ok()?;
                 let GamePhase::Draft(draft) = &state.phase else {
                     return None;
                 };
                 draft.offers.iter().enumerate().find_map(|(index, id)| {
-                    implemented_card(id)
-                        .is_some_and(|card| {
-                            card.phase == CardPhase::Opening
-                                && card.activation == CardActivation::Active
-                        })
-                        .then(|| (state.clone(), index as u16, id.clone()))
+                    let (state, opening_id) = (state.clone(), id.clone());
+                    let picked = engine
+                        .apply(&state, Action::DraftPick { offer_index: index as u16 })
+                        .ok()?
+                        .state;
+                    let picked = first_draft_pick(&engine, &picked).state;
+                    let instance_id = picked
+                        .cards
+                        .iter()
+                        .find(|card| card.owner == Player::White && card.definition_id == opening_id)?
+                        .instance_id;
+                    if !picked
+                        .card_runtime
+                        .opening_auto_card_ids
+                        .contains(&instance_id)
+                    {
+                        return None;
+                    }
+                    if engine.legal_actions(&picked).unwrap().iter().any(|action| {
+                        matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
+                    }) {
+                        return None;
+                    }
+                    let first_move = engine
+                        .legal_actions(&picked)
+                        .unwrap()
+                        .into_iter()
+                        .find(|action| matches!(action, Action::Move(_)))?;
+                    let after = engine.apply(&picked, first_move).ok()?.state;
+                    let consumed = after
+                        .cards
+                        .iter()
+                        .find(|card| card.instance_id == instance_id)
+                        .is_some_and(|card| card.charges == 0);
+                    consumed.then_some((picked, opening_id))
                 })
             })
-            .expect("a bounded seed search must find an active OPENING offer");
-        let state = engine
-            .apply(&state, Action::DraftPick { offer_index })
-            .unwrap()
-            .state;
-        let state = first_draft_pick(&engine, &state).state;
+            .expect("a bounded seed search must find an auto-used active OPENING offer");
         let card = state
             .cards
             .iter()
@@ -8651,14 +10198,20 @@ mod tests {
         state.turn = Player::Black;
         state.turns_taken = [10, 9];
         state = engine.apply(&state, movement("g8", "f6")).unwrap().state;
+        // New passive middle cards changed seeded pools; pin a known active offer for determinism.
+        if let GamePhase::Draft(draft) = &mut state.phase {
+            draft.offers[0] = "parry".to_owned();
+        }
         let white_offer_index = match &state.phase {
             GamePhase::Draft(draft) => draft
                 .offers
                 .iter()
                 .position(|id| {
-                    implemented_card(id).is_some_and(|card| card.phase == CardPhase::Middle)
+                    implemented_card(id).is_some_and(|card| {
+                        card.phase == CardPhase::Middle && card.activation == CardActivation::Active
+                    })
                 })
-                .expect("middle draft must offer a MIDDLE card"),
+                .expect("middle draft must offer an active MIDDLE card"),
             _ => panic!("middle draft must be active"),
         };
         let white_definition_id = match &state.phase {
@@ -9632,7 +11185,7 @@ mod tests {
         let state = minimal_state(
             &[
                 ("a1", Player::White, PieceKind::King),
-                ("d4", Player::White, PieceKind::Rook),
+                ("d4", Player::White, PieceKind::Knight),
                 ("d5", Player::White, PieceKind::Pawn),
                 ("e4", Player::White, PieceKind::Pawn),
                 ("f4", Player::Black, PieceKind::Bishop),
@@ -9652,8 +11205,14 @@ mod tests {
         );
         let actions = engine.legal_actions(&state).unwrap();
         assert!(actions.contains(&movement("d4", "d6")));
-        assert!(actions.contains(&movement("d4", "f4")));
+        assert!(!actions.contains(&movement("d4", "f4")));
         assert!(!actions.contains(&movement("d4", "d5")));
+        // A transformation cannot capture even on the opening turns. The lock expires
+        // after the owner completes one turn; quiet grasshopper moves stay available.
+        let mut ready = state.clone();
+        ready.turns_taken[Player::White.index()] += 1;
+        let actions = engine.legal_actions(&ready).unwrap();
+        assert!(actions.contains(&movement("d4", "f4")));
     }
 
     #[test]
@@ -9777,7 +11336,7 @@ mod tests {
             } if purpose == "parry"
         )));
         assert_eq!(state.turn, Player::White);
-        assert_eq!(state.fingerprint(), 0x7008_e96d_ab2d_53d9);
+        assert_eq!(state.fingerprint(), 0xe18e_15c9_9501_f591);
     }
 
     #[test]
@@ -9850,7 +11409,7 @@ mod tests {
         assert_eq!(state.board.get("a5".parse().unwrap()), None);
         assert!(state.card_runtime.empty_lunchboxes.is_empty());
         assert_eq!(state.turns_taken[Player::Black.index()], 3);
-        assert_eq!(state.fingerprint(), 0xea81_7858_5290_c62e);
+        assert_eq!(state.fingerprint(), 0x54cf_4f5f_325e_f346);
     }
 
     #[test]
@@ -9978,7 +11537,7 @@ mod tests {
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
         assert_eq!(state.ply, 2);
-        assert_eq!(state.fingerprint(), 0xdcd0_859a_5dcc_e83d);
+        assert_eq!(state.fingerprint(), 0x93a5_5b6b_07fe_343d);
     }
 
     #[test]
@@ -11123,7 +12682,14 @@ mod tests {
                 state
                     .board
                     .iter()
-                    .filter(|(_, piece)| piece.owner == Player::White && piece.kind == expected)
+                    .filter(|(_, piece)| {
+                        let owner = if card == CHECKER {
+                            Player::Black
+                        } else {
+                            Player::White
+                        };
+                        piece.owner == owner && piece.kind == expected
+                    })
                     .count(),
                 2
             );
@@ -11588,7 +13154,7 @@ mod tests {
             119,
         );
         fianchetto.card_runtime.fianchetto[Player::Black.index()] = true;
-        assert!(!has_move(&engine, &fianchetto, "b1", "e4"));
+        assert!(has_move(&engine, &fianchetto, "b1", "e4"));
 
         let mut iron = minimal_state(
             &[
@@ -11603,6 +13169,40 @@ mod tests {
         let iron = engine.apply(&iron, movement("d4", "e5")).unwrap().state;
         assert_eq!(iron.turn, Player::White);
         assert_eq!(iron.actions_remaining, 1);
+
+        for (kind, extra) in [
+            (PieceKind::Fanatic, true),
+            (PieceKind::Rook, false),
+            (PieceKind::Bishop, false),
+            (PieceKind::Knight, false),
+            (PieceKind::Queen, false),
+        ] {
+            let mut iron = minimal_state(
+                &[
+                    ("d4", Player::White, PieceKind::King),
+                    ("e5", Player::Black, kind),
+                    ("h8", Player::Black, PieceKind::King),
+                ],
+                Player::White,
+                120,
+            );
+            iron.card_runtime.iron_monarch[Player::White.index()] = true;
+            let next = engine.apply(&iron, movement("d4", "e5")).unwrap().state;
+            assert_eq!(next.turn == Player::White, extra, "{kind:?}");
+        }
+
+        let mut blocked_pawn = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d3", Player::White, PieceKind::Pawn),
+                ("a1", Player::Black, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            119,
+        );
+        blocked_pawn.card_runtime.fianchetto[Player::Black.index()] = true;
+        assert!(!has_move(&engine, &blocked_pawn, "d3", "d4"));
     }
 
     #[test]
@@ -11732,6 +13332,8 @@ mod tests {
         for square in ["a4", "b4", "c4", "d4"] {
             pieces.push((square, Player::White, PieceKind::Pawn));
         }
+        // An advanced White piece gives half-locked target cards (outpost) a legal target.
+        pieces.push(("d5", Player::White, PieceKind::Pawn));
         for square in ["e5", "f5", "g5", "h5"] {
             pieces.push((square, Player::Black, PieceKind::Pawn));
         }
@@ -11776,7 +13378,7 @@ mod tests {
             Player::White,
             1,
         );
-        engine.apply_card_definition(&mut leap, LEAP, Player::White);
+        engine.apply_card_definition(&mut leap, LEAP, Player::White, &mut Vec::new());
         assert!(has_move(&engine, &leap, "a2", "b4"));
 
         let pawn = leap.board.get("a2".parse().unwrap()).unwrap();
@@ -11842,12 +13444,10 @@ mod tests {
                 max_hp: 2,
             },
         );
-        grant_test_card(&mut state, crate::BLACK_MAGIC, 1);
-        let mut state = engine
-            .apply(&state, use_card_without_target(1))
-            .unwrap()
-            .state;
-        assert_eq!(state.status, GameStatus::Ongoing);
+        let mut events = Vec::new();
+        engine
+            .resolve_black_tower_legacy(&mut state, &mut events)
+            .unwrap();
         assert!(state.board.contains(Player::White, PieceKind::DarkWizard));
         assert!(!state.board.contains(Player::White, PieceKind::King));
         assert!(!state.card_runtime.large_pieces.contains_key(&rook.id));
@@ -11861,6 +13461,2307 @@ mod tests {
                 .count(),
             8
         );
+    }
+
+    #[test]
+    fn insight_reveals_enemy_stealth_pieces() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("e5", Player::Black, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            922,
+        );
+        let bishop = state.board.get("e5".parse().unwrap()).unwrap();
+        state.card_runtime.stealth_piece_ids.insert(bishop.id);
+        grant_test_card(&mut state, crate::INSIGHT, 1);
+        let revealed = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(!revealed.card_runtime.stealth_piece_ids.contains(&bishop.id));
+    }
+
+    // Live source: disassembleMovedQueen (main-6qeAcxbX.js L6028591) — with disassembly active,
+    // a moved non-royal queen becomes a bishop on its destination and a rook is created on the
+    // origin square if it is empty and unblocked. state.disassembly[movingColor] resets after
+    // the move batch (js "if (state.disassembly) state.disassembly[movingColor] = false").
+    // Live source: septemberOvertakeCanCross (main-6qeAcxbX.js) — while overtake is active for
+    // the mover, a rook treats friendly pieces (except wall/football/monster/blackHole/coffin)
+    // as transparent in rayMoves, landing after them normally.
+    #[test]
+    fn overtake_lets_the_rook_cross_friendly_pieces_for_this_turn() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::Rook),
+            ("a2", Player::White, PieceKind::Pawn),
+            ("e1", Player::White, PieceKind::King),
+            ("h8", Player::Black, PieceKind::King),
+            ("a4", Player::Black, PieceKind::Pawn),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let without = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::White,
+            927,
+        );
+        let actions = engine.legal_actions(&without).unwrap();
+        assert!(!actions.contains(&movement("a1", "a3")));
+        let with = engine
+            .grant_card(&without, 1, "overtake", Player::White)
+            .unwrap()
+            .state;
+        // The effect arms only after the card is actually used (active card).
+        assert!(
+            !engine
+                .legal_actions(&with)
+                .unwrap()
+                .contains(&movement("a1", "a3"))
+        );
+        let activated = engine
+            .apply(&with, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&activated).unwrap();
+        assert!(actions.contains(&movement("a1", "a3")));
+        assert!(actions.contains(&movement("a1", "a4")));
+        // After the mover's turn completes, the turn-scoped effect is cleared again.
+        let after_move = engine
+            .apply(&activated, movement("a1", "a3"))
+            .unwrap()
+            .state;
+        assert_eq!(
+            after_move.board.get("a3".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        assert_eq!(
+            after_move.board.get("a2".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        let next_own = engine
+            .apply(&after_move, movement("h8", "h7"))
+            .unwrap()
+            .state;
+        assert_eq!(next_own.turn, Player::White);
+        // a3→a1 requires crossing the friendly pawn on a2, so it is blocked again
+        // once the turn-scoped overtake effect has been cleared.
+        let own_again = engine.legal_actions(&next_own).unwrap();
+        assert!(!own_again.contains(&movement("a3", "a1")));
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1114-1119: "reversal", "END", 4, "사용한 턴에 아군 룩과 비숍의 행마가 뒤바뀝니다."
+    // L86549-86553: case "reversal" sets state.reversal[state.turn] = true.
+    // L82195/L82204: bishop uses rookDirections; rook uses bishopDirections while armed.
+    // L80215: if (state.reversal) state.reversal[movingColor] = false;
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1049-1055: outpost, MIDDLE, 3.5, own-outpost-piece (active default).
+    // L1197-1199: White target cells must reach the opponent half of the board.
+    // L86120: rejects royal identity, already protected, and rule-object targets.
+    // L86127: item2.outpostProtected = true; L95452: protection is recognized.
+    // L1244-1246: delete outpostProtected only when the piece's occupied cells change.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L4131-4133: symmetry is MIDDLE 3.5, active by default, for the current turn.
+    // L4156-4157: destination is { row, col: columns - 1 - col }.
+    // L4186-4188: card use sets state2[card2.id][color2] = true.
+    // L101339-101341: friendly landing is rejected; capturable enemy landing is allowed.
+    // L82366-82367: mirror moves are added to normal moves. L80208 clears the flag.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L3973/L3982: active END 4.0, own-extinction; delete the selected type on both sides.
+    // L709-710: minor targets are exactly knight, bishop, camel in the current catalog.
+    // L8858: requires a friendly nonroyal eligible target.
+    // L8859-8862: victims are ALL entries whose item.type equals selected.type, then remove.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1121-1127: miracle, MIDDLE 4.5, active by default, no target in the current catalog.
+    // L7431/73698: using miracle ends the user's turn (END_TURN).
+    // L91144-91152: targets are enemy pieces a friendly bishop could capture right now
+    //   (getLegalMoves of that bishop), skipping encouraged pieces.
+    // L91157-91177: every such enemy piece is converted to the mover's color; ALL friendly
+    //   bishops (no selection in this catalog) are then removed as sacrifices.
+    // L73698: miracle is in the endsTurn card list, so the user's turn ends.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L4131 card$k(..., passive2 = false default); L4136 mutation is END 2.5 with passive
+    //   TRUE, so it arms on acquisition without a UseCard action.
+    // L4159-4160: canMutationPromote requires a pawn whose color has mutation armed and
+    //   which reaches the last rank (white row 0 / black row rows-1).
+    // L95714/L95725: promotionChoicesFor appends "monster" to the standard four choices.
+    // L79065: a monster promotion result is marked as an allied monster (아군 취급).
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L3981: long-en-passant is MIDDLE 2.0, passive (card$l ... , true), so it arms on grant.
+    // L101313-101321: addInternalPawnMoves merges longEnPassantCandidates when armed.
+    // L4035-4048: a candidate needs an active right whose landing is one rank ahead of the
+    //   capturer, a different file, and the victim pawn on the right's captured square.
+    // L2839-2864: the right exists only after a standard double step (or sprint triple).
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L4135: clockwork, PIECE 4, own-minor. L4198-4202: friendly nonroyal
+    // bishop/knight/camel -> card2.id, moved=true, freshNoCaptureUntil set.
+    // L4148-4153: clockworkHasNeighbor requires a different friendly piece in
+    // the surrounding eight squares. L82179-82180: movement uses queen rays.
+    #[test]
+    fn clockwork_neighbor_gate_precedes_extra_move_providers() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let base = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Clockwork),
+                ("d7", Player::White, PieceKind::Rook),
+            ],
+            Player::White,
+            935,
+        );
+        let origin: Square = "d4".parse().unwrap();
+        // The live getLegalMoves neighbor gate precedes all movement suppliers.
+        for provider in 0..3 {
+            let mut state = base.clone();
+            match provider {
+                0 => state.card_runtime.socialism[Player::White.index()] = 1,
+                1 => state.card_runtime.symmetry[Player::White.index()] = true,
+                _ => state.card_runtime.relay[Player::White.index()] = true,
+            }
+            assert!(
+                !engine.legal_actions(&state).unwrap().iter().any(|action| {
+                    matches!(action, Action::Move(movement) if movement.from == origin)
+                }),
+                "provider {provider} bypassed Clockwork's neighbor gate"
+            );
+            let neighbor_id = state.allocate_piece_id();
+            state.board.set(
+                "c4".parse().unwrap(),
+                Some(Piece::new(Player::White, PieceKind::Pawn).with_id(neighbor_id)),
+            );
+            assert!(
+                engine.legal_actions(&state).unwrap().iter().any(|action| {
+                    matches!(action, Action::Move(movement) if movement.from == origin)
+                }),
+                "provider {provider} remained blocked with a real ally neighbor"
+            );
+        }
+        let mut shadow_only = base.clone();
+        let rook = shadow_only.board.get("d7".parse().unwrap()).unwrap();
+        shadow_only
+            .card_runtime
+            .quantum_positions
+            .insert(rook.id, "c4".parse().unwrap());
+        assert!(
+            !engine
+                .legal_actions(&shadow_only)
+                .unwrap()
+                .iter()
+                .any(|action| {
+                    matches!(action, Action::Move(movement) if movement.from == origin)
+                }),
+            "a quantum shadow is not a raw-board neighbor"
+        );
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L4137 catalog own-rook; L4196-4200 own nonroyal rook -> parrot, moved=true.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L52916 initializes parrotMovement to {white:null,black:null}; L4206 gives no base moves.
+    // L59312-59315 setLastMove records every relocation, even before card acquisition.
+    // L4168-4182 records own ability type; a Parrot retains previous memory.
+    // L4196-4200 transforms the rook without resetting memory.
+    // L4212 permits enemy captures unless quiet; L4231 Clockwork=queen rays,
+    // L4240 Princess=diagonal step, L4283 Campfire=quiet orthogonal,
+    // L4225-4230 Pawn=forward/diagonal capture with double-step only if unmoved.
+    // L78887 records before Trickster reroll at L78977-78979; L4170 uses sampled ability.
+    #[test]
+    fn parrot_remembers_own_preacquisition_moves_and_copies_only_base_movement() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let base = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("e7", Player::Black, PieceKind::Pawn),
+            ],
+            Player::White,
+            945,
+        );
+        let unremembered = engine
+            .grant_card(&base, 1, "parrot", Player::White)
+            .unwrap()
+            .state;
+        let unremembered = engine
+            .apply(&unremembered, use_card(1, "d4"))
+            .unwrap()
+            .state;
+        assert!(
+            !engine
+                .legal_actions(&unremembered)
+                .unwrap()
+                .iter()
+                .any(|action| {
+                    matches!(action, Action::Move(mv) if mv.from == "d4".parse::<Square>().unwrap())
+                })
+        );
+
+        // Record a rook move BEFORE owning the card. Preserve one action for the Parrot.
+        let mut before_card = base.clone();
+        before_card.actions_remaining = 2;
+        let remembered = engine
+            .apply(&before_card, movement("d4", "d5"))
+            .unwrap()
+            .state;
+        assert_eq!(remembered.turn, Player::White);
+        let granted = engine
+            .grant_card(&remembered, 2, "parrot", Player::White)
+            .unwrap()
+            .state;
+        let transformed = engine.apply(&granted, use_card(2, "d5")).unwrap().state;
+        let actions = engine.legal_actions(&transformed).unwrap();
+        assert!(actions.contains(&movement("d5", "e5")));
+        assert!(!actions.contains(&movement("d5", "e6")));
+        let moved = engine
+            .apply(&transformed, movement("d5", "e5"))
+            .unwrap()
+            .state;
+        assert_eq!(moved.turn, Player::Black);
+        let next = engine.apply(&moved, movement("h8", "h7")).unwrap().state;
+        assert_eq!(next.turn, Player::White);
+        // Parrot's own move kept the rook memory; enemy movement did not overwrite it.
+        let next_moves = engine.legal_actions(&next).unwrap();
+        assert!(next_moves.contains(&movement("e5", "e7")));
+        assert!(!next_moves.contains(&movement("e5", "f6")));
+        let capture = engine.apply(&next, movement("e5", "e7")).unwrap().state;
+        assert_eq!(
+            capture.board.get("e7".parse().unwrap()).unwrap().kind,
+            PieceKind::Parrot
+        );
+        assert_eq!(
+            capture.board.get("e7".parse().unwrap()).unwrap().owner,
+            Player::White
+        );
+
+        // Each case records an actual source move, then checks the Parrot's base mapping.
+        for (index, kind, destination, parrot_square, enemy_square, allowed, forbidden) in [
+            (
+                0,
+                PieceKind::Clockwork,
+                "b4",
+                "d4",
+                "d6",
+                vec!["e5", "d6"],
+                vec!["f5"],
+            ),
+            (
+                1,
+                PieceKind::Princess,
+                "c4",
+                "d4",
+                "e5",
+                vec!["e5", "c3"],
+                vec!["d5", "f6"],
+            ),
+            (
+                2,
+                PieceKind::Campfire,
+                "b4",
+                "d4",
+                "e4",
+                vec!["d5", "c4"],
+                vec!["e4", "e5", "d6"],
+            ),
+            (
+                3,
+                PieceKind::Pawn,
+                "b4",
+                "d2",
+                "e3",
+                vec!["d3", "e3"],
+                vec!["d4", "c3", "d1"],
+            ),
+            (
+                4,
+                PieceKind::Trickster,
+                "c5",
+                "d4",
+                "f5",
+                vec!["f5", "e6"],
+                vec!["d5", "e5"],
+            ),
+        ] {
+            let mut state = minimal_state(
+                &[
+                    ("a1", Player::White, PieceKind::King),
+                    ("h8", Player::Black, PieceKind::King),
+                    ("b3", Player::White, kind),
+                    ("a3", Player::White, PieceKind::Pawn),
+                    (parrot_square, Player::White, PieceKind::Rook),
+                    (enemy_square, Player::Black, PieceKind::Pawn),
+                ],
+                Player::White,
+                946 + index,
+            );
+            state.actions_remaining = 2;
+            if kind == PieceKind::Trickster {
+                let id = state.board.get("b3".parse().unwrap()).unwrap().id;
+                state
+                    .card_runtime
+                    .trickster_move_kinds
+                    .insert(id, PieceKind::Knight);
+            }
+            let recorded = engine
+                .apply(&state, movement("b3", destination))
+                .unwrap()
+                .state;
+            assert_eq!(recorded.turn, Player::White);
+            let granted = engine
+                .grant_card(&recorded, 3, "parrot", Player::White)
+                .unwrap()
+                .state;
+            let mut copied = engine
+                .apply(&granted, use_card(3, parrot_square))
+                .unwrap()
+                .state;
+            // Isolate base movement from source aura/neighbors and fresh-transform capture lock.
+            copied.board.set(destination.parse().unwrap(), None);
+            copied.board.set("a3".parse().unwrap(), None);
+            let parrot_id = copied.board.get(parrot_square.parse().unwrap()).unwrap().id;
+            copied
+                .card_runtime
+                .fresh_no_capture_until
+                .remove(&parrot_id);
+            let legal = engine.legal_actions(&copied).unwrap();
+            for target in allowed {
+                assert!(
+                    legal.contains(&movement(parrot_square, target)),
+                    "{kind:?}: missing {target}"
+                );
+            }
+            for target in forbidden {
+                assert!(
+                    !legal.contains(&movement(parrot_square, target)),
+                    "{kind:?}: unexpected {target}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn september_six_parrot_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("g7", Player::Black, PieceKind::Rook),
+                ("b2", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            936,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "parrot", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Parrot);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L3851 catalog own-knight; L3903-3914 transforms own nonroyal knight.
+    // L82170-82171: knight leaps. L3932: captures prohibited.
+    #[test]
+    fn september_six_paladin_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Knight),
+                ("g7", Player::Black, PieceKind::Knight),
+                ("b2", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            937,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "paladin", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Knight
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Paladin);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+        let moves = engine.legal_actions(&changed).unwrap();
+        assert!(moves.contains(&movement("d4", "f5")));
+        assert!(!moves.contains(&movement("d4", "d5")));
+    }
+
+    #[test]
+    fn paladin_radiance_blocks_dark_square_routes_and_captures() {
+        let engine = Engine::bundled_20260818().unwrap();
+
+        let capture = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Paladin),
+                ("f5", Player::Black, PieceKind::Pawn),
+            ],
+            Player::White,
+            947,
+        );
+        let capture_moves = engine.legal_actions(&capture).unwrap();
+        assert!(capture_moves.contains(&movement("d4", "b5")));
+        assert!(!capture_moves.contains(&movement("d4", "f5")));
+
+        // Rust e4 is a light square. Its eight-neighbor radiance includes d4/d5.
+        // A dark-square bishop may reach c3, but may not land on or cross radiance.
+        let dark = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("e4", Player::White, PieceKind::Paladin),
+                ("h8", Player::Black, PieceKind::King),
+                ("a1", Player::Black, PieceKind::Bishop),
+                ("c1", Player::Black, PieceKind::Knight),
+            ],
+            Player::Black,
+            948,
+        );
+        let dark_moves = engine.legal_actions(&dark).unwrap();
+        assert!(dark_moves.contains(&movement("a1", "c3")));
+        assert!(!dark_moves.contains(&movement("a1", "d4")));
+        assert!(!dark_moves.contains(&movement("a1", "g7")));
+        assert!(dark_moves.contains(&movement("c1", "a2")));
+        assert!(!dark_moves.contains(&movement("c1", "d3")));
+
+        // A piece that starts on a light square is exempt from enemy radiance.
+        let light = minimal_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("e4", Player::White, PieceKind::Paladin),
+                ("h8", Player::Black, PieceKind::King),
+                ("a2", Player::Black, PieceKind::Bishop),
+            ],
+            Player::Black,
+            949,
+        );
+        assert!(
+            engine
+                .legal_actions(&light)
+                .unwrap()
+                .contains(&movement("a2", "g8"))
+        );
+
+        // Trickster uses its sampled Paladin ability as a radiance source.
+        let mut trickster = dark.clone();
+        let paladin = trickster.board.get("e4".parse().unwrap()).unwrap();
+        let mut sampled = paladin;
+        sampled.kind = PieceKind::Trickster;
+        trickster.board.set("e4".parse().unwrap(), Some(sampled));
+        trickster
+            .card_runtime
+            .trickster_move_kinds
+            .insert(sampled.id, PieceKind::Paladin);
+        assert!(
+            !engine
+                .legal_actions(&trickster)
+                .unwrap()
+                .contains(&movement("a1", "d4"))
+        );
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1085-1090 catalog; L86533-86534 transforms rook.
+    // L1172/L82667-82668: one-step diagonals with own queen; queen rays without one.
+    #[test]
+    fn september_six_princess_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("g7", Player::Black, PieceKind::Rook),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("h2", Player::White, PieceKind::Queen),
+            ],
+            Player::White,
+            938,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "princess", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Princess);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+        let moves = engine.legal_actions(&changed).unwrap();
+        assert!(moves.contains(&movement("d4", "e5")));
+        assert!(!moves.contains(&movement("d4", "d6")));
+        assert!(!moves.contains(&movement("d4", "f6")));
+        let mut no_queen = changed.clone();
+        no_queen.board.set("h2".parse().unwrap(), None);
+        let empowered = engine.legal_actions(&no_queen).unwrap();
+        assert!(empowered.contains(&movement("d4", "d6")));
+        assert!(empowered.contains(&movement("d4", "f6")));
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L3852 catalog own-rook; L3903-3914 transforms own nonroyal rook.
+    // L82173-82174: jumpMoves with eight unit queenDirections.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L3903-3916: transformation does not set submerged.
+    // L3881-3890: completeThreeTurn grants Octopus submerge without an enemy in eight neighbors.
+    // L79945-79953: remaining extra actions return before completeThreeTurn.
+    // L85283-85296: an adjacent enemy clears submerged; L84953 blocks capture while submerged.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L79901-79911: free-move endMove handling occurs after refreshSubmergedPieces (L79897).
+    // L85283-85296: any adjacent enemy deletes submerged, rather than suspending protection.
+    // Regression: a due-premove sequence must observe its intermediate board positions.
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L79897 refreshSubmergedPieces precedes autoAdvanceLogs (L79930) and
+    // applyDelayedHazards (L79971). L85283-85296 permanently clears adjacent submerge.
+    // This tests reveal ordering only, not the separate Octopus grant-vs-hazard order.
+    #[test]
+    fn submerged_octopus_stays_revealed_when_the_approaching_enemy_dies_to_a_hazard() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Octopus),
+                ("d8", Player::Black, PieceKind::Rook),
+            ],
+            Player::Black,
+            944,
+        );
+        let octopus_id = state.board.get("d4".parse().unwrap()).unwrap().id;
+        let rook_id = state.board.get("d8".parse().unwrap()).unwrap().id;
+        state.card_runtime.submerged_piece_ids.insert(octopus_id);
+        state
+            .card_runtime
+            .delayed_hazards
+            .push(crate::DelayedHazard {
+                kind: crate::DelayedHazardKind::Lightning,
+                owner: Player::White,
+                trigger_after: Player::Black,
+                squares: vec!["d5".parse().unwrap()],
+            });
+        assert!(
+            engine
+                .legal_actions(&state)
+                .unwrap()
+                .contains(&movement("d8", "d5"))
+        );
+        let transition = engine.apply(&state, movement("d8", "d5")).unwrap();
+        // Removal at d5 proves the rook reached the adjacent square before the hazard.
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::PieceRemoved { piece, at, cause, .. }
+                if piece.id == rook_id && *at == "d5".parse::<Square>().unwrap()
+                    && cause == "wizard-lightning"
+        )));
+        let after = transition.state;
+        assert_eq!(after.turn, Player::White);
+        assert!(after.board.get("d8".parse().unwrap()).is_none());
+        assert!(after.board.get("d5".parse().unwrap()).is_none());
+        assert_eq!(
+            after.board.get("d4".parse().unwrap()).unwrap().id,
+            octopus_id
+        );
+        assert!(after.card_runtime.delayed_hazards.is_empty());
+        assert!(!after.card_runtime.submerged_piece_ids.contains(&octopus_id));
+    }
+
+    #[test]
+    fn due_premoves_reveal_submerged_octopus_even_when_the_enemy_moves_away() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Octopus),
+                ("d8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            943,
+        );
+        let octopus_id = state.board.get("d4".parse().unwrap()).unwrap().id;
+        let rook_id = state.board.get("d8".parse().unwrap()).unwrap().id;
+        state.card_runtime.submerged_piece_ids.insert(octopus_id);
+        state.turns_taken[Player::White.index()] = 1;
+        state
+            .card_runtime
+            .pending_premoves
+            .push(crate::PendingPremove {
+                owner: Player::Black,
+                trigger_player: Player::White,
+                trigger_turn: 1,
+                moves: vec![
+                    MoveAction::new("d8".parse().unwrap(), "d5".parse().unwrap(), None),
+                    MoveAction::new("d5".parse().unwrap(), "d8".parse().unwrap(), None),
+                ],
+            });
+        let mut events = Vec::new();
+        engine.resolve_due_premoves_after_turn(&mut state, Player::White, &mut events);
+        // Both noncapturing moves ran: d5 was adjacent to d4, d8 is not.
+        for (from, to) in [("d8", "d5"), ("d5", "d8")] {
+            let expected = format!("premove:{}:{}->{}", rook_id, from, to);
+            assert!(events.iter().any(|event| matches!(
+                event, Event::EffectApplied { command, .. } if command == &expected
+            )));
+        }
+        assert_eq!(state.turn, Player::White);
+        assert!(state.card_runtime.pending_premoves.is_empty());
+        assert_eq!(state.board.get("d8".parse().unwrap()).unwrap().id, rook_id);
+        assert!(state.board.get("d5".parse().unwrap()).is_none());
+        assert_eq!(
+            state.board.get("d4".parse().unwrap()).unwrap().id,
+            octopus_id
+        );
+        assert!(!state.card_runtime.submerged_piece_ids.contains(&octopus_id));
+        engine.refresh_submerged_pieces(&mut state);
+        assert!(!state.card_runtime.submerged_piece_ids.contains(&octopus_id));
+    }
+
+    #[test]
+    fn octopus_submerges_only_after_its_completed_turn_and_reveals_next_to_an_enemy() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("d8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            942,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "octopus", Player::White)
+            .unwrap()
+            .state;
+        let mut transformed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let octopus_id = transformed.board.get("d4".parse().unwrap()).unwrap().id;
+        assert_eq!(
+            transformed.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Octopus
+        );
+        assert!(
+            !transformed
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&octopus_id)
+        );
+
+        // Two actions allow a genuine within-turn boundary to be tested.
+        transformed.actions_remaining = 2;
+        let between = engine
+            .apply(&transformed, movement("a1", "b1"))
+            .unwrap()
+            .state;
+        assert_eq!(between.turn, Player::White);
+        assert_eq!(between.actions_remaining, 1);
+        assert!(
+            !between
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&octopus_id)
+        );
+
+        // d8 is four ranks from d4: no enemy neighbor, but an unobstructed capture ray.
+        let completed = engine.apply(&between, movement("b1", "a1")).unwrap().state;
+        assert_eq!(completed.turn, Player::Black);
+        assert!(
+            completed
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&octopus_id)
+        );
+        assert!(
+            !engine
+                .legal_actions(&completed)
+                .unwrap()
+                .contains(&movement("d8", "d4"))
+        );
+
+        // An enemy can approach and leave during extra actions. Revelation must persist
+        // after it leaves; the set must not merely suppress protection while adjacent.
+        let mut extra_actions = completed.clone();
+        extra_actions.actions_remaining = 3;
+        let near = engine
+            .apply(&extra_actions, movement("d8", "d5"))
+            .unwrap()
+            .state;
+        assert_eq!(near.turn, Player::Black);
+        assert_eq!(near.actions_remaining, 2);
+        assert!(!near.card_runtime.submerged_piece_ids.contains(&octopus_id));
+        let away = engine.apply(&near, movement("d5", "d8")).unwrap().state;
+        assert_eq!(away.turn, Player::Black);
+        assert_eq!(away.actions_remaining, 1);
+        assert!(!away.card_runtime.submerged_piece_ids.contains(&octopus_id));
+        assert!(
+            engine
+                .legal_actions(&away)
+                .unwrap()
+                .contains(&movement("d8", "d4"))
+        );
+
+        // Approach, not capture: the enemy rook stops on d5, adjacent to the Octopus.
+        let approached = engine
+            .apply(&completed, movement("d8", "d5"))
+            .unwrap()
+            .state;
+        assert_eq!(approached.turn, Player::White);
+        assert!(
+            !approached
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&octopus_id)
+        );
+        let exposed = engine
+            .apply(&approached, movement("a1", "b1"))
+            .unwrap()
+            .state;
+        assert_eq!(exposed.turn, Player::Black);
+        assert!(
+            !exposed
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&octopus_id)
+        );
+        assert!(
+            engine
+                .legal_actions(&exposed)
+                .unwrap()
+                .contains(&movement("d5", "d4"))
+        );
+    }
+
+    #[test]
+    fn september_six_octopus_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("g7", Player::Black, PieceKind::Rook),
+                ("b2", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            939,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "octopus", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Octopus);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+        let moves = engine.legal_actions(&changed).unwrap();
+        assert!(moves.contains(&movement("d4", "d5")));
+        assert!(moves.contains(&movement("d4", "e5")));
+        assert!(!moves.contains(&movement("d4", "d6")));
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1058-1064 catalog own-queen; L86537-86538 transforms queen.
+    // L86114 initializes bearRetaliationsRemaining; L1164-1165 gives two charges.
+    // L82310-82311: king-step movement.
+    #[test]
+    fn september_six_hedgehog_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Queen),
+                ("g7", Player::Black, PieceKind::Queen),
+                ("b2", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            940,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "hedgehog", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Queen
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Hedgehog);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+        assert_eq!(
+            changed.card_runtime.bear_retaliations.get(&result.id),
+            Some(&2)
+        );
+        let moves = engine.legal_actions(&changed).unwrap();
+        assert!(moves.contains(&movement("d4", "e5")));
+        assert!(!moves.contains(&movement("d4", "d6")));
+    }
+
+    #[test]
+    fn hedgehog_retaliates_twice_before_it_can_be_captured() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Queen),
+                ("d8", Player::Black, PieceKind::Rook),
+                ("h4", Player::Black, PieceKind::Rook),
+                ("d1", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            950,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "hedgehog", Player::White)
+            .unwrap()
+            .state;
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let hedgehog_id = changed.board.get("d4".parse().unwrap()).unwrap().id;
+
+        let black = engine.apply(&changed, movement("a1", "b1")).unwrap().state;
+        let first = engine.apply(&black, movement("d8", "d4")).unwrap().state;
+        assert!(first.board.get("d8".parse().unwrap()).is_none());
+        assert_eq!(
+            first.board.get("d4".parse().unwrap()).unwrap().id,
+            hedgehog_id
+        );
+        assert_eq!(
+            first.card_runtime.bear_retaliations.get(&hedgehog_id),
+            Some(&1)
+        );
+
+        let black = engine.apply(&first, movement("b1", "a1")).unwrap().state;
+        let second = engine.apply(&black, movement("h4", "d4")).unwrap().state;
+        assert!(second.board.get("h4".parse().unwrap()).is_none());
+        assert_eq!(
+            second.board.get("d4".parse().unwrap()).unwrap().id,
+            hedgehog_id
+        );
+        assert_eq!(
+            second.card_runtime.bear_retaliations.get(&hedgehog_id),
+            Some(&0)
+        );
+
+        let black = engine.apply(&second, movement("a1", "b1")).unwrap().state;
+        let third = engine.apply(&black, movement("d1", "d4")).unwrap().state;
+        let survivor = third.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(survivor.owner, Player::Black);
+        assert_eq!(survivor.kind, PieceKind::Rook);
+    }
+
+    // Live source: artifacts/ruleset-0915-baseline/main-6qeAcxbX.js:
+    // L1040-1046 catalog own-rook; L86531-86532 transforms rook.
+    // L1168/L82316-82317: one orthogonal step, no captures.
+    // L1257-1266/L95455: adjacent orthogonal friendly nonroyal gets protection.
+    #[test]
+    fn september_six_campfire_transformation_and_basic_behavior() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("g7", Player::Black, PieceKind::Rook),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("d5", Player::White, PieceKind::Pawn),
+                ("d8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            941,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "campfire", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("d4".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "g7", "b2"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(result.kind, PieceKind::Campfire);
+        assert_eq!(result.owner, Player::White);
+        assert_eq!(changed.turn, Player::White);
+        let before = engine.apply(&granted, movement("a1", "b1")).unwrap().state;
+        assert_eq!(before.turn, Player::Black);
+        assert!(
+            engine
+                .legal_actions(&before)
+                .unwrap()
+                .contains(&movement("d8", "d5"))
+        );
+        let moves = engine.legal_actions(&changed).unwrap();
+        assert!(moves.contains(&movement("d4", "e4")));
+        assert!(!moves.contains(&movement("d4", "e5")));
+        let opponent = engine.apply(&changed, movement("a1", "b1")).unwrap().state;
+        assert_eq!(opponent.turn, Player::Black);
+        assert!(
+            !engine
+                .legal_actions(&opponent)
+                .unwrap()
+                .contains(&movement("d8", "d5"))
+        );
+    }
+
+    #[test]
+    fn clockwork_transforms_an_allied_minor_and_requires_a_friendly_neighbor_to_move() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Knight),
+                ("h2", Player::White, PieceKind::Rook),
+                ("f7", Player::Black, PieceKind::Bishop),
+            ],
+            Player::White,
+            935,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "clockwork", Player::White)
+            .unwrap()
+            .state;
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        for square in ["a1", "h2", "f7"] {
+            assert!(!targets.contains(&use_card(1, square)));
+        }
+        let transformed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let clockwork = transformed.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(clockwork.kind, PieceKind::Clockwork);
+        assert_eq!(clockwork.owner, Player::White);
+        assert_eq!(transformed.turn, Player::White);
+        assert!(!engine.legal_actions(&transformed).unwrap().iter().any(|action| {
+            matches!(action, Action::Move(movement) if movement.from == "d4".parse::<Square>().unwrap())
+        }));
+
+        // Add a friendly neighbor on c4; the unobstructed d-file is a queen ray.
+        let mut supported = transformed.clone();
+        supported.board.set(
+            "c4".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Pawn)),
+        );
+        assert!(
+            engine
+                .legal_actions(&supported)
+                .unwrap()
+                .contains(&movement("d4", "d6"))
+        );
+    }
+
+    #[test]
+    fn long_en_passant_lets_a_distant_pawn_capture_the_just_doublestepped_pawn() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::King),
+            ("h8", Player::Black, PieceKind::King),
+            ("b5", Player::White, PieceKind::Pawn),
+            ("e7", Player::Black, PieceKind::Pawn),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        // Black double-steps e7 -> e5; White then owns the en-passant right, so the
+        // long-en-passant card must be armed for the CAPTURER (White), matching
+        // state.longEnPassant[color] semantics in addInternalPawnMoves.
+        let state = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::Black,
+            934,
+        );
+        let stepped = engine.apply(&state, movement("e7", "e5")).unwrap().state;
+        assert_eq!(stepped.turn, Player::White);
+        let ep = stepped.en_passant.unwrap();
+        assert_eq!(ep.target, "e6".parse().unwrap());
+        // Without the card, the distant pawn on b5 has no en-passant reach at all.
+        assert!(
+            !engine
+                .legal_actions(&stepped)
+                .unwrap()
+                .contains(&movement("b5", "e6"))
+        );
+
+        let granted = engine
+            .grant_card(&stepped, 1, "long-en-passant", Player::White)
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&granted).unwrap();
+        assert!(actions.contains(&movement("b5", "e6")));
+
+        let transition = engine.apply(&granted, movement("b5", "e6")).unwrap();
+        let captured = transition.state;
+        assert_eq!(
+            captured.board.get("e6".parse().unwrap()).unwrap().owner,
+            Player::White
+        );
+        assert_eq!(
+            captured.board.get("e6".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        assert!(captured.board.get("e5".parse().unwrap()).is_none());
+        assert!(transition.events.iter().any(|event| matches!(
+            event,
+            Event::PieceCaptured { at, piece, .. }
+                if at == &"e5".parse::<Square>().unwrap() && piece.kind == PieceKind::Pawn
+        )));
+    }
+
+    #[test]
+    fn mutation_lets_a_last_rank_pawn_promote_into_a_friendly_monster() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("a7", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            933,
+        );
+        let monster_promotion = |from: &str, to: &str| {
+            Action::Move(MoveAction::new(
+                from.parse().unwrap(),
+                to.parse().unwrap(),
+                Some(PieceKind::Monster),
+            ))
+        };
+        // Without the card the pawn only exposes the standard four promotion kinds.
+        let base_actions = engine.legal_actions(&state).unwrap();
+        assert!(base_actions.contains(&Action::Move(MoveAction::new(
+            "a7".parse().unwrap(),
+            "a8".parse().unwrap(),
+            Some(PieceKind::Queen)
+        ))));
+        assert!(!base_actions.contains(&monster_promotion("a7", "a8")));
+
+        // Passive card: granting it is enough for the effect to arm.
+        let granted = engine
+            .grant_card(&state, 1, "mutation", Player::White)
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&granted).unwrap();
+        assert!(actions.contains(&monster_promotion("a7", "a8")));
+        assert!(actions.contains(&Action::Move(MoveAction::new(
+            "a7".parse().unwrap(),
+            "a8".parse().unwrap(),
+            Some(PieceKind::Queen)
+        ))));
+
+        let promoted = engine
+            .apply(&granted, monster_promotion("a7", "a8"))
+            .unwrap()
+            .state;
+        let monster = promoted.board.get("a8".parse().unwrap()).unwrap();
+        assert_eq!(monster.owner, Player::White);
+        assert_eq!(monster.kind, PieceKind::Monster);
+        assert_eq!(promoted.turn, Player::Black);
+    }
+
+    #[test]
+    fn miracle_converts_every_bishop_capturable_enemy_and_sacrifices_all_friendly_bishops() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("b2", Player::White, PieceKind::Bishop),
+                ("d4", Player::White, PieceKind::Bishop),
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("f6", Player::Black, PieceKind::Rook),
+                ("d6", Player::Black, PieceKind::Knight),
+                ("c5", Player::Black, PieceKind::Pawn),
+                ("g5", Player::Black, PieceKind::Pawn),
+            ],
+            Player::White,
+            932,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "miracle", Player::White)
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&granted).unwrap();
+        assert!(actions.contains(&use_card_without_target(1)));
+        let converted = engine
+            .apply(&granted, use_card_without_target(1))
+            .unwrap()
+            .state;
+        // Sacrificed bishops are gone from the board.
+        assert!(converted.board.get("b2".parse().unwrap()).is_none());
+        assert!(converted.board.get("d4".parse().unwrap()).is_none());
+        // The rook on f6 lies on b2's diagonal and is captured, so it is converted.
+        let converted_rook = converted.board.get("f6".parse().unwrap()).unwrap();
+        assert_eq!(converted_rook.owner, Player::White);
+        assert_eq!(converted_rook.kind, PieceKind::Rook);
+        // d6 and g5 are unreachable for either bishop and stay with Black.
+        assert_eq!(
+            converted.board.get("d6".parse().unwrap()).unwrap().owner,
+            Player::Black
+        );
+        assert_eq!(
+            converted.board.get("g5".parse().unwrap()).unwrap().owner,
+            Player::Black
+        );
+        // The pawn on c5 is capturable from b2 and converts.
+        let converted_pawn = converted.board.get("c5".parse().unwrap()).unwrap();
+        assert_eq!(converted_pawn.owner, Player::White);
+        assert_eq!(converted_pawn.kind, PieceKind::Pawn);
+        // The user's turn ends (END_TURN).
+        assert_eq!(converted.turn, Player::Black);
+    }
+
+    #[test]
+    fn extinction_targets_an_allied_minor_and_removes_its_type_from_both_sides() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("c3", Player::White, PieceKind::Bishop),
+                ("f4", Player::White, PieceKind::Bishop),
+                ("c6", Player::Black, PieceKind::Bishop),
+                ("f7", Player::Black, PieceKind::Bishop),
+                ("b1", Player::White, PieceKind::Knight),
+                ("b8", Player::Black, PieceKind::Knight),
+                ("g2", Player::White, PieceKind::Camel),
+                ("d1", Player::White, PieceKind::Rook),
+                ("a2", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            931,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "extinction", Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(granted.board.iter().count(), 11);
+        let targets = engine.legal_actions(&granted).unwrap();
+        for square in ["c3", "f4", "b1", "g2"] {
+            assert!(
+                targets.contains(&use_card(1, square)),
+                "eligible minor at {square}"
+            );
+        }
+        for square in ["a1", "d1", "a2", "c6", "b8"] {
+            assert!(
+                !targets.contains(&use_card(1, square)),
+                "ineligible target at {square}"
+            );
+        }
+        let removed = engine.apply(&granted, use_card(1, "c3")).unwrap().state;
+        for square in ["c3", "f4", "c6", "f7"] {
+            assert!(
+                removed.board.get(square.parse().unwrap()).is_none(),
+                "bishop at {square}"
+            );
+        }
+        for square in ["a1", "h8", "b1", "b8", "g2", "d1", "a2"] {
+            assert_eq!(
+                removed.board.get(square.parse().unwrap()),
+                granted.board.get(square.parse().unwrap())
+            );
+        }
+        assert_eq!(removed.board.iter().count(), 7);
+        assert_eq!(removed.status, GameStatus::Ongoing);
+    }
+
+    #[test]
+    fn symmetry_adds_a_mirror_capture_for_one_turn_ignoring_intermediate_blockers() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("b3", Player::White, PieceKind::Knight),
+                ("d3", Player::White, PieceKind::Pawn),
+                ("b5", Player::White, PieceKind::Knight),
+                ("g5", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+                ("g3", Player::Black, PieceKind::Pawn),
+            ],
+            Player::White,
+            930,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "symmetry", Player::White)
+            .unwrap()
+            .state;
+        assert!(
+            !engine
+                .legal_actions(&granted)
+                .unwrap()
+                .contains(&movement("b3", "g3"))
+        );
+        let activated = engine
+            .apply(&granted, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(activated.turn, Player::White);
+        let actions = engine.legal_actions(&activated).unwrap();
+        assert!(actions.contains(&movement("b3", "g3")));
+        assert!(actions.contains(&movement("b3", "c5")));
+        assert!(!actions.contains(&movement("b5", "g5")));
+        let moved = engine
+            .apply(&activated, movement("b3", "g3"))
+            .unwrap()
+            .state;
+        assert_eq!(moved.turn, Player::Black);
+        assert!(moved.board.get("b3".parse().unwrap()).is_none());
+        let mirrored = moved.board.get("g3".parse().unwrap()).unwrap();
+        assert_eq!(mirrored.owner, Player::White);
+        assert_eq!(mirrored.kind, PieceKind::Knight);
+        assert_eq!(
+            moved.board.get("d3".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        let next_own = engine.apply(&moved, movement("h8", "h7")).unwrap().state;
+        assert_eq!(next_own.turn, Player::White);
+        let restored = engine.legal_actions(&next_own).unwrap();
+        assert!(!restored.contains(&movement("g3", "b3")));
+        assert!(restored.contains(&movement("g3", "e4")));
+    }
+
+    #[test]
+    fn outpost_protects_an_advanced_nonroyal_until_that_piece_moves() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a5", Player::White, PieceKind::King),
+                ("d5", Player::White, PieceKind::Rook),
+                ("b4", Player::White, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+                ("d8", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            929,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "outpost", Player::White)
+            .unwrap()
+            .state;
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d5")));
+        assert!(!targets.contains(&use_card(1, "a5")));
+        assert!(!targets.contains(&use_card(1, "b4")));
+        assert!(!targets.contains(&use_card(1, "d8")));
+        // Merely owning the active card must not protect the rook.
+        let unused = engine.apply(&granted, movement("a5", "a4")).unwrap().state;
+        assert!(
+            engine
+                .legal_actions(&unused)
+                .unwrap()
+                .contains(&movement("d8", "d5"))
+        );
+
+        let protected = engine.apply(&granted, use_card(1, "d5")).unwrap().state;
+        assert_eq!(protected.turn, Player::White);
+        let opponent = engine
+            .apply(&protected, movement("a5", "a4"))
+            .unwrap()
+            .state;
+        assert_eq!(opponent.turn, Player::Black);
+        assert!(
+            !engine
+                .legal_actions(&opponent)
+                .unwrap()
+                .contains(&movement("d8", "d5"))
+        );
+        let next_own = engine.apply(&opponent, movement("h8", "h7")).unwrap().state;
+        assert_eq!(next_own.turn, Player::White);
+        let moved = engine.apply(&next_own, movement("d5", "d6")).unwrap().state;
+        assert_eq!(moved.turn, Player::Black);
+        assert!(
+            engine
+                .legal_actions(&moved)
+                .unwrap()
+                .contains(&movement("d8", "d6"))
+        );
+    }
+
+    #[test]
+    fn reversal_swaps_rook_and_bishop_moves_only_after_use_and_for_one_turn() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("b3", Player::White, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            928,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "reversal", Player::White)
+            .unwrap()
+            .state;
+        let before_use = engine.legal_actions(&granted).unwrap();
+        assert!(before_use.contains(&movement("d4", "d5")));
+        assert!(!before_use.contains(&movement("d4", "e5")));
+        assert!(before_use.contains(&movement("b3", "c4")));
+        assert!(!before_use.contains(&movement("b3", "b4")));
+
+        let activated = engine
+            .apply(&granted, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(activated.turn, Player::White);
+        let reversed = engine.legal_actions(&activated).unwrap();
+        assert!(reversed.contains(&movement("d4", "e5")));
+        assert!(!reversed.contains(&movement("d4", "d5")));
+        assert!(reversed.contains(&movement("b3", "b4")));
+        assert!(!reversed.contains(&movement("b3", "c4")));
+
+        let moved = engine
+            .apply(&activated, movement("d4", "e5"))
+            .unwrap()
+            .state;
+        assert_eq!(
+            moved.board.get("e5".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        assert_eq!(moved.turn, Player::Black);
+        let next_own = engine.apply(&moved, movement("h8", "h7")).unwrap().state;
+        assert_eq!(next_own.turn, Player::White);
+        let restored = engine.legal_actions(&next_own).unwrap();
+        assert!(restored.contains(&movement("e5", "e6")));
+        assert!(!restored.contains(&movement("e5", "f6")));
+        assert!(restored.contains(&movement("b3", "c4")));
+        assert!(!restored.contains(&movement("b3", "b4")));
+    }
+
+    #[test]
+    fn disassembly_splits_the_moved_queen_into_bishop_and_rook() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::King),
+            ("d4", Player::White, PieceKind::Queen),
+            ("h8", Player::Black, PieceKind::King),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let without = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::White,
+            926,
+        );
+        let moved = engine.apply(&without, movement("d4", "d5")).unwrap().state;
+        assert_eq!(
+            moved.board.get("d5".parse().unwrap()).unwrap().kind,
+            PieceKind::Queen
+        );
+        let with = engine
+            .grant_card(&without, 1, "disassembly", Player::White)
+            .unwrap()
+            .state;
+        // Active card: the effect arms only when the card is used.
+        let moved_without_use = engine.apply(&with, movement("d4", "d5")).unwrap().state;
+        assert_eq!(
+            moved_without_use
+                .board
+                .get("d5".parse().unwrap())
+                .unwrap()
+                .kind,
+            PieceKind::Queen
+        );
+        let activated = engine
+            .apply(&with, use_card_without_target(1))
+            .unwrap()
+            .state;
+        let split = engine
+            .apply(&activated, movement("d4", "d5"))
+            .unwrap()
+            .state;
+        let bishop = split.board.get("d5".parse().unwrap()).unwrap();
+        assert_eq!(bishop.kind, PieceKind::Bishop);
+        assert_eq!(bishop.owner, Player::White);
+        let rook = split.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(rook.kind, PieceKind::Rook);
+        assert_eq!(rook.owner, Player::White);
+    }
+
+    // Live source: addInternalPawnMoves (main-6qeAcxbX.js ~L11828896) — proficiency lets a pawn
+    // on the rank before promotion capture one step forward: state.proficiency?.[color] &&
+    // row === (white ? 1 : boardRowCount()-2) && target && canCaptureTarget(...).
+    #[test]
+    fn proficiency_lets_the_pawn_capture_forward_from_the_seventh_rank() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::King),
+            ("e7", Player::White, PieceKind::Pawn),
+            ("e8", Player::Black, PieceKind::Rook),
+            ("h8", Player::Black, PieceKind::King),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let without = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::White,
+            925,
+        );
+        let actions = engine.legal_actions(&without).unwrap();
+        assert!(!actions.contains(&movement("e7", "e8")));
+        let with = engine
+            .grant_card(&without, 1, "proficiency", Player::White)
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&with).unwrap();
+        // Reaching the last rank promotes, so the forward capture is a promotion capture.
+        let promotion_capture = Action::Move(MoveAction::new(
+            "e7".parse().unwrap(),
+            "e8".parse().unwrap(),
+            Some(PieceKind::Queen),
+        ));
+        assert!(actions.contains(&promotion_capture));
+        let captured = engine.apply(&with, promotion_capture).unwrap().state;
+        assert!(captured.board.get("e8".parse().unwrap()).unwrap().kind == PieceKind::Queen);
+        assert_eq!(
+            captured.board.get("e8".parse().unwrap()).unwrap().owner,
+            Player::White
+        );
+    }
+
+    #[test]
+    fn killer_king_lets_the_king_capture_like_a_rook() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::King),
+            ("e1", Player::White, PieceKind::King),
+            ("h1", Player::Black, PieceKind::King),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let without = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::White,
+            924,
+        );
+        let actions = engine.legal_actions(&without).unwrap();
+        assert!(!actions.contains(&movement("e1", "h1")));
+
+        let with = engine
+            .grant_card(&without, 1, "killer-king", Player::White)
+            .unwrap()
+            .state;
+        let actions = engine.legal_actions(&with).unwrap();
+        assert!(actions.contains(&movement("e1", "h1")));
+        assert!(!actions.contains(&movement("e1", "e4")));
+        let victory = engine.apply(&with, movement("e1", "h1")).unwrap().state;
+        assert!(matches!(
+            victory.status,
+            GameStatus::Won {
+                winner: Player::White,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn pawn_steps_onto_or_through_a_concealed_enemy_square() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("e2", Player::White, PieceKind::Pawn),
+                ("e3", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            923,
+        );
+        let hidden_pawn = state.board.get("e3".parse().unwrap()).unwrap();
+        state.card_runtime.stealth_piece_ids.insert(hidden_pawn.id);
+        let actions = engine.legal_actions(&state).unwrap();
+        assert!(actions.contains(&movement("e2", "e3")));
+        assert!(actions.contains(&movement("e2", "e4")));
+        let stepped = engine.apply(&state, movement("e2", "e3")).unwrap().state;
+        let occupant = stepped.board.get("e3".parse().unwrap()).unwrap();
+        assert_eq!(occupant.owner, Player::White);
+        assert!(stepped.board.find_by_id(hidden_pawn.id).is_none());
+    }
+
+    #[test]
+    fn stealth_concealment_survives_own_turn_end_and_clears_after_opponents_turn() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("e4", Player::Black, PieceKind::Rook),
+                ("e5", Player::White, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            921,
+        );
+        grant_test_card(&mut state, crate::STEALTH, 1);
+        let hidden = engine.apply(&state, use_card(1, "e5")).unwrap().state;
+        assert!(
+            hidden
+                .card_runtime
+                .stealth_piece_ids
+                .contains(&hidden.board.get("e5".parse().unwrap()).unwrap().id)
+        );
+        // The owner's own turn end keeps the concealment.
+        let own = engine.apply(&hidden, movement("a1", "a2")).unwrap().state;
+        assert!(
+            own.card_runtime
+                .stealth_piece_ids
+                .contains(&own.board.get("e5".parse().unwrap()).unwrap().id)
+        );
+        // The opponent's completed turn removes it: hidden only for that opponent turn.
+        let after_enemy = engine.apply(&own, movement("h8", "h7")).unwrap().state;
+        assert!(after_enemy.card_runtime.stealth_piece_ids.is_empty());
+    }
+
+    #[test]
+    fn stealth_bishop_is_absent_from_enemy_move_generation_and_installations() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("e4", Player::Black, PieceKind::Rook),
+                ("e5", Player::White, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::Black,
+            920,
+        );
+        let bishop = state.board.get("e5".parse().unwrap()).unwrap();
+        state.card_runtime.stealth_piece_ids.insert(bishop.id);
+        let enemy_actions = engine.legal_actions(&state).unwrap();
+        // The hidden bishop must not block the ray, but landing on it is legal.
+        assert!(enemy_actions.contains(&movement("e4", "e5")));
+        assert!(engine.can_capture(
+            &state,
+            state.board.get("e4".parse().unwrap()).unwrap(),
+            bishop
+        ));
+        assert!(enemy_actions.iter().any(|action| matches!(action,
+            Action::Move(m) if m.to == "e6".parse().unwrap())));
+        assert!(enemy_actions.iter().any(|action| matches!(action,
+            Action::Move(m) if m.to == "e8".parse().unwrap())));
+        grant_test_card(&mut state, crate::LOBSTER, 1);
+        let reserved = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::Square("e5".parse().unwrap()),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            reserved
+                .card_runtime
+                .pending_lobsters
+                .iter()
+                .find(|p| p.square == "e5".parse().unwrap())
+                .map(|p| p.owner),
+            Some(Player::Black)
+        );
+        let landed = engine.apply(&state, movement("e4", "e5")).unwrap().state;
+        assert!(landed.board.find_by_id(bishop.id).is_none());
+        let rook = landed.board.get("e5".parse().unwrap()).unwrap();
+        assert_eq!(rook.owner, Player::Black);
+        assert_eq!(rook.kind, PieceKind::Rook);
+    }
+
+    #[test]
+    fn portal_gun_installs_chosen_pair_at_next_own_turn_start() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            919,
+        );
+        grant_test_card(&mut state, crate::PORTAL_GUN, 1);
+        let squares = ["c3".parse().unwrap(), "f6".parse().unwrap()];
+        let action = Action::UseCard {
+            instance_id: 1,
+            target: ActionTarget::Squares(squares.to_vec()),
+        };
+        let pending = engine.apply(&state, action).unwrap().state;
+        assert!(pending.card_runtime.portals.is_none());
+        assert_eq!(pending.card_runtime.pending_portals.len(), 1);
+        let mut changed = pending.clone();
+        changed.card_runtime.pending_portals[0].due_turn += 1;
+        assert_ne!(changed.fingerprint(), pending.fingerprint());
+        assert_ne!(changed.position_key(), pending.position_key());
+        let once = engine.apply(&pending, movement("a1", "a2")).unwrap().state;
+        assert!(once.card_runtime.portals.is_none());
+        let twice = engine.apply(&once, movement("h8", "h7")).unwrap().state;
+        assert_eq!(twice.card_runtime.portals, Some(squares));
+        assert!(twice.card_runtime.pending_portals.is_empty());
+        let rollback = engine.opening_move_rollback_state(&twice, &once);
+        assert_eq!(
+            rollback.card_runtime.pending_portals,
+            once.card_runtime.pending_portals
+        );
+        let mut due = once.clone();
+        due.turn = Player::White;
+        due.actions_remaining = 2;
+        let mut after = engine.apply(&due, movement("a2", "a3")).unwrap().state;
+        engine.resolve_pending_portals_for_turn(&mut after, Player::White, &mut Vec::new());
+        // Runtime delta restoration must cover both pending and installed portal state.
+        let replay = after.card_runtime.move_replays[Player::White.index()]
+            .as_mut()
+            .unwrap();
+        replay.runtime_after.pending_portals.clear();
+        replay.runtime_after.portals = Some(squares);
+        grant_test_card(&mut after, crate::REPLAY, 2);
+        let restored = engine
+            .apply(
+                &after,
+                Action::UseCard {
+                    instance_id: 2,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            restored.card_runtime.pending_portals,
+            due.card_runtime.pending_portals
+        );
+        assert_eq!(restored.card_runtime.portals, due.card_runtime.portals);
+    }
+
+    #[test]
+    fn lobster_pending_is_fingerprinted_restored_and_canceled_when_blocked() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            918,
+        );
+        state
+            .card_runtime
+            .pending_lobsters
+            .push(crate::PendingLobster {
+                owner: Player::White,
+                square: "d4".parse().unwrap(),
+                due_ply: 1,
+            });
+        let mut changed = state.clone();
+        changed.card_runtime.pending_lobsters[0].due_ply += 1;
+        assert_ne!(changed.fingerprint(), state.fingerprint());
+        assert_ne!(changed.position_key(), state.position_key());
+        state.actions_remaining = 2;
+        let mut moved = engine.apply(&state, movement("a1", "a2")).unwrap().state;
+        assert!(moved.card_runtime.pending_lobsters.is_empty());
+        assert_eq!(
+            engine
+                .opening_move_rollback_state(&moved, &state)
+                .card_runtime
+                .pending_lobsters,
+            state.card_runtime.pending_lobsters
+        );
+        moved.turn = Player::White;
+        grant_test_card(&mut moved, crate::REPLAY, 1);
+        let restored = engine
+            .apply(
+                &moved,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            restored.card_runtime.pending_lobsters,
+            state.card_runtime.pending_lobsters
+        );
+        assert_eq!(restored.board, state.board);
+        state.card_runtime.barricades.insert("d4".parse().unwrap());
+        let blocked = engine.apply(&state, movement("a1", "a2")).unwrap().state;
+        assert!(blocked.board.get("d4".parse().unwrap()).is_none());
+        assert!(blocked.card_runtime.pending_lobsters.is_empty());
+    }
+
+    #[test]
+    fn lobster_spawns_after_two_counted_moves_not_at_card_use() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            917,
+        );
+        grant_test_card(&mut state, crate::LOBSTER, 1);
+        let pending = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::Square("d4".parse().unwrap()),
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(pending.board.get("d4".parse().unwrap()).is_none());
+        let once = engine.apply(&pending, movement("a1", "a2")).unwrap().state;
+        assert!(once.board.get("d4".parse().unwrap()).is_none());
+        let twice = engine.apply(&once, movement("h8", "h7")).unwrap().state;
+        let lobster = twice.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(lobster.kind, PieceKind::Lobster);
+        assert_eq!(lobster.owner, Player::White);
+        assert!(
+            twice
+                .card_runtime
+                .fresh_no_capture_until
+                .contains_key(&lobster.id)
+        );
+    }
+
+    #[test]
+    fn queens_gambit_protection_is_removed_by_non_promotion_card_transforms() {
+        let engine = Engine::bundled_20260818().unwrap();
+        for (card, kind) in [
+            (crate::ASSASSIN, PieceKind::Knight),
+            (crate::PEGASUS, PieceKind::Knight),
+            (crate::REAPER, PieceKind::Queen),
+            (crate::SLIME, PieceKind::Rook),
+            (crate::NECROMANCY, PieceKind::Pawn),
+        ] {
+            let mut state = minimal_state(
+                &[
+                    ("a1", Player::White, PieceKind::King),
+                    ("d4", Player::White, kind),
+                    ("h8", Player::Black, PieceKind::King),
+                ],
+                Player::White,
+                916,
+            );
+            let piece = state.board.get("d4".parse().unwrap()).unwrap();
+            state.card_runtime.protected_piece_ids.insert(piece.id);
+            state.card_runtime.queens_gambit_protection.insert(piece.id);
+            grant_test_card(&mut state, card, 1);
+            let result = engine.apply(&state, use_card(1, "d4")).unwrap();
+            assert!(
+                !result
+                    .state
+                    .card_runtime
+                    .queens_gambit_protection
+                    .contains(&piece.id),
+                "{card}"
+            );
+            assert!(
+                !result
+                    .state
+                    .card_runtime
+                    .protected_piece_ids
+                    .contains(&piece.id),
+                "{card}"
+            );
+        }
+    }
+
+    #[test]
+    fn zugzwang_ends_users_turn_and_forces_opponents_royal_move() {
+        let engine = Engine::bundled_20260818().unwrap();
+        assert!(crate::implemented_card(crate::ZUGZWANG).unwrap().ends_turn);
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d6", Player::Black, PieceKind::Rook),
+            ],
+            Player::White,
+            915,
+        );
+        grant_test_card(&mut state, crate::ZUGZWANG, 1);
+        let result = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap();
+        assert_eq!(result.state.turn, Player::Black);
+        assert_eq!(result.state.turns_taken, [1, 0]);
+        assert!(result.state.card_runtime.zugzwang[Player::Black.index()]);
+        let actions = engine.legal_actions(&result.state).unwrap();
+        assert!(actions.iter().any(|a| matches!(a, Action::Move(_))));
+        assert!(actions.iter().all(|a| match a {
+            Action::Move(m) => m.from == "h8".parse().unwrap(),
+            _ => true,
+        }));
+        let moved = engine.apply(&result.state, movement("h8", "h7")).unwrap();
+        assert!(!moved.state.card_runtime.zugzwang[Player::Black.index()]);
+        assert_eq!(moved.state.turn, Player::White);
+    }
+
+    #[test]
+    fn macho_chess_king_wins_only_at_the_opposite_edge() {
+        let engine = Engine::bundled_20260818().unwrap();
+        for (owner, from, to, enemy) in [
+            (Player::White, "d7", "d8", "h1"),
+            (Player::Black, "d2", "d1", "h8"),
+        ] {
+            let mut state = minimal_state(
+                &[
+                    (from, owner, PieceKind::King),
+                    (enemy, owner.opponent(), PieceKind::King),
+                ],
+                owner,
+                913,
+            );
+            state.card_runtime.macho_chess = true;
+            let result = engine.apply(&state, movement(from, to)).unwrap();
+            assert_eq!(
+                result.state.status,
+                GameStatus::Won {
+                    winner: owner,
+                    reason: WinReason::CardEffect(crate::MACHO_CHESS.to_owned()),
+                }
+            );
+            assert!(
+                result
+                    .events
+                    .iter()
+                    .any(|event| matches!(event, Event::GameEnded { .. }))
+            );
+        }
+        let mut state = minimal_state(
+            &[
+                ("d2", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            914,
+        );
+        state.card_runtime.macho_chess = true;
+        assert_eq!(
+            engine
+                .apply(&state, movement("d2", "d1"))
+                .unwrap()
+                .state
+                .status,
+            GameStatus::Ongoing
+        );
+    }
+
+    #[test]
+    fn missionary_creates_two_missionaries_from_one_bishop() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            912,
+        );
+        grant_test_card(&mut state, MISSIONARY, 1);
+        let action = use_card(1, "d4");
+        assert!(engine.legal_actions(&state).unwrap().contains(&action));
+        let first = engine.apply(&state, action.clone()).unwrap();
+        let second = engine.apply(&state, action).unwrap();
+        assert_eq!(first, second);
+        let missionaries = first
+            .state
+            .board
+            .iter()
+            .filter(|(_, piece)| {
+                piece.owner == Player::White && piece.kind == PieceKind::Missionary
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(missionaries.len(), 2);
+        assert_ne!(missionaries[0].1.id, missionaries[1].1.id);
+        assert!(
+            missionaries
+                .iter()
+                .any(|(square, _)| *square == "d4".parse().unwrap())
+        );
+        assert!(missionaries.iter().all(|(_, piece)| {
+            first
+                .state
+                .card_runtime
+                .fresh_no_capture_until
+                .contains_key(&piece.id)
+        }));
+    }
+
+    #[test]
+    fn slime_cannot_teleport_via_loyalist_or_twin_bonds() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Slime),
+                ("f4", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            911,
+        );
+        let slime = state.board.get("d4".parse().unwrap()).unwrap();
+        let rook = state.board.get("f4".parse().unwrap()).unwrap();
+        state.card_runtime.loyalist_piece_ids.insert(slime.id);
+        assert!(!has_move(&engine, &state, "d4", "a2"));
+        assert!(has_move(&engine, &state, "d4", "d7"));
+        state.card_runtime.twin_bonds.push(crate::TwinBond {
+            first_id: slime.id,
+            second_id: rook.id,
+        });
+        let moved_slime = engine.apply(&state, movement("d4", "d7")).unwrap().state;
+        assert_eq!(
+            moved_slime.board.get("d7".parse().unwrap()).unwrap().id,
+            slime.id
+        );
+        assert_eq!(
+            moved_slime.board.get("f4".parse().unwrap()).unwrap().id,
+            rook.id
+        );
+        let moved_rook = engine.apply(&state, movement("f4", "f5")).unwrap().state;
+        assert_eq!(
+            moved_rook.board.get("d4".parse().unwrap()).unwrap().id,
+            slime.id
+        );
+        assert_eq!(
+            moved_rook.board.get("f5".parse().unwrap()).unwrap().id,
+            rook.id
+        );
+    }
+
+    #[test]
+    fn slime_does_not_gain_card_supplied_movement() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Slime),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            910,
+        );
+        let slime = state.board.get("d4".parse().unwrap()).unwrap();
+        for provider in ["training", "promotion", "imperial", "socialism"] {
+            let mut changed = state.clone();
+            match provider {
+                "training" => {
+                    changed
+                        .card_runtime
+                        .basic_training_piece_ids
+                        .insert(slime.id);
+                }
+                "promotion" => {
+                    changed
+                        .card_runtime
+                        .promotion_rush_piece_ids
+                        .insert(slime.id);
+                }
+                "imperial" => {
+                    changed
+                        .card_runtime
+                        .imperial_moves
+                        .insert(slime.id, [PieceKind::Queen].into_iter().collect());
+                }
+                "socialism" => {
+                    changed.card_runtime.socialism[Player::White.index()] = 1;
+                }
+                _ => unreachable!(),
+            }
+            assert!(has_move(&engine, &changed, "d4", "d7"), "{provider}");
+            assert!(!has_move(&engine, &changed, "d4", "d5"), "{provider}");
+        }
+    }
+
+    #[test]
+    fn slime_cannot_relay_as_source_or_target() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Slime),
+                ("d6", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            909,
+        );
+        state.card_runtime.relay[Player::White.index()] = true;
+        assert!(has_move(&engine, &state, "d4", "d7"));
+        for (from, to) in [("d4", "d6"), ("d6", "d4")] {
+            assert!(!has_move(&engine, &state, from, to));
+            assert!(matches!(
+                engine.apply(&state, movement(from, to)),
+                Err(EngineError::IllegalAction(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn slime_retains_normal_leaps_but_cannot_be_dragon_swapped() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Slime),
+                ("b3", Player::White, PieceKind::Dragon),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            908,
+        );
+        assert!(has_move(&engine, &state, "d4", "d7"));
+        assert!(!has_move(&engine, &state, "b3", "d4"));
+        assert!(matches!(
+            engine.apply(&state, movement("b3", "d4")),
+            Err(EngineError::IllegalAction(_))
+        ));
+    }
+
+    #[test]
+    fn horse_riding_deletes_own_knights_with_events_but_without_capture_reactions() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Knight),
+                ("e4", Player::White, PieceKind::Knight),
+                ("c4", Player::White, PieceKind::Wizard),
+                ("d5", Player::Black, PieceKind::Reaper),
+                ("g7", Player::Black, PieceKind::Knight),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            907,
+        );
+        let knights: Vec<_> = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Knight)
+            .collect();
+        let wizard = state.board.get("c4".parse().unwrap()).unwrap();
+        let reaper = state.board.get("d5".parse().unwrap()).unwrap();
+        state.card_runtime.wizard_mana.insert(wizard.id, 2);
+        state.card_runtime.reaper_souls.insert(reaper.id, 3);
+        for (_, piece) in &knights {
+            state.card_runtime.shielded_piece_ids.insert(piece.id);
+        }
+        let transition = engine
+            .grant_card(&state, 911, HORSE_RIDING, Player::White)
+            .unwrap();
+        let after = &transition.state;
+        assert!(after.card_runtime.horse_riding[Player::White.index()]);
+        assert!(after.board.contains(Player::Black, PieceKind::Knight));
+        assert!(after.board.contains(Player::White, PieceKind::King));
+        for (square, piece) in knights {
+            assert!(after.board.get(square).is_none());
+            assert!(!after.card_runtime.shielded_piece_ids.contains(&piece.id));
+            assert_eq!(
+                transition
+                    .events
+                    .iter()
+                    .filter(|event| matches!(event,
+                        Event::PieceRemoved { actor: Player::White, piece: removed, at, cause }
+                            if removed.id == piece.id && *at == square && cause == HORSE_RIDING
+                    ))
+                    .count(),
+                1
+            );
+        }
+        assert!(
+            !transition
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::PieceCaptured { .. }))
+        );
+        assert_eq!(after.card_runtime.magic_girl_surge, [false, false]);
+        assert_eq!(after.card_runtime.wizard_mana[&wizard.id], 2);
+        assert_eq!(after.card_runtime.reaper_souls[&reaper.id], 3);
+        assert!(after.card_runtime.undead_resurrections.is_empty());
+        assert_eq!(after.status, GameStatus::Ongoing);
+    }
+
+    #[test]
+    fn black_magic_legal_action_requires_an_adjacent_open_square() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut blocked = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("b1", Player::White, PieceKind::Pawn),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            905,
+        );
+        grant_test_card(&mut blocked, crate::BLACK_MAGIC, 1);
+        let actions = engine.legal_actions(&blocked).unwrap();
+        assert!(
+            !actions
+                .iter()
+                .any(|action| matches!(action, Action::UseCard { instance_id: 1, .. }))
+        );
+
+        let mut open = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            906,
+        );
+        grant_test_card(&mut open, crate::BLACK_MAGIC, 1);
+        let actions = engine.legal_actions(&open).unwrap();
+        assert!(actions.iter().any(|action| matches!(
+            action,
+            Action::UseCard {
+                instance_id: 1,
+                target: ActionTarget::None
+            }
+        )));
+        let state = engine
+            .apply(
+                &open,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(
+            state.board.get("b1".parse().unwrap()).unwrap().kind,
+            PieceKind::Monster
+        );
+        assert_eq!(
+            state.board.get("b1".parse().unwrap()).unwrap().owner,
+            Player::White
+        );
+    }
+
+    #[test]
+    fn black_magic_summons_one_adjacent_allied_monster_0915() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let mut state = standard_play_state(4);
+        state.board.set("d2".parse().unwrap(), None);
+        let rook = state.board.get("a1".parse().unwrap()).unwrap();
+        state.card_runtime.large_pieces.insert(
+            rook.id,
+            LargePieceStatus {
+                anchor: "a1".parse().unwrap(),
+                hp: 2,
+                max_hp: 2,
+            },
+        );
+        grant_test_card(&mut state, crate::BLACK_MAGIC, 1);
+        let mut state = engine
+            .apply(&state, use_card_without_target(1))
+            .unwrap()
+            .state;
+        assert_eq!(state.status, GameStatus::Ongoing);
+        // 0915: no sacrifice, no dark wizard; the king survives untouched and the
+        // large rook runtime is preserved.
+        assert!(state.board.contains(Player::White, PieceKind::King));
+        assert!(!state.board.contains(Player::White, PieceKind::DarkWizard));
+        assert!(state.card_runtime.large_pieces.contains_key(&rook.id));
+        // Exactly one allied monster spawns on an open square adjacent to the
+        // royal. From the standard opening the first candidate is d2 beside e1.
+        let monsters: Vec<_> = state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == Player::White && piece.kind == PieceKind::Monster)
+            .collect();
+        assert_eq!(monsters.len(), 1);
+        assert_eq!(monsters[0].0.to_string(), "d2");
         // Monster cannot be targeted by friendly buff cards like Parry
         grant_test_card(&mut state, crate::PARRY, 2);
         let parry_actions = engine.legal_actions(&state).unwrap();
@@ -11870,7 +15771,7 @@ mod tests {
                 target: ActionTarget::PieceAt(sq),
             } = action
             {
-                assert_eq!(state.board.get(sq).unwrap().kind, PieceKind::DarkWizard);
+                assert_ne!(state.board.get(sq).unwrap().kind, PieceKind::Monster);
             }
         }
     }
@@ -12020,6 +15921,16 @@ mod tests {
                     target: ActionTarget::Square("d4".parse().unwrap()),
                 },
             )
+            .unwrap()
+            .state;
+        assert!(lob_state.board.get("d4".parse().unwrap()).is_none());
+        let lob_state = engine
+            .apply(&lob_state, movement("e2", "e4"))
+            .unwrap()
+            .state;
+        assert!(lob_state.board.get("d4".parse().unwrap()).is_none());
+        let lob_state = engine
+            .apply(&lob_state, movement("e7", "e5"))
             .unwrap()
             .state;
         assert_eq!(
@@ -12578,5 +16489,587 @@ mod tests {
             engine.apply(&state, replay),
             Err(EngineError::IllegalAction(_))
         ));
+    }
+
+    #[test]
+    fn september_deletion_and_undead_timing_regression() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("b2", Player::White, PieceKind::Undead),
+                ("c2", Player::White, PieceKind::Wizard),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            901,
+        );
+        let square = "b2".parse().unwrap();
+        let undead = state.board.get(square).unwrap();
+        let wizard = state.board.get("c2".parse().unwrap()).unwrap();
+        let mut events = Vec::new();
+        engine.delete_piece_for_card(
+            &mut state,
+            square,
+            undead,
+            Player::White,
+            CLEANUP,
+            &mut events,
+        );
+        assert!(state.board.get(square).is_none());
+        assert!(state.card_runtime.undead_resurrections.is_empty());
+        assert_eq!(state.card_runtime.magic_girl_surge, [false, false]);
+        assert_eq!(
+            state
+                .card_runtime
+                .wizard_mana
+                .get(&wizard.id)
+                .copied()
+                .unwrap_or(0),
+            0
+        );
+        state.ply = 10;
+        engine.record_new_capture_reactions(&mut state, undead);
+        assert_eq!(state.card_runtime.undead_resurrections[0].due_ply, 16);
+    }
+
+    #[test]
+    fn september_queens_gambit_transform_protection_regression() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("d2", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            902,
+        );
+        let pawn = state.board.get("d2".parse().unwrap()).unwrap();
+        state.card_runtime.protected_piece_ids.insert(pawn.id);
+        state.card_runtime.queens_gambit_protection.insert(pawn.id);
+        engine.clear_promotion_inherited_traits(&mut state, pawn.id);
+        assert!(state.card_runtime.protected_piece_ids.contains(&pawn.id));
+        engine.mark_transformed_piece(&mut state, pawn);
+        assert!(!state.card_runtime.protected_piece_ids.contains(&pawn.id));
+        assert!(
+            !state
+                .card_runtime
+                .queens_gambit_protection
+                .contains(&pawn.id)
+        );
+    }
+
+    #[test]
+    fn search_chance_is_reproducible_and_independent_of_actual_rng() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = engine.new_game(Mode::Standard, 701).unwrap();
+        let actual_rng_before = state.rng_state();
+        assert!(matches!(state.phase, GamePhase::Draft(_)));
+        let mut different_actual_rng = state.clone();
+        different_actual_rng.rng_mut().next_u64();
+        assert_ne!(state.rng_state(), different_actual_rng.rng_state());
+
+        let action = Action::DraftPick { offer_index: 0 };
+        let mut left_context = SearchChanceContext::new(0xabc1);
+        let mut right_context = SearchChanceContext::new(0xabc1);
+        let left = engine
+            .apply_for_search(&state, action.clone(), &mut left_context)
+            .unwrap();
+        let right = engine
+            .apply_for_search(&different_actual_rng, action, &mut right_context)
+            .unwrap();
+
+        assert!(left.sampled_chance);
+        assert_eq!(left.chance_event_index, Some(0));
+        assert_eq!(left.transition.state, right.transition.state);
+        assert_eq!(left_context.event_index(), 1);
+        assert_eq!(right_context.event_index(), 1);
+        assert_eq!(state.rng_state(), actual_rng_before);
+    }
+
+    #[test]
+    fn deterministic_search_transition_is_identical_and_does_not_advance_context() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 17);
+        state.phase = GamePhase::Playing;
+        let action = engine.legal_actions(&state).unwrap().remove(0);
+        let expected = engine.apply(&state, action.clone()).unwrap();
+        let mut context = SearchChanceContext::new(99);
+        let actual = engine
+            .apply_for_search(&state, action, &mut context)
+            .unwrap();
+
+        assert!(!actual.sampled_chance);
+        assert_eq!(actual.chance_event_index, None);
+        assert_eq!(actual.transition.state, expected.state);
+        assert_eq!(actual.transition.events, expected.events);
+        assert_eq!(context.event_index(), 0);
+    }
+
+    #[test]
+    fn search_chance_uses_the_exact_engine_distribution_for_each_sample_seed() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = engine.new_game(Mode::Standard, 808).unwrap();
+        let action = Action::DraftPick { offer_index: 0 };
+        for base_seed in 0..64u64 {
+            let mut context = SearchChanceContext::new(base_seed);
+            let sampled = engine
+                .apply_for_search(&state, action.clone(), &mut context)
+                .unwrap();
+            let expected_seed = mix_search_seed(base_seed ^ 0x4348_414e_4345_5f31);
+            let mut expected_state = state.clone();
+            *expected_state.rng_mut() = crate::DeterministicRng::new(expected_seed);
+            let expected = engine.apply(&expected_state, action.clone()).unwrap();
+            assert_eq!(sampled.transition.state, expected.state);
+            assert_eq!(sampled.transition.events, expected.events);
+        }
+    }
+    #[test]
+    fn trickster_sampling_rook_does_not_gain_overtake_cross() {
+        // Live overtake helper checks attacker.type on the original board piece;
+        // a trickster sampling rook movement is not a board rook, so the cross
+        // must not apply even while overtake is armed for its owner.
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut board = crate::Board::empty();
+        for (square, owner, kind) in [
+            ("a1", Player::White, PieceKind::Trickster),
+            ("a2", Player::White, PieceKind::Pawn),
+            ("e1", Player::White, PieceKind::King),
+            ("h8", Player::Black, PieceKind::King),
+        ] {
+            board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let probe_state = GameState::from_board(
+            crate::BUNDLED_RULESET_ID,
+            Mode::Standard,
+            board,
+            Player::White,
+            3311,
+        );
+        let granted = engine
+            .grant_card(&probe_state, 1, "overtake", Player::White)
+            .unwrap()
+            .state;
+        let activated = engine
+            .apply(&granted, use_card_without_target(1))
+            .unwrap()
+            .state;
+        // Force the trickster's movement kind to rook for this turn.
+        let mut forced = activated.clone();
+        let trickster_id = forced.board.get("a1".parse().unwrap()).unwrap().id;
+        forced
+            .card_runtime
+            .trickster_move_kinds
+            .insert(trickster_id, PieceKind::Rook);
+        let actions = engine.legal_actions(&forced).unwrap();
+        assert!(
+            !actions.contains(&movement("a1", "a3")),
+            "trickster-as-rook must not cross friendly pieces"
+        );
+    }
+    #[test]
+    fn nullification_blocks_only_same_kind_enemy_captures() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("d8", Player::Black, PieceKind::Rook),
+                ("g7", Player::Black, PieceKind::Bishop),
+            ],
+            Player::White,
+            951,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "nullification", Player::White)
+            .unwrap()
+            .state;
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        assert!(!targets.contains(&use_card(1, "d8")));
+        let protected = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let rook_id = protected.board.get("d4".parse().unwrap()).unwrap().id;
+        assert!(
+            protected
+                .card_runtime
+                .nullification_piece_ids
+                .contains(&rook_id)
+        );
+        let black = engine
+            .apply(&protected, movement("a1", "b1"))
+            .unwrap()
+            .state;
+        let moves = engine.legal_actions(&black).unwrap();
+        assert!(!moves.contains(&movement("d8", "d4")));
+        assert!(moves.contains(&movement("g7", "d4")));
+    }
+    #[test]
+    fn vanguard_gives_only_the_unique_front_pawn_quiet_diagonals() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("d4", Player::White, PieceKind::Pawn),
+                ("a3", Player::White, PieceKind::Pawn),
+            ],
+            Player::White,
+            952,
+        );
+        let granted = engine
+            .grant_card(&state, 1, "vanguard", Player::White)
+            .unwrap()
+            .state;
+        let moves = engine.legal_actions(&granted).unwrap();
+        assert!(moves.contains(&movement("d4", "c5")));
+        assert!(moves.contains(&movement("d4", "e5")));
+        assert!(!moves.contains(&movement("a3", "b4")));
+
+        let mut tied = granted.clone();
+        tied.board.set(
+            "f4".parse().unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Pawn).with_id(99)),
+        );
+        let tied_moves = engine.legal_actions(&tied).unwrap();
+        assert!(!tied_moves.contains(&movement("d4", "c5")));
+        assert!(!tied_moves.contains(&movement("f4", "e5")));
+    }
+    #[test]
+    fn infiltration_submerges_piece_reaching_isolated_enemy_home_rank() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("b7", Player::White, PieceKind::Rook),
+            ],
+            Player::White,
+            952,
+        );
+        state.card_runtime.infiltration[Player::White.index()] = true;
+        let transitioned = engine.apply(&state, movement("b7", "b8")).unwrap().state;
+        let rook = transitioned.board.get("b8".parse().unwrap()).unwrap();
+        assert!(
+            transitioned
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&rook.id)
+        );
+    }
+
+    #[test]
+    fn resolve_grants_extra_move_to_pawn_after_friendly_pawn_captured() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let mut state = minimal_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+                ("c4", Player::White, PieceKind::Pawn),
+                ("e2", Player::White, PieceKind::Pawn),
+                ("e5", Player::Black, PieceKind::Knight),
+            ],
+            Player::Black,
+            953,
+        );
+        state.card_runtime.resolve[Player::White.index()] = true;
+        // Black captures White pawn on c4 with knight
+        let after_capture = engine.apply(&state, movement("e5", "c4")).unwrap().state;
+        assert!(after_capture.card_runtime.resolve_ready[Player::White.index()]);
+        assert_eq!(after_capture.turn, Player::White);
+
+        // White moves pawn e2->e3
+        let after_pawn_move = engine
+            .apply(&after_capture, movement("e2", "e3"))
+            .unwrap()
+            .state;
+        // Resolve gave extra action, so White's turn continues!
+        assert_eq!(after_pawn_move.turn, Player::White);
+        assert!(!after_pawn_move.card_runtime.resolve_ready[Player::White.index()]);
+    }
+
+    #[test]
+    fn metal_restricts_range_and_applies_three_owner_turns_of_cooldown() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("h1", Player::White, PieceKind::King),
+                ("d4", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1001,
+        );
+        let granted = engine
+            .grant_card(&state, 1, crate::METAL, Player::White)
+            .unwrap()
+            .state;
+        assert!(
+            engine
+                .legal_actions(&granted)
+                .unwrap()
+                .contains(&use_card(1, "d4"))
+        );
+        let metalized = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        assert!(has_move(&engine, &metalized, "d4", "d5"));
+        assert!(!has_move(&engine, &metalized, "d4", "d8"));
+
+        let mut cooled = engine
+            .apply(&metalized, movement("d4", "d5"))
+            .unwrap()
+            .state;
+        let rook_id = cooled.board.get("d5".parse().unwrap()).unwrap().id;
+        assert_eq!(cooled.card_runtime.metal_cooldowns.get(&rook_id), Some(&3));
+        cooled.turn = Player::White;
+        cooled.actions_remaining = 1;
+        assert!(!has_move(&engine, &cooled, "d5", "d6"));
+        engine.tick_card_statuses_after_turn(&mut cooled, Player::White);
+        engine.tick_card_statuses_after_turn(&mut cooled, Player::White);
+        engine.tick_card_statuses_after_turn(&mut cooled, Player::White);
+        assert!(!cooled.card_runtime.metal_cooldowns.contains_key(&rook_id));
+        assert!(has_move(&engine, &cooled, "d5", "d6"));
+        assert!(!has_move(&engine, &cooled, "d5", "d8"));
+    }
+
+    #[test]
+    fn false_start_advances_each_friendly_file_as_far_as_its_path_allows() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::Rook),
+                ("a2", Player::White, PieceKind::Pawn),
+                ("b2", Player::White, PieceKind::Pawn),
+                ("h1", Player::White, PieceKind::King),
+                ("a4", Player::Black, PieceKind::Bishop),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1002,
+        );
+        let granted = engine
+            .grant_card(&state, 2, crate::FALSE_START, Player::White)
+            .unwrap()
+            .state;
+        let advanced = engine
+            .apply(&granted, use_card_without_target(2))
+            .unwrap()
+            .state;
+        assert_eq!(
+            advanced.board.get("a2".parse().unwrap()).unwrap().kind,
+            PieceKind::Rook
+        );
+        assert_eq!(
+            advanced.board.get("a3".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        assert_eq!(
+            advanced.board.get("b4".parse().unwrap()).unwrap().kind,
+            PieceKind::Pawn
+        );
+        assert_eq!(
+            advanced.board.get("h3".parse().unwrap()).unwrap().kind,
+            PieceKind::King
+        );
+        assert_eq!(
+            advanced.board.get("a4".parse().unwrap()).unwrap().owner,
+            Player::Black
+        );
+    }
+
+    #[test]
+    fn locust_swarm_grants_one_adjacent_hurdle_jump_to_unmoved_non_pawns() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Knight),
+                ("c4", Player::White, PieceKind::Pawn),
+                ("c6", Player::White, PieceKind::Pawn),
+                ("e3", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1003,
+        );
+        let granted = engine
+            .grant_card(&state, 3, crate::LOCUST_SWARM, Player::White)
+            .unwrap()
+            .state;
+        let marked = engine
+            .apply(&granted, use_card_without_target(3))
+            .unwrap()
+            .state;
+        let knight_id = marked.board.get("c3".parse().unwrap()).unwrap().id;
+        assert!(
+            marked
+                .card_runtime
+                .locust_swarm_piece_ids
+                .contains(&knight_id)
+        );
+        assert!(has_move(&engine, &marked, "c3", "c5"));
+        assert!(!has_move(&engine, &marked, "c3", "f3"));
+
+        let mut moved = engine.apply(&marked, movement("c3", "c5")).unwrap().state;
+        assert!(
+            !moved
+                .card_runtime
+                .locust_swarm_piece_ids
+                .contains(&knight_id)
+        );
+        moved.turn = Player::White;
+        moved.actions_remaining = 1;
+        assert!(!has_move(&engine, &moved, "c5", "c7"));
+    }
+
+    #[test]
+    fn thief_transforms_a_queen_leaps_and_is_arrested_after_losing_submerge() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Queen),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1005,
+        );
+        let granted = engine
+            .grant_card(&state, 5, THIEF, Player::White)
+            .unwrap()
+            .state;
+        let transformed = engine
+            .apply(&granted, use_card_without_target(5))
+            .unwrap()
+            .state;
+        let thief = transformed.board.get("c3".parse().unwrap()).unwrap();
+        assert_eq!(thief.kind, PieceKind::Thief);
+        assert!(
+            transformed
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&thief.id)
+        );
+        assert!(has_move(&engine, &transformed, "c3", "c6"));
+        assert!(!has_move(&engine, &transformed, "c3", "d4"));
+
+        let mut exposed = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Thief),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1006,
+        );
+        let thief_id = exposed.board.get("c3".parse().unwrap()).unwrap().id;
+        assert!(!exposed.card_runtime.submerged_piece_ids.contains(&thief_id));
+        exposed = engine.apply(&exposed, movement("a1", "a2")).unwrap().state;
+        assert!(exposed.board.find_by_id(thief_id).is_none());
+    }
+
+    #[test]
+    fn brutus_can_capture_its_friendly_king() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("a3", Player::White, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1007,
+        );
+        let granted = engine
+            .grant_card(&state, 6, BRUTUS, Player::White)
+            .unwrap()
+            .state;
+        assert_eq!(
+            granted.board.get("a3".parse().unwrap()).unwrap().kind,
+            PieceKind::Brutus
+        );
+        assert!(has_move(&engine, &granted, "a3", "a1"));
+        let betrayed = engine.apply(&granted, movement("a3", "a1")).unwrap().state;
+        assert_eq!(
+            betrayed.status,
+            GameStatus::Won {
+                winner: Player::Black,
+                reason: WinReason::KingCaptured
+            }
+        );
+    }
+
+    #[test]
+    fn big_bishop_opening_creates_a_two_by_two_diagonal_large_piece() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            1008,
+        );
+        let granted = engine
+            .grant_card(&state, 7, BIG_BISHOP, Player::White)
+            .unwrap()
+            .state;
+        let mut opened = engine
+            .apply(&granted, use_card_without_target(7))
+            .unwrap()
+            .state;
+        let bishop = opened.board.get("f2".parse().unwrap()).unwrap();
+        assert_eq!(bishop.kind, PieceKind::BigBishop);
+        assert_eq!(
+            opened
+                .card_runtime
+                .large_pieces
+                .get(&bishop.id)
+                .unwrap()
+                .anchor,
+            "f2".parse().unwrap()
+        );
+        opened.board.set("f3".parse().unwrap(), None);
+        assert!(has_move(&engine, &opened, "f2", "e3"));
+        assert!(!has_move(&engine, &opened, "f2", "f3"));
+    }
+
+    #[test]
+    fn recurrence_marks_a_random_non_pawn_and_respawns_it_on_the_home_rank() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let mut state = september_state(
+            &[
+                ("a2", Player::White, PieceKind::Pawn),
+                ("c3", Player::White, PieceKind::Bishop),
+                ("c8", Player::Black, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::Black,
+            1004,
+        );
+        state.card_runtime.democracy[Player::White.index()] = true;
+        let granted = engine
+            .grant_card(&state, 4, crate::RECURRENCE, Player::White)
+            .unwrap()
+            .state;
+        let bishop_id = granted.board.get("c3".parse().unwrap()).unwrap().id;
+        assert!(
+            granted
+                .card_runtime
+                .recurrence_piece_ids
+                .contains(&bishop_id)
+        );
+
+        let captured = engine.apply(&granted, movement("c8", "c3")).unwrap().state;
+        let (square, bishop) = captured.board.find_by_id(bishop_id).unwrap();
+        assert_eq!(square.rank(), 0);
+        assert_eq!(bishop.kind, PieceKind::Bishop);
+        assert!(captured.card_runtime.pending_recurrences.is_empty());
+        assert!(
+            !captured
+                .card_runtime
+                .recurrence_piece_ids
+                .contains(&bishop_id)
+        );
     }
 }

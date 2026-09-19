@@ -1,0 +1,273 @@
+{
+  "scope": "Declarative metadata audit only. Does not evaluate all runtime CARD_BY_ID/UI mutations or gameplay behavior. Differences are not approved changes.",
+  "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+  "announcement_sha256": "ba2570f034e9c59f66afb621ef4512698e08d6c11abb92dafacc2f3a58461e57",
+  "differences": {
+    "acceleration": {
+      "text_ko": {
+        "announced": "세번째 흑 차례부터 모든 플레이어가 한 턴에 2번 행동합니다.",
+        "live_definition": "적용 뒤 세번째 흑 차례부터 모든 플레이어가 한 턴에 2번 행동합니다."
+      }
+    },
+    "assassin": {
+      "half_stars": {
+        "announced": 7,
+        "live_definition": 6
+      }
+    },
+    "backward-knight": {
+      "half_stars": {
+        "announced": 5,
+        "live_definition": 6
+      }
+    },
+    "capture-the-flag": {
+      "half_stars": {
+        "announced": null,
+        "live_definition": 0
+      }
+    },
+    "chameleon-mutation": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 3
+      }
+    },
+    "chess-344200": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 1
+      }
+    },
+    "chess-960": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 1
+      }
+    },
+    "constitutional-monarchy": {
+      "half_stars": {
+        "announced": 3,
+        "live_definition": 4
+      }
+    },
+    "cool-guy": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 1
+      }
+    },
+    "dice": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 4
+      }
+    },
+    "eastern-policy": {
+      "text_ko": {
+        "announced": "아군 마이너 피스 하나를 장기의 포로 변화시킵니다.",
+        "live_definition": "아군 마이너 기물 하나를 포로 변경합니다."
+      }
+    },
+    "elephant-escape": {
+      "half_stars": {
+        "announced": 5,
+        "live_definition": 4
+      }
+    },
+    "exile": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 5
+      }
+    },
+    "fanatical-ritual": {
+      "half_stars": {
+        "announced": 7,
+        "live_definition": 6
+      }
+    },
+    "feudal-contract": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 7
+      }
+    },
+    "highlander": {
+      "half_stars": {
+        "announced": 9,
+        "live_definition": 10
+      }
+    },
+    "hook": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 9
+      }
+    },
+    "ice-sheet": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 5
+      }
+    },
+    "initiative": {
+      "text_ko": {
+        "announced": "상대방이 첫 10수 동안 기물을 잡을 수 없게 됩니다. 단, 기물이 잡힐 경우 즉시 제한이 해제됩니다.",
+        "live_definition": "상대방이 첫 10수 동안 기물을 잡을 수 없게 됩니다. 단, 기물이 잡히거나 체크시 제한이 해제됩니다."
+      }
+    },
+    "iron-monarch": {
+      "name_ko": {
+        "announced": "친정",
+        "live_definition": "철혈군주"
+      }
+    },
+    "jester": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 4
+      }
+    },
+    "knightmaster": {
+      "half_stars": {
+        "announced": 7,
+        "live_definition": 5
+      }
+    },
+    "knightmate": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 7
+      }
+    },
+    "log": {
+      "half_stars": {
+        "announced": 5,
+        "live_definition": 4
+      }
+    },
+    "london-system": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 5
+      }
+    },
+    "monochrome-chess": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 1
+      }
+    },
+    "palace": {
+      "half_stars": {
+        "announced": 9,
+        "live_definition": 7
+      }
+    },
+    "pegasus": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 7
+      },
+      "phase": {
+        "announced": "PIECE",
+        "live_definition": "END"
+      },
+      "target": {
+        "announced": "own-knight",
+        "live_definition": "own-rook"
+      },
+      "text_ko": {
+        "announced": "나이트 하나를 유니콘으로 교환합니다.",
+        "live_definition": "룩 하나를 유니콘으로 교환합니다."
+      }
+    },
+    "promotion-rush": {
+      "text_ko": {
+        "announced": "아군 비폰 기물 하나를 지정합니다. 해당 기물은 이번 턴에 퀸처럼도 이동할 수 있지만 기물을 잡을 수 없습니다.",
+        "live_definition": "아군 비폰 기물 하나를 지정합니다. 해당 기물은 이번 턴 첫 이동 때 퀸처럼도 움직일 수 있지만, 기물을 잡을 수 없습니다."
+      }
+    },
+    "queens-gambit": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 7
+      },
+      "text_ko": {
+        "announced": "퀸을 갬빗합니다. 이후 d파일 및 무작위 파일의 아군 폰에 영구적인 보호를 부여합니다.",
+        "live_definition": "퀸을 갬빗합니다. 이후 퀸 파일 및 무작위 파일의 아군 폰에 반영구적인 보호를 부여합니다."
+      }
+    },
+    "racing-king": {
+      "half_stars": {
+        "announced": 7,
+        "live_definition": 6
+      }
+    },
+    "radical-charge": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 9
+      }
+    },
+    "reposition": {
+      "target": {
+        "announced": "own-nonking-piece",
+        "live_definition": null
+      },
+      "text_ko": {
+        "announced": "킹을 제외한 아군 기물이 이번 턴에 두번 이동합니다. 단, 기물을 잡을 수 없습니다.",
+        "live_definition": "사용할 경우 이번 턴에 기물을 잡지 못하는 대신 같은 기물을 2번 움직일수 있습니다."
+      }
+    },
+    "revelation": {
+      "half_stars": {
+        "announced": 3,
+        "live_definition": 0
+      }
+    },
+    "reverse-pawns": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 5
+      }
+    },
+    "suicide-bomber": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 7
+      }
+    },
+    "switcheroo": {
+      "half_stars": {
+        "announced": 6,
+        "live_definition": 3
+      }
+    },
+    "vanguard": {
+      "text_ko": {
+        "announced": "제일 선두에 있는 아군 폰이 하나라면, 해당 폰은 대각선으로도 이동할 수 있습니다. 앞으로 기물을 잡지 못하며, 맨 앞의 폰이 1개일 때만 발동됩니다.",
+        "live_definition": "제일 선두에 있는 아군 폰이 하나라면, 해당 폰은 대각선으로도 이동할 수 있습니다."
+      }
+    },
+    "vortex": {
+      "half_stars": {
+        "announced": 4,
+        "live_definition": 6
+      }
+    },
+    "windmill": {
+      "half_stars": {
+        "announced": 5,
+        "live_definition": 3
+      }
+    },
+    "witch-trial": {
+      "half_stars": {
+        "announced": 8,
+        "live_definition": 6
+      }
+    }
+  }
+}

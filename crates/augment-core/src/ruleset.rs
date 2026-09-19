@@ -6,6 +6,8 @@ use crate::{SUPPORTED_ENGINE_API_VERSION, SUPPORTED_SCHEMA_VERSION};
 
 const BUNDLED_20260818: &str =
     include_str!("../../../rulesets/augment_chess_20260818/manifest.json");
+const BUNDLED_20260915: &str =
+    include_str!("../../../rulesets/augment_chess_20260915/manifest.json");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct RulesetManifest {
@@ -28,6 +30,11 @@ impl RulesetManifest {
 
     pub fn bundled_20260818() -> Result<Self, RulesetError> {
         Self::from_json(BUNDLED_20260818)
+    }
+
+    /// Announced September rules. The legacy constructors remain frozen metadata loaders.
+    pub fn bundled_20260915() -> Result<Self, RulesetError> {
+        Self::from_json(BUNDLED_20260915)
     }
 
     pub fn from_json(json: &str) -> Result<Self, RulesetError> {
@@ -248,6 +255,40 @@ mod tests {
         );
         assert_eq!(manifest.artifacts.catalog, "cards/catalog.json");
         assert_eq!(manifest.artifacts.notation, "notation.json");
+    }
+
+    #[test]
+    fn september_manifest_reports_partial_coverage_without_replacing_legacy() {
+        let old = RulesetManifest::bundled_20260818().unwrap();
+        assert_eq!(old, RulesetManifest::bundled_20260807().unwrap());
+        assert_eq!(old.id, "augment_chess_20260818");
+        let latest = RulesetManifest::bundled_20260915().unwrap();
+        assert_eq!(latest.id, "augment_chess_20260915");
+        assert_eq!(latest.snapshot_date, "2026-09-15");
+        assert_eq!(latest.coverage.target_card_count, 240);
+        assert_eq!(latest.coverage.status, "partial");
+        assert_eq!(latest.coverage.site_parity_verified_card_count, 0);
+        let implemented: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../rulesets/augment_chess_20260915/cards/implemented.json"
+        ))
+        .unwrap();
+        assert_eq!(
+            latest.coverage.implemented_card_count as usize,
+            implemented["cards"].as_array().unwrap().len()
+        );
+        assert_eq!(
+            implemented["scope"]["implemented_cards"].as_u64(),
+            Some(latest.coverage.implemented_card_count.into())
+        );
+        assert!(implemented["cards"].as_array().unwrap().iter().all(|card| {
+            card["activation"].is_string()
+                && card["compatibility"].is_array()
+                && card["engine_primitives"].is_array()
+        }));
+        assert_eq!(
+            latest.coverage.behavioral_slice_card_count,
+            latest.coverage.implemented_card_count
+        );
     }
 
     #[test]

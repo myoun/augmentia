@@ -15,6 +15,17 @@ enum BudgetKind {
     WallClock,
 }
 
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum SearchVariant {
+    FairPuct,
+    Reuse,
+    Widening,
+    Gumbel,
+    VirtualChameleon,
+    WideningVirtualChameleon,
+}
+
 #[derive(Clone, Copy)]
 struct ArenaBudget {
     kind: BudgetKind,
@@ -65,10 +76,33 @@ struct ArenaReport {
     move_time_ms: u64,
     max_simulations: usize,
     leaf_batch_size: usize,
+    candidate_budget: ArenaBudgetReport,
+    opponent_budget: ArenaBudgetReport,
+    candidate_search_variant: SearchVariant,
+    opponent_search_variant: SearchVariant,
     pairs: usize,
     base_seed: u64,
     max_decisions: usize,
     games: Vec<ArenaGame>,
+}
+
+#[derive(Serialize)]
+struct ArenaBudgetReport {
+    simulations: usize,
+    move_time_ms: u64,
+    max_simulations: usize,
+    leaf_batch_size: usize,
+}
+
+impl From<ArenaBudget> for ArenaBudgetReport {
+    fn from(value: ArenaBudget) -> Self {
+        Self {
+            simulations: value.simulations,
+            move_time_ms: value.move_time_ms,
+            max_simulations: value.max_simulations,
+            leaf_batch_size: value.leaf_batch_size,
+        }
+    }
 }
 
 fn main() {
@@ -90,22 +124,60 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "wall_clock" => BudgetKind::WallClock,
         other => return Err(format!("unsupported budget kind {other}").into()),
     };
-    let budget = ArenaBudget {
+    let base_budget = ArenaBudget {
         kind: budget_kind,
         simulations: numeric(&args, "--simulations", 400usize)?,
         move_time_ms: numeric(&args, "--move-time-ms", 1000u64)?,
         max_simulations: numeric(&args, "--max-simulations", 100_000usize)?,
         leaf_batch_size: numeric(&args, "--leaf-batch-size", 16usize)?,
     };
+    let candidate_budget = ArenaBudget {
+        kind: budget_kind,
+        simulations: numeric(&args, "--candidate-simulations", base_budget.simulations)?,
+        move_time_ms: numeric(&args, "--candidate-move-time-ms", base_budget.move_time_ms)?,
+        max_simulations: numeric(
+            &args,
+            "--candidate-max-simulations",
+            base_budget.max_simulations,
+        )?,
+        leaf_batch_size: numeric(
+            &args,
+            "--candidate-leaf-batch-size",
+            base_budget.leaf_batch_size,
+        )?,
+    };
+    let opponent_budget = ArenaBudget {
+        kind: budget_kind,
+        simulations: numeric(&args, "--opponent-simulations", base_budget.simulations)?,
+        move_time_ms: numeric(&args, "--opponent-move-time-ms", base_budget.move_time_ms)?,
+        max_simulations: numeric(
+            &args,
+            "--opponent-max-simulations",
+            base_budget.max_simulations,
+        )?,
+        leaf_batch_size: numeric(
+            &args,
+            "--opponent-leaf-batch-size",
+            base_budget.leaf_batch_size,
+        )?,
+    };
+    let candidate_search_variant =
+        search_variant(&args, "--candidate-search", SearchVariant::FairPuct)?;
+    let opponent_search_variant =
+        search_variant(&args, "--opponent-search", SearchVariant::FairPuct)?;
     let pairs = numeric(&args, "--pairs", 100usize)?;
     let base_seed = numeric(&args, "--base-seed", 2026082101u64)?;
     let max_decisions = numeric(&args, "--max-decisions", 512usize)?;
     if pairs == 0
         || max_decisions == 0
-        || budget.simulations == 0
-        || budget.move_time_ms == 0
-        || budget.max_simulations == 0
-        || budget.leaf_batch_size == 0
+        || candidate_budget.simulations == 0
+        || candidate_budget.move_time_ms == 0
+        || candidate_budget.max_simulations == 0
+        || candidate_budget.leaf_batch_size == 0
+        || opponent_budget.simulations == 0
+        || opponent_budget.move_time_ms == 0
+        || opponent_budget.max_simulations == 0
+        || opponent_budget.leaf_batch_size == 0
     {
         return Err("arena counts and budgets must be positive".into());
     }
@@ -134,7 +206,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             &engine,
             &candidate,
             &opponent,
-            budget,
+            candidate_budget,
+            opponent_budget,
+            candidate_search_variant,
+            opponent_search_variant,
             pair_index,
             seed,
             Player::White,
@@ -144,7 +219,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             &engine,
             &candidate,
             &opponent,
-            budget,
+            candidate_budget,
+            opponent_budget,
+            candidate_search_variant,
+            opponent_search_variant,
             pair_index,
             seed,
             Player::Black,
@@ -165,10 +243,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             },
             opponent_sha256: sha256_file(&opponent_model)?,
             budget_kind,
-            simulations: budget.simulations,
-            move_time_ms: budget.move_time_ms,
-            max_simulations: budget.max_simulations,
-            leaf_batch_size: budget.leaf_batch_size,
+            simulations: base_budget.simulations,
+            move_time_ms: base_budget.move_time_ms,
+            max_simulations: base_budget.max_simulations,
+            leaf_batch_size: base_budget.leaf_batch_size,
+            candidate_budget: candidate_budget.into(),
+            opponent_budget: opponent_budget.into(),
+            candidate_search_variant,
+            opponent_search_variant,
             pairs,
             base_seed,
             max_decisions,
@@ -183,7 +265,10 @@ fn play_game(
     engine: &Engine,
     candidate: &V3OnnxRuntime,
     opponent: &Opponent,
-    budget: ArenaBudget,
+    candidate_budget: ArenaBudget,
+    opponent_budget: ArenaBudget,
+    candidate_search_variant: SearchVariant,
+    opponent_search_variant: SearchVariant,
     pair_index: usize,
     seed: u64,
     candidate_seat: Player,
@@ -206,6 +291,26 @@ fn play_game(
     let mut opponent_cards = BTreeSet::new();
     let mut decisions = 0usize;
     let mut search_error = None;
+    let mut candidate_tree = match MctsV3Tree::new(arena_tree_config(
+        candidate_budget,
+        arena_search_seed(seed),
+        candidate_search_variant,
+    )) {
+        Ok(tree) => tree,
+        Err(error) => return failed_game(pair_index, seed, candidate_seat, error.to_string()),
+    };
+    let mut opponent_tree = if matches!(opponent, Opponent::V3(_)) {
+        match MctsV3Tree::new(arena_tree_config(
+            opponent_budget,
+            arena_search_seed(seed),
+            opponent_search_variant,
+        )) {
+            Ok(tree) => Some(tree),
+            Err(error) => return failed_game(pair_index, seed, candidate_seat, error.to_string()),
+        }
+    } else {
+        None
+    };
 
     while state.status == GameStatus::Ongoing && decisions < max_decisions {
         record_cards(
@@ -217,9 +322,21 @@ fn play_game(
         let candidate_turn = state.turn == candidate_seat;
         let search_started = Instant::now();
         let selected = if candidate_turn {
-            search_v3(&state, engine, candidate, budget)
+            search_v3(
+                &mut candidate_tree,
+                &state,
+                engine,
+                candidate,
+                candidate_budget,
+            )
         } else {
-            search_opponent(&state, engine, opponent, budget)
+            search_opponent(
+                opponent_tree.as_mut(),
+                &state,
+                engine,
+                opponent,
+                opponent_budget,
+            )
         };
         let elapsed = search_started.elapsed().as_secs_f64() * 1000.0;
         let (action, simulations) = match selected {
@@ -295,6 +412,7 @@ fn play_game(
 }
 
 fn search_v3(
+    tree: &mut MctsV3Tree,
     state: &augment_core::GameState,
     engine: &Engine,
     runtime: &V3OnnxRuntime,
@@ -304,12 +422,8 @@ fn search_v3(
         BudgetKind::Simulations => budget.simulations,
         BudgetKind::WallClock => budget.max_simulations,
     };
-    let mut tree = MctsV3Tree::new(MctsV3Config {
-        num_simulations: cap,
-        leaf_batch_size: budget.leaf_batch_size,
-        ..MctsV3Config::default()
-    })
-    .map_err(|error| error.to_string())?;
+    tree.set_search_budget(cap, budget.leaf_batch_size)
+        .map_err(|error| error.to_string())?;
     let result = match budget.kind {
         BudgetKind::Simulations => tree.search(state, engine, runtime),
         BudgetKind::WallClock => tree.search_for_duration(
@@ -328,13 +442,20 @@ fn search_v3(
 }
 
 fn search_opponent(
+    v3_tree: Option<&mut MctsV3Tree>,
     state: &augment_core::GameState,
     engine: &Engine,
     opponent: &Opponent,
     budget: ArenaBudget,
 ) -> Result<(Action, usize), String> {
     match opponent {
-        Opponent::V3(runtime) => search_v3(state, engine, runtime, budget),
+        Opponent::V3(runtime) => search_v3(
+            v3_tree.ok_or_else(|| "V3 opponent tree is missing".to_owned())?,
+            state,
+            engine,
+            runtime,
+            budget,
+        ),
         Opponent::V2(evaluator) => {
             evaluator.clear_cache();
             let failures = evaluator.inference_failures();
@@ -363,6 +484,69 @@ fn search_opponent(
             let simulations = result.2.iter().map(|item| item.2 as usize).sum();
             Ok((result.0, simulations))
         }
+    }
+}
+
+fn arena_search_seed(seed: u64) -> u64 {
+    seed ^ 0x4152_454e_415f_5631
+}
+
+fn arena_tree_config(
+    budget: ArenaBudget,
+    search_seed: u64,
+    variant: SearchVariant,
+) -> MctsV3Config {
+    let cap = match budget.kind {
+        BudgetKind::Simulations => budget.simulations,
+        BudgetKind::WallClock => budget.max_simulations,
+    };
+    let mut config = MctsV3Config {
+        num_simulations: cap,
+        leaf_batch_size: budget.leaf_batch_size,
+        search_seed,
+        proposal_seed: search_seed ^ 0x5052_4f50_4f53_414c,
+        gumbel_seed: search_seed ^ 0x4755_4d42_454c_5f31,
+        gumbel_planning_budget: budget.simulations,
+        reuse_descendant_depth: 0,
+        ..MctsV3Config::default()
+    };
+    match variant {
+        SearchVariant::FairPuct => {}
+        SearchVariant::Reuse => config.reuse_descendant_depth = 4,
+        SearchVariant::Widening => config.progressive_widening = true,
+        SearchVariant::Gumbel => {
+            config.gumbel_root = true;
+            config.gumbel_candidates = if cap <= 150 { 32 } else { 64 };
+        }
+        SearchVariant::VirtualChameleon => config.virtual_chameleon_hierarchy = true,
+        SearchVariant::WideningVirtualChameleon => {
+            config.progressive_widening = true;
+            config.virtual_chameleon_hierarchy = true;
+        }
+    }
+    config
+}
+
+fn search_variant(
+    args: &[String],
+    flag: &str,
+    default: SearchVariant,
+) -> Result<SearchVariant, Box<dyn std::error::Error>> {
+    let Some(value) = args
+        .windows(2)
+        .find(|pair| pair[0] == flag)
+        .map(|pair| pair[1].as_str())
+    else {
+        return Ok(default);
+    };
+    match value {
+        "fair_puct" => Ok(SearchVariant::FairPuct),
+        "reuse" => Ok(SearchVariant::Reuse),
+        "widening" => Ok(SearchVariant::Widening),
+        "gumbel" => Ok(SearchVariant::Gumbel),
+        "virtual_chameleon" => Ok(SearchVariant::VirtualChameleon),
+        "widening_virtual_chameleon" => Ok(SearchVariant::WideningVirtualChameleon),
+        other => Err(format!("unsupported search variant {other:?}").into()),
     }
 }
 

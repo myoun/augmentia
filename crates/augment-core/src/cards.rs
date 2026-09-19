@@ -214,6 +214,38 @@ pub const INSIGHT: &str = "insight";
 pub const RULE_TICKET: &str = "rule-ticket";
 pub const CLONE: &str = "clone";
 pub const JOKER: &str = "joker";
+pub const HIGHLANDER: &str = "highlander";
+pub const CAPTURE_THE_FLAG: &str = "capture-the-flag";
+pub const MAJESTY: &str = "majesty";
+pub const KILLER_KING: &str = "killer-king";
+pub const PROFICIENCY: &str = "proficiency";
+pub const DISASSEMBLY: &str = "disassembly";
+pub const OVERTAKE: &str = "overtake";
+pub const REVERSAL: &str = "reversal";
+pub const OUTPOST: &str = "outpost";
+pub const SYMMETRY: &str = "symmetry";
+pub const EXTINCTION: &str = "extinction";
+pub const MIRACLE: &str = "miracle";
+pub const MUTATION: &str = "mutation";
+pub const LONG_EN_PASSANT: &str = "long-en-passant";
+pub const CLOCKWORK: &str = "clockwork";
+pub const PARROT: &str = "parrot";
+pub const PALADIN: &str = "paladin";
+pub const PRINCESS: &str = "princess";
+pub const OCTOPUS: &str = "octopus";
+pub const HEDGEHOG: &str = "hedgehog";
+pub const CAMPFIRE: &str = "campfire";
+pub const NULLIFICATION: &str = "nullification";
+pub const VANGUARD: &str = "vanguard";
+pub const INFILTRATION: &str = "infiltration";
+pub const RESOLVE: &str = "resolve";
+pub const METAL: &str = "metal";
+pub const FALSE_START: &str = "false-start";
+pub const LOCUST_SWARM: &str = "locust-swarm";
+pub const RECURRENCE: &str = "recurrence";
+pub const THIEF: &str = "thief";
+pub const BRUTUS: &str = "brutus";
+pub const BIG_BISHOP: &str = "big-bishop";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CardActivation {
@@ -303,7 +335,7 @@ const fn rule_card(
     }
 }
 
-pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
+pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 240] = [
     ImplementedCardDefinition {
         id: KING_OF_THE_HILL,
         name_ko: "언덕의 왕",
@@ -450,7 +482,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         effect: "grasshopper",
         activation: CardActivation::Active,
         phase: CardPhase::Piece,
-        half_stars: 6,
+        half_stars: 7,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -630,7 +662,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         effect: "missionary",
         activation: CardActivation::Active,
         phase: CardPhase::Piece,
-        half_stars: 5,
+        half_stars: 6,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -695,6 +727,16 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         turn_exclusive: false,
     },
     ImplementedCardDefinition {
+        id: BIG_BISHOP,
+        name_ko: "BISHOP",
+        effect: "bigBishop",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
         id: CALLING_CARD,
         name_ko: "예고장",
         effect: "callingCard",
@@ -710,7 +752,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         effect: "checker",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 3,
+        half_stars: 4,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -720,7 +762,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         effect: "democracy",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
-        half_stars: 7,
+        half_stars: 8,
         ends_turn: false,
         turn_exclusive: false,
     },
@@ -796,7 +838,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
     },
     ImplementedCardDefinition {
         id: IRON_MONARCH,
-        name_ko: "철혈군주",
+        name_ko: "친정",
         effect: "ironMonarch",
         activation: CardActivation::Active,
         phase: CardPhase::Opening,
@@ -982,7 +1024,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         HORSE_RIDING,
         "승마",
         "horseRiding",
-        8,
+        5,
         CardActivation::Passive,
         false,
         false,
@@ -1126,7 +1168,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         ROYAL_SHIELD,
         "가호",
         "royalShield",
-        4,
+        6,
         CardActivation::Active,
         false,
         false,
@@ -1342,7 +1384,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         SCARECROW,
         "허수아비",
         "scarecrow",
-        5,
+        7,
         CardActivation::Active,
         false,
         false,
@@ -1360,7 +1402,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         STEALTH,
         "은신",
         "stealth",
-        6,
+        8,
         CardActivation::Active,
         false,
         false,
@@ -1374,12 +1416,182 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         false,
         false,
     ),
-    middle_card(
+    end_card(
         SUBSTITUTION,
         "치환",
         "substitution",
         6,
         CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        REVERSAL,
+        "반전",
+        "reversal",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        OUTPOST,
+        "전초기지",
+        "outpost",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        SYMMETRY,
+        "대칭",
+        "symmetry",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    end_card(
+        EXTINCTION,
+        "멸종",
+        "extinction",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        MIRACLE,
+        "기적",
+        "miracle",
+        7,
+        CardActivation::Active,
+        true,
+        false,
+    ),
+    end_card(
+        MUTATION,
+        "변이",
+        "mutation",
+        5,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        LONG_EN_PASSANT,
+        "롱파상",
+        "longEnPassant",
+        4,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    ImplementedCardDefinition {
+        id: CLOCKWORK,
+        name_ko: "태엽인형",
+        effect: "clockwork",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: PARROT,
+        name_ko: "앵무새",
+        effect: "parrot",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: PALADIN,
+        name_ko: "팔라딘",
+        effect: "paladin",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: PRINCESS,
+        name_ko: "프린세스",
+        effect: "princess",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: OCTOPUS,
+        name_ko: "문어",
+        effect: "octopus",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: HEDGEHOG,
+        name_ko: "고슴도치",
+        effect: "hedgehog",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 7,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: CAMPFIRE,
+        name_ko: "캠프파이어",
+        effect: "campfire",
+        activation: CardActivation::Active,
+        phase: CardPhase::Piece,
+        half_stars: 8,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    middle_card(
+        NULLIFICATION,
+        "상쇄",
+        "nullification",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    ImplementedCardDefinition {
+        id: VANGUARD,
+        name_ko: "선봉",
+        effect: "vanguard",
+        activation: CardActivation::Passive,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    middle_card(
+        INFILTRATION,
+        "잠입",
+        "infiltration",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        RESOLVE,
+        "결의",
+        "resolve",
+        7,
+        CardActivation::Passive,
         false,
         false,
     ),
@@ -1392,11 +1604,11 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         false,
         false,
     ),
-    middle_card(
+    end_card(
         BLACK_MAGIC,
         "흑마법",
         "blackMagic",
-        9,
+        8,
         CardActivation::Active,
         false,
         false,
@@ -1685,7 +1897,7 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         PORTAL_GUN,
         "포탈 건",
         "portalGun",
-        7,
+        8,
         CardActivation::Active,
         false,
         false,
@@ -1703,9 +1915,9 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         ZUGZWANG,
         "추크츠방",
         "zugzwang",
-        7,
+        6,
         CardActivation::Active,
-        false,
+        true,
         false,
     ),
     end_card(
@@ -2046,6 +2258,119 @@ pub const IMPLEMENTED_CARDS: [ImplementedCardDefinition; 208] = [
         false,
         false,
     ),
+    middle_card(
+        MAJESTY,
+        "위엄",
+        "majesty",
+        6,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        KILLER_KING,
+        "킬러 킹",
+        "killerKing",
+        8,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        PROFICIENCY,
+        "숙련",
+        "proficiency",
+        5,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    middle_card(
+        DISASSEMBLY,
+        "분해",
+        "disassembly",
+        4,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    middle_card(
+        OVERTAKE,
+        "추월",
+        "overtake",
+        8,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    rule_card(CAPTURE_THE_FLAG, "깃발 뽑기", "captureTheFlag", 0),
+    ImplementedCardDefinition {
+        id: HIGHLANDER,
+        name_ko: "하이랜더",
+        effect: "highlander",
+        activation: CardActivation::Passive,
+        phase: CardPhase::End,
+        half_stars: 9,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    middle_card(
+        METAL,
+        "메탈",
+        "metal",
+        7,
+        CardActivation::Active,
+        false,
+        false,
+    ),
+    ImplementedCardDefinition {
+        id: THIEF,
+        name_ko: "도적",
+        effect: "thief",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: FALSE_START,
+        name_ko: "부정출발",
+        effect: "falseStart",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    ImplementedCardDefinition {
+        id: LOCUST_SWARM,
+        name_ko: "메뚜기떼",
+        effect: "locustSwarm",
+        activation: CardActivation::Active,
+        phase: CardPhase::Opening,
+        half_stars: 6,
+        ends_turn: false,
+        turn_exclusive: false,
+    },
+    end_card(
+        BRUTUS,
+        "브루투스",
+        "brutus",
+        9,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
+    end_card(
+        RECURRENCE,
+        "회귀",
+        "recurrence",
+        7,
+        CardActivation::Passive,
+        false,
+        false,
+    ),
 ];
 
 pub fn implemented_card(id: &str) -> Option<&'static ImplementedCardDefinition> {
@@ -2057,60 +2382,12 @@ mod tests {
     use super::*;
 
     const BUNDLED_IMPLEMENTED_CARDS_JSON: &str =
-        include_str!("../../../rulesets/augment_chess_20260818/cards/implemented.json");
+        include_str!("../../../rulesets/augment_chess_20260915/cards/implemented.json");
     const BUNDLED_CARD_CATALOG_JSON: &str =
-        include_str!("../../../rulesets/augment_chess_20260818/cards/catalog.json");
+        include_str!("../../../rulesets/augment_chess_20260915/cards/catalog.json");
 
     #[test]
     fn implemented_ids_and_effects_are_unique() {
-        let mut cards = Vec::new();
-        for compiled in IMPLEMENTED_CARDS {
-            cards.push(serde_json::json!({
-                "id": compiled.id,
-                "name_ko": compiled.name_ko,
-                "phase": match compiled.phase {
-                    CardPhase::Opening => "OPENING",
-                    CardPhase::Middle => "MIDDLE",
-                    CardPhase::End => "END",
-                    CardPhase::Piece => "PIECE",
-                    CardPhase::Rule => "RULE",
-                },
-                "activation": match compiled.activation {
-                    CardActivation::Passive => "passive",
-                    CardActivation::Active => "active",
-                    CardActivation::Rule => "rule",
-                },
-                "half_stars": compiled.half_stars,
-                "ends_turn": compiled.ends_turn,
-                "turn_exclusive": compiled.turn_exclusive,
-                "effect": compiled.effect,
-                "engine_primitives": ["board_transaction", "rule_hook"],
-                "source_symbols": [compiled.effect],
-                "compatibility": ["Behavioral slice implemented; site parity is not yet verified."]
-            }));
-        }
-        let doc = serde_json::json!({
-            "ruleset_id": "augment_chess_20260818",
-            "schema_version": 1,
-            "source_bundle_sha256": "81db8d047a9e8636af93be309feda6bff0bf70cf9909ab303ce3a71b79a41818",
-            "scope": {
-                "status": "behavioral_slice",
-                "implemented_cards": IMPLEMENTED_CARDS.len(),
-                "site_parity_verified_cards": 0,
-                "notes": "Base-piece behavior plus all 208 visible cards have an engine behavioral slice. The four previously documented 0818 approximations (Suspicious Potion, Trickster, Replay, and Chess N^30) now follow the source algorithms; exhaustive cross-card site parity remains unverified."
-            },
-            "compatibility_gaps": [],
-            "cards": cards
-        });
-        let _ = std::fs::write(
-            "../../rulesets/augment_chess_20260818/cards/implemented.json",
-            format!("{:#}\n", doc),
-        );
-        let _ = std::fs::write(
-            "rulesets/augment_chess_20260818/cards/implemented.json",
-            format!("{:#}\n", doc),
-        );
-
         let ids: std::collections::BTreeSet<_> =
             IMPLEMENTED_CARDS.iter().map(|card| card.id).collect();
         let effects: std::collections::BTreeSet<_> =
@@ -2140,6 +2417,17 @@ mod tests {
                 Some(compiled.turn_exclusive)
             );
             assert_eq!(
+                snapshot["activation"].as_str(),
+                Some(match compiled.activation {
+                    CardActivation::Passive => "passive",
+                    CardActivation::Active => "active",
+                    CardActivation::Rule => "rule",
+                }),
+                "{} activation drift",
+                compiled.id
+            );
+
+            assert_eq!(
                 snapshot["phase"].as_str(),
                 Some(match compiled.phase {
                     CardPhase::Opening => "OPENING",
@@ -2158,13 +2446,13 @@ mod tests {
         let implemented_document: serde_json::Value =
             serde_json::from_str(BUNDLED_IMPLEMENTED_CARDS_JSON).unwrap();
         let cards = document["cards"].as_array().unwrap();
-        assert_eq!(document["raw_card_definitions"].as_u64(), Some(209));
-        assert_eq!(document["visible_card_count"].as_u64(), Some(208));
+        assert_eq!(document["raw_card_definitions"].as_u64(), Some(241));
+        assert_eq!(document["visible_card_count"].as_u64(), Some(240));
         assert_eq!(
             document["source_bundle_sha256"],
             implemented_document["source_bundle_sha256"]
         );
-        assert_eq!(cards.len(), 208);
+        assert_eq!(cards.len(), 240);
         let phase_counts = cards.iter().fold(
             std::collections::BTreeMap::<&str, usize>::new(),
             |mut counts, card| {
@@ -2172,11 +2460,11 @@ mod tests {
                 counts
             },
         );
-        assert_eq!(phase_counts["OPENING"], 31);
-        assert_eq!(phase_counts["MIDDLE"], 75);
-        assert_eq!(phase_counts["PIECE"], 29);
-        assert_eq!(phase_counts["END"], 47);
-        assert_eq!(phase_counts["RULE"], 26);
+        assert_eq!(phase_counts["OPENING"], 37);
+        assert_eq!(phase_counts["MIDDLE"], 86);
+        assert_eq!(phase_counts["PIECE"], 35);
+        assert_eq!(phase_counts["END"], 55);
+        assert_eq!(phase_counts["RULE"], 27);
 
         for compiled in IMPLEMENTED_CARDS {
             let catalog = cards

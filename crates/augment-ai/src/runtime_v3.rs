@@ -76,17 +76,39 @@ pub struct EvaluationV3 {
     pub value: f32,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-struct VocabularyArtifactV3 {
-    schema_id: String,
-    tokens: Vec<String>,
+#[derive(Clone, Debug)]
+pub struct CandidateEvaluationV3 {
+    /// Raw policy logits paired with the original local action indices.
+    pub logits: Vec<(Action, usize, f32)>,
+    pub value: f32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct ModelInputV3 {
-    name: String,
-    dtype: String,
-    rank: usize,
+pub(crate) struct VocabularyArtifactV3 {
+    pub(crate) schema_id: String,
+    pub(crate) tokens: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub(crate) struct ModelInputV3 {
+    pub(crate) name: String,
+    pub(crate) dtype: String,
+    pub(crate) rank: usize,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct SplitGraphContractV3 {
+    path: String,
+    sha256: String,
+    inputs: Vec<ModelInputV3>,
+    outputs: Vec<ModelInputV3>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct SplitPolicyBundleV3 {
+    schema_id: String,
+    state_encoder: SplitGraphContractV3,
+    candidate_scorer: SplitGraphContractV3,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -101,15 +123,17 @@ struct ModelMetadataV3 {
     vocabulary: VocabularyArtifactV3,
     inputs: Vec<ModelInputV3>,
     outputs: Vec<String>,
+    #[serde(default)]
+    split_policy_bundle: Option<SplitPolicyBundleV3>,
 }
 
 #[derive(Clone, Debug)]
-struct VocabularyV3 {
+pub(crate) struct VocabularyV3 {
     lookup: HashMap<String, i64>,
 }
 
 impl VocabularyV3 {
-    fn from_artifact(artifact: &VocabularyArtifactV3) -> Result<Self, V3RuntimeError> {
+    pub(crate) fn from_artifact(artifact: &VocabularyArtifactV3) -> Result<Self, V3RuntimeError> {
         if artifact.schema_id != "augmentia.model-vocabulary.v3"
             || artifact.tokens.first().map(String::as_str) != Some("<none>")
         {
@@ -127,7 +151,7 @@ impl VocabularyV3 {
         Ok(Self { lookup })
     }
 
-    fn index(&self, token: Option<&str>, path: &str) -> Result<i64, V3RuntimeError> {
+    pub(crate) fn index(&self, token: Option<&str>, path: &str) -> Result<i64, V3RuntimeError> {
         let Some(token) = token else { return Ok(0) };
         self.lookup.get(token).copied().ok_or_else(|| {
             V3RuntimeError::Tensor(format!("{path} contains unknown token {token:?}"))
@@ -135,8 +159,22 @@ impl VocabularyV3 {
     }
 }
 
+struct SplitPolicyRuntimeV3 {
+    state_encoder: Mutex<Session>,
+    candidate_scorer: Mutex<Session>,
+    cache: Mutex<HashMap<u64, Vec<CachedStateEncodingV3>>>,
+}
+
+#[derive(Clone)]
+struct CachedStateEncodingV3 {
+    state: GameState,
+    tensors: HashMap<String, TensorDataV3>,
+    value: f32,
+}
+
 pub struct V3OnnxRuntime {
     session: Mutex<Session>,
+    split_policy: Option<SplitPolicyRuntimeV3>,
     metadata: ModelMetadataV3,
     vocabulary: VocabularyV3,
     session_runs: AtomicU64,
@@ -172,9 +210,9 @@ impl V3OnnxRuntime {
             ));
         }
         let model_path = model_path.as_ref();
+        let metadata_path = metadata_path.as_ref();
         let metadata: ModelMetadataV3 = serde_json::from_slice(
-            &fs::read(metadata_path.as_ref())
-                .map_err(|error| V3RuntimeError::Io(error.to_string()))?,
+            &fs::read(metadata_path).map_err(|error| V3RuntimeError::Io(error.to_string()))?,
         )
         .map_err(|error| V3RuntimeError::Metadata(error.to_string()))?;
         validate_metadata(
@@ -185,21 +223,36 @@ impl V3OnnxRuntime {
         )?;
         let vocabulary = VocabularyV3::from_artifact(&metadata.vocabulary)?;
         validate_required_runtime_vocabulary(&vocabulary)?;
-        let builder = Session::builder()
-            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?
-            .with_intra_threads(options.intra_threads)
-            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
-        let mut builder = match options.execution_provider {
-            V3ExecutionProvider::Cpu => builder,
-            V3ExecutionProvider::Cuda => builder
-                .with_execution_providers([ort::ep::CUDA::default().build().error_on_failure()])
-                .map_err(|error| V3RuntimeError::Inference(error.to_string()))?,
+        let session = build_session(model_path, options)?;
+        let split_policy = if let Some(bundle) = &metadata.split_policy_bundle {
+            let base = metadata_path.parent().unwrap_or_else(|| Path::new("."));
+            let (encoder_path, scorer_path) =
+                validate_split_policy_bundle(bundle, &metadata, base)?;
+            let encoder = build_session(&encoder_path, options)?;
+            let scorer = build_session(&scorer_path, options)?;
+            validate_session_contract(
+                &encoder,
+                &bundle.state_encoder.inputs,
+                &bundle.state_encoder.outputs,
+                "state encoder",
+            )?;
+            validate_session_contract(
+                &scorer,
+                &bundle.candidate_scorer.inputs,
+                &bundle.candidate_scorer.outputs,
+                "candidate scorer",
+            )?;
+            Some(SplitPolicyRuntimeV3 {
+                state_encoder: Mutex::new(encoder),
+                candidate_scorer: Mutex::new(scorer),
+                cache: Mutex::new(HashMap::new()),
+            })
+        } else {
+            None
         };
-        let session = builder
-            .commit_from_file(model_path)
-            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
         Ok(Self {
             session: Mutex::new(session),
+            split_policy,
             metadata,
             vocabulary,
             session_runs: AtomicU64::new(0),
@@ -232,17 +285,239 @@ impl V3OnnxRuntime {
         if states.is_empty() {
             return tensor_error("cannot evaluate an empty state batch");
         }
-        let mut observations = Vec::with_capacity(states.len());
         let mut legal_sets = Vec::with_capacity(states.len());
         for state in states {
+            let legal = LegalActionSetV3::from_state(state, engine)
+                .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
+            legal_sets.push(legal);
+        }
+        let raw = self.evaluate_batch_with_legal_sets(states, &legal_sets)?;
+        let mut evaluations = Vec::with_capacity(states.len());
+        for ((state, legal), (logits, value)) in states.iter().zip(&legal_sets).zip(raw.into_iter())
+        {
+            let probabilities = softmax(&logits)?;
+            let mut priors = Vec::with_capacity(legal.len());
+            for (index, probability) in probabilities.into_iter().enumerate() {
+                let action = legal
+                    .decode_action(index, state)
+                    .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
+                priors.push((action, index, probability));
+            }
+            evaluations.push(EvaluationV3 { priors, value });
+        }
+        Ok(evaluations)
+    }
+
+    pub fn evaluate_candidates(
+        &self,
+        state: &GameState,
+        engine: &Engine,
+        action_indices: &[usize],
+    ) -> Result<CandidateEvaluationV3, V3RuntimeError> {
+        if action_indices.is_empty() {
+            return tensor_error("candidate evaluation requires at least one action");
+        }
+        let full = LegalActionSetV3::from_state(state, engine)
+            .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
+        let mut seen = std::collections::BTreeSet::new();
+        let mut descriptors = Vec::with_capacity(action_indices.len());
+        for index in action_indices {
+            if !seen.insert(*index) {
+                return tensor_error("candidate action indices must be unique");
+            }
+            let descriptor = full.descriptor(*index).ok_or_else(|| {
+                V3RuntimeError::Tensor(format!(
+                    "candidate action index {index} exceeds legal action count {}",
+                    full.len()
+                ))
+            })?;
+            descriptors.push(descriptor.clone());
+        }
+        let subset = LegalActionSetV3 {
+            schema_id: full.schema_id.clone(),
+            actions: descriptors,
+        };
+        let (logits, value) = if let Some(split) = &self.split_policy {
+            self.evaluate_split_candidates(state, &subset, split)?
+        } else {
+            let mut raw = self.evaluate_batch_with_legal_sets(
+                std::slice::from_ref(state),
+                std::slice::from_ref(&subset),
+            )?;
+            raw.remove(0)
+        };
+        let mut scored = Vec::with_capacity(logits.len());
+        for ((subset_index, logit), original_index) in logits
+            .into_iter()
+            .enumerate()
+            .zip(action_indices.iter().copied())
+        {
+            let action = subset
+                .decode_action(subset_index, state)
+                .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
+            scored.push((action, original_index, logit));
+        }
+        Ok(CandidateEvaluationV3 {
+            logits: scored,
+            value,
+        })
+    }
+
+    fn evaluate_split_candidates(
+        &self,
+        state: &GameState,
+        legal: &LegalActionSetV3,
+        split: &SplitPolicyRuntimeV3,
+    ) -> Result<(Vec<f32>, f32), V3RuntimeError> {
+        if state.ruleset_id != self.metadata.ruleset_id {
+            return metadata(format!(
+                "state ruleset {} differs from model ruleset {}",
+                state.ruleset_id, self.metadata.ruleset_id
+            ));
+        }
+        let bundle = self.metadata.split_policy_bundle.as_ref().ok_or_else(|| {
+            V3RuntimeError::Metadata("split runtime has no bundle contract".to_owned())
+        })?;
+        let observation = encode_observation_v3(state);
+        let mut tensors = tensorize_v3(
+            std::slice::from_ref(&observation),
+            std::slice::from_ref(legal),
+            &self.vocabulary,
+        )?;
+        let fingerprint = state.fingerprint();
+        let cached = {
+            let cache = split.cache.lock().map_err(|_| {
+                V3RuntimeError::Inference("state encoding cache lock poisoned".to_owned())
+            })?;
+            cache
+                .get(&fingerprint)
+                .and_then(|entries| entries.iter().find(|entry| entry.state == *state))
+                .cloned()
+        };
+        let encoding = if let Some(cached) = cached {
+            cached
+        } else {
+            let mut inputs = Vec::with_capacity(bundle.state_encoder.inputs.len());
+            for declared in &bundle.state_encoder.inputs {
+                let tensor = tensors.get(&declared.name).cloned().ok_or_else(|| {
+                    V3RuntimeError::Tensor(format!("missing state encoder input {}", declared.name))
+                })?;
+                if tensor.rank() != declared.rank || tensor.dtype() != declared.dtype {
+                    return tensor_error(format!(
+                        "state encoder input {} type/rank drifted",
+                        declared.name
+                    ));
+                }
+                inputs.push((declared.name.clone(), tensor.into_ort()?));
+            }
+            let mut session = split.state_encoder.lock().map_err(|_| {
+                V3RuntimeError::Inference("state encoder session lock poisoned".to_owned())
+            })?;
+            let outputs = session
+                .run(inputs)
+                .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+            self.session_runs.fetch_add(1, Ordering::Relaxed);
+            let mut encoded = HashMap::new();
+            for name in [
+                "state_embedding",
+                "board_tokens",
+                "piece_entities",
+                "card_entities",
+            ] {
+                let output = outputs.get(name).ok_or_else(|| {
+                    V3RuntimeError::Inference(format!("state encoder omitted output {name}"))
+                })?;
+                let (shape, values) = output
+                    .try_extract_tensor::<f32>()
+                    .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+                let shape = shape
+                    .iter()
+                    .map(|dimension| usize::try_from(*dimension))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|_| V3RuntimeError::Tensor(format!("invalid {name} shape")))?;
+                if values.iter().any(|value| !value.is_finite()) {
+                    return tensor_error(format!("{name} contains NaN or infinity"));
+                }
+                encoded.insert(
+                    name.to_owned(),
+                    TensorDataV3::F32 {
+                        shape,
+                        values: values.to_vec(),
+                    },
+                );
+            }
+            let (_, values) = outputs["value"]
+                .try_extract_tensor::<f32>()
+                .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+            if values.len() != 1
+                || !values[0].is_finite()
+                || !(-1.0001..=1.0001).contains(&values[0])
+            {
+                return tensor_error("state encoder returned an invalid value");
+            }
+            let cached = CachedStateEncodingV3 {
+                state: state.clone(),
+                tensors: encoded,
+                value: values[0],
+            };
+            let mut cache = split.cache.lock().map_err(|_| {
+                V3RuntimeError::Inference("state encoding cache lock poisoned".to_owned())
+            })?;
+            let entries = cache.entry(fingerprint).or_default();
+            if !entries.iter().any(|entry| entry.state == *state) {
+                entries.push(cached.clone());
+            }
+            cached
+        };
+
+        for (name, tensor) in &encoding.tensors {
+            tensors.insert(name.clone(), tensor.clone());
+        }
+        let mut inputs = Vec::with_capacity(bundle.candidate_scorer.inputs.len());
+        for declared in &bundle.candidate_scorer.inputs {
+            let tensor = tensors.remove(&declared.name).ok_or_else(|| {
+                V3RuntimeError::Tensor(format!("missing candidate scorer input {}", declared.name))
+            })?;
+            if tensor.rank() != declared.rank || tensor.dtype() != declared.dtype {
+                return tensor_error(format!(
+                    "candidate scorer input {} type/rank drifted",
+                    declared.name
+                ));
+            }
+            inputs.push((declared.name.clone(), tensor.into_ort()?));
+        }
+        let mut session = split.candidate_scorer.lock().map_err(|_| {
+            V3RuntimeError::Inference("candidate scorer session lock poisoned".to_owned())
+        })?;
+        let outputs = session
+            .run(inputs)
+            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+        self.session_runs.fetch_add(1, Ordering::Relaxed);
+        let (_, logits) = outputs["policy_logits"]
+            .try_extract_tensor::<f32>()
+            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+        if logits.len() != legal.len() || logits.iter().any(|value| !value.is_finite()) {
+            return tensor_error("candidate scorer returned invalid policy logits");
+        }
+        Ok((logits.to_vec(), encoding.value))
+    }
+
+    fn evaluate_batch_with_legal_sets(
+        &self,
+        states: &[GameState],
+        legal_sets: &[LegalActionSetV3],
+    ) -> Result<Vec<(Vec<f32>, f32)>, V3RuntimeError> {
+        if states.is_empty() || states.len() != legal_sets.len() {
+            return tensor_error("states and legal action sets must be non-empty and aligned");
+        }
+        let mut observations = Vec::with_capacity(states.len());
+        for (state, legal) in states.iter().zip(legal_sets) {
             if state.ruleset_id != self.metadata.ruleset_id {
                 return metadata(format!(
                     "state ruleset {} differs from model ruleset {}",
                     state.ruleset_id, self.metadata.ruleset_id
                 ));
             }
-            let legal = LegalActionSetV3::from_state(state, engine)
-                .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
             if legal.is_empty() {
                 return tensor_error(format!(
                     "states with no legal actions must bypass the model: ply={} phase={:?} status={:?} fingerprint={:016x}",
@@ -253,9 +528,8 @@ impl V3OnnxRuntime {
                 ));
             }
             observations.push(encode_observation_v3(state));
-            legal_sets.push(legal);
         }
-        let mut tensors = tensorize_v3(&observations, &legal_sets, &self.vocabulary)?;
+        let mut tensors = tensorize_v3(&observations, legal_sets, &self.vocabulary)?;
         let mut inputs: Vec<(String, SessionInputValue<'static>)> = Vec::new();
         for declared in &self.metadata.inputs {
             let tensor = tensors.remove(&declared.name).ok_or_else(|| {
@@ -285,31 +559,26 @@ impl V3OnnxRuntime {
             return tensor_error("ONNX output shapes do not match the requested batch");
         }
         let mut evaluations = Vec::with_capacity(states.len());
-        for (batch_index, ((state, legal), value)) in states
-            .iter()
-            .zip(&legal_sets)
-            .zip(values.iter().copied())
-            .enumerate()
+        for (batch_index, (legal, value)) in
+            legal_sets.iter().zip(values.iter().copied()).enumerate()
         {
             if !value.is_finite() || !(-1.0001..=1.0001).contains(&value) {
                 return tensor_error(format!("invalid value output {value}"));
             }
             let start = batch_index * max_actions;
-            let probabilities = softmax(&logits[start..start + legal.len()])?;
-            let mut priors = Vec::with_capacity(legal.len());
-            for (index, probability) in probabilities.into_iter().enumerate() {
-                let action = legal
-                    .decode_action(index, state)
-                    .map_err(|error| V3RuntimeError::Engine(error.to_string()))?;
-                priors.push((action, index, probability));
+            let candidate_logits = logits[start..start + legal.len()].to_vec();
+            if candidate_logits.iter().any(|logit| !logit.is_finite()) {
+                return tensor_error("policy logits contain NaN or infinity");
             }
-            evaluations.push(EvaluationV3 { priors, value });
+            evaluations.push((candidate_logits, value));
         }
         Ok(evaluations)
     }
 }
 
-fn validate_required_runtime_vocabulary(vocabulary: &VocabularyV3) -> Result<(), V3RuntimeError> {
+pub(crate) fn validate_required_runtime_vocabulary(
+    vocabulary: &VocabularyV3,
+) -> Result<(), V3RuntimeError> {
     let required = observation_v3_runtime_text_tokens();
     let missing = required
         .iter()
@@ -326,7 +595,7 @@ fn validate_required_runtime_vocabulary(vocabulary: &VocabularyV3) -> Result<(),
 }
 
 #[derive(Clone, Debug)]
-enum TensorDataV3 {
+pub(crate) enum TensorDataV3 {
     F32 {
         shape: Vec<usize>,
         values: Vec<f32>,
@@ -342,14 +611,14 @@ enum TensorDataV3 {
 }
 
 impl TensorDataV3 {
-    fn rank(&self) -> usize {
+    pub(crate) fn rank(&self) -> usize {
         match self {
             Self::F32 { shape, .. } | Self::I64 { shape, .. } | Self::Bool { shape, .. } => {
                 shape.len()
             }
         }
     }
-    fn dtype(&self) -> String {
+    pub(crate) fn dtype(&self) -> String {
         match self {
             Self::F32 { .. } => "float32",
             Self::I64 { .. } => "int64",
@@ -357,7 +626,7 @@ impl TensorDataV3 {
         }
         .to_owned()
     }
-    fn into_ort(self) -> Result<SessionInputValue<'static>, V3RuntimeError> {
+    pub(crate) fn into_ort(self) -> Result<SessionInputValue<'static>, V3RuntimeError> {
         match self {
             Self::F32 { shape, values } => {
                 Tensor::from_array((shape, values)).map(SessionInputValue::from)
@@ -387,7 +656,7 @@ struct RuntimeNodeV3 {
     numeric: [f32; 7],
 }
 
-fn tensorize_v3(
+pub(crate) fn tensorize_v3(
     observations: &[ObservationV3],
     legal_sets: &[LegalActionSetV3],
     vocabulary: &VocabularyV3,
@@ -1122,6 +1391,158 @@ fn signed_log(value: f32) -> f32 {
     value.signum() * value.abs().ln_1p()
 }
 
+pub(crate) fn build_session(
+    path: &Path,
+    options: V3RuntimeOptions,
+) -> Result<Session, V3RuntimeError> {
+    let builder = Session::builder()
+        .map_err(|error| V3RuntimeError::Inference(error.to_string()))?
+        .with_intra_threads(options.intra_threads)
+        .map_err(|error| V3RuntimeError::Inference(error.to_string()))?;
+    let mut builder = match options.execution_provider {
+        V3ExecutionProvider::Cpu => builder,
+        V3ExecutionProvider::Cuda => builder
+            .with_execution_providers([ort::ep::CUDA::default().build().error_on_failure()])
+            .map_err(|error| V3RuntimeError::Inference(error.to_string()))?,
+    };
+    builder
+        .commit_from_file(path)
+        .map_err(|error| V3RuntimeError::Inference(error.to_string()))
+}
+
+fn validate_split_policy_bundle(
+    bundle: &SplitPolicyBundleV3,
+    model: &ModelMetadataV3,
+    base: &Path,
+) -> Result<(std::path::PathBuf, std::path::PathBuf), V3RuntimeError> {
+    if bundle.schema_id != "augmentia.onnx-split-policy-bundle.v1" {
+        return metadata("unsupported split policy bundle schema");
+    }
+    let state_inputs = model
+        .inputs
+        .iter()
+        .filter(|input| !input.name.starts_with("action_"))
+        .cloned()
+        .collect::<Vec<_>>();
+    if bundle.state_encoder.inputs != state_inputs {
+        return metadata("state encoder input contract mismatch");
+    }
+    let state_outputs = vec![
+        model_input("state_embedding", "float32", 2),
+        model_input("board_tokens", "float32", 3),
+        model_input("piece_entities", "float32", 3),
+        model_input("card_entities", "float32", 3),
+        model_input("value", "float32", 1),
+    ];
+    if bundle.state_encoder.outputs != state_outputs {
+        return metadata("state encoder output contract mismatch");
+    }
+    let mut scorer_inputs = state_outputs[..4].to_vec();
+    for name in ["piece_slot", "piece_mask", "card_slot", "card_mask"] {
+        let input = model
+            .inputs
+            .iter()
+            .find(|input| input.name == name)
+            .ok_or_else(|| {
+                V3RuntimeError::Metadata(format!(
+                    "monolithic model omits split scorer lookup input {name}"
+                ))
+            })?;
+        scorer_inputs.push(input.clone());
+    }
+    scorer_inputs.extend(
+        model
+            .inputs
+            .iter()
+            .filter(|input| input.name.starts_with("action_"))
+            .cloned(),
+    );
+    if bundle.candidate_scorer.inputs != scorer_inputs
+        || bundle.candidate_scorer.outputs != [model_input("policy_logits", "float32", 2)]
+    {
+        return metadata("candidate scorer I/O contract mismatch");
+    }
+    let encoder_path = validate_split_graph_file(&bundle.state_encoder, base, "state encoder")?;
+    let scorer_path =
+        validate_split_graph_file(&bundle.candidate_scorer, base, "candidate scorer")?;
+    if encoder_path == scorer_path {
+        return metadata("split policy graphs must use distinct sibling paths");
+    }
+    Ok((encoder_path, scorer_path))
+}
+
+pub(crate) fn model_input(name: &str, dtype: &str, rank: usize) -> ModelInputV3 {
+    ModelInputV3 {
+        name: name.to_owned(),
+        dtype: dtype.to_owned(),
+        rank,
+    }
+}
+
+fn validate_split_graph_file(
+    contract: &SplitGraphContractV3,
+    base: &Path,
+    label: &str,
+) -> Result<std::path::PathBuf, V3RuntimeError> {
+    let relative = Path::new(&contract.path);
+    if contract.path.is_empty()
+        || relative.is_absolute()
+        || relative.components().count() != 1
+        || relative.file_name().is_none()
+    {
+        return metadata(format!("{label} path must name a sibling file"));
+    }
+    let path = base.join(relative);
+    let bytes = fs::read(&path).map_err(|error| V3RuntimeError::Io(error.to_string()))?;
+    let actual = format!("{:x}", Sha256::digest(bytes));
+    if actual != contract.sha256 {
+        return metadata(format!("{label} ONNX checksum does not match metadata"));
+    }
+    Ok(path)
+}
+
+pub(crate) fn validate_session_contract(
+    session: &Session,
+    inputs: &[ModelInputV3],
+    outputs: &[ModelInputV3],
+    label: &str,
+) -> Result<(), V3RuntimeError> {
+    let actual_inputs = session
+        .inputs()
+        .iter()
+        .map(session_outlet_contract)
+        .collect::<Result<Vec<_>, _>>()?;
+    let actual_outputs = session
+        .outputs()
+        .iter()
+        .map(session_outlet_contract)
+        .collect::<Result<Vec<_>, _>>()?;
+    if actual_inputs != inputs || actual_outputs != outputs {
+        return metadata(format!(
+            "{label} ONNX graph does not match its I/O contract"
+        ));
+    }
+    Ok(())
+}
+
+fn session_outlet_contract(outlet: &ort::value::Outlet) -> Result<ModelInputV3, V3RuntimeError> {
+    let ort::value::ValueType::Tensor { ty, shape, .. } = outlet.dtype() else {
+        return metadata(format!("ONNX outlet {} is not a tensor", outlet.name()));
+    };
+    let dtype = match ty {
+        ort::value::TensorElementType::Float32 => "float32",
+        ort::value::TensorElementType::Int64 => "int64",
+        ort::value::TensorElementType::Bool => "bool",
+        _ => {
+            return metadata(format!(
+                "ONNX outlet {} has unsupported dtype",
+                outlet.name()
+            ));
+        }
+    };
+    Ok(model_input(outlet.name(), dtype, shape.len()))
+}
+
 fn validate_metadata(
     metadata_value: &ModelMetadataV3,
     model_path: &Path,
@@ -1274,7 +1695,10 @@ mod tests {
         }
         match &tensors["spatial"] {
             TensorDataV3::F32 { shape, values } => {
-                assert_eq!(shape, &[cases.len(), 116, 8, 8]);
+                assert_eq!(
+                    shape,
+                    &[cases.len(), crate::OBSERVATION_V3_SPATIAL_PLANES, 8, 8]
+                );
                 assert!(values.iter().all(|value| value.is_finite()));
             }
             _ => panic!("spatial must be float32"),

@@ -1,0 +1,4785 @@
+{
+  "cards": [
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "kingOfTheHill",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "king-of-the-hill",
+      "name_ko": "언덕의 왕",
+      "phase": "OPENING",
+      "source_symbols": [
+        "kingOfTheHill"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "genevaConvention",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "geneva-convention",
+      "name_ko": "제네바 협약",
+      "phase": "OPENING",
+      "source_symbols": [
+        "genevaConvention"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "parry",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "parry",
+      "name_ko": "패링",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "parry"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "emptyLunchbox",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "empty-lunchbox",
+      "name_ko": "빈 찬합",
+      "phase": "END",
+      "source_symbols": [
+        "emptyLunchbox"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "platformRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "platform",
+      "name_ko": "발판",
+      "phase": "RULE",
+      "source_symbols": [
+        "platformRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "pawnSprint",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "sprint",
+      "name_ko": "질주",
+      "phase": "OPENING",
+      "source_symbols": [
+        "pawnSprint"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "earlyPromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "early-promotion",
+      "name_ko": "조기 진급",
+      "phase": "OPENING",
+      "source_symbols": [
+        "earlyPromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "initiative",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "initiative",
+      "name_ko": "선공권",
+      "phase": "OPENING",
+      "source_symbols": [
+        "initiative"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "revelation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 3,
+      "id": "revelation",
+      "name_ko": "계시",
+      "phase": "RULE",
+      "source_symbols": [
+        "revelation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "disarm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "disarm",
+      "name_ko": "무장해제",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "disarm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "dice",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "dice",
+      "name_ko": "주사위",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "dice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "freeze",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "freeze",
+      "name_ko": "빙결",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "freeze"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "reposition",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "reposition",
+      "name_ko": "재배치",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "reposition"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "assassin",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "assassin",
+      "name_ko": "암살자",
+      "phase": "PIECE",
+      "source_symbols": [
+        "assassin"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "grasshopper",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "grasshopper",
+      "name_ko": "그래스호퍼",
+      "phase": "PIECE",
+      "source_symbols": [
+        "grasshopper"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "judgment",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "judgment",
+      "name_ko": "레드카드",
+      "phase": "END",
+      "source_symbols": [
+        "judgment"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "cleanupSacrifice",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 3,
+      "id": "cleanup-sacrifice",
+      "name_ko": "강제 교환",
+      "phase": "END",
+      "source_symbols": [
+        "cleanupSacrifice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "amazon",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "amazon",
+      "name_ko": "아마존",
+      "phase": "PIECE",
+      "source_symbols": [
+        "amazon"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "constitutionalMonarchy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 3,
+      "id": "constitutional-monarchy",
+      "name_ko": "입헌군주제",
+      "phase": "PIECE",
+      "source_symbols": [
+        "constitutionalMonarchy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "dragon",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "dragon",
+      "name_ko": "드래곤",
+      "phase": "PIECE",
+      "source_symbols": [
+        "dragon"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "easternPolicy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "eastern-policy",
+      "name_ko": "동방견문록",
+      "phase": "PIECE",
+      "source_symbols": [
+        "easternPolicy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "herald",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "herald",
+      "name_ko": "전령",
+      "phase": "PIECE",
+      "source_symbols": [
+        "herald"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "knightmaster",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "knightmaster",
+      "name_ko": "기사단장",
+      "phase": "PIECE",
+      "source_symbols": [
+        "knightmaster"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "pegasus",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "pegasus",
+      "name_ko": "유니콘",
+      "phase": "PIECE",
+      "source_symbols": [
+        "pegasus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "hook",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "hook",
+      "name_ko": "구행",
+      "phase": "PIECE",
+      "source_symbols": [
+        "hook"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "idol",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "idol",
+      "name_ko": "아이돌",
+      "phase": "PIECE",
+      "source_symbols": [
+        "idol"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "jester",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "jester",
+      "name_ko": "광대",
+      "phase": "PIECE",
+      "source_symbols": [
+        "jester"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "localConscription",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "local-conscription",
+      "name_ko": "현지군 징병",
+      "phase": "PIECE",
+      "source_symbols": [
+        "localConscription"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "reaper",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "reaper",
+      "name_ko": "사신",
+      "phase": "PIECE",
+      "source_symbols": [
+        "reaper"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "wizard",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "wizard",
+      "name_ko": "마법사",
+      "phase": "PIECE",
+      "source_symbols": [
+        "wizard"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "eagle",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "eagle",
+      "name_ko": "알리바바",
+      "phase": "PIECE",
+      "source_symbols": [
+        "eagle"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "log",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "log",
+      "name_ko": "통나무",
+      "phase": "PIECE",
+      "source_symbols": [
+        "log"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "missionary",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "missionary",
+      "name_ko": "선교사",
+      "phase": "PIECE",
+      "source_symbols": [
+        "missionary"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ordination",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "ordination",
+      "name_ko": "서품",
+      "phase": "PIECE",
+      "source_symbols": [
+        "ordination"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "reformation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "reformation",
+      "name_ko": "종교 개혁",
+      "phase": "PIECE",
+      "source_symbols": [
+        "reformation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "standardBearer",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "standard-bearer",
+      "name_ko": "기수",
+      "phase": "PIECE",
+      "source_symbols": [
+        "standardBearer"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "windmill",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "windmill",
+      "name_ko": "풍차",
+      "phase": "PIECE",
+      "source_symbols": [
+        "windmill"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "apprenticeKnights",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 3,
+      "id": "apprentice-knights",
+      "name_ko": "견습 기사단",
+      "phase": "OPENING",
+      "source_symbols": [
+        "apprenticeKnights"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "bigRook",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "big-rook",
+      "name_ko": "ROOK",
+      "phase": "OPENING",
+      "source_symbols": [
+        "bigRook"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "bigBishop",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "large_piece",
+        "move_generation"
+      ],
+      "half_stars": 8,
+      "id": "big-bishop",
+      "name_ko": "BISHOP",
+      "phase": "OPENING",
+      "source_symbols": [
+        "applyBigRookOpening",
+        "septemberBigBishopOpening",
+        "bigRookMoves"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "callingCard",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "calling-card",
+      "name_ko": "예고장",
+      "phase": "OPENING",
+      "source_symbols": [
+        "callingCard"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "checker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "checker",
+      "name_ko": "체커",
+      "phase": "OPENING",
+      "source_symbols": [
+        "checker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "democracy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "democracy",
+      "name_ko": "민주주의",
+      "phase": "OPENING",
+      "source_symbols": [
+        "democracy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "dutch",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "dutch",
+      "name_ko": "네덜란드",
+      "phase": "OPENING",
+      "source_symbols": [
+        "dutch"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "elephantEscape",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "elephant-escape",
+      "name_ko": "코끼리 탈출",
+      "phase": "OPENING",
+      "source_symbols": [
+        "elephantEscape"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fastGrowth",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "fast-growth",
+      "name_ko": "성급한 승진",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fastGrowth"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fianchetto",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "fianchetto",
+      "name_ko": "피앙케토",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fianchetto"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "guard",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "guard",
+      "name_ko": "근위병",
+      "phase": "OPENING",
+      "source_symbols": [
+        "guard"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "holdout",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "holdout",
+      "name_ko": "존버",
+      "phase": "OPENING",
+      "source_symbols": [
+        "holdout"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "horde",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "horde",
+      "name_ko": "호드",
+      "phase": "OPENING",
+      "source_symbols": [
+        "horde"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ironMonarch",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "iron-monarch",
+      "name_ko": "친정",
+      "phase": "OPENING",
+      "source_symbols": [
+        "ironMonarch"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "knightmate",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "knightmate",
+      "name_ko": "나이트메이트",
+      "phase": "OPENING",
+      "source_symbols": [
+        "knightmate"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "lastStand",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "last-stand",
+      "name_ko": "집단 광기",
+      "phase": "OPENING",
+      "source_symbols": [
+        "lastStand"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "londonSystem",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "london-system",
+      "name_ko": "런던 시스템",
+      "phase": "OPENING",
+      "source_symbols": [
+        "londonSystem"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "loyalist",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "loyalist",
+      "name_ko": "충신",
+      "phase": "OPENING",
+      "source_symbols": [
+        "loyalist"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "martyrdom",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "martyrdom",
+      "name_ko": "순교",
+      "phase": "OPENING",
+      "source_symbols": [
+        "martyrdom"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "merchantGuild",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "merchant-guild",
+      "name_ko": "상인 조합",
+      "phase": "OPENING",
+      "source_symbols": [
+        "merchantGuild"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "otherworld",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "otherworld",
+      "name_ko": "이세계",
+      "phase": "OPENING",
+      "source_symbols": [
+        "otherworld"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "pawnConversion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "pawn-conversion",
+      "name_ko": "전환",
+      "phase": "OPENING",
+      "source_symbols": [
+        "pawnConversion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "queenCavalry",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "queen-cavalry",
+      "name_ko": "퀸의 기병대",
+      "phase": "OPENING",
+      "source_symbols": [
+        "queenCavalry"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "queensGambit",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "queens-gambit",
+      "name_ko": "퀸즈 갬빗",
+      "phase": "OPENING",
+      "source_symbols": [
+        "queensGambit"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "qxe1",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "qxe1",
+      "name_ko": "Qxe1!!",
+      "phase": "OPENING",
+      "source_symbols": [
+        "qxe1"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "summonColossus",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "summon-colossus",
+      "name_ko": "메가체스트론",
+      "phase": "OPENING",
+      "source_symbols": [
+        "summonColossus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "backwardKnight",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "backward-knight",
+      "name_ko": "뒤로 가는 나이트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "backwardKnight"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "basicTraining",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "basic-training",
+      "name_ko": "기초 교습",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "basicTraining"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "breakthroughOrder",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "breakthrough-order",
+      "name_ko": "돌파",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "breakthroughOrder"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "cornerKick",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "corner-kick",
+      "name_ko": "코너킥",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "cornerKick"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "enPassantBang",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "en-passant-bang",
+      "name_ko": "앙파상",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "enPassantBang"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fileSurge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "file-surge",
+      "name_ko": "급수",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "fileSurge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "horseRiding",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "horse-riding",
+      "name_ko": "승마",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "horseRiding"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "injury",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "injury",
+      "name_ko": "부상",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "injury"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "pawnLeap",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "leap",
+      "name_ko": "도약",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "pawnLeap"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "promotionRush",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "promotion-rush",
+      "name_ko": "승진 체험",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "promotionRush"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "radicalCharge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "radical-charge",
+      "name_ko": "난폭한 돌진",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "radicalCharge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "retreat",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "retreat",
+      "name_ko": "퇴각",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "retreat"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "rookLift",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "rook-lift",
+      "name_ko": "룩 리프트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "rookLift"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "armistice",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "armistice",
+      "name_ko": "휴전",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "armistice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "encouragement",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "encouragement",
+      "name_ko": "독려",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "encouragement"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "evasion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "evasion",
+      "name_ko": "회피",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "evasion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "exhaustion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "exhaustion",
+      "name_ko": "탈진",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "exhaustion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ghost",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "ghost",
+      "name_ko": "고스트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "ghost"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "iceSheet",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "ice-sheet",
+      "name_ko": "빙판",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "iceSheet"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "inertia",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "inertia",
+      "name_ko": "관성",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "inertia"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "overwhelm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "overwhelm",
+      "name_ko": "압도",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "overwhelm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "royalCommand",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "royal-command",
+      "name_ko": "왕명",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "royalCommand"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "royalShield",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "royal-shield",
+      "name_ko": "가호",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "royalShield"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "severance",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "severance",
+      "name_ko": "절단",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "severance"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "socialism",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "socialism",
+      "name_ko": "사회주의",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "socialism"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "taunt",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "taunt",
+      "name_ko": "도발",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "taunt"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "alekhineMachineGun",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "alekhine-machine-gun",
+      "name_ko": "알레킨의 머신건",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "alekhineMachineGun"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chameleonMutation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "chameleon-mutation",
+      "name_ko": "카멜레온 변이",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "chameleonMutation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chimera",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "chimera",
+      "name_ko": "키메라",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "chimera"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "feudalContract",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "feudal-contract",
+      "name_ko": "봉건 계약",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "feudalContract"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "imperialStudies",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "imperial-studies",
+      "name_ko": "제왕학",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "imperialStudies"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "madHorse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "mad-horse",
+      "name_ko": "광마",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "madHorse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "mistakeCard",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "mistake-card",
+      "name_ko": "실수",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "mistakeCard"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "poisonedPawn",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "poisoned-pawn",
+      "name_ko": "독이 든 폰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "poisonedPawn"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "queenAfterimage",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "queen-afterimage",
+      "name_ko": "잔상",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "queenAfterimage"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "sacrifice",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "sacrifice",
+      "name_ko": "희생",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "sacrifice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "bishopSnipe",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "snipe",
+      "name_ko": "저격",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "bishopSnipe"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "suicideBomber",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "suicide-bomber",
+      "name_ko": "자폭병",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "suicideBomber"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "trojanHorse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "trojan-horse",
+      "name_ko": "트로이 목마",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "trojanHorse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "freeCastling",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "castling",
+      "name_ko": "캐슬링",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "freeCastling"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "emergencyEvacuation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "emergency-evacuation",
+      "name_ko": "긴급 피난",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "emergencyEvacuation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "gale",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "gale",
+      "name_ko": "강풍",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "gale"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "panic",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "panic",
+      "name_ko": "패닉",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "panic"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "pawnStorm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "pawn-storm",
+      "name_ko": "폰 스톰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "pawnStorm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "freeMove",
+      "ends_turn": true,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "premove",
+      "name_ko": "프리 무브",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "freeMove"
+      ],
+      "turn_exclusive": true
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "quantumMechanics",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "quantum-mechanics",
+      "name_ko": "양자 역학",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "quantumMechanics"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "scarecrow",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "scarecrow",
+      "name_ko": "허수아비",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "scarecrow"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "schrodingerPawns",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "schrodinger-pawns",
+      "name_ko": "슈뢰딩거의 폰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "schrodingerPawns"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "stealth",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "stealth",
+      "name_ko": "은신",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "stealth"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "submerge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "submerge",
+      "name_ko": "잠복",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "submerge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "substitution",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "substitution",
+      "name_ko": "치환",
+      "phase": "END",
+      "source_symbols": [
+        "substitution"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "reversal",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 8,
+      "id": "reversal",
+      "name_ko": "반전",
+      "phase": "END",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "outpost",
+      "ends_turn": false,
+      "engine_primitives": [
+        "protection_set",
+        "move_generation"
+      ],
+      "half_stars": 7,
+      "id": "outpost",
+      "name_ko": "전초기지",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "symmetry",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 7,
+      "id": "symmetry",
+      "name_ko": "대칭",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "extinction",
+      "ends_turn": false,
+      "engine_primitives": [
+        "mass_removal",
+        "royal_resolution"
+      ],
+      "half_stars": 8,
+      "id": "extinction",
+      "name_ko": "멸종",
+      "phase": "END",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "miracle",
+      "ends_turn": true,
+      "engine_primitives": [
+        "owner_conversion",
+        "mass_removal"
+      ],
+      "half_stars": 7,
+      "id": "miracle",
+      "name_ko": "기적",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "mutation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "promotion_choices"
+      ],
+      "half_stars": 5,
+      "id": "mutation",
+      "name_ko": "변이",
+      "phase": "END",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "longEnPassant",
+      "ends_turn": false,
+      "engine_primitives": [
+        "en_passant_extension"
+      ],
+      "half_stars": 4,
+      "id": "long-en-passant",
+      "name_ko": "롱파상",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 behavioral slice; full parity unverified"
+      ],
+      "effect": "clockwork",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_transformation",
+        "neighbor_conditioned_movement"
+      ],
+      "half_stars": 8,
+      "id": "clockwork",
+      "name_ko": "태엽인형",
+      "phase": "PIECE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "id": "parrot",
+      "name_ko": "앵무새",
+      "effect": "parrot",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "paladin",
+      "name_ko": "팔라딘",
+      "effect": "paladin",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "princess",
+      "name_ko": "프린세스",
+      "effect": "princess",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "octopus",
+      "name_ko": "문어",
+      "effect": "octopus",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "hedgehog",
+      "name_ko": "고슴도치",
+      "effect": "hedgehog",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "campfire",
+      "name_ko": "캠프파이어",
+      "effect": "campfire",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Basic conversion slice only; full piece behavior incomplete"
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "nullification",
+      "name_ko": "상쇄",
+      "effect": "nullification",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Same-kind direct capture protection implemented"
+      ],
+      "engine_primitives": [
+        "piece_status",
+        "capture_filter"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "vanguard",
+      "name_ko": "선봉",
+      "effect": "vanguard",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unique foremost pawn gains quiet diagonal steps"
+      ],
+      "engine_primitives": [
+        "color_passive",
+        "pawn_move_hook"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "infiltration",
+      "name_ko": "잠입",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "infiltration",
+      "text_ko": "아군 기물이 상대 홈 랭크까지 침투할 경우, 주변에 기물이 없다면 잠복을 얻습니다.",
+      "art": "infiltration",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "engine_primitives": [
+        "move_post_effect",
+        "piece_status"
+      ],
+      "source_symbols": null
+    },
+    {
+      "id": "resolve",
+      "name_ko": "결의",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "resolve",
+      "text_ko": "아군 폰이 잡힌 턴에 가장 먼저 움직인 폰은 첫번째 이동에 한해 턴을 소모하지 않습니다.",
+      "art": "resolve",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "engine_primitives": [
+        "capture_reaction",
+        "turn_status"
+      ],
+      "source_symbols": null
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "twins",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "twins",
+      "name_ko": "환상의 콤비",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "twins"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "blackMagic",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "black-magic",
+      "name_ko": "흑마법",
+      "phase": "END",
+      "source_symbols": [
+        "blackMagic"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "conversion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "conversion",
+      "name_ko": "기도",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "conversion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fanaticalRitual",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "fanatical-ritual",
+      "name_ko": "광신적 의식",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "fanaticalRitual"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "mongolianGambit",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "mongolian-gambit",
+      "name_ko": "몽골리안 갬빗",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "mongolianGambit"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "randomRoulette",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "random-roulette",
+      "name_ko": "랜덤룰렛",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "randomRoulette"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "religiousVictory",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "religious-victory",
+      "name_ko": "종교 승리",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "religiousVictory"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "switcheroo",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "switcheroo",
+      "name_ko": "바꿔치기",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "switcheroo"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "trolley",
+      "ends_turn": true,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "trolley",
+      "name_ko": "트롤리",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "trolley"
+      ],
+      "turn_exclusive": true
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "vortex",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "vortex",
+      "name_ko": "소용돌이",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "vortex"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "witchTrial",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "witch-trial",
+      "name_ko": "마녀재판",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "witchTrial"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "babyBear",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "baby-bear",
+      "name_ko": "아기곰",
+      "phase": "END",
+      "source_symbols": [
+        "babyBear"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "bribe",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "bribe",
+      "name_ko": "삼일천하",
+      "phase": "END",
+      "source_symbols": [
+        "bribe"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "charge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "charge",
+      "name_ko": "마지막 질주",
+      "phase": "END",
+      "source_symbols": [
+        "charge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "coronation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "coronation",
+      "name_ko": "대관식",
+      "phase": "END",
+      "source_symbols": [
+        "coronation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "frenzy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "frenzy",
+      "name_ko": "광란",
+      "phase": "END",
+      "source_symbols": [
+        "frenzy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "hallucination",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "hallucination",
+      "name_ko": "환각",
+      "phase": "END",
+      "source_symbols": [
+        "hallucination"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "lastResistance",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "last-resistance",
+      "name_ko": "마지막 저항",
+      "phase": "END",
+      "source_symbols": [
+        "lastResistance"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "moving",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "moving",
+      "name_ko": "무빙",
+      "phase": "END",
+      "source_symbols": [
+        "moving"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "necromancy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "necromancy",
+      "name_ko": "빙의",
+      "phase": "END",
+      "source_symbols": [
+        "necromancy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "reversePawns",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "reverse-pawns",
+      "name_ko": "폰 방향 반전",
+      "phase": "END",
+      "source_symbols": [
+        "reversePawns"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "stake",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "stake",
+      "name_ko": "말뚝",
+      "phase": "END",
+      "source_symbols": [
+        "stake"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "underpromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "underpromotion",
+      "name_ko": "언더프로모션",
+      "phase": "END",
+      "source_symbols": [
+        "underpromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "vip",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "vip",
+      "name_ko": "귀빈",
+      "phase": "END",
+      "source_symbols": [
+        "vip"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "barricade",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "barricade",
+      "name_ko": "엄폐물 설치",
+      "phase": "END",
+      "source_symbols": [
+        "barricade"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "canceling",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "canceling",
+      "name_ko": "캔슬링",
+      "phase": "END",
+      "source_symbols": [
+        "canceling"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chain",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "chain",
+      "name_ko": "사슬",
+      "phase": "END",
+      "source_symbols": [
+        "chain"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "conscription",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "conscription",
+      "name_ko": "징집",
+      "phase": "END",
+      "source_symbols": [
+        "conscription"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "collapse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "collapse",
+      "name_ko": "붕괴",
+      "phase": "END",
+      "source_symbols": [
+        "collapse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "desperado",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "desperado",
+      "name_ko": "데스페라도",
+      "phase": "END",
+      "source_symbols": [
+        "desperado"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "exile",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "exile",
+      "name_ko": "유배",
+      "phase": "END",
+      "source_symbols": [
+        "exile"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "homecoming",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "homecoming",
+      "name_ko": "귀환",
+      "phase": "END",
+      "source_symbols": [
+        "homecoming"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "lobster",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "lobster",
+      "name_ko": "랍스터",
+      "phase": "END",
+      "source_symbols": [
+        "lobster"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "palace",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "palace",
+      "name_ko": "궁성",
+      "phase": "END",
+      "source_symbols": [
+        "palace"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "portalGun",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "portal-gun",
+      "name_ko": "포탈 건",
+      "phase": "END",
+      "source_symbols": [
+        "portalGun"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "undergroundBunker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "underground-bunker",
+      "name_ko": "지하벙커",
+      "phase": "END",
+      "source_symbols": [
+        "undergroundBunker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "zugzwang",
+      "ends_turn": true,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "zugzwang",
+      "name_ko": "추크츠방",
+      "phase": "END",
+      "source_symbols": [
+        "zugzwang"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "binaMate",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "bina-mate",
+      "name_ko": "더블 체크",
+      "phase": "END",
+      "source_symbols": [
+        "binaMate"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "blueJeans",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "blue-jeans",
+      "name_ko": "청바지",
+      "phase": "END",
+      "source_symbols": [
+        "blueJeans"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "deathSquad",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "death-squad",
+      "name_ko": "결사대",
+      "phase": "END",
+      "source_symbols": [
+        "deathSquad"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "finalWeapon",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "final-weapon",
+      "name_ko": "최종병기",
+      "phase": "END",
+      "source_symbols": [
+        "finalWeapon"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fleetingDream",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "fleeting-dream",
+      "name_ko": "일장춘몽",
+      "phase": "END",
+      "source_symbols": [
+        "fleetingDream"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "icbm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "icbm",
+      "name_ko": "ICBM",
+      "phase": "END",
+      "source_symbols": [
+        "icbm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "othello",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "othello",
+      "name_ko": "오델로",
+      "phase": "END",
+      "source_symbols": [
+        "othello"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "prophecy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "prophecy",
+      "name_ko": "종전",
+      "phase": "END",
+      "source_symbols": [
+        "prophecy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "racingKing",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "racing-king",
+      "name_ko": "레이싱 킹",
+      "phase": "END",
+      "source_symbols": [
+        "racingKing"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "spy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "spy",
+      "name_ko": "스파이",
+      "phase": "END",
+      "source_symbols": [
+        "spy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "traitor",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "traitor",
+      "name_ko": "변절자",
+      "phase": "END",
+      "source_symbols": [
+        "traitor"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ultimatum",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "ultimatum",
+      "name_ko": "최후 통첩",
+      "phase": "END",
+      "source_symbols": [
+        "ultimatum"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "vanish",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "vanish",
+      "name_ko": "소멸",
+      "phase": "END",
+      "source_symbols": [
+        "vanish"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "fieldPromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "field-promotion",
+      "name_ko": "특진",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fieldPromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "cleanupPieces",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "cleanup",
+      "name_ko": "클린업",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "cleanupPieces"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "frontlineResponse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "frontline-response",
+      "name_ko": "불가침",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "frontlineResponse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "relay",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "relay",
+      "name_ko": "교대",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "relay"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "suspiciousPotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "suspicious-potion",
+      "name_ko": "수상한 물약",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "suspiciousPotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "berserker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "berserker",
+      "name_ko": "버서커",
+      "phase": "PIECE",
+      "source_symbols": [
+        "berserker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "magicGirl",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "magic-girl",
+      "name_ko": "마법소녀",
+      "phase": "PIECE",
+      "source_symbols": [
+        "magicGirl"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "siegeRam",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "siege-ram",
+      "name_ko": "공성추",
+      "phase": "PIECE",
+      "source_symbols": [
+        "siegeRam"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "siren",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "siren",
+      "name_ko": "세이렌",
+      "phase": "PIECE",
+      "source_symbols": [
+        "siren"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "slime",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "slime",
+      "name_ko": "슬라임",
+      "phase": "PIECE",
+      "source_symbols": [
+        "slime"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "trickster",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "trickster",
+      "name_ko": "트릭스터",
+      "phase": "PIECE",
+      "source_symbols": [
+        "trickster"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "undead",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "undead",
+      "name_ko": "언데드",
+      "phase": "PIECE",
+      "source_symbols": [
+        "undead"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "gomoku",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "gomoku",
+      "name_ko": "오목",
+      "phase": "END",
+      "source_symbols": [
+        "gomoku"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "hypocrisy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "hypocrisy",
+      "name_ko": "위선",
+      "phase": "END",
+      "source_symbols": [
+        "hypocrisy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "replayMove",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "replay",
+      "name_ko": "리플레이",
+      "phase": "END",
+      "source_symbols": [
+        "replayMove"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "acceleration",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 2,
+      "id": "acceleration",
+      "name_ko": "가속",
+      "phase": "RULE",
+      "source_symbols": [
+        "acceleration"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chessNPow30",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "chess-n-pow-30",
+      "name_ko": "혼돈의 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "chessNPow30"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "blackHole",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "black-hole",
+      "name_ko": "블랙홀",
+      "phase": "RULE",
+      "source_symbols": [
+        "blackHole"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "camouflageRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "camouflage-color",
+      "name_ko": "위장색",
+      "phase": "RULE",
+      "source_symbols": [
+        "camouflageRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chess344200",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "chess-344200",
+      "name_ko": "344200 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "chess344200"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "chess960",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "chess-960",
+      "name_ko": "960 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "chess960"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "conveyorRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "conveyor",
+      "name_ko": "컨베이어",
+      "phase": "RULE",
+      "source_symbols": [
+        "conveyorRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "coolGuy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "cool-guy",
+      "name_ko": "매너",
+      "phase": "RULE",
+      "source_symbols": [
+        "coolGuy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "crownRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "crown",
+      "name_ko": "왕관",
+      "phase": "RULE",
+      "source_symbols": [
+        "crownRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "diagonalChess",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "diagonal-chess",
+      "name_ko": "대각선 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "diagonalChess"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "football",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "football",
+      "name_ko": "축구공",
+      "phase": "RULE",
+      "source_symbols": [
+        "football"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "highGround",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "high-ground",
+      "name_ko": "고지전",
+      "phase": "RULE",
+      "source_symbols": [
+        "highGround"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "highway",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "highway",
+      "name_ko": "고속도로",
+      "phase": "RULE",
+      "source_symbols": [
+        "highway"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "machoChess",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "macho-chess",
+      "name_ko": "상남자 모드",
+      "phase": "RULE",
+      "source_symbols": [
+        "machoChess"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "mistake",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "mistake",
+      "name_ko": "실수",
+      "phase": "RULE",
+      "source_symbols": [
+        "mistake"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "monochromeChess",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "monochrome-chess",
+      "name_ko": "단색 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "monochromeChess"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "monsterRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "monster",
+      "name_ko": "괴물",
+      "phase": "RULE",
+      "source_symbols": [
+        "monsterRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "periodicCollapse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "periodic-collapse",
+      "name_ko": "붕괴",
+      "phase": "RULE",
+      "source_symbols": [
+        "periodicCollapse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "portal",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "portal",
+      "name_ko": "포탈",
+      "phase": "RULE",
+      "source_symbols": [
+        "portal"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "recycling",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "recycling",
+      "name_ko": "재활용",
+      "phase": "RULE",
+      "source_symbols": [
+        "recycling"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ruleBombs",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "rule-bombs",
+      "name_ko": "폭탄",
+      "phase": "RULE",
+      "source_symbols": [
+        "ruleBombs"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "saturation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "saturation",
+      "name_ko": "포화",
+      "phase": "RULE",
+      "source_symbols": [
+        "saturation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "transcendence",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "transcendence",
+      "name_ko": "초월",
+      "phase": "RULE",
+      "source_symbols": [
+        "transcendence"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "winterKingdom",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "winter-kingdom",
+      "name_ko": "겨울 왕국",
+      "phase": "RULE",
+      "source_symbols": [
+        "winterKingdom"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "blackBox",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "black-box",
+      "name_ko": "검은 상자",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "blackBox"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "whiteBox",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "white-box",
+      "name_ko": "하얀 상자",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "whiteBox"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "insight",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "insight",
+      "name_ko": "통찰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "insight"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "ruleTicket",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "rule-ticket",
+      "name_ko": "규칙 티켓",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "ruleTicket"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "clonePassive",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "clone",
+      "name_ko": "복제",
+      "phase": "END",
+      "source_symbols": [
+        "clonePassive"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "joker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "joker",
+      "name_ko": "조커",
+      "phase": "END",
+      "source_symbols": [
+        "joker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "majesty",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter"
+      ],
+      "half_stars": 6,
+      "id": "majesty",
+      "name_ko": "위엄",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "killerKing",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter",
+        "capture_extension"
+      ],
+      "half_stars": 8,
+      "id": "killer-king",
+      "name_ko": "킬러 킹",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "proficiency",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter",
+        "capture_extension"
+      ],
+      "half_stars": 5,
+      "id": "proficiency",
+      "name_ko": "숙련",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "disassembly",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_post_effect",
+        "piece_spawn"
+      ],
+      "half_stars": 4,
+      "id": "disassembly",
+      "name_ko": "분해",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "0915 announced behavioral slice; site parity unverified"
+      ],
+      "effect": "overtake",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 8,
+      "id": "overtake",
+      "name_ko": "추월",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "captureTheFlag",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "capture-the-flag",
+      "name_ko": "깃발 뽑기",
+      "phase": "RULE",
+      "source_symbols": [
+        "septemberAdvanceFlags",
+        "captureTheFlag"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "highlander",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "highlander",
+      "name_ko": "하이랜더",
+      "phase": "END",
+      "source_symbols": [
+        "highlander"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "metal",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_status",
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 7,
+      "id": "metal",
+      "name_ko": "메탈",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "applyThreeLocalCard",
+        "threeMoveAllowed",
+        "completeThreeTurn"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "thief",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_transform",
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 6,
+      "id": "thief",
+      "name_ko": "도적",
+      "phase": "OPENING",
+      "source_symbols": [
+        "thiefBaseMoveAllowed",
+        "tickThiefArrests"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "falseStart",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "opening_card"
+      ],
+      "half_stars": 6,
+      "id": "false-start",
+      "name_ko": "부정출발",
+      "phase": "OPENING",
+      "source_symbols": [
+        "falseStartMoves"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "locustSwarm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_status",
+        "move_generation",
+        "opening_card"
+      ],
+      "half_stars": 6,
+      "id": "locust-swarm",
+      "name_ko": "메뚜기떼",
+      "phase": "OPENING",
+      "source_symbols": [
+        "markLocustOrigins",
+        "locustReady"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "brutus",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_transform",
+        "move_generation",
+        "capture_rule",
+        "rng_cursor"
+      ],
+      "half_stars": 9,
+      "id": "brutus",
+      "name_ko": "브루투스",
+      "phase": "END",
+      "source_symbols": [
+        "applyFiveLocalCard",
+        "resolveLocalBrutus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Behavioral slice implemented; site parity is not yet verified."
+      ],
+      "effect": "recurrence",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_status",
+        "capture_reaction",
+        "rng_cursor"
+      ],
+      "half_stars": 7,
+      "id": "recurrence",
+      "name_ko": "회귀",
+      "phase": "END",
+      "source_symbols": [
+        "septemberQueueRecurrence",
+        "septemberResolveBoardRecurrences"
+      ],
+      "turn_exclusive": false
+    }
+  ],
+  "compatibility_gaps": [],
+  "ruleset_id": "augment_chess_20260915",
+  "schema_version": 1,
+  "scope": {
+    "implemented_cards": 240,
+    "notes": "240 registered behavioral slices, not 240 fully verified cards. Full 0915 site parity is incomplete.",
+    "site_parity_verified_cards": 0,
+    "status": "behavioral_slice"
+  },
+  "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+}

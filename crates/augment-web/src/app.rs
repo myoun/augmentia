@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::time::Instant;
 
 pub const DEFAULT_SEED: u64 = 20_260_807;
@@ -45,6 +46,7 @@ pub struct GameSession {
     history: Vec<String>,
     model_1: Result<OnnxNeuralEvaluator, String>,
     model_2: Result<V3OnnxRuntime, String>,
+    model_2_tree: Mutex<MctsV3Tree>,
 }
 
 impl GameSession {
@@ -71,12 +73,18 @@ impl GameSession {
             .map_err(|error| format!("1번 모델을 불러오지 못했습니다: {error}"));
         let model_2 = load_v3_runtime(models)
             .map_err(|error| format!("2번 모델을 불러오지 못했습니다: {error}"));
+        let model_2_tree = MctsV3Tree::new(MctsV3Config {
+            search_seed: web_search_seed(seed),
+            ..MctsV3Config::default()
+        })
+        .map_err(|error| error.to_string())?;
         let mut session = Self {
             engine,
             state: transition.state,
             seed,
             model_1,
             model_2,
+            model_2_tree: Mutex::new(model_2_tree),
             history: Vec::new(),
         };
         session.record_events(&transition.events);
@@ -90,6 +98,13 @@ impl GameSession {
             .map_err(|error| error.to_string())?;
         self.state = transition.state;
         self.seed = seed;
+        self.model_2_tree = Mutex::new(
+            MctsV3Tree::new(MctsV3Config {
+                search_seed: web_search_seed(seed),
+                ..MctsV3Config::default()
+            })
+            .map_err(|error| error.to_string())?,
+        );
         self.history.clear();
         self.record_events(&transition.events);
         Ok(())
@@ -143,6 +158,7 @@ impl GameSession {
             let second = scope.spawn(|| {
                 model_2_suggestion(
                     &self.model_2,
+                    &self.model_2_tree,
                     &self.state,
                     &self.engine,
                     &legal_actions,
@@ -961,6 +977,16 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::Siren => ("siren", "세이렌", "SI"),
         PieceKind::Trickster => ("trickster", "트릭스터", "TR"),
         PieceKind::Undead => ("undead", "언데드", "UD"),
+        PieceKind::Clockwork => ("clockwork", "태엽인형", "CW"),
+        PieceKind::Parrot => ("parrot", "앵무새", "PR"),
+        PieceKind::Paladin => ("paladin", "팔라딘", "PL"),
+        PieceKind::Princess => ("princess", "프린세스", "PS"),
+        PieceKind::Octopus => ("octopus", "문어", "OC"),
+        PieceKind::Hedgehog => ("hedgehog", "고슴도치", "HG"),
+        PieceKind::Campfire => ("campfire", "캠프파이어", "CP"),
+        PieceKind::Thief => ("thief", "도적", "TH"),
+        PieceKind::Brutus => ("brutus", "브루투스", "BT"),
+        PieceKind::BigBishop => ("big_bishop", "빅비숍", "BB"),
         PieceKind::Pawn
         | PieceKind::Knight
         | PieceKind::Bishop
@@ -986,6 +1012,7 @@ fn large_piece_cells(anchor: Square) -> Vec<Square> {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 
@@ -1165,6 +1192,7 @@ fn model_1_suggestion(
 
 fn model_2_suggestion(
     evaluator: &Result<V3OnnxRuntime, String>,
+    tree: &Mutex<MctsV3Tree>,
     state: &GameState,
     engine: &Engine,
     legal_actions: &[Action],
@@ -1175,16 +1203,19 @@ fn model_2_suggestion(
         Err(error) => return suggestion_error("model-2", "2번 모델 · V3 M3 champion", error),
     };
     let started = Instant::now();
-    let mut tree = match MctsV3Tree::new(MctsV3Config {
-        num_simulations: simulations,
-        leaf_batch_size: 16,
-        ..MctsV3Config::default()
-    }) {
+    let mut tree = match tree.lock() {
         Ok(tree) => tree,
-        Err(error) => {
-            return suggestion_error("model-2", "2번 모델 · V3 M3 champion", &error.to_string());
+        Err(_) => {
+            return suggestion_error(
+                "model-2",
+                "2번 모델 · V3 M3 champion",
+                "V3 탐색 트리 잠금이 손상되었습니다.",
+            );
         }
     };
+    if let Err(error) = tree.set_search_budget(simulations, 16) {
+        return suggestion_error("model-2", "2번 모델 · V3 M3 champion", &error.to_string());
+    }
     let result = match tree.search(state, engine, evaluator) {
         Ok(result) => result,
         Err(error) => {
@@ -1222,6 +1253,10 @@ fn model_2_suggestion(
         started.elapsed().as_secs_f64() * 1_000.0,
         Some("일반 체스 사전학습 후 M3 증강체스 데이터로 미세조정한 operational champion"),
     )
+}
+
+fn web_search_seed(seed: u64) -> u64 {
+    seed ^ 0x5745_425f_5633_5f31
 }
 
 #[allow(clippy::too_many_arguments)]

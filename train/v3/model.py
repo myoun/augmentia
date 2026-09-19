@@ -53,6 +53,14 @@ class V3ModelOutput:
 
 
 @dataclass
+class V3StateEncoding:
+    state: torch.Tensor
+    board_tokens: torch.Tensor
+    piece_entities: torch.Tensor
+    card_entities: torch.Tensor
+
+
+@dataclass
 class V3Loss:
     total: torch.Tensor
     policy: torch.Tensor
@@ -162,12 +170,29 @@ class AugmentNetV3(nn.Module):
             nn.Linear(dim, dim), nn.SiLU(), nn.Linear(dim, 1)
         )
 
+        # Common scalar shifts cancel in the attention/policy softmax. Their
+        # exact gradients are zero; freeze them to avoid Adam amplifying
+        # reduction noise across microbatch shapes. Keep checkpoint keys,
+        # initial values, and parameter ordering unchanged.
+        self.runtime_attention.bias.requires_grad_(False)
+        self.policy_scorer[-1].bias.requires_grad_(False)
+
     def forward(self, batch: V3Batch) -> V3ModelOutput:
         self._validate_batch(batch)
         return self._forward(batch)
 
     def _forward(self, batch: V3Batch) -> V3ModelOutput:
         """Tensor-only path used by the checked ONNX export wrapper."""
+        encoding = self.encode_state(batch)
+        logits = self.score_actions(batch, encoding)
+        return V3ModelOutput(
+            policy_logits=logits,
+            value=self.value_head(encoding.state).squeeze(-1),
+            forced_win_distance=self.forced_win_distance_head(encoding.state).squeeze(-1),
+        )
+
+    def encode_state(self, batch: V3Batch) -> V3StateEncoding:
+        """Encode state once so candidate action batches can reuse the expensive branches."""
         board_hidden = self.board_blocks(self.board_stem(batch.spatial))
         board_map = self.board_projection(board_hidden)
         board_tokens = board_map.flatten(2).transpose(1, 2)
@@ -206,18 +231,24 @@ class AugmentNetV3(nn.Module):
                 dim=-1,
             )
         )
+        return V3StateEncoding(state, board_tokens, piece_entities, card_entities)
+
+    def score_actions(
+        self, batch: V3Batch, encoding: V3StateEncoding
+    ) -> torch.Tensor:
+        """Score only the action records present in `batch`."""
         actions = self._encode_actions(
-            batch, board_tokens, piece_entities, card_entities
+            batch,
+            encoding.board_tokens,
+            encoding.piece_entities,
+            encoding.card_entities,
         )
-        expanded_state = state.unsqueeze(1).expand_as(actions)
+        expanded_state = encoding.state.unsqueeze(1).expand_as(actions)
         logits = self.policy_scorer(
             torch.cat([expanded_state, actions, expanded_state * actions], dim=-1)
         ).squeeze(-1)
-        logits = logits.masked_fill(~batch.action_mask, torch.finfo(logits.dtype).min)
-        return V3ModelOutput(
-            policy_logits=logits,
-            value=self.value_head(state).squeeze(-1),
-            forced_win_distance=self.forced_win_distance_head(state).squeeze(-1),
+        return logits.masked_fill(
+            ~batch.action_mask, torch.finfo(logits.dtype).min
         )
 
     def parameter_count(self) -> int:

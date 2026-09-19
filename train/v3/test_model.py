@@ -39,14 +39,36 @@ class AugmentNetV3Tests(unittest.TestCase):
             )
         )
 
+    def test_split_state_encoding_and_candidate_scoring_match_forward(self) -> None:
+        case = next(
+            case for case in self.suite["cases"] if case["legal_actions"]["actions"]
+        )
+        batch = tensorize_cases([case], self.vocabulary)
+        torch.manual_seed(71)
+        model = self._small_model().eval()
+        with torch.no_grad():
+            expected = model(batch)
+            encoding = model.encode_state(batch)
+            logits = model.score_actions(batch, encoding)
+        torch.testing.assert_close(logits, expected.policy_logits, rtol=0, atol=0)
+        torch.testing.assert_close(
+            model.value_head(encoding.state).squeeze(-1),
+            expected.value,
+            rtol=0,
+            atol=0,
+        )
+
     def test_default_parameter_and_vocabulary_baseline_is_fixed(self) -> None:
         model = AugmentNetV3(V3ModelConfig(text_vocabulary_size=self.vocabulary.size))
-        self.assertEqual(self.vocabulary.size, 384)
-        self.assertEqual(model.parameter_count(), 2_865_284)
-        self.assertEqual(model.piece_kind_embedding.num_embeddings, 59)
+        # Observation .10/194, 136 spatial planes and stable piece code 68.
+        # Measured via the project interpreter after appending Batch A runtime
+        # state and the three final PieceKinds.
+        self.assertEqual(self.vocabulary.size, 390)
+        self.assertEqual(model.parameter_count(), 2_893_572)
+        self.assertEqual(model.piece_kind_embedding.num_embeddings, 69)
         self.assertEqual(
-            model.piece_kind_embedding(torch.arange(59)).shape,
-            (59, model.config.model_dim),
+            model.piece_kind_embedding(torch.arange(69)).shape,
+            (69, model.config.model_dim),
         )
         self.assertEqual(
             V3Vocabulary.from_json(self.vocabulary.to_json()), self.vocabulary

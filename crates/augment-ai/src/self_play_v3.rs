@@ -20,6 +20,10 @@ pub struct SelfPlayGameConfigV3 {
     pub root_noise_epsilon: f32,
     pub sampling_temperature: f32,
     pub temperature_decisions: usize,
+    pub progressive_widening: bool,
+    pub gumbel_root: bool,
+    pub virtual_chameleon_hierarchy: bool,
+    pub reuse_descendant_depth: usize,
 }
 
 impl Default for SelfPlayGameConfigV3 {
@@ -33,6 +37,10 @@ impl Default for SelfPlayGameConfigV3 {
             root_noise_epsilon: 0.25,
             sampling_temperature: 1.0,
             temperature_decisions: 30,
+            progressive_widening: false,
+            gumbel_root: false,
+            virtual_chameleon_hierarchy: false,
+            reuse_descendant_depth: 4,
         }
     }
 }
@@ -108,6 +116,13 @@ pub fn generate_self_play_game_v3(
     let mcts_config = MctsV3Config {
         num_simulations: config.simulations,
         leaf_batch_size: config.leaf_batch_size,
+        search_seed: derive_seed(config.seed, 0, 0x4348_414e_4345_5631),
+        proposal_seed: derive_seed(config.seed, 0, 0x5052_4f50_4f53_5631),
+        progressive_widening: config.progressive_widening,
+        gumbel_root: config.gumbel_root,
+        gumbel_planning_budget: config.simulations,
+        virtual_chameleon_hierarchy: config.virtual_chameleon_hierarchy,
+        reuse_descendant_depth: config.reuse_descendant_depth,
         ..MctsV3Config::default()
     };
     let mut trees = [
@@ -141,15 +156,21 @@ pub fn generate_self_play_game_v3(
                 break;
             }
         };
+        let root_noise =
+            if config.gumbel_root && !matches!(state.phase, augment_core::GamePhase::Draft(_)) {
+                None
+            } else {
+                Some(RootNoiseConfigV3 {
+                    alpha: config.root_noise_alpha,
+                    epsilon: config.root_noise_epsilon,
+                    seed: noise_seed,
+                })
+            };
         let search = match trees[seat].search_with_root_noise(
             &state,
             engine,
             agents[seat].evaluator,
-            Some(RootNoiseConfigV3 {
-                alpha: config.root_noise_alpha,
-                epsilon: config.root_noise_epsilon,
-                seed: noise_seed,
-            }),
+            root_noise,
         ) {
             Ok(result) => result,
             Err(error) => {
@@ -200,6 +221,53 @@ pub fn generate_self_play_game_v3(
             }
         };
         let next_state_fingerprint = fingerprint_hex(transition.state.fingerprint());
+        let policy_target = if diagnostics.progressive_widening_enabled
+            || diagnostics.gumbel_root_enabled
+            || diagnostics.virtual_hierarchy_enabled
+            || diagnostics.root_opened_action_count < diagnostics.root_legal_actions
+        {
+            let proposed_mask = diagnostics
+                .root_actions
+                .iter()
+                .map(|action| action.opened_at_simulation == Some(0))
+                .collect();
+            let opened_mask = diagnostics
+                .root_actions
+                .iter()
+                .map(|action| action.opened)
+                .collect();
+            let inclusion_probabilities = diagnostics
+                .root_actions
+                .iter()
+                .map(|action| action.proposal_probability)
+                .collect();
+            let first_open_simulations = diagnostics
+                .root_actions
+                .iter()
+                .map(|action| action.opened_at_simulation.map(|value| value as u32))
+                .collect();
+            PolicyTargetV3::SampledMctsVisits {
+                visit_counts,
+                completed_simulations,
+                root_value: diagnostics.root_raw_value,
+                noise_seed_hex: Some(fingerprint_hex(noise_seed)),
+                sampling_temperature: temperature,
+                proposed_mask,
+                opened_mask,
+                inclusion_probabilities,
+                first_open_simulations,
+                search_semantics_id: diagnostics.search_semantics_id.to_owned(),
+                candidate_proposal_id: "augmentia.candidate-proposal.stratified.v1".to_owned(),
+            }
+        } else {
+            PolicyTargetV3::MctsVisits {
+                visit_counts,
+                completed_simulations,
+                root_value: diagnostics.root_raw_value,
+                noise_seed_hex: Some(fingerprint_hex(noise_seed)),
+                sampling_temperature: temperature,
+            }
+        };
         steps.push(GameStepV3 {
             decision_index: decision_index as u32,
             engine_ply: state.ply,
@@ -207,13 +275,7 @@ pub fn generate_self_play_game_v3(
             state_fingerprint,
             observation,
             legal_actions,
-            policy_target: PolicyTargetV3::MctsVisits {
-                visit_counts,
-                completed_simulations,
-                root_value: diagnostics.root_raw_value,
-                noise_seed_hex: Some(fingerprint_hex(noise_seed)),
-                sampling_temperature: temperature,
-            },
+            policy_target,
             played_action_index: played_action_index as u32,
             next_state_fingerprint,
         });
@@ -418,5 +480,56 @@ mod tests {
             .unwrap()
         };
         assert_eq!(generate().trajectory_sha256, generate().trajectory_sha256);
+    }
+
+    #[test]
+    fn widening_self_play_records_open_masks_and_proposal_probabilities() {
+        let engine = Engine::bundled_20260807().unwrap();
+        let white = agent(AbsolutePlayerV3::White);
+        let black = agent(AbsolutePlayerV3::Black);
+        let game = generate_self_play_game_v3(
+            &engine,
+            Mode::Standard,
+            "selfplay-sampled-test".to_owned(),
+            RulesetRefV3 {
+                id: BUNDLED_RULESET_ID.to_owned(),
+                manifest_sha256: "b".repeat(64),
+            },
+            GeneratorProvenanceV3 {
+                run_id: "selfplay-sampled-run".to_owned(),
+                engine_commit: "c".repeat(40),
+                engine_api_version: 1,
+                collector_id: "self-play-v3-sampled".to_owned(),
+                dirty_worktree: false,
+            },
+            [&white, &black],
+            SelfPlayGameConfigV3 {
+                seed: 44,
+                max_decisions: 1,
+                simulations: 24,
+                leaf_batch_size: 4,
+                progressive_widening: true,
+                ..SelfPlayGameConfigV3::default()
+            },
+        )
+        .unwrap();
+        let PolicyTargetV3::SampledMctsVisits {
+            visit_counts,
+            proposed_mask,
+            opened_mask,
+            inclusion_probabilities,
+            first_open_simulations,
+            ..
+        } = &game.steps[0].policy_target
+        else {
+            panic!("widening self-play must use sampled policy semantics");
+        };
+        assert_eq!(visit_counts.len(), game.steps[0].legal_actions.len());
+        assert_eq!(proposed_mask.len(), visit_counts.len());
+        assert_eq!(opened_mask.len(), visit_counts.len());
+        assert_eq!(inclusion_probabilities.len(), visit_counts.len());
+        assert_eq!(first_open_simulations.len(), visit_counts.len());
+        assert!(opened_mask.iter().all(|opened| *opened));
+        game.validate().unwrap();
     }
 }
