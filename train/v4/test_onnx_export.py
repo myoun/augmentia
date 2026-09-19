@@ -85,7 +85,7 @@ class FactorizedOnnxExportTests(unittest.TestCase):
             self.assertEqual(metadata["metadata_schema_id"], V4_BUNDLE_SCHEMA_ID)
             self.assertEqual(
                 metadata["factorized_policy_schema_id"],
-                "augmentia.factorized-policy.v4",
+                "augmentia.factorized-policy.v4.1",
             )
             self.assertEqual(
                 metadata["factorized_scorer"]["inputs"][0]["name"], "state_embedding"
@@ -111,7 +111,7 @@ class FactorizedOnnxExportTests(unittest.TestCase):
             )
             # Change indexes after tracing so this also covers ONNX Gather,
             # rather than only validating the eager export sample.
-            for field, index in (("destination", 63), ("target_square", 63), ("piece", 64), ("card", 65)):
+            for field, index in (("source_square", 63), ("destination", 63), ("target_square", 63), ("piece", 64), ("card", 65)):
                 with self.subTest(field=field, index=index):
                     factorized = self._factorized()
                     for edges in (factorized.prefixes.prefix, factorized.prefixes.children):

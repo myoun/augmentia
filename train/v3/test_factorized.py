@@ -72,6 +72,20 @@ class FactorizedPolicyTests(unittest.TestCase):
         self.assertNotEqual(paths[0], paths[1])
         build_factorized_trie([first, second])
 
+    def test_move_source_square_disambiguates_quantum_shadow_paths(self) -> None:
+        physical = {
+            "kind": "move",
+            "piece": 7,
+            "piece_kind": 4,
+            "from": 8,
+            "to": 24,
+            "promotion": None,
+        }
+        shadow = {**physical, "from": 16}
+        paths = [factorized_action_path(action) for action in (physical, shadow)]
+        self.assertNotEqual(paths[0], paths[1])
+        build_factorized_trie([physical, shadow])
+
     def test_duplicate_paths_are_rejected(self) -> None:
         action = {
             "kind": "draft_pick",

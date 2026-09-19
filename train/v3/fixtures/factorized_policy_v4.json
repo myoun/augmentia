@@ -1,6 +1,6 @@
 {
   "schema_id": "augmentia.factorized-policy.golden.v1",
-  "factorized_policy_schema_id": "augmentia.factorized-policy.v4",
+  "factorized_policy_schema_id": "augmentia.factorized-policy.v4.1",
   "cases": [
     {
       "name": "move",
@@ -15,6 +15,7 @@
       "path": [
         "family:move",
         "piece:1",
+        "source_square:1",
         "destination:16",
         "promotion:none",
         "complete:action"
@@ -33,6 +34,7 @@
       "path": [
         "family:move",
         "piece:4",
+        "source_square:55",
         "destination:63",
         "promotion:5",
         "complete:action"

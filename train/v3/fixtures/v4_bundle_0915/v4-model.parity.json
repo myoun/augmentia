@@ -23591,7 +23591,7 @@
      1
     ],
     "logits": [
-     -0.260385
+     -0.499993
     ]
    },
    {
@@ -23606,7 +23606,7 @@
      2
     ],
     "logits": [
-     -0.268998
+     -0.508323
     ]
    },
    {
@@ -23621,7 +23621,7 @@
      3
     ],
     "logits": [
-     -0.275291
+     -0.512501
     ]
    },
    {
@@ -23639,9 +23639,9 @@
      3
     ],
     "logits": [
-     -0.150046,
-     -0.166392,
-     -0.17854
+     -0.397784,
+     -0.377588,
+     -0.36769
     ]
    },
    {
@@ -23653,7 +23653,7 @@
      6
     ],
     "logits": [
-     -0.094627
+     -0.192444
     ]
    }
   ],
@@ -23662,6 +23662,7 @@
     "prefix": [
      "family:move",
      "piece:1",
+     "source_square:1",
      "destination:16",
      "promotion:none"
     ],
@@ -23672,13 +23673,14 @@
      1
     ],
     "logits": [
-     -0.139009
+     0.063082
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:1",
+     "source_square:1",
      "destination:16"
     ],
     "children": [
@@ -23688,13 +23690,14 @@
      1
     ],
     "logits": [
-     -0.07682
+     0.014679
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:1",
+     "source_square:1",
      "destination:18",
      "promotion:none"
     ],
@@ -23705,13 +23708,14 @@
      2
     ],
     "logits": [
-     -0.137792
+     0.050367
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:1",
+     "source_square:1",
      "destination:18"
     ],
     "children": [
@@ -23721,13 +23725,14 @@
      2
     ],
     "logits": [
-     -0.088359
+     0.005349
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:1"
+     "piece:1",
+     "source_square:1"
     ],
     "children": [
      "destination:16",
@@ -23738,14 +23743,30 @@
      2
     ],
     "logits": [
-     -0.008922,
-     -0.021703
+     0.217077,
+     0.182775
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:1"
+    ],
+    "children": [
+     "source_square:1"
+    ],
+    "visit_counts": [
+     3
+    ],
+    "logits": [
+     -0.192515
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:10",
+     "source_square:10",
      "destination:18",
      "promotion:none"
     ],
@@ -23756,13 +23777,14 @@
      9
     ],
     "logits": [
-     -0.126169
+     -0.028555
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:10",
+     "source_square:10",
      "destination:18"
     ],
     "children": [
@@ -23772,13 +23794,14 @@
      9
     ],
     "logits": [
-     -0.185281
+     -0.053324
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:10",
+     "source_square:10",
      "destination:26",
      "promotion:none"
     ],
@@ -23789,13 +23812,14 @@
      10
     ],
     "logits": [
-     -0.135255
+     -0.01763
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:10",
+     "source_square:10",
      "destination:26"
     ],
     "children": [
@@ -23805,13 +23829,14 @@
      10
     ],
     "logits": [
-     -0.199149
+     -0.059665
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:10"
+     "piece:10",
+     "source_square:10"
     ],
     "children": [
      "destination:18",
@@ -23822,14 +23847,30 @@
      10
     ],
     "logits": [
-     0.077585,
-     0.044555
+     0.035437,
+     0.05675
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:10"
+    ],
+    "children": [
+     "source_square:10"
+    ],
+    "visit_counts": [
+     19
+    ],
+    "logits": [
+     0.102146
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:11",
+     "source_square:11",
      "destination:19",
      "promotion:none"
     ],
@@ -23840,13 +23881,14 @@
      11
     ],
     "logits": [
-     -0.148893
+     -0.024916
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:11",
+     "source_square:11",
      "destination:19"
     ],
     "children": [
@@ -23856,13 +23898,14 @@
      11
     ],
     "logits": [
-     -0.208767
+     -0.075407
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:11",
+     "source_square:11",
      "destination:27",
      "promotion:none"
     ],
@@ -23873,13 +23916,14 @@
      12
     ],
     "logits": [
-     -0.15998
+     0.005016
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:11",
+     "source_square:11",
      "destination:27"
     ],
     "children": [
@@ -23889,13 +23933,14 @@
      12
     ],
     "logits": [
-     -0.220616
+     -0.049569
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:11"
+     "piece:11",
+     "source_square:11"
     ],
     "children": [
      "destination:19",
@@ -23906,14 +23951,30 @@
      12
     ],
     "logits": [
-     0.013895,
-     -0.014637
+     0.011944,
+     0.074869
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:11"
+    ],
+    "children": [
+     "source_square:11"
+    ],
+    "visit_counts": [
+     23
+    ],
+    "logits": [
+     0.046352
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:12",
+     "source_square:12",
      "destination:20",
      "promotion:none"
     ],
@@ -23924,13 +23985,14 @@
      13
     ],
     "logits": [
-     -0.154137
+     0.005556
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:12",
+     "source_square:12",
      "destination:20"
     ],
     "children": [
@@ -23940,13 +24002,14 @@
      13
     ],
     "logits": [
-     -0.173383
+     -0.00179
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:12",
+     "source_square:12",
      "destination:28",
      "promotion:none"
     ],
@@ -23957,13 +24020,14 @@
      14
     ],
     "logits": [
-     -0.155171
+     0.01346
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:12",
+     "source_square:12",
      "destination:28"
     ],
     "children": [
@@ -23973,13 +24037,14 @@
      14
     ],
     "logits": [
-     -0.182879
+     -0.011526
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:12"
+     "piece:12",
+     "source_square:12"
     ],
     "children": [
      "destination:20",
@@ -23990,14 +24055,30 @@
      14
     ],
     "logits": [
-     0.010669,
-     -0.029377
+     0.101388,
+     0.076152
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:12"
+    ],
+    "children": [
+     "source_square:12"
+    ],
+    "visit_counts": [
+     27
+    ],
+    "logits": [
+     0.181554
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:13",
+     "source_square:13",
      "destination:21",
      "promotion:none"
     ],
@@ -24008,13 +24089,14 @@
      15
     ],
     "logits": [
-     -0.146363
+     0.011824
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:13",
+     "source_square:13",
      "destination:21"
     ],
     "children": [
@@ -24024,13 +24106,14 @@
      15
     ],
     "logits": [
-     -0.217838
+     -0.042134
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:13",
+     "source_square:13",
      "destination:29",
      "promotion:none"
     ],
@@ -24041,13 +24124,14 @@
      16
     ],
     "logits": [
-     -0.150377
+     0.026421
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:13",
+     "source_square:13",
      "destination:29"
     ],
     "children": [
@@ -24057,13 +24141,14 @@
      16
     ],
     "logits": [
-     -0.219067
+     -0.028429
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:13"
+     "piece:13",
+     "source_square:13"
     ],
     "children": [
      "destination:21",
@@ -24074,14 +24159,30 @@
      16
     ],
     "logits": [
-     0.063642,
-     0.029817
+     0.100187,
+     0.115937
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:13"
+    ],
+    "children": [
+     "source_square:13"
+    ],
+    "visit_counts": [
+     31
+    ],
+    "logits": [
+     0.148107
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:14",
+     "source_square:14",
      "destination:22",
      "promotion:none"
     ],
@@ -24092,13 +24193,14 @@
      17
     ],
     "logits": [
-     -0.14639
+     -0.004159
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:14",
+     "source_square:14",
      "destination:22"
     ],
     "children": [
@@ -24108,13 +24210,14 @@
      17
     ],
     "logits": [
-     -0.207615
+     -0.04419
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:14",
+     "source_square:14",
      "destination:30",
      "promotion:none"
     ],
@@ -24125,13 +24228,14 @@
      18
     ],
     "logits": [
-     -0.145444
+     -0.005509
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:14",
+     "source_square:14",
      "destination:30"
     ],
     "children": [
@@ -24141,13 +24245,14 @@
      18
     ],
     "logits": [
-     -0.215197
+     -0.063992
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:14"
+     "piece:14",
+     "source_square:14"
     ],
     "children": [
      "destination:22",
@@ -24158,14 +24263,30 @@
      18
     ],
     "logits": [
-     0.046053,
-     0.011929
+     0.042218,
+     -0.001394
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:14"
+    ],
+    "children": [
+     "source_square:14"
+    ],
+    "visit_counts": [
+     35
+    ],
+    "logits": [
+     -0.047098
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:15",
+     "source_square:15",
      "destination:23",
      "promotion:none"
     ],
@@ -24176,13 +24297,14 @@
      19
     ],
     "logits": [
-     -0.127766
+     -0.048963
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:15",
+     "source_square:15",
      "destination:23"
     ],
     "children": [
@@ -24192,13 +24314,14 @@
      19
     ],
     "logits": [
-     -0.169996
+     -0.094087
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:15",
+     "source_square:15",
      "destination:31",
      "promotion:none"
     ],
@@ -24209,13 +24332,14 @@
      20
     ],
     "logits": [
-     -0.132508
+     -0.029043
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:15",
+     "source_square:15",
      "destination:31"
     ],
     "children": [
@@ -24225,13 +24349,14 @@
      20
     ],
     "logits": [
-     -0.195146
+     -0.078317
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:15"
+     "piece:15",
+     "source_square:15"
     ],
     "children": [
      "destination:23",
@@ -24242,14 +24367,30 @@
      20
     ],
     "logits": [
-     0.14031,
-     0.070395
+     0.025283,
+     0.043129
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:15"
+    ],
+    "children": [
+     "source_square:15"
+    ],
+    "visit_counts": [
+     39
+    ],
+    "logits": [
+     0.05464
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:6",
+     "source_square:6",
      "destination:21",
      "promotion:none"
     ],
@@ -24260,13 +24401,14 @@
      3
     ],
     "logits": [
-     -0.14229
+     0.063987
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:6",
+     "source_square:6",
      "destination:21"
     ],
     "children": [
@@ -24276,13 +24418,14 @@
      3
     ],
     "logits": [
-     -0.149067
+     -0.015091
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:6",
+     "source_square:6",
      "destination:23",
      "promotion:none"
     ],
@@ -24293,13 +24436,14 @@
      4
     ],
     "logits": [
-     -0.137151
+     0.058198
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:6",
+     "source_square:6",
      "destination:23"
     ],
     "children": [
@@ -24309,13 +24453,14 @@
      4
     ],
     "logits": [
-     -0.130301
+     -0.022793
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:6"
+     "piece:6",
+     "source_square:6"
     ],
     "children": [
      "destination:21",
@@ -24326,14 +24471,30 @@
      4
     ],
     "logits": [
-     0.048662,
-     0.068747
+     0.179611,
+     0.146389
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:6"
+    ],
+    "children": [
+     "source_square:6"
+    ],
+    "visit_counts": [
+     7
+    ],
+    "logits": [
+     -0.126011
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:8",
+     "source_square:8",
      "destination:16",
      "promotion:none"
     ],
@@ -24344,13 +24505,14 @@
      5
     ],
     "logits": [
-     -0.13145
+     0.012975
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:8",
+     "source_square:8",
      "destination:16"
     ],
     "children": [
@@ -24360,13 +24522,14 @@
      5
     ],
     "logits": [
-     -0.144838
+     -0.025017
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:8",
+     "source_square:8",
      "destination:24",
      "promotion:none"
     ],
@@ -24377,13 +24540,14 @@
      6
     ],
     "logits": [
-     -0.13557
+     0.011229
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:8",
+     "source_square:8",
      "destination:24"
     ],
     "children": [
@@ -24393,13 +24557,14 @@
      6
     ],
     "logits": [
-     -0.165702
+     -0.043467
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:8"
+     "piece:8",
+     "source_square:8"
     ],
     "children": [
      "destination:16",
@@ -24410,14 +24575,30 @@
      6
     ],
     "logits": [
-     0.098178,
-     0.053835
+     0.104475,
+     0.070238
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:8"
+    ],
+    "children": [
+     "source_square:8"
+    ],
+    "visit_counts": [
+     11
+    ],
+    "logits": [
+     0.124409
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:9",
+     "source_square:9",
      "destination:17",
      "promotion:none"
     ],
@@ -24428,13 +24609,14 @@
      7
     ],
     "logits": [
-     -0.137101
+     -0.009864
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:9",
+     "source_square:9",
      "destination:17"
     ],
     "children": [
@@ -24444,13 +24626,14 @@
      7
     ],
     "logits": [
-     -0.192863
+     -0.019256
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:9",
+     "source_square:9",
      "destination:25",
      "promotion:none"
     ],
@@ -24461,13 +24644,14 @@
      8
     ],
     "logits": [
-     -0.14786
+     0.020773
     ]
    },
    {
     "prefix": [
      "family:move",
      "piece:9",
+     "source_square:9",
      "destination:25"
     ],
     "children": [
@@ -24477,13 +24661,14 @@
      8
     ],
     "logits": [
-     -0.204577
+     0.003394
     ]
    },
    {
     "prefix": [
      "family:move",
-     "piece:9"
+     "piece:9",
+     "source_square:9"
     ],
     "children": [
      "destination:17",
@@ -24494,8 +24679,23 @@
      8
     ],
     "logits": [
-     0.058081,
-     0.037733
+     0.038844,
+     0.095579
+    ]
+   },
+   {
+    "prefix": [
+     "family:move",
+     "piece:9"
+    ],
+    "children": [
+     "source_square:9"
+    ],
+    "visit_counts": [
+     15
+    ],
+    "logits": [
+     0.189769
     ]
    },
    {
@@ -24527,16 +24727,16 @@
      15
     ],
     "logits": [
-     -0.1118,
-     -0.093817,
-     -0.171941,
-     -0.135448,
-     -0.147718,
-     -0.249592,
-     -0.122994,
-     -0.129091,
-     -0.164817,
-     -0.163574
+     -0.106563,
+     -0.074583,
+     -0.181769,
+     -0.144868,
+     -0.183315,
+     -0.1366,
+     -0.066346,
+     -0.13934,
+     -0.142615,
+     0.014761
     ]
    },
    {
@@ -24548,7 +24748,7 @@
      210
     ],
     "logits": [
-     -0.313599
+     -0.112709
     ]
    }
   ]
@@ -24559,31 +24759,31 @@
  ],
  "expected_action_logits": [
   [
-   -1.083734,
-   -1.10008,
-   -1.112228
+   -1.115454,
+   -1.095258,
+   -1.08536
   ],
   [
-   -2.95291,
-   -2.965691,
-   -2.986664,
-   -2.966579,
-   -2.990371,
-   -3.034714,
-   -3.000932,
-   -3.02128,
-   -2.924918,
-   -2.957948,
-   -3.005257,
-   -3.033788,
-   -2.963106,
-   -3.003151,
-   -2.978428,
-   -3.012253,
-   -3.080156,
-   -3.11428,
-   -2.936128,
-   -3.006043
+   -2.970834,
+   -3.005136,
+   -3.004142,
+   -3.037365,
+   -3.006918,
+   -3.041156,
+   -2.895284,
+   -2.838549,
+   -2.966572,
+   -2.945258,
+   -3.095001,
+   -3.032077,
+   -3.013605,
+   -3.038841,
+   -3.072496,
+   -3.056746,
+   -2.996307,
+   -3.039919,
+   -2.956584,
+   -2.938738
   ]
  ]
 }

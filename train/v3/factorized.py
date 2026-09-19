@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
-FACTOR_POLICY_SCHEMA_ID = "augmentia.factorized-policy.v4"
+FACTOR_POLICY_SCHEMA_ID = "augmentia.factorized-policy.v4.1"
 Token = tuple[str, str | int]
 Path = tuple[Token, ...]
 
@@ -25,6 +25,7 @@ def factorized_action_path(action: Mapping[str, Any]) -> Path:
         return (
             ("family", "move"),
             ("piece", _integer(action, "piece")),
+            ("source_square", _integer(action, "from")),
             ("destination", _integer(action, "to")),
             ("promotion", _optional_integer(action, "promotion")),
             ("complete", "action"),

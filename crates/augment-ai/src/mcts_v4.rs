@@ -281,6 +281,17 @@ struct BuildPrefixV4 {
 
 impl SearchTrieV4 {
     fn new(actions: &[ActionDescriptorV3], priors: &[f32]) -> Result<Self, MctsV4Error> {
+        let mut seen_paths = BTreeMap::new();
+        for (action_index, action) in actions.iter().enumerate() {
+            let path = factorized_action_path_v4(action)
+                .map_err(|error| MctsV4Error::FactorizedPolicy(error.to_string()))?;
+            if let Some(first_index) = seen_paths.insert(path.clone(), action_index) {
+                return Err(MctsV4Error::FactorizedPolicy(format!(
+                    "complete actions must have unique canonical paths: first_index={first_index} second_index={action_index} path={path:?} first_action={:?} second_action={:?}",
+                    actions[first_index], action
+                )));
+            }
+        }
         let canonical = build_factorized_trie_v4(actions)
             .map_err(|error| MctsV4Error::FactorizedPolicy(error.to_string()))?;
         let mut build = BuildPrefixV4::default();

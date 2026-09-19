@@ -17,7 +17,7 @@ A V4 policy decision has these ordered levels:
 
 1. `family`: `move`, `piece_ability`, `card`, `draft_pick`, or `resolve_choice`.
 2. `source`: the piece/card/offer/choice instance selected by the family.
-3. `detail`: family-specific fixed fields, such as ability, move destination, promotion,
+3. `detail`: family-specific fixed fields, such as move source square, ability, move destination, promotion,
    handler, or choice option.
 4. `target`: one or more canonical target selections, or `stop` where the complete
    action is legal at that prefix.
@@ -31,7 +31,7 @@ A trie edge has a stable, typed identifier. IDs must not depend on UI labels or 
 RNG state. Piece and card *instances* use their existing observation slots; card
 *definitions*, handler IDs, ability IDs, squares, offer indexes and options use the
 existing V3 stable encodings. A change to this grammar requires a new
-`factorized_policy_schema_id`.
+`factorized_policy_schema_id`. Move paths include the canonical source square because a quantum piece can legally move from both its physical and shadow squares while retaining one local piece slot.
 
 ## Policy target
 

@@ -74,8 +74,8 @@ class FactorizedBatchTests(unittest.TestCase):
         case = self.suite["cases"][0]
         states = tensorize_cases([case], V3Vocabulary.from_cases([case]))
         actions = [
-            {"kind": "move", "piece": 0, "to": 63, "promotion": None},
-            {"kind": "move", "piece": 0, "to": 63, "promotion": 5},
+            {"kind": "move", "piece": 0, "from": 55, "to": 63, "promotion": None},
+            {"kind": "move", "piece": 0, "from": 55, "to": 63, "promotion": 5},
         ]
         batch = collate_factorized_batch(states, [actions], [[2, 3]])
         two_way = torch.nonzero(batch.prefixes.legal_mask.sum(1) == 2).flatten()

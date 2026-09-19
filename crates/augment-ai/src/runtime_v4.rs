@@ -136,6 +136,7 @@ const FACTOR_FIELD_IDS_V4: &[(&str, i64)] = &[
     ("choice", 11),
     ("option", 12),
     ("complete", 13),
+    ("source_square", 14),
 ];
 
 #[derive(Debug)]
@@ -871,8 +872,16 @@ pub(crate) fn build_factorized_decision_v4(
             }
             node = node.children.entry(token.clone()).or_default();
         }
-        if node.action_index.is_some() || !node.children.is_empty() {
-            return tensor_error("complete actions must have unique canonical paths");
+        if let Some(first_index) = node.action_index {
+            return tensor_error(format!(
+                "complete actions must have unique canonical paths: first_index={first_index} second_index={action_index} path={path:?} first_action={:?} second_action={:?}",
+                actions[first_index], action
+            ));
+        }
+        if !node.children.is_empty() {
+            return tensor_error(format!(
+                "complete action path collides with an existing prefix: second_index={action_index} path={path:?} second_action={action:?}"
+            ));
         }
         node.action_index = Some(action_index);
     }

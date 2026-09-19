@@ -449,7 +449,9 @@ fn generate_and_write_game(
             temperature_decisions,
         },
     )
-    .map_err(|error| error.to_string())?;
+    .map_err(|error| {
+        format!("game_index={game_index} game_id={game_id} seed={seed:016x}: {error}")
+    })?;
     game.validate().map_err(|error| error.to_string())?;
 
     let relative_path = format!("games/{game_id}.json");

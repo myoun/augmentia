@@ -6,7 +6,7 @@
     "ruleset_id": "augment_chess_20260818",
     "ruleset_manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   },
-  "factorized_policy_schema_id": "augmentia.factorized-policy.v4",
+  "factorized_policy_schema_id": "augmentia.factorized-policy.v4.1",
   "factorized_scorer": {
     "inputs": [
       {
@@ -118,7 +118,7 @@
       }
     ],
     "path": "v4-model.factorized-scorer.onnx",
-    "sha256": "070dc5db42d45baa00f90b378b36c709977dbb703c35b04cf9157bb8e8815b57"
+    "sha256": "0866cac40fcead3ab66c935e123cff6dd73692fb4e12b491be6e4be42bf3bede"
   },
   "metadata_schema_id": "augmentia.onnx-factorized-policy-bundle.v1",
   "model_config": {

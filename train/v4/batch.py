@@ -38,6 +38,7 @@ FACTOR_FIELD_IDS = {
     "choice": 11,
     "option": 12,
     "complete": 13,
+    "source_square": 14,
 }
 FACTOR_FIELD_COUNT = len(FACTOR_FIELD_IDS)
 FACTOR_CATEGORY_COUNT = max(

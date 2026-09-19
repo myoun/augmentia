@@ -129,6 +129,7 @@ def main() -> None:
         output,
         vocabulary,
         _Identity(ruleset_id, args.ruleset_manifest_sha256),
+        runtime_vocabulary_path=args.runtime_vocabulary,
     )
     with torch.no_grad():
         encoding = model.encode_state(states)

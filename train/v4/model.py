@@ -155,7 +155,8 @@ class AugmentNetV4(nn.Module):
         edge = edge + piece_context * (field == FACTOR_FIELD_IDS["piece"]).unsqueeze(-1)
         edge = edge + card_context * (field == FACTOR_FIELD_IDS["card"]).unsqueeze(-1)
         is_square = (
-            (field == FACTOR_FIELD_IDS["destination"])
+            (field == FACTOR_FIELD_IDS["source_square"])
+            | (field == FACTOR_FIELD_IDS["destination"])
             | (field == FACTOR_FIELD_IDS["target_square"])
             | (field == FACTOR_FIELD_IDS["target_sequence"])
         )

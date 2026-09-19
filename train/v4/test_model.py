@@ -55,7 +55,7 @@ class FactorizedModelTests(unittest.TestCase):
 
     def test_non_promotion_indexes_do_not_index_piece_kind_embedding(self) -> None:
         model = self._model().eval()
-        for field, index in (("destination", 63), ("target_square", 63), ("piece", 64), ("card", 65)):
+        for field, index in (("source_square", 63), ("destination", 63), ("target_square", 63), ("piece", 64), ("card", 65)):
             with self.subTest(field=field, index=index):
                 batch = self._batch([4, 2, 1])
                 # Exercise both prefix and child embeddings with valid typed

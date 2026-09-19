@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 
-pub const FACTORIZED_POLICY_V4_SCHEMA_ID: &str = "augmentia.factorized-policy.v4";
+pub const FACTORIZED_POLICY_V4_SCHEMA_ID: &str = "augmentia.factorized-policy.v4.1";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FactorizedPolicyV4Error {
@@ -69,12 +69,14 @@ pub fn factorized_action_path_v4(
     match action {
         ActionDescriptorV3::Move {
             piece,
+            from,
             to,
             promotion,
             ..
         } => {
             path.push("family:move".to_owned());
             path.push(format!("piece:{piece}"));
+            path.push(format!("source_square:{from}"));
             path.push(format!("destination:{to}"));
             path.push(match promotion {
                 Some(value) => format!("promotion:{value}"),
@@ -304,6 +306,29 @@ mod tests {
             factorized_action_path_v4(&second).unwrap()
         );
         build_factorized_trie_v4(&[first, second]).unwrap();
+    }
+
+    #[test]
+    fn move_source_square_disambiguates_quantum_shadow_paths() {
+        let physical = ActionDescriptorV3::Move {
+            piece: 7,
+            piece_kind: 4,
+            from: 8,
+            to: 24,
+            promotion: None,
+        };
+        let shadow = ActionDescriptorV3::Move {
+            piece: 7,
+            piece_kind: 4,
+            from: 16,
+            to: 24,
+            promotion: None,
+        };
+        assert_ne!(
+            factorized_action_path_v4(&physical).unwrap(),
+            factorized_action_path_v4(&shadow).unwrap()
+        );
+        build_factorized_trie_v4(&[physical, shadow]).unwrap();
     }
 
     #[test]
