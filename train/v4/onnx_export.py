@@ -122,9 +122,16 @@ def export_factorized_policy_bundle_v4(
     checkpoint_path: str | Path | None = None,
     code_commit: str = "unknown",
     opset: int = 18,
+    runtime_vocabulary_path: str | Path | None = None,
 ) -> tuple[Path, Path]:
     """Export the split V4 bundle and its fail-closed metadata sidecar."""
-    missing = set(load_runtime_vocabulary()["tokens"]) - set(vocabulary.tokens)
+    dataset_identity = dataset.to_json()
+    ruleset_id, ruleset_manifest_sha256 = _ruleset_identity(dataset_identity)
+    runtime_vocabulary = load_runtime_vocabulary(
+        runtime_vocabulary_path,
+        expected_ruleset_id=ruleset_id,
+    )
+    missing = set(runtime_vocabulary["tokens"]) - set(vocabulary.tokens)
     if missing:
         raise ValueError(f"V4 vocabulary is missing required runtime tokens: {', '.join(sorted(missing))}")
     if model.config.text_vocabulary_size != vocabulary.size:
@@ -156,8 +163,6 @@ def export_factorized_policy_bundle_v4(
         _factorized_scorer_dynamic_axes(factorized_sample),
         opset,
     )
-    dataset_identity = dataset.to_json()
-    ruleset_id, ruleset_manifest_sha256 = _ruleset_identity(dataset_identity)
     metadata = {
         "metadata_schema_id": V4_BUNDLE_SCHEMA_ID,
         "observation_schema_id": OBSERVATION_SCHEMA_ID,

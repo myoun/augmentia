@@ -58,7 +58,10 @@ def default_runtime_vocabulary_path() -> Path:
     return Path(__file__).with_name("fixtures") / "runtime_vocabulary_v3.json"
 
 
-def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
+def load_runtime_vocabulary(
+    path: str | Path | None = None,
+    expected_ruleset_id: str = RULESET_ID,
+) -> dict[str, Any]:
     vocabulary_path = (
         Path(path) if path is not None else default_runtime_vocabulary_path()
     )
@@ -75,7 +78,11 @@ def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
         RUNTIME_VOCABULARY_SCHEMA_ID,
         "runtime_vocabulary.schema_id",
     )
-    _equal(vocabulary.get("ruleset_id"), RULESET_ID, "runtime_vocabulary.ruleset_id")
+    _equal(
+        vocabulary.get("ruleset_id"),
+        expected_ruleset_id,
+        "runtime_vocabulary.ruleset_id",
+    )
     tokens = _sequence(vocabulary.get("tokens"), "runtime_vocabulary.tokens")
     normalized = [
         _string(token, f"runtime_vocabulary.tokens[{index}]")
@@ -103,15 +110,21 @@ def load_runtime_vocabulary(path: str | Path | None = None) -> dict[str, Any]:
     return vocabulary
 
 
-def load_golden_suite(path: str | Path | None = None) -> dict[str, Any]:
+def load_golden_suite(
+    path: str | Path | None = None,
+    expected_ruleset_id: str = RULESET_ID,
+) -> dict[str, Any]:
     fixture_path = Path(path) if path is not None else default_fixture_path()
     with fixture_path.open("r", encoding="utf-8") as fixture_file:
         payload = json.load(fixture_file)
-    validate_golden_suite(payload)
+    validate_golden_suite(payload, expected_ruleset_id)
     return payload
 
 
-def validate_golden_suite(payload: Any) -> None:
+def validate_golden_suite(
+    payload: Any,
+    expected_ruleset_id: str = RULESET_ID,
+) -> None:
     suite = _mapping(payload, "suite")
     _exact_keys(
         suite,
@@ -131,7 +144,7 @@ def validate_golden_suite(payload: Any) -> None:
         "suite.observation_schema_id",
     )
     _equal(suite.get("action_schema_id"), ACTION_SCHEMA_ID, "suite.action_schema_id")
-    _equal(suite.get("ruleset_id"), RULESET_ID, "suite.ruleset_id")
+    _equal(suite.get("ruleset_id"), expected_ruleset_id, "suite.ruleset_id")
     cases = _sequence(suite.get("cases"), "suite.cases")
     if not cases:
         raise SchemaError("suite.cases must not be empty")
@@ -145,7 +158,11 @@ def validate_golden_suite(payload: Any) -> None:
         if name in names:
             raise SchemaError(f"{path}.name duplicates {name!r}")
         names.add(name)
-        observation = _validate_observation(case.get("observation"), f"{path}.observation")
+        observation = _validate_observation(
+            case.get("observation"),
+            f"{path}.observation",
+            expected_ruleset_id,
+        )
         _validate_legal_actions(
             case.get("legal_actions"),
             f"{path}.legal_actions",
@@ -153,7 +170,11 @@ def validate_golden_suite(payload: Any) -> None:
         )
 
 
-def _validate_observation(payload: Any, path: str) -> dict[str, int]:
+def _validate_observation(
+    payload: Any,
+    path: str,
+    expected_ruleset_id: str,
+) -> dict[str, int]:
     observation = _mapping(payload, path)
     _exact_keys(
         observation,
@@ -175,7 +196,11 @@ def _validate_observation(payload: Any, path: str) -> dict[str, int]:
         path,
     )
     _equal(observation.get("schema_id"), OBSERVATION_SCHEMA_ID, f"{path}.schema_id")
-    _equal(observation.get("ruleset_id"), RULESET_ID, f"{path}.ruleset_id")
+    _equal(
+        observation.get("ruleset_id"),
+        expected_ruleset_id,
+        f"{path}.ruleset_id",
+    )
     _equal(observation.get("spatial_shape"), SPATIAL_SHAPE, f"{path}.spatial_shape")
     _equal(observation.get("global_shape"), GLOBAL_SHAPE, f"{path}.global_shape")
     _bounded_vector(observation.get("spatial"), SPATIAL_SIZE, f"{path}.spatial")

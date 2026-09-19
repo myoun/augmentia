@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn generated_limit_game_has_valid_factorized_targets_and_is_reproducible() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_20260915().unwrap();
         let evaluator = DeterministicFactorizedEvaluatorV4 {
             seed: 17,
             value: 0.0,
@@ -285,7 +285,7 @@ mod tests {
                 Mode::Standard,
                 "v4-test".to_owned(),
                 RulesetRefV3 {
-                    id: "augment_chess_20260818".to_owned(),
+                    id: "augment_chess_20260915".to_owned(),
                     manifest_sha256: "0".repeat(64),
                 },
                 GeneratorProvenanceV3 {

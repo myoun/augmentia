@@ -18,6 +18,7 @@ from v3.schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID, SchemaError, vali
 
 GAME_RECORD_V4_SCHEMA_ID = "augmentia.replay.game.v4"
 FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID = "augmentia.factorized-mcts-visits.v2"
+RULESET_ID_V4 = "augment_chess_20260915"
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,9 @@ def parse_game_v4(
     steps = record.get("steps")
     if not isinstance(game_id, str) or not game_id or not isinstance(steps, list) or not steps:
         raise SchemaError(f"{path}: V4 game must have an ID and steps")
+    ruleset = record.get("ruleset", {})
+    if not isinstance(ruleset, dict) or ruleset.get("id") != RULESET_ID_V4:
+        raise SchemaError(f"{path}: V4 replay must use {RULESET_ID_V4}")
     result = _terminal_result(record.get("termination"))
     examples = []
     for index, step in enumerate(steps):
@@ -61,15 +65,15 @@ def parse_game_v4(
             "observation": step.get("observation"),
             "legal_actions": step.get("legal_actions"),
         }
-        ruleset = record.get("ruleset", {})
         validate_golden_suite(
             {
                 "fixture_schema_id": "augmentia.golden.observation-action.v3",
                 "observation_schema_id": OBSERVATION_SCHEMA_ID,
                 "action_schema_id": ACTION_SCHEMA_ID,
-                "ruleset_id": ruleset.get("id"),
+                "ruleset_id": RULESET_ID_V4,
                 "cases": [{"name": f"{game_id}:{index}", **case}],
-            }
+            },
+            RULESET_ID_V4,
         )
         actions = case["legal_actions"]["actions"]
         target = validate_factorized_target_v4(step.get("policy_target"), actions, step_path)
