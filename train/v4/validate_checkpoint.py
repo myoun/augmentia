@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 
 from .dataset import load_dataset_input
-from .replay import load_game_v4
 from .train import (
     V4Trainer,
     V4_TRAINER_SCHEMA_ID,
+    _load_examples,
     _sha256_file,
     load_runtime_vocabulary,
 )
@@ -42,18 +42,14 @@ def main() -> None:
     validation_paths = [
         artifacts[game_id] for game_id in provenance["validation_game_ids"]
     ]
-    train_examples = [
-        example for path in train_paths for example in load_game_v4(path)
-    ]
-    validation_examples = [
-        example for path in validation_paths for example in load_game_v4(path)
-    ]
     max_train = provenance.get("max_train_examples")
     max_validation = provenance.get("max_validation_examples")
-    if max_train is not None:
-        train_examples = train_examples[: int(max_train)]
-    if max_validation is not None:
-        validation_examples = validation_examples[: int(max_validation)]
+    train_examples = _load_examples(
+        train_paths, None if max_train is None else int(max_train)
+    )
+    validation_examples = _load_examples(
+        validation_paths, None if max_validation is None else int(max_validation)
+    )
 
     vocabulary, _identity = load_runtime_vocabulary(
         provenance["runtime_vocabulary"]["path"]

@@ -528,10 +528,16 @@ def _split_games(
     return train, validation, train_ids, validation_ids
 
 
-def _load_examples(paths: Sequence[Path]) -> list[FactorizedTrainingExampleV4]:
+def _load_examples(
+    paths: Sequence[Path], max_examples: int | None = None
+) -> list[FactorizedTrainingExampleV4]:
     result: list[FactorizedTrainingExampleV4] = []
     for path in paths:
-        result.extend(load_game_v4(path))
+        remaining = None if max_examples is None else max_examples - len(result)
+        if remaining is not None and remaining <= 0:
+            break
+        examples = load_game_v4(path)
+        result.extend(examples if remaining is None else examples[:remaining])
     return result
 
 
@@ -719,12 +725,10 @@ def main() -> None:
         args.validation_bp,
         args.seed,
     )
-    train_examples = _load_examples(train_paths)
-    validation_examples = _load_examples(validation_paths)
-    if args.max_train_examples is not None:
-        train_examples = train_examples[: args.max_train_examples]
-    if args.max_validation_examples is not None:
-        validation_examples = validation_examples[: args.max_validation_examples]
+    train_examples = _load_examples(train_paths, args.max_train_examples)
+    validation_examples = _load_examples(
+        validation_paths, args.max_validation_examples
+    )
     provenance = _dataset_provenance(
         dataset,
         vocabulary_identity,
@@ -752,9 +756,16 @@ def main() -> None:
         hybrid_heads=args.hybrid_heads,
     )
     run_dir.mkdir(parents=True, exist_ok=True)
+    limited_dataset = (
+        args.max_train_examples is not None or args.max_validation_examples is not None
+    )
     run_identity = {
         "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
-        "run_kind": "smoke" if dirty or dataset.run_kind == "smoke" else "production",
+        "run_kind": (
+            "smoke"
+            if dirty or dataset.run_kind == "smoke" or limited_dataset
+            else "production"
+        ),
         "config": asdict(config),
         "provenance": provenance,
         "environment": _environment_identity(torch.device(args.device)),

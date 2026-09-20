@@ -4,10 +4,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from v3.factorized import FACTOR_POLICY_SCHEMA_ID
 
 from v4.dataset import DATASET_INDEX_SCHEMA_ID, load_dataset_input, sha256_file
+from v4.train import _load_examples
 
 
 class DatasetInputV4Test(unittest.TestCase):
@@ -129,6 +131,13 @@ class DatasetInputV4Test(unittest.TestCase):
             index = self._write_index(root, [first, second])
             with self.assertRaisesRegex(ValueError, "game_index gap"):
                 load_dataset_input(index)
+
+    def test_capped_example_loading_stops_early(self) -> None:
+        paths = [Path("g1.json"), Path("g2.json"), Path("g3.json")]
+        with patch("v4.train.load_game_v4", side_effect=[[1, 2], [3, 4], [5]]) as load:
+            result = _load_examples(paths, 3)
+        self.assertEqual(result, [1, 2, 3])
+        self.assertEqual(load.call_count, 2)
 
 
 if __name__ == "__main__":
