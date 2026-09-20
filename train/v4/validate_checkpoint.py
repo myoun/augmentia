@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .dataset import load_dataset_input
 from .replay import load_game_v4
 from .train import (
     V4Trainer,
@@ -23,7 +24,7 @@ def main() -> None:
     args = parser.parse_args()
 
     checkpoint = args.checkpoint.resolve()
-    manifest_path = args.manifest.resolve()
+    dataset_path = args.manifest.resolve()
     sidecar_path = checkpoint.with_suffix(".v4-checkpoint.json")
     sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
     if sidecar.get("schema_id") != V4_TRAINER_SCHEMA_ID:
@@ -31,14 +32,11 @@ def main() -> None:
     if sidecar.get("checkpoint_sha256") != _sha256_file(checkpoint):
         raise ValueError("checkpoint hash mismatch")
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    artifacts = {
-        item["game_id"]: manifest_path.parent / item["relative_path"]
-        for item in manifest["games_artifacts"]
-    }
+    dataset = load_dataset_input(dataset_path)
+    artifacts = {game.game_id: game.path for game in dataset.games}
     provenance = sidecar.get("provenance", {})
-    if provenance.get("dataset_manifest_sha256") != _sha256_file(manifest_path):
-        raise ValueError("dataset manifest hash differs from checkpoint provenance")
+    if provenance.get("dataset_manifest_sha256") != dataset.sha256:
+        raise ValueError("dataset input hash differs from checkpoint provenance")
 
     train_paths = [artifacts[game_id] for game_id in provenance["train_game_ids"]]
     validation_paths = [

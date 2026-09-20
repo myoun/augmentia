@@ -21,6 +21,7 @@ from v3.factorized import FACTOR_POLICY_SCHEMA_ID
 from v3.tensorize import V3Vocabulary
 
 from .batch import tensorize_factorized_cases
+from .dataset import DatasetInputV4, load_dataset_input
 from .loss import conditional_prefix_cross_entropy
 from .model import AugmentNetV4, V4ModelConfig
 from .replay import FactorizedTrainingExampleV4, load_game_v4
@@ -489,23 +490,8 @@ def train_from_games(
     return trainer
 
 
-def _load_run_manifest(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if payload.get("manifest_schema_id") != "augmentia.self-play-v4-run.v1":
-        raise ValueError("training input is not a V4 self-play run manifest")
-    if payload.get("ruleset", {}).get("id") != RULESET_ID:
-        raise ValueError("training input is not the 0915 ruleset")
-    if payload.get("factorized_policy_schema_id") != FACTOR_POLICY_SCHEMA_ID:
-        raise ValueError("training input factorized policy schema mismatch")
-    artifacts = payload.get("games_artifacts")
-    if not isinstance(artifacts, list) or not artifacts:
-        raise ValueError("training manifest contains no games")
-    return payload
-
-
 def _split_games(
-    manifest: Mapping[str, Any],
-    base_dir: Path,
+    dataset: DatasetInputV4,
     validation_basis_points: int,
     split_seed: int,
 ) -> tuple[list[Path], list[Path], list[str], list[str]]:
@@ -515,34 +501,30 @@ def _split_games(
     validation: list[Path] = []
     train_ids: list[str] = []
     validation_ids: list[str] = []
-    artifacts = sorted(manifest["games_artifacts"], key=lambda item: item["game_index"])
-    scored: list[tuple[int, Mapping[str, Any]]] = []
-    for artifact in artifacts:
-        game_id = artifact["game_id"]
-        digest = hashlib.sha256(f"{split_seed}:{game_id}".encode()).digest()
+    scored: list[tuple[int, Any]] = []
+    for game in dataset.games:
+        digest = hashlib.sha256(f"{split_seed}:{game.game_id}".encode()).digest()
         bucket = int.from_bytes(digest[:8], "big") % 10_000
-        scored.append((bucket, artifact))
+        scored.append((bucket, game))
         target_paths = (
             (validation, validation_ids)
             if bucket < validation_basis_points
             else (train, train_ids)
         )
-        target_paths[0].append(base_dir / artifact["relative_path"])
-        target_paths[1].append(game_id)
+        target_paths[0].append(game.path)
+        target_paths[1].append(game.game_id)
     if not validation:
-        bucket, artifact = min(scored, key=lambda item: item[0])
-        path = base_dir / artifact["relative_path"]
-        train.remove(path)
-        train_ids.remove(artifact["game_id"])
-        validation.append(path)
-        validation_ids.append(artifact["game_id"])
+        _bucket, game = min(scored, key=lambda item: item[0])
+        train.remove(game.path)
+        train_ids.remove(game.game_id)
+        validation.append(game.path)
+        validation_ids.append(game.game_id)
     if not train:
-        bucket, artifact = max(scored, key=lambda item: item[0])
-        path = base_dir / artifact["relative_path"]
-        validation.remove(path)
-        validation_ids.remove(artifact["game_id"])
-        train.append(path)
-        train_ids.append(artifact["game_id"])
+        _bucket, game = max(scored, key=lambda item: item[0])
+        validation.remove(game.path)
+        validation_ids.remove(game.game_id)
+        train.append(game.path)
+        train_ids.append(game.game_id)
     return train, validation, train_ids, validation_ids
 
 
@@ -554,8 +536,7 @@ def _load_examples(paths: Sequence[Path]) -> list[FactorizedTrainingExampleV4]:
 
 
 def _dataset_provenance(
-    manifest_path: Path,
-    manifest: Mapping[str, Any],
+    dataset: DatasetInputV4,
     vocabulary_identity: Mapping[str, Any],
     train_ids: Sequence[str],
     validation_ids: Sequence[str],
@@ -564,17 +545,19 @@ def _dataset_provenance(
     max_validation_examples: int | None,
 ) -> dict[str, Any]:
     return {
-        "source_seal_tag": manifest.get("source_seal_tag"),
-        "source_seal_commit": manifest.get("source_seal_commit"),
-        "source_engine_commit": manifest.get("engine_commit"),
-        "ruleset_id": manifest["ruleset"]["id"],
-        "ruleset_manifest_sha256": manifest["ruleset"]["manifest_sha256"],
-        "factorized_policy_schema_id": manifest["factorized_policy_schema_id"],
-        "dataset_manifest_path": str(manifest_path),
-        "dataset_manifest_sha256": _sha256_file(manifest_path),
-        "dataset_run_id": manifest["run_id"],
-        "dataset_run_kind": manifest["run_kind"],
-        "producer_evaluator": manifest["evaluator"],
+        "source_seal_tag": dataset.source_seal_tag,
+        "source_seal_commit": dataset.source_seal_commit,
+        "source_engine_commit": dataset.engine_commit,
+        "ruleset_id": dataset.ruleset["id"],
+        "ruleset_manifest_sha256": dataset.ruleset["manifest_sha256"],
+        "factorized_policy_schema_id": dataset.factorized_policy_schema_id,
+        "dataset_input_schema_id": dataset.schema_id,
+        "dataset_manifest_path": str(dataset.path),
+        "dataset_manifest_sha256": dataset.sha256,
+        "dataset_run_id": dataset.dataset_id,
+        "dataset_run_kind": dataset.run_kind,
+        "dataset_source_manifests": [dict(item) for item in dataset.source_manifests],
+        "producer_evaluator": dict(dataset.producer_evaluator),
         "train_game_ids": list(train_ids),
         "validation_game_ids": list(validation_ids),
         "runtime_vocabulary": dict(vocabulary_identity),
@@ -713,7 +696,7 @@ def main() -> None:
     if not math.isfinite(args.value_weight) or args.value_weight < 0:
         parser.error("--value-weight must be finite and non-negative")
 
-    manifest_path = args.manifest.resolve()
+    dataset_path = args.manifest.resolve()
     run_dir = args.run_dir.resolve()
     repo_root = Path(__file__).parents[2]
     commit, dirty = _git_identity(repo_root)
@@ -724,15 +707,15 @@ def main() -> None:
     if dirty and "smoke" not in run_dir.name.lower():
         parser.error("--allow-dirty-smoke requires run_dir name to contain 'smoke'")
 
-    manifest = _load_run_manifest(manifest_path)
-    if manifest.get("source_seal_tag") != SOURCE_SEAL_TAG or manifest.get(
-        "source_seal_commit"
-    ) != SOURCE_SEAL_COMMIT:
+    dataset = load_dataset_input(dataset_path)
+    if (
+        dataset.source_seal_tag != SOURCE_SEAL_TAG
+        or dataset.source_seal_commit != SOURCE_SEAL_COMMIT
+    ):
         parser.error("dataset source seal does not match the V4 training base")
     vocabulary, vocabulary_identity = load_runtime_vocabulary(args.runtime_vocabulary)
     train_paths, validation_paths, train_ids, validation_ids = _split_games(
-        manifest,
-        manifest_path.parent,
+        dataset,
         args.validation_bp,
         args.seed,
     )
@@ -743,8 +726,7 @@ def main() -> None:
     if args.max_validation_examples is not None:
         validation_examples = validation_examples[: args.max_validation_examples]
     provenance = _dataset_provenance(
-        manifest_path,
-        manifest,
+        dataset,
         vocabulary_identity,
         train_ids,
         validation_ids,
@@ -772,7 +754,7 @@ def main() -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     run_identity = {
         "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
-        "run_kind": "smoke" if dirty or manifest["run_kind"] == "smoke" else "production",
+        "run_kind": "smoke" if dirty or dataset.run_kind == "smoke" else "production",
         "config": asdict(config),
         "provenance": provenance,
         "environment": _environment_identity(torch.device(args.device)),

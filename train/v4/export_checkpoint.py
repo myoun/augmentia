@@ -16,6 +16,7 @@ from v3.factorized import factorized_action_path
 from v3.tensorize import V3Vocabulary
 
 from .batch import FACTOR_FIELD_IDS, tensorize_factorized_cases
+from .dataset import load_dataset_input
 from .model import AugmentNetV4, V4ModelConfig
 from .onnx_export import (
     assert_factorized_onnx_equivalent,
@@ -67,7 +68,7 @@ def main() -> None:
     args = parser.parse_args()
 
     checkpoint = args.checkpoint.resolve()
-    manifest_path = args.manifest.resolve()
+    dataset_path = args.manifest.resolve()
     output = args.output.resolve()
     sidecar_path = checkpoint.with_suffix(".v4-checkpoint.json")
     sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
@@ -90,15 +91,14 @@ def main() -> None:
     model.load_state_dict(state, strict=True)
     model.eval()
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("manifest_schema_id") != "augmentia.self-play-v4-run.v1":
-        raise ValueError("dataset manifest is not V4 self-play")
-    ruleset = manifest.get("ruleset", {})
+    dataset_input = load_dataset_input(dataset_path)
+    ruleset = dataset_input.ruleset
     if ruleset.get("id") != RULESET_ID:
-        raise ValueError("dataset manifest ruleset is not 0915")
-    if manifest.get("source_seal_tag") != SOURCE_SEAL_TAG or manifest.get(
-        "source_seal_commit"
-    ) != SOURCE_SEAL_COMMIT:
+        raise ValueError("dataset ruleset is not 0915")
+    if (
+        dataset_input.source_seal_tag != SOURCE_SEAL_TAG
+        or dataset_input.source_seal_commit != SOURCE_SEAL_COMMIT
+    ):
         raise ValueError("dataset source seal differs from training base")
 
     provenance = sidecar.get("provenance", {})
@@ -106,15 +106,14 @@ def main() -> None:
         "ruleset_manifest_sha256"
     ) != ruleset["manifest_sha256"]:
         raise ValueError("checkpoint ruleset provenance differs from dataset")
-    manifest_sha256 = _sha256_file(manifest_path)
+    manifest_sha256 = dataset_input.sha256
     if provenance.get("dataset_manifest_sha256") != manifest_sha256:
-        raise ValueError("checkpoint dataset manifest provenance differs from export input")
+        raise ValueError("checkpoint dataset provenance differs from export input")
 
-    artifacts = manifest.get("games_artifacts", [])
-    if not artifacts:
+    if not dataset_input.games:
         raise ValueError("dataset contains no games")
-    sample_path = manifest_path.parent / artifacts[0]["relative_path"]
-    examples = load_game_v4(sample_path)
+    sample_game = dataset_input.games[0]
+    examples = load_game_v4(sample_game.path)
     if not examples:
         raise ValueError("sample game contains no training examples")
     example = examples[0]
@@ -132,9 +131,9 @@ def main() -> None:
         ruleset_id=ruleset["id"],
         ruleset_manifest_sha256=ruleset["manifest_sha256"],
         dataset_manifest_sha256=manifest_sha256,
-        dataset_run_id=manifest["run_id"],
-        source_seal_tag=manifest["source_seal_tag"],
-        source_seal_commit=manifest["source_seal_commit"],
+        dataset_run_id=dataset_input.dataset_id,
+        source_seal_tag=dataset_input.source_seal_tag or "",
+        source_seal_commit=dataset_input.source_seal_commit or "",
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     _, metadata_path = export_factorized_policy_bundle_v4(
@@ -179,7 +178,7 @@ def main() -> None:
         "checkpoint_sha256": checkpoint_sha256,
         "bundle_metadata_path": metadata_path.name,
         "bundle_metadata_sha256": metadata_sha256,
-        "sample_game_id": artifacts[0]["game_id"],
+        "sample_game_id": sample_game.game_id,
         "sample_decision_index": 0,
         "observation": case["observation"],
         "legal_actions": case["legal_actions"],
