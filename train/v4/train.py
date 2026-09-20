@@ -18,7 +18,7 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
-from v3.factorized import FACTOR_POLICY_SCHEMA_ID
+from v3.factorized import FACTOR_POLICY_SCHEMA_ID, factorized_action_path
 from v3.tensorize import V3Vocabulary
 
 from .batch import tensorize_factorized_cases
@@ -50,6 +50,7 @@ class V4TrainingConfig:
     encoder_kind: str = "baseline"
     hybrid_layers: int = 2
     hybrid_heads: int = 4
+    batching_kind: str = "random"
 
     def validate(self) -> "V4TrainingConfig":
         if (
@@ -65,6 +66,8 @@ class V4TrainingConfig:
             raise ValueError("device must be cpu or cuda")
         if self.encoder_kind not in {"baseline", "hybrid"}:
             raise ValueError("encoder_kind must be baseline or hybrid")
+        if self.batching_kind not in {"random", "bucketed"}:
+            raise ValueError("batching_kind must be random or bucketed")
         if min(
             self.model_dim,
             self.channels,
@@ -116,6 +119,24 @@ def load_runtime_vocabulary(path: str | Path) -> tuple[V3Vocabulary, dict[str, A
     return vocabulary, identity
 
 
+def _factorized_shape_key(
+    example: FactorizedTrainingExampleV4,
+) -> tuple[int, int, int, int]:
+    """Return deterministic padding drivers for one factorized decision."""
+    actions = example.legal_actions["actions"]
+    children_by_prefix: dict[tuple[Any, ...], set[Any]] = {}
+    for action in actions:
+        path = factorized_action_path(action)
+        for depth, token in enumerate(path):
+            prefix = tuple(path[:depth])
+            children_by_prefix.setdefault(prefix, set()).add(token)
+    max_children = max(
+        (len(children) for children in children_by_prefix.values()), default=0
+    )
+    max_prefix = max((len(prefix) for prefix in children_by_prefix), default=0)
+    return max_children, len(actions), max_prefix, len(children_by_prefix)
+
+
 class V4Trainer:
     """Train the conditional scorer and value head with a fixed runtime vocabulary."""
 
@@ -135,6 +156,11 @@ class V4Trainer:
         self.run_dir = Path(run_dir)
         self.examples = list(examples)
         self.validation_examples = list(validation_examples)
+        self._training_shape_keys = (
+            [_factorized_shape_key(example) for example in self.examples]
+            if self.config.batching_kind == "bucketed"
+            else None
+        )
         if not self.examples:
             raise ValueError("V4 training requires at least one decision example")
         self.vocabulary = vocabulary or V3Vocabulary.from_cases(
@@ -204,7 +230,22 @@ class V4Trainer:
     ):
         order = list(range(len(examples)))
         if shuffle:
-            random.Random(self.config.seed + epoch).shuffle(order)
+            rng = random.Random(self.config.seed + epoch)
+            if self.config.batching_kind == "bucketed" and examples is self.examples:
+                if self._training_shape_keys is None:
+                    raise RuntimeError("bucketed batching shape keys are unavailable")
+                order.sort(key=lambda index: (*self._training_shape_keys[index], index))
+                size = self.config.batch_size
+                batches = [
+                    order[start : start + size]
+                    for start in range(0, len(order), size)
+                ]
+                for indexes in batches:
+                    rng.shuffle(indexes)
+                rng.shuffle(batches)
+                order = [index for indexes in batches for index in indexes]
+            else:
+                rng.shuffle(order)
         size = self.config.batch_size
         for batch_index, start in enumerate(range(0, len(order), size)):
             if batch_index < start_batch:
@@ -530,8 +571,14 @@ class V4Trainer:
                 "encoder_kind",
                 "hybrid_layers",
                 "hybrid_heads",
+                "batching_kind",
             ):
-                if getattr(config, field) != saved_training[field]:
+                saved_value = (
+                    saved_training.get(field, "random")
+                    if field == "batching_kind"
+                    else saved_training[field]
+                )
+                if getattr(config, field) != saved_value:
                     raise ValueError(f"resume model/training field {field} changed")
             if payload.get("paused"):
                 for field in (
@@ -540,8 +587,14 @@ class V4Trainer:
                     "value_weight",
                     "seed",
                     "device",
+                    "batching_kind",
                 ):
-                    if getattr(config, field) != saved_training[field]:
+                    saved_value = (
+                        saved_training.get(field, "random")
+                        if field == "batching_kind"
+                        else saved_training[field]
+                    )
+                    if getattr(config, field) != saved_value:
                         raise ValueError(
                             f"paused resume training field {field} changed"
                         )
@@ -849,6 +902,12 @@ def main() -> None:
     parser.add_argument("--runtime-message-passes", type=int, default=2)
     parser.add_argument("--hybrid-layers", type=int, default=2)
     parser.add_argument("--hybrid-heads", type=int, default=4)
+    parser.add_argument(
+        "--batching",
+        dest="batching_kind",
+        choices=("random", "bucketed"),
+        default="random",
+    )
     parser.add_argument("--validation-bp", type=int, default=2000)
     parser.add_argument("--checkpoint-every", type=int, default=1)
     parser.add_argument("--resume", type=Path)
@@ -936,6 +995,7 @@ def main() -> None:
         encoder_kind=args.encoder,
         hybrid_layers=args.hybrid_layers,
         hybrid_heads=args.hybrid_heads,
+        batching_kind=args.batching_kind,
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     limited_dataset = (
