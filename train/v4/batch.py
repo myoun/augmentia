@@ -255,7 +255,7 @@ def tensorize_factorized_cases(
     device: torch.device | str | None = None,
 ) -> V4Batch:
     """Tensorize serialized V3 observation/action cases and their V4 visits."""
-    states = tensorize_cases(cases, vocabulary)
+    states = tensorize_cases(cases, vocabulary, include_actions=False)
     actions = [case["legal_actions"]["actions"] for case in cases]
     return collate_factorized_batch(
         states,

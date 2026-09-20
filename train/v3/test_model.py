@@ -39,6 +39,28 @@ class AugmentNetV3Tests(unittest.TestCase):
             )
         )
 
+    def test_state_encoding_does_not_depend_on_v3_action_tensors(self) -> None:
+        cases = self.suite["cases"][:2]
+        full = tensorize_cases(cases, self.vocabulary)
+        lean = tensorize_cases(cases, self.vocabulary, include_actions=False)
+        self.assertEqual(tuple(lean.action_kind.shape), (2, 1))
+        self.assertFalse(bool(lean.action_mask.any()))
+        torch.manual_seed(17)
+        model = self._small_model().eval()
+        with torch.no_grad():
+            expected = model.encode_state(full)
+            actual = model.encode_state(lean)
+        torch.testing.assert_close(actual.state, expected.state, rtol=0, atol=0)
+        torch.testing.assert_close(
+            actual.board_tokens, expected.board_tokens, rtol=0, atol=0
+        )
+        torch.testing.assert_close(
+            actual.piece_entities, expected.piece_entities, rtol=0, atol=0
+        )
+        torch.testing.assert_close(
+            actual.card_entities, expected.card_entities, rtol=0, atol=0
+        )
+
     def test_split_state_encoding_and_candidate_scoring_match_forward(self) -> None:
         case = next(
             case for case in self.suite["cases"] if case["legal_actions"]["actions"]

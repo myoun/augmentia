@@ -149,33 +149,40 @@ class PauseResumeV4Test(unittest.TestCase):
                     value=0.0,
                 )
             )
-        config = V4TrainingConfig(
-            learning_rate=1e-3,
-            batch_size=2,
-            epochs=1,
-            value_weight=1.0,
-            seed=1234,
-            device="cpu",
-            model_dim=16,
-            channels=8,
-            residual_blocks=1,
-            runtime_message_passes=1,
-            batching_kind="bucketed",
-        )
-        with tempfile.TemporaryDirectory() as temp:
-            trainer = V4Trainer(
-                examples,
-                Path(temp),
-                config,
-                vocabulary=self.vocabulary,
-            )
-            action_counts = []
-            for _batch_index, batch, _values in trainer._batches(
-                trainer.examples, shuffle=True, epoch=0
-            ):
-                counts_in_batch = batch.prefixes.complete_action_mask.sum(dim=1).tolist()
-                action_counts.append(counts_in_batch)
-            self.assertEqual(sorted(action_counts), [[1, 1], [2, 2], [3, 3]])
+        for batching_kind in ("bucketed", "cached_bucketed"):
+            with self.subTest(batching_kind=batching_kind):
+                config = V4TrainingConfig(
+                    learning_rate=1e-3,
+                    batch_size=2,
+                    epochs=1,
+                    value_weight=1.0,
+                    seed=1234,
+                    device="cpu",
+                    model_dim=16,
+                    channels=8,
+                    residual_blocks=1,
+                    runtime_message_passes=1,
+                    batching_kind=batching_kind,
+                )
+                with tempfile.TemporaryDirectory() as temp:
+                    trainer = V4Trainer(
+                        examples,
+                        Path(temp),
+                        config,
+                        vocabulary=self.vocabulary,
+                    )
+                    action_counts = []
+                    for _batch_index, batch, _values in trainer._batches(
+                        trainer.examples, shuffle=True, epoch=0
+                    ):
+                        counts_in_batch = batch.prefixes.complete_action_mask.sum(dim=1).tolist()
+                        action_counts.append(counts_in_batch)
+                    self.assertEqual(
+                        sorted(action_counts), [[1, 1], [2, 2], [3, 3]]
+                    )
+                    if batching_kind == "cached_bucketed":
+                        self.assertGreater(trainer.tensor_cache_build_seconds, 0.0)
+                        self.assertGreater(trainer.tensor_cache_bytes, 0)
 
     def test_bucketed_mid_epoch_pause_resume_matches_uninterrupted(self) -> None:
         old_threads = torch.get_num_threads()
@@ -183,52 +190,54 @@ class PauseResumeV4Test(unittest.TestCase):
         try:
             examples = self._examples(4)
             validation = self._examples(1)
-            config = self._config("bucketed")
-            with tempfile.TemporaryDirectory() as temp:
-                root = Path(temp)
-                continuous = V4Trainer(
-                    examples,
-                    root / "continuous",
-                    config,
-                    vocabulary=self.vocabulary,
-                    validation_examples=validation,
-                )
-                continuous.fit()
+            for batching_kind in ("bucketed", "cached_bucketed"):
+                with self.subTest(batching_kind=batching_kind):
+                    config = self._config(batching_kind)
+                    with tempfile.TemporaryDirectory() as temp:
+                        root = Path(temp)
+                        continuous = V4Trainer(
+                            examples,
+                            root / "continuous",
+                            config,
+                            vocabulary=self.vocabulary,
+                            validation_examples=validation,
+                        )
+                        continuous.fit()
 
-                paused = V4Trainer(
-                    examples,
-                    root / "resumed",
-                    config,
-                    vocabulary=self.vocabulary,
-                    validation_examples=validation,
-                )
-                original_step = paused.optimizer.step
-                step_count = 0
+                        paused = V4Trainer(
+                            examples,
+                            root / "resumed",
+                            config,
+                            vocabulary=self.vocabulary,
+                            validation_examples=validation,
+                        )
+                        original_step = paused.optimizer.step
+                        step_count = 0
 
-                def step_and_pause(*args, **kwargs):
-                    nonlocal step_count
-                    result = original_step(*args, **kwargs)
-                    step_count += 1
-                    if step_count == 2:
-                        paused.stop_requested = True
-                    return result
+                        def step_and_pause(*args, **kwargs):
+                            nonlocal step_count
+                            result = original_step(*args, **kwargs)
+                            step_count += 1
+                            if step_count == 2:
+                                paused.stop_requested = True
+                            return result
 
-                paused.optimizer.step = step_and_pause
-                paused.fit()
-                resumed = V4Trainer.from_checkpoint(
-                    root / "resumed" / "interrupt.pt",
-                    examples,
-                    config,
-                    validation_examples=validation,
-                    expected_vocabulary=self.vocabulary,
-                )
-                resumed.run_dir = root / "resumed"
-                resumed.fit()
-                for name, expected in continuous.model.state_dict().items():
-                    self.assertTrue(
-                        torch.equal(expected, resumed.model.state_dict()[name]),
-                        name,
-                    )
+                        paused.optimizer.step = step_and_pause
+                        paused.fit()
+                        resumed = V4Trainer.from_checkpoint(
+                            root / "resumed" / "interrupt.pt",
+                            examples,
+                            config,
+                            validation_examples=validation,
+                            expected_vocabulary=self.vocabulary,
+                        )
+                        resumed.run_dir = root / "resumed"
+                        resumed.fit()
+                        for name, expected in continuous.model.state_dict().items():
+                            self.assertTrue(
+                                torch.equal(expected, resumed.model.state_dict()[name]),
+                                name,
+                            )
         finally:
             torch.set_num_threads(old_threads)
 

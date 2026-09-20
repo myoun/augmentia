@@ -304,23 +304,33 @@ def tensorize_cases(
     cases: Sequence[Mapping[str, Any]],
     vocabulary: V3Vocabulary,
     device: torch.device | str | None = None,
+    *,
+    include_actions: bool = True,
 ) -> V3Batch:
     if not cases:
         raise ValueError("cannot tensorize an empty case batch")
     batch_size = len(cases)
     max_pieces = max(1, max(len(case["observation"]["pieces"]) for case in cases))
     max_cards = max(1, max(len(case["observation"]["cards"]) for case in cases))
-    max_actions = max(1, max(len(case["legal_actions"]["actions"]) for case in cases))
-    max_target_squares = max(
-        1,
+    max_actions = (
+        max(1, max(len(case["legal_actions"]["actions"]) for case in cases))
+        if include_actions
+        else 1
+    )
+    max_target_squares = (
         max(
-            (
-                len(_action_target_square_list(action))
-                for case in cases
-                for action in case["legal_actions"]["actions"]
+            1,
+            max(
+                (
+                    len(_action_target_square_list(action))
+                    for case in cases
+                    for action in case["legal_actions"]["actions"]
+                ),
+                default=0,
             ),
-            default=0,
-        ),
+        )
+        if include_actions
+        else 1
     )
 
     runtime_nodes = [
@@ -484,31 +494,32 @@ def tensorize_cases(
             runtime_numeric[batch_index, index] = torch.tensor(node.numeric)
             runtime_mask[batch_index, index] = True
 
-        for index, action in enumerate(case["legal_actions"]["actions"]):
-            _write_action(
-                batch_index,
-                index,
-                action,
-                vocabulary,
-                action_kind,
-                action_piece_ref,
-                action_piece_kind,
-                action_from,
-                action_to,
-                action_promotion,
-                action_ability,
-                action_card_ref,
-                action_definition,
-                action_handler,
-                action_option,
-                action_target_kind,
-                action_target_squares,
-                action_target_sequence,
-                action_target_sequence_position,
-                action_target_sequence_mask,
-                action_numeric,
-            )
-            action_mask[batch_index, index] = True
+        if include_actions:
+            for index, action in enumerate(case["legal_actions"]["actions"]):
+                _write_action(
+                    batch_index,
+                    index,
+                    action,
+                    vocabulary,
+                    action_kind,
+                    action_piece_ref,
+                    action_piece_kind,
+                    action_from,
+                    action_to,
+                    action_promotion,
+                    action_ability,
+                    action_card_ref,
+                    action_definition,
+                    action_handler,
+                    action_option,
+                    action_target_kind,
+                    action_target_squares,
+                    action_target_sequence,
+                    action_target_sequence_position,
+                    action_target_sequence_mask,
+                    action_numeric,
+                )
+                action_mask[batch_index, index] = True
 
     batch = V3Batch(
         spatial=spatial,
