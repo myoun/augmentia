@@ -163,6 +163,7 @@ class PauseResumeV4Test(unittest.TestCase):
                     residual_blocks=1,
                     runtime_message_passes=1,
                     batching_kind=batching_kind,
+                    tensor_cache_max_batches=(2 if batching_kind == "cached_bucketed" else 128),
                 )
                 with tempfile.TemporaryDirectory() as temp:
                     trainer = V4Trainer(
@@ -183,6 +184,9 @@ class PauseResumeV4Test(unittest.TestCase):
                     if batching_kind == "cached_bucketed":
                         self.assertGreater(trainer.tensor_cache_build_seconds, 0.0)
                         self.assertGreater(trainer.tensor_cache_bytes, 0)
+                        self.assertLessEqual(len(trainer._tensor_cache), 2)
+                        self.assertLessEqual(trainer.tensor_cache_peak_bytes, trainer.tensor_cache_bytes)
+                        self.assertGreater(trainer.tensor_cache_bypasses, 0)
 
     def test_bucketed_mid_epoch_pause_resume_matches_uninterrupted(self) -> None:
         old_threads = torch.get_num_threads()

@@ -51,6 +51,7 @@ class V4TrainingConfig:
     hybrid_layers: int = 2
     hybrid_heads: int = 4
     batching_kind: str = "random"
+    tensor_cache_max_batches: int = 128
 
     def validate(self) -> "V4TrainingConfig":
         if (
@@ -70,6 +71,8 @@ class V4TrainingConfig:
             raise ValueError(
                 "batching_kind must be random, bucketed, or cached_bucketed"
             )
+        if self.tensor_cache_max_batches < 0:
+            raise ValueError("tensor_cache_max_batches must be non-negative")
         if min(
             self.model_dim,
             self.channels,
@@ -188,16 +191,20 @@ class V4Trainer:
                 for example in self.examples
             ]
         )
-        self._cached_training_batches: (
-            list[tuple[Any, tuple[float | None, ...]]] | None
-        ) = None
-        self._cached_validation_batches: (
-            list[tuple[Any, tuple[float | None, ...]]] | None
-        ) = None
+        self._cached_training_groups: list[tuple[int, ...]] | None = None
+        self._tensor_cache: dict[
+            tuple[str, int], tuple[Any, tuple[float | None, ...], int]
+        ] = {}
+        self._training_cache_slots = 0
+        self._validation_cache_slots = 0
         self.tensor_cache_build_seconds = 0.0
         self.tensor_cache_bytes = 0
+        self.tensor_cache_peak_bytes = 0
+        self.tensor_cache_hits = 0
+        self.tensor_cache_misses = 0
+        self.tensor_cache_bypasses = 0
         if self.config.batching_kind == "cached_bucketed":
-            self._build_tensor_cache()
+            self._initialize_tensor_cache_layout()
         if model_config is None:
             model_config = V4ModelConfig(
                 text_vocabulary_size=self.vocabulary.size,
@@ -252,34 +259,70 @@ class V4Trainer:
         batch = tensorize_factorized_cases(cases, self.vocabulary, visits)
         return batch, tuple(item.value for item in selected)
 
-    def _build_tensor_cache(self) -> None:
+    def _initialize_tensor_cache_layout(self) -> None:
         if self._training_shape_keys is None:
             raise RuntimeError("cached_bucketed batching requires shape keys")
-        started = time.perf_counter()
         size = self.config.batch_size
         order = sorted(
             range(len(self.examples)),
             key=lambda index: (*self._training_shape_keys[index], index),
         )
-        self._cached_training_batches = [
-            self._tensorize_selected(
-                [self.examples[index] for index in order[start : start + size]]
-            )
+        self._cached_training_groups = [
+            tuple(order[start : start + size])
             for start in range(0, len(order), size)
         ]
-        self._cached_validation_batches = [
-            self._tensorize_selected(self.validation_examples[start : start + size])
-            for start in range(0, len(self.validation_examples), size)
-        ]
-        self.tensor_cache_build_seconds = time.perf_counter() - started
-        self.tensor_cache_bytes = sum(
-            _tensor_bytes(batch)
-            for cache in (
-                self._cached_training_batches,
-                self._cached_validation_batches,
-            )
-            for batch, _values in (cache or ())
+        train_batches = len(self._cached_training_groups)
+        validation_batches = self.batch_count(self.validation_examples)
+        total_batches = train_batches + validation_batches
+        limit = min(self.config.tensor_cache_max_batches, total_batches)
+        if limit <= 0 or total_batches <= 0:
+            return
+        self._training_cache_slots = min(
+            train_batches,
+            max(1, (limit * train_batches) // total_batches),
         )
+        self._validation_cache_slots = min(
+            validation_batches,
+            limit - self._training_cache_slots,
+        )
+        unused = limit - self._training_cache_slots - self._validation_cache_slots
+        if unused > 0:
+            extra_train = min(unused, train_batches - self._training_cache_slots)
+            self._training_cache_slots += extra_train
+            unused -= extra_train
+        if unused > 0:
+            self._validation_cache_slots += min(
+                unused, validation_batches - self._validation_cache_slots
+            )
+
+    def _tensorize_with_bounded_cache(
+        self,
+        cache_key: tuple[str, int],
+        selected: Sequence[FactorizedTrainingExampleV4],
+        *,
+        cacheable: bool,
+    ) -> tuple[Any, tuple[float | None, ...]]:
+        cached = self._tensor_cache.get(cache_key)
+        if cached is not None:
+            self.tensor_cache_hits += 1
+            batch, values, _bytes = cached
+            return batch, values
+        if not cacheable:
+            self.tensor_cache_bypasses += 1
+            return self._tensorize_selected(selected)
+        self.tensor_cache_misses += 1
+        started = time.perf_counter()
+        batch, values = self._tensorize_selected(selected)
+        batch_bytes = _tensor_bytes(batch)
+        self.tensor_cache_build_seconds += time.perf_counter() - started
+        self._tensor_cache[cache_key] = (batch, values, batch_bytes)
+        self.tensor_cache_bytes += batch_bytes
+        self.tensor_cache_peak_bytes = max(
+            self.tensor_cache_peak_bytes, self.tensor_cache_bytes
+        )
+        if len(self._tensor_cache) > self.config.tensor_cache_max_batches:
+            raise RuntimeError("bounded tensor cache exceeded configured batch limit")
+        return batch, values
 
     def batch_count(self, examples: Sequence[FactorizedTrainingExampleV4] | None = None) -> int:
         selected = self.examples if examples is None else examples
@@ -296,28 +339,37 @@ class V4Trainer:
     ):
         if self.config.batching_kind == "cached_bucketed":
             if examples is self.examples and shuffle:
-                if self._cached_training_batches is None:
-                    raise RuntimeError("cached training batches are unavailable")
+                if self._cached_training_groups is None:
+                    raise RuntimeError("cached training groups are unavailable")
                 rng = random.Random(self.config.seed + epoch)
-                for _batch, values in self._cached_training_batches:
-                    dummy = list(range(len(values)))
+                for indexes in self._cached_training_groups:
+                    dummy = list(range(len(indexes)))
                     rng.shuffle(dummy)
-                batch_order = list(range(len(self._cached_training_batches)))
+                batch_order = list(range(len(self._cached_training_groups)))
                 rng.shuffle(batch_order)
-                for batch_index, cache_index in enumerate(batch_order):
+                for batch_index, group_index in enumerate(batch_order):
                     if batch_index < start_batch:
                         continue
-                    batch, values = self._cached_training_batches[cache_index]
+                    indexes = self._cached_training_groups[group_index]
+                    selected = [self.examples[index] for index in indexes]
+                    batch, values = self._tensorize_with_bounded_cache(
+                        ("train", group_index),
+                        selected,
+                        cacheable=group_index < self._training_cache_slots,
+                    )
                     yield batch_index, batch, values
                 return
             if examples is self.validation_examples and not shuffle:
-                if self._cached_validation_batches is None:
-                    raise RuntimeError("cached validation batches are unavailable")
-                for batch_index, (batch, values) in enumerate(
-                    self._cached_validation_batches
-                ):
+                size = self.config.batch_size
+                for batch_index, start in enumerate(range(0, len(examples), size)):
                     if batch_index < start_batch:
                         continue
+                    selected = examples[start : start + size]
+                    batch, values = self._tensorize_with_bounded_cache(
+                        ("validation", batch_index),
+                        selected,
+                        cacheable=batch_index < self._validation_cache_slots,
+                    )
                     yield batch_index, batch, values
                 return
 
@@ -713,6 +765,10 @@ class V4Trainer:
             for field in fields:
                 if provenance.get(field) != expected_provenance.get(field):
                     raise ValueError(f"resume provenance field {field} changed")
+            if not payload.get("paused"):
+                for field in ("trainer_git_commit", "trainer_dirty_worktree"):
+                    if field in expected_provenance:
+                        provenance[field] = expected_provenance[field]
 
         trainer = cls(
             examples,
@@ -1001,6 +1057,7 @@ def main() -> None:
         choices=("random", "bucketed", "cached_bucketed"),
         default="random",
     )
+    parser.add_argument("--tensor-cache-max-batches", type=int, default=128)
     parser.add_argument("--validation-bp", type=int, default=2000)
     parser.add_argument("--checkpoint-every", type=int, default=1)
     parser.add_argument("--resume", type=Path)
@@ -1027,6 +1084,8 @@ def main() -> None:
     ):
         if getattr(args, name) <= 0:
             parser.error(f"--{name.replace('_', '-')} must be positive")
+    if args.tensor_cache_max_batches < 0:
+        parser.error("--tensor-cache-max-batches must be non-negative")
     for name in ("max_train_examples", "max_validation_examples"):
         value = getattr(args, name)
         if value is not None and value <= 0:
@@ -1089,6 +1148,7 @@ def main() -> None:
         hybrid_layers=args.hybrid_layers,
         hybrid_heads=args.hybrid_heads,
         batching_kind=args.batching_kind,
+        tensor_cache_max_batches=args.tensor_cache_max_batches,
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     limited_dataset = (
@@ -1108,19 +1168,6 @@ def main() -> None:
         "validation_examples": len(validation_examples),
     }
     _atomic_json(run_dir / "run.json", run_identity)
-
-    if config.batching_kind == "cached_bucketed":
-        print(
-            json.dumps(
-                {
-                    "event": "v4_tensor_cache_build_started",
-                    "train_examples": len(train_examples),
-                    "validation_examples": len(validation_examples),
-                },
-                sort_keys=True,
-            ),
-            flush=True,
-        )
 
     if args.resume is None:
         trainer = V4Trainer(
@@ -1146,9 +1193,10 @@ def main() -> None:
         print(
             json.dumps(
                 {
-                    "event": "v4_tensor_cache_built",
-                    "seconds": trainer.tensor_cache_build_seconds,
-                    "bytes": trainer.tensor_cache_bytes,
+                    "event": "v4_bounded_tensor_cache_enabled",
+                    "max_batches": config.tensor_cache_max_batches,
+                    "training_cache_slots": trainer._training_cache_slots,
+                    "validation_cache_slots": trainer._validation_cache_slots,
                 },
                 sort_keys=True,
             ),
@@ -1208,6 +1256,12 @@ def main() -> None:
             "validation_games": len(validation_ids),
             "tensor_cache_build_seconds": trainer.tensor_cache_build_seconds,
             "tensor_cache_bytes": trainer.tensor_cache_bytes,
+            "tensor_cache_peak_bytes": trainer.tensor_cache_peak_bytes,
+            "tensor_cache_max_batches": trainer.config.tensor_cache_max_batches,
+            "tensor_cache_entries": len(trainer._tensor_cache),
+            "tensor_cache_hits": trainer.tensor_cache_hits,
+            "tensor_cache_misses": trainer.tensor_cache_misses,
+            "tensor_cache_bypasses": trainer.tensor_cache_bypasses,
         }
         _atomic_json(run_dir / "metrics.json", metrics)
         print(json.dumps(metrics, indent=2, sort_keys=True))
@@ -1228,6 +1282,12 @@ def main() -> None:
         "validation_games": len(validation_ids),
         "tensor_cache_build_seconds": trainer.tensor_cache_build_seconds,
         "tensor_cache_bytes": trainer.tensor_cache_bytes,
+        "tensor_cache_peak_bytes": trainer.tensor_cache_peak_bytes,
+        "tensor_cache_max_batches": trainer.config.tensor_cache_max_batches,
+        "tensor_cache_entries": len(trainer._tensor_cache),
+        "tensor_cache_hits": trainer.tensor_cache_hits,
+        "tensor_cache_misses": trainer.tensor_cache_misses,
+        "tensor_cache_bypasses": trainer.tensor_cache_bypasses,
     }
     _atomic_json(run_dir / "metrics.json", metrics)
     print(json.dumps(metrics, indent=2, sort_keys=True))
