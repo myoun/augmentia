@@ -8,6 +8,7 @@ import json
 import math
 import os
 import random
+import signal
 import subprocess
 import sys
 import time
@@ -181,6 +182,12 @@ class V4Trainer:
         self.history: list[dict[str, Any]] = []
         self.provenance = dict(provenance or {})
         self.source_checkpoint_sha256: str | None = None
+        self.stop_requested = False
+        self.paused = False
+        self.pause_checkpoint: Path | None = None
+        self.epoch_progress: dict[str, Any] | None = None
+        self.pending_validation: dict[str, Any] | None = None
+        self._resume_target_epochs: int | None = None
 
     def batch_count(self, examples: Sequence[FactorizedTrainingExampleV4] | None = None) -> int:
         selected = self.examples if examples is None else examples
@@ -193,12 +200,15 @@ class V4Trainer:
         *,
         shuffle: bool,
         epoch: int,
+        start_batch: int = 0,
     ):
         order = list(range(len(examples)))
         if shuffle:
             random.Random(self.config.seed + epoch).shuffle(order)
         size = self.config.batch_size
-        for start in range(0, len(order), size):
+        for batch_index, start in enumerate(range(0, len(order), size)):
+            if batch_index < start_batch:
+                continue
             selected = [examples[index] for index in order[start : start + size]]
             cases = [
                 {"observation": item.observation, "legal_actions": item.legal_actions}
@@ -207,7 +217,7 @@ class V4Trainer:
             visits = [list(item.complete_visit_counts) for item in selected]
             batch = tensorize_factorized_cases(cases, self.vocabulary, visits)
             values = [item.value for item in selected]
-            yield batch, values
+            yield batch_index, batch, values
 
     def _loss_for_batch(
         self,
@@ -233,47 +243,80 @@ class V4Trainer:
         loss = policy_loss + self.config.value_weight * value_loss
         return loss, policy_loss, value_loss, len(targets)
 
-    def train_epoch(self) -> dict[str, float | int]:
+    def train_epoch(self) -> dict[str, float | int] | None:
         self.model.train()
-        policy_total = 0.0
-        value_total = 0.0
-        total_total = 0.0
-        value_batches = 0
-        value_samples = 0
-        batches = 0
         epoch = self.completed_epochs
-        for batch, values in self._batches(self.examples, shuffle=True, epoch=epoch):
-            batch = batch.to(self.device)
-            self.optimizer.zero_grad(set_to_none=True)
-            loss, policy_loss, value_loss, supervised = self._loss_for_batch(
-                batch, values
-            )
-            if not torch.isfinite(loss):
-                raise FloatingPointError("training loss became NaN or infinity")
-            loss.backward()
-            self.optimizer.step()
-            total_total += float(loss.detach())
-            policy_total += float(policy_loss.detach())
-            if value_loss is not None:
-                value_total += float(value_loss.detach())
-                value_batches += 1
-                value_samples += supervised
-            batches += 1
-        self.completed_epochs += 1
-        return {
-            "loss": total_total / max(1, batches),
-            "policy_loss": policy_total / max(1, batches),
-            "value_loss": value_total / max(1, value_batches),
+        if self.epoch_progress is None:
+            self.epoch_progress = {
+                "epoch": epoch,
+                "next_batch": 0,
+                "total_total": 0.0,
+                "policy_total": 0.0,
+                "value_total": 0.0,
+                "value_batches": 0,
+                "value_samples": 0,
+                "batches": 0,
+                "elapsed_seconds": 0.0,
+            }
+        progress = self.epoch_progress
+        if int(progress.get("epoch", -1)) != epoch:
+            raise ValueError("checkpoint epoch progress does not match completed_epochs")
+        started = time.perf_counter()
+        try:
+            if self.stop_requested:
+                return None
+            for batch_index, batch, values in self._batches(
+                self.examples,
+                shuffle=True,
+                epoch=epoch,
+                start_batch=int(progress["next_batch"]),
+            ):
+                batch = batch.to(self.device)
+                self.optimizer.zero_grad(set_to_none=True)
+                loss, policy_loss, value_loss, supervised = self._loss_for_batch(
+                    batch, values
+                )
+                if not torch.isfinite(loss):
+                    raise FloatingPointError("training loss became NaN or infinity")
+                loss.backward()
+                self.optimizer.step()
+                progress["total_total"] += float(loss.detach())
+                progress["policy_total"] += float(policy_loss.detach())
+                if value_loss is not None:
+                    progress["value_total"] += float(value_loss.detach())
+                    progress["value_batches"] += 1
+                    progress["value_samples"] += supervised
+                progress["batches"] += 1
+                progress["next_batch"] = batch_index + 1
+                if self.stop_requested:
+                    return None
+        finally:
+            progress["elapsed_seconds"] += time.perf_counter() - started
+        batches = int(progress["batches"])
+        value_batches = int(progress["value_batches"])
+        metrics = {
+            "loss": float(progress["total_total"]) / max(1, batches),
+            "policy_loss": float(progress["policy_total"]) / max(1, batches),
+            "value_loss": float(progress["value_total"]) / max(1, value_batches),
             "batches": batches,
             "examples": len(self.examples),
-            "value_supervised_examples": value_samples,
+            "value_supervised_examples": int(progress["value_samples"]),
         }
+        train_elapsed_seconds = float(progress["elapsed_seconds"])
+        self.completed_epochs += 1
+        self.epoch_progress = None
+        self.pending_validation = {
+            "epoch": self.completed_epochs,
+            "train": metrics,
+            "train_elapsed_seconds": train_elapsed_seconds,
+        }
+        return metrics
 
     @torch.no_grad()
     def evaluate(
         self,
         examples: Sequence[FactorizedTrainingExampleV4] | None = None,
-    ) -> dict[str, float | int]:
+    ) -> dict[str, float | int] | None:
         selected = self.validation_examples if examples is None else list(examples)
         if not selected:
             return {
@@ -291,7 +334,9 @@ class V4Trainer:
         value_batches = 0
         value_samples = 0
         batches = 0
-        for batch, values in self._batches(
+        if self.stop_requested:
+            return None
+        for _batch_index, batch, values in self._batches(
             selected, shuffle=False, epoch=self.completed_epochs
         ):
             batch = batch.to(self.device)
@@ -307,6 +352,8 @@ class V4Trainer:
                 value_batches += 1
                 value_samples += supervised
             batches += 1
+            if self.stop_requested:
+                return None
         return {
             "loss": total_total / max(1, batches),
             "policy_loss": policy_total / max(1, batches),
@@ -322,15 +369,31 @@ class V4Trainer:
         checkpoint_every: int = 0,
         checkpoint_prefix: str = "checkpoint",
     ) -> list[dict[str, Any]]:
-        for _ in range(self.config.epochs):
-            started = time.perf_counter()
-            train_metrics = self.train_epoch()
+        target_epochs = (
+            self._resume_target_epochs
+            if self._resume_target_epochs is not None
+            else self.completed_epochs + self.config.epochs
+        )
+        while self.pending_validation is not None or self.completed_epochs < target_epochs:
+            if self.pending_validation is None:
+                train_metrics = self.train_epoch()
+                if train_metrics is None:
+                    self._save_interrupt_checkpoint()
+                    return self.history
+            pending = self.pending_validation
+            if pending is None:
+                raise RuntimeError("training epoch completed without pending validation state")
+            validation_started = time.perf_counter()
             validation_metrics = self.evaluate()
+            if validation_metrics is None:
+                self._save_interrupt_checkpoint()
+                return self.history
             event = {
-                "epoch": self.completed_epochs,
-                "elapsed_seconds": time.perf_counter() - started,
+                "epoch": int(pending["epoch"]),
+                "elapsed_seconds": float(pending["train_elapsed_seconds"])
+                + (time.perf_counter() - validation_started),
                 "learning_rate": self.optimizer.param_groups[0]["lr"],
-                "train": train_metrics,
+                "train": dict(pending["train"]),
                 "validation": validation_metrics,
                 "cuda_memory_allocated_bytes": (
                     torch.cuda.memory_allocated(self.device)
@@ -348,6 +411,7 @@ class V4Trainer:
                     else 0
                 ),
             }
+            self.pending_validation = None
             self.history.append(event)
             self._write_history()
             print(json.dumps(event, sort_keys=True), flush=True)
@@ -356,7 +420,35 @@ class V4Trainer:
                     self.run_dir
                     / f"{checkpoint_prefix}-epoch-{self.completed_epochs:04d}.pt"
                 )
+            if self.stop_requested:
+                self._save_interrupt_checkpoint()
+                return self.history
         return self.history
+
+    def _save_interrupt_checkpoint(self) -> tuple[Path, Path]:
+        self.paused = True
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        target = self.run_dir / "interrupt.pt"
+        checkpoint, sidecar = self.save_checkpoint(target)
+        self.pause_checkpoint = checkpoint
+        print(
+            json.dumps(
+                {
+                    "event": "v4_training_paused",
+                    "checkpoint": str(checkpoint),
+                    "completed_epochs": self.completed_epochs,
+                    "next_batch": (
+                        None
+                        if self.epoch_progress is None
+                        else int(self.epoch_progress["next_batch"])
+                    ),
+                    "pending_validation": self.pending_validation is not None,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        return checkpoint, sidecar
 
     def _write_history(self) -> None:
         self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -386,6 +478,10 @@ class V4Trainer:
             "validation_example_count": len(self.validation_examples),
             "history": self.history,
             "provenance": self.provenance,
+            "epoch_progress": self.epoch_progress,
+            "pending_validation": self.pending_validation,
+            "paused": self.paused,
+            "rng_state": _capture_rng_state(),
             "environment": _environment_identity(self.device),
         }
         _atomic_json(sidecar, payload)
@@ -437,14 +533,38 @@ class V4Trainer:
             ):
                 if getattr(config, field) != saved_training[field]:
                     raise ValueError(f"resume model/training field {field} changed")
+            if payload.get("paused"):
+                for field in (
+                    "batch_size",
+                    "learning_rate",
+                    "value_weight",
+                    "seed",
+                    "device",
+                ):
+                    if getattr(config, field) != saved_training[field]:
+                        raise ValueError(
+                            f"paused resume training field {field} changed"
+                        )
         provenance = dict(payload.get("provenance", {}))
         if expected_provenance is not None:
-            for field in (
+            fields = [
                 "ruleset_id",
                 "ruleset_manifest_sha256",
                 "factorized_policy_schema_id",
                 "dataset_manifest_sha256",
-            ):
+            ]
+            if payload.get("paused"):
+                fields.extend(
+                    [
+                        "max_train_examples",
+                        "max_validation_examples",
+                        "train_game_ids",
+                        "validation_game_ids",
+                        "trainer_git_commit",
+                        "trainer_dirty_worktree",
+                    ]
+                )
+            for field in fields:
                 if provenance.get(field) != expected_provenance.get(field):
                     raise ValueError(f"resume provenance field {field} changed")
 
@@ -471,6 +591,35 @@ class V4Trainer:
         _optimizer_to(trainer.optimizer, trainer.device)
         trainer.completed_epochs = int(payload.get("completed_epochs", 0))
         trainer.history = list(payload.get("history", []))
+        trainer.epoch_progress = payload.get("epoch_progress")
+        trainer.pending_validation = payload.get("pending_validation")
+        if len(examples) != int(payload.get("example_count", len(examples))):
+            raise ValueError("resume training example count changed")
+        if len(validation_examples) != int(
+            payload.get("validation_example_count", len(validation_examples))
+        ):
+            raise ValueError("resume validation example count changed")
+        if trainer.epoch_progress is not None and trainer.pending_validation is not None:
+            raise ValueError("checkpoint cannot contain both epoch progress and pending validation")
+        if trainer.epoch_progress is not None:
+            if int(trainer.epoch_progress.get("epoch", -1)) != trainer.completed_epochs:
+                raise ValueError("checkpoint epoch progress is inconsistent")
+            next_batch = int(trainer.epoch_progress.get("next_batch", -1))
+            if not 0 <= next_batch <= trainer.batch_count():
+                raise ValueError("checkpoint next batch is out of range")
+        if trainer.pending_validation is not None and int(
+            trainer.pending_validation.get("epoch", -1)
+        ) != trainer.completed_epochs:
+            raise ValueError("checkpoint pending validation epoch is inconsistent")
+        if payload.get("paused"):
+            if trainer.epoch_progress is not None and config.epochs <= trainer.completed_epochs:
+                raise ValueError(
+                    "paused mid-epoch resume requires --epochs above completed_epochs"
+                )
+            trainer._resume_target_epochs = config.epochs
+        rng_state = payload.get("rng_state")
+        if isinstance(rng_state, dict):
+            _restore_rng_state(rng_state)
         trainer.source_checkpoint_sha256 = actual_checkpoint_hash
         return trainer
 
@@ -600,6 +749,39 @@ def _seed_everything(seed: int) -> None:
     if hasattr(torch.backends, "cudnn"):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
+
+
+def _capture_rng_state() -> dict[str, Any]:
+    return {
+        "python": random.getstate(),
+        "torch_cpu": torch.get_rng_state().tolist(),
+        "torch_cuda": (
+            [state.tolist() for state in torch.cuda.get_rng_state_all()]
+            if torch.cuda.is_available()
+            else []
+        ),
+    }
+
+
+def _restore_rng_state(payload: Mapping[str, Any]) -> None:
+    python_state = payload.get("python")
+    if python_state is not None:
+        random.setstate(_nested_tuple(python_state))
+    torch_cpu = payload.get("torch_cpu")
+    if isinstance(torch_cpu, list):
+        torch.set_rng_state(torch.tensor(torch_cpu, dtype=torch.uint8))
+    torch_cuda = payload.get("torch_cuda")
+    if torch.cuda.is_available() and isinstance(torch_cuda, list) and torch_cuda:
+        states = [torch.tensor(state, dtype=torch.uint8) for state in torch_cuda]
+        if len(states) != torch.cuda.device_count():
+            raise ValueError("checkpoint CUDA RNG device count changed")
+        torch.cuda.set_rng_state_all(states)
+
+
+def _nested_tuple(value: Any) -> Any:
+    if isinstance(value, list):
+        return tuple(_nested_tuple(item) for item in value)
+    return value
 
 
 def _optimizer_to(optimizer: torch.optim.Optimizer, device: torch.device) -> None:
@@ -794,10 +976,66 @@ def main() -> None:
         )
         trainer.run_dir = run_dir
 
-    trainer.fit(checkpoint_every=args.checkpoint_every)
+    interrupt_count = 0
+
+    def request_pause(signum: int, _frame: Any) -> None:
+        nonlocal interrupt_count
+        interrupt_count += 1
+        if interrupt_count == 1:
+            trainer.stop_requested = True
+            print(
+                json.dumps(
+                    {
+                        "event": "v4_training_pause_requested",
+                        "signal": signum,
+                        "message": "finishing the current batch before checkpointing",
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            return
+        raise KeyboardInterrupt
+
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = (
+        signal.getsignal(signal.SIGTERM) if hasattr(signal, "SIGTERM") else None
+    )
+    signal.signal(signal.SIGINT, request_pause)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, request_pause)
+    try:
+        trainer.fit(checkpoint_every=args.checkpoint_every)
+    finally:
+        signal.signal(signal.SIGINT, previous_sigint)
+        if hasattr(signal, "SIGTERM") and previous_sigterm is not None:
+            signal.signal(signal.SIGTERM, previous_sigterm)
+
+    if trainer.paused:
+        metrics = {
+            "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
+            "paused": True,
+            "completed_epochs": trainer.completed_epochs,
+            "history": trainer.history,
+            "resume_checkpoint": str(trainer.pause_checkpoint),
+            "resume_checkpoint_sha256": (
+                None
+                if trainer.pause_checkpoint is None
+                else _sha256_file(trainer.pause_checkpoint)
+            ),
+            "train_examples": len(train_examples),
+            "validation_examples": len(validation_examples),
+            "train_games": len(train_ids),
+            "validation_games": len(validation_ids),
+        }
+        _atomic_json(run_dir / "metrics.json", metrics)
+        print(json.dumps(metrics, indent=2, sort_keys=True))
+        return
+
     final_checkpoint, final_sidecar = trainer.save_checkpoint(run_dir / "final.pt")
     metrics = {
         "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
+        "paused": False,
         "completed_epochs": trainer.completed_epochs,
         "history": trainer.history,
         "final_checkpoint": str(final_checkpoint),
