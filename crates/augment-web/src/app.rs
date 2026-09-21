@@ -1048,7 +1048,7 @@ mod tests {
 
 fn load_v4_runtime(models: &WebModelConfig) -> Result<V4OnnxRuntime, String> {
     let ruleset_hash = sha256_file(&models.ruleset_manifest)?;
-    V4OnnxRuntime::from_bundle_with_options(
+    let cuda = V4OnnxRuntime::from_bundle_with_options(
         &models.model_bundle,
         RULESET_ID,
         &ruleset_hash,
@@ -1056,8 +1056,22 @@ fn load_v4_runtime(models: &WebModelConfig) -> Result<V4OnnxRuntime, String> {
             execution_provider: V3ExecutionProvider::Cuda,
             intra_threads: 1,
         },
-    )
-    .map_err(|error| error.to_string())
+    );
+    match cuda {
+        Ok(runtime) => Ok(runtime),
+        Err(cuda_error) => V4OnnxRuntime::from_bundle_with_options(
+            &models.model_bundle,
+            RULESET_ID,
+            &ruleset_hash,
+            V3RuntimeOptions {
+                execution_provider: V3ExecutionProvider::Cpu,
+                intra_threads: 1,
+            },
+        )
+        .map_err(|cpu_error| {
+            format!("CUDA load failed ({cuda_error}); CPU fallback also failed ({cpu_error})")
+        }),
+    }
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
