@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("증강체스 웹 UI");
     println!("주소: {url}");
     println!(
-        "규칙 스냅숏: augment_chess_20260818 | seed: {}",
+        "규칙 스냅숏: augment_chess_20260915 | seed: {}",
         options.seed
     );
     println!("종료하려면 Ctrl+C를 누르세요.");
@@ -79,18 +79,10 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Options, Box<dyn
                     .parse()?;
             }
             "--no-open" => options.open_browser = false,
-            "--model-1" => {
-                options.models.model_1 =
-                    PathBuf::from(args.next().ok_or("--model-1 뒤에 ONNX 경로가 필요합니다")?);
-            }
-            "--model-2" => {
-                options.models.model_2 =
-                    PathBuf::from(args.next().ok_or("--model-2 뒤에 ONNX 경로가 필요합니다")?);
-            }
-            "--model-2-metadata" => {
-                options.models.model_2_metadata = PathBuf::from(
+            "--model-bundle" => {
+                options.models.model_bundle = PathBuf::from(
                     args.next()
-                        .ok_or("--model-2-metadata 뒤에 metadata 경로가 필요합니다")?,
+                        .ok_or("--model-bundle 뒤에 V4 bundle metadata 경로가 필요합니다")?,
                 );
             }
             "--ruleset-manifest" => {
@@ -102,8 +94,7 @@ fn parse_args(mut args: impl Iterator<Item = String>) -> Result<Options, Box<dyn
             "--help" | "-h" => {
                 println!(
                     "사용법: cargo run -p augment-web -- [--port 7878] [--seed 정수] [--no-open] \
-                     [--model-1 V2.onnx] [--model-2 V3.onnx] \
-                     [--model-2-metadata V3.metadata.json] [--ruleset-manifest manifest.json]"
+                     [--model-bundle V4.metadata.json] [--ruleset-manifest manifest.json]"
                 );
                 std::process::exit(0);
             }

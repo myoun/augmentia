@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
@@ -76,8 +76,8 @@
         <section class="model-compare panel" aria-live="polite">
           <div class="model-compare-heading">
             <div>
-              <span class="eyebrow">MODEL COMPARISON</span>
-              <h2>두 모델의 제안</h2>
+              <span class="eyebrow">V4 MODEL</span>
+              <h2>Model-1 epoch2 제안</h2>
             </div>
             <button id="stopAutoButton" class="button danger hidden" type="button">
               자동 진행 중지
@@ -86,33 +86,17 @@
           <div class="model-suggestion-grid">
             <article id="model1Card" class="model-suggestion model-one" data-state="loading">
               <div class="model-suggestion-title">
-                <span class="model-number">1</span>
+                <span class="model-number">V4</span>
                 <div>
-                  <strong>1번 모델</strong>
-                  <span>V2 기준 모델</span>
+                  <strong>Model-1 epoch2</strong>
+                  <span>0915 ruleset · factorized Gumbel MCTS</span>
                 </div>
               </div>
               <div id="model1Move" class="model-move">계산 중…</div>
-              <div id="model1Meta" class="model-meta">같은 상태에서 탐색하고 있습니다.</div>
+              <div id="model1Meta" class="model-meta">V4가 현재 상태를 탐색하고 있습니다.</div>
               <div class="model-actions">
                 <button id="chooseModel1" class="button primary" type="button" disabled>이 수 선택</button>
-                <button id="autoModel1" class="button auto-play" type="button" disabled>1번 모델 자동 진행</button>
-              </div>
-            </article>
-
-            <article id="model2Card" class="model-suggestion model-two" data-state="loading">
-              <div class="model-suggestion-title">
-                <span class="model-number">2</span>
-                <div>
-                  <strong>2번 모델</strong>
-                  <span>V3 smoke 모델</span>
-                </div>
-              </div>
-              <div id="model2Move" class="model-move">계산 중…</div>
-              <div id="model2Meta" class="model-meta">같은 상태에서 탐색하고 있습니다.</div>
-              <div class="model-actions">
-                <button id="chooseModel2" class="button primary" type="button" disabled>이 수 선택</button>
-                <button id="autoModel2" class="button auto-play" type="button" disabled>2번 모델 자동 진행</button>
+                <button id="autoModel1" class="button auto-play" type="button" disabled>V4 자동 진행</button>
               </div>
             </article>
           </div>

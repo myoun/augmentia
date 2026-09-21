@@ -3,15 +3,10 @@ const elements = {
   seedInput: document.querySelector("#seedInput"),
   newGameButton: document.querySelector("#newGameButton"),
   model1Card: document.querySelector("#model1Card"),
-  model2Card: document.querySelector("#model2Card"),
   model1Move: document.querySelector("#model1Move"),
-  model2Move: document.querySelector("#model2Move"),
   model1Meta: document.querySelector("#model1Meta"),
-  model2Meta: document.querySelector("#model2Meta"),
   chooseModel1: document.querySelector("#chooseModel1"),
-  chooseModel2: document.querySelector("#chooseModel2"),
   autoModel1: document.querySelector("#autoModel1"),
-  autoModel2: document.querySelector("#autoModel2"),
   stopAutoButton: document.querySelector("#stopAutoButton"),
   connectionState: document.querySelector("#connectionState"),
   turnPill: document.querySelector("#turnPill"),
@@ -620,19 +615,12 @@ async function refreshSuggestions() {
 
 function renderSuggestions() {
   if (!elements.model1Card) return;
-  renderSuggestion("model-1", {
+  renderSuggestion("model-v4", {
     card: elements.model1Card,
     move: elements.model1Move,
     meta: elements.model1Meta,
     choose: elements.chooseModel1,
     auto: elements.autoModel1,
-  });
-  renderSuggestion("model-2", {
-    card: elements.model2Card,
-    move: elements.model2Move,
-    meta: elements.model2Meta,
-    choose: elements.chooseModel2,
-    auto: elements.autoModel2,
   });
   elements.stopAutoButton.classList.toggle("hidden", !autoModel);
 }
@@ -648,7 +636,7 @@ function renderSuggestion(modelId, view) {
   } else if (!suggestion) {
     view.card.dataset.state = "loading";
     view.move.textContent = "계산 중…";
-    view.meta.textContent = "두 모델이 같은 상태에서 동시에 탐색 중입니다.";
+    view.meta.textContent = "V4가 현재 상태를 탐색 중입니다.";
   } else if (ready) {
     view.card.dataset.state = "ready";
     view.move.textContent = suggestion.action.label;
@@ -714,10 +702,8 @@ function scheduleAutoMove() {
   }, 650);
 }
 
-elements.chooseModel1.addEventListener("click", () => chooseSuggestion("model-1"));
-elements.chooseModel2.addEventListener("click", () => chooseSuggestion("model-2"));
-elements.autoModel1.addEventListener("click", () => startAutoModel("model-1"));
-elements.autoModel2.addEventListener("click", () => startAutoModel("model-2"));
+elements.chooseModel1.addEventListener("click", () => chooseSuggestion("model-v4"));
+elements.autoModel1.addEventListener("click", () => startAutoModel("model-v4"));
 elements.stopAutoButton.addEventListener("click", () => setAutoModel(null));
 elements.newGameButton.addEventListener("click", newGame);
 elements.cancelSelection.addEventListener("click", () => {

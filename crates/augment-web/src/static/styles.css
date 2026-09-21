@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   --bg: #0c0e12;
   --surface: rgba(24, 27, 34, 0.88);
@@ -500,7 +500,7 @@ h2 {
 
 .model-suggestion-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -549,7 +549,7 @@ h2 {
 
 .model-number {
   display: grid !important;
-  width: 29px;
+  min-width: 38px;
   height: 29px;
   place-items: center;
   border-radius: 9px;
