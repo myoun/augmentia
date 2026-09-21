@@ -3,6 +3,7 @@
 이 문서는 V4 factorized search의 구현 상태를 기록한다.
 설계 계약은 [V4 factorized policy contract](ai-v4-factorized-policy.md)를 참고한다.
 2026-09-19 현재 Phase 0/1 이후 lazy prefix scoring, Hybrid Encoder 구현과 0915 고정 예산 baseline 재봉인까지 반영했다.
+실제 학습 파이프라인의 실행 순서와 데이터 오염 방지 원칙은 [0915 native V4 training plan](ai-v4-training-plan-0915.md)에 고정한다.
 
 ## 요약
 
@@ -155,6 +156,9 @@ fixture는 작은 테스트 모델이며 배포용 학습 모델이나 품질 ba
 | `train/v3/fixtures/0915/`, `train/v3/fixtures/v4_bundle_0915/` | 0915 baseline fixture와 split ONNX bundle |
 
 ## 남은 작업과 진행 순서
+
+실제 모델 학습은 [0915 native V4 training plan](ai-v4-training-plan-0915.md)의 M0~M7을 우선한다.
+특히 0818 policy/value target은 0915 학습에 변환·혼합하지 않는다.
 
 1. **0915 고정 예산 baseline: 재봉인 완료** — [baseline 기록](ai-v4-baseline.md).
    lazy scoring 적용 상태에서 standard/draft와 wide stress fixture를 봉인했고 warm repeat visit delta는 모두 0이다.

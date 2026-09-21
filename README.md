@@ -119,6 +119,7 @@ docs/ai-v3-model.md                   첫 V3 신경망 구조·동적 policy·�
 docs/ai-v3-hierarchical-sampled-search.md  계층형 표본 PUCT와 확률적 Draft 후속 설계
 docs/ai-v4-factorized-policy.md       V4 factorized policy·조건부 visit target 계약
 docs/ai-v4-implementation-status.md   V4 Phase 0/1 구현 현황·검증 결과·후속 계획
+docs/ai-v4-training-plan-0915.md       0915 native data 기반 실제 V4 학습 계획과 단계별 gate
 rulesets/augment_chess_20260818/      최신 불변 규칙 스냅숏
 rulesets/augment_chess_20260807/      이전 불변 규칙 스냅숏
 ```
