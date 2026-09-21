@@ -10,18 +10,18 @@ from v3.factorized import FactorizedPolicyError
 from .batch import PrefixBatchV4, assert_visit_conservation
 
 
-def conditional_prefix_cross_entropy(
+def conditional_prefix_policy_metrics(
     logits: torch.Tensor,
     prefixes: PrefixBatchV4,
     *,
     reduction: str = "mean",
-) -> torch.Tensor:
-    """Cross entropy over opened legal children at each visited prefix.
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return cross entropy, target entropy, and KL for V4 prefix targets.
 
     Each prefix term is weighted by its descendant visit mass divided by its
-    decision's root visits. Therefore the sum is exactly the negative log
-    likelihood of the complete-action visit distribution under products of
-    conditional probabilities. Zero-mass prefixes contribute no loss.
+    decision's root visits. The weighted conditional target entropy therefore
+    obeys the same chain rule as the policy cross entropy, so CE = H + KL at
+    decision level. Zero-mass prefixes contribute no metric mass.
     """
     if logits.shape != prefixes.visit_counts.shape:
         raise ValueError("prefix logits and visit counts must have the same shape")
@@ -36,13 +36,51 @@ def conditional_prefix_cross_entropy(
     row_visits = prefixes.visit_counts.sum(dim=1)
     target = prefixes.visit_counts / row_visits.clamp_min(1).unsqueeze(1)
     log_probabilities = F.log_softmax(masked_logits, dim=1)
-    row_loss = -(target * log_probabilities).sum(dim=1)
-    row_loss = torch.where(row_visits > 0, row_loss * prefixes.prefix_mass, torch.zeros_like(row_loss))
+    log_target = torch.where(target > 0, target.log(), torch.zeros_like(target))
+
+    row_cross_entropy = -(target * log_probabilities).sum(dim=1)
+    row_target_entropy = -(target * log_target).sum(dim=1)
+    row_kl = (target * (log_target - log_probabilities)).sum(dim=1)
+
+    has_visits = row_visits > 0
+    row_cross_entropy = torch.where(
+        has_visits,
+        row_cross_entropy * prefixes.prefix_mass,
+        torch.zeros_like(row_cross_entropy),
+    )
+    row_target_entropy = torch.where(
+        has_visits,
+        row_target_entropy * prefixes.prefix_mass,
+        torch.zeros_like(row_target_entropy),
+    )
+    row_kl = torch.where(
+        has_visits,
+        row_kl * prefixes.prefix_mass,
+        torch.zeros_like(row_kl),
+    )
 
     if reduction == "none":
-        return row_loss
-    total = row_loss.sum()
+        return row_cross_entropy, row_target_entropy, row_kl
+
+    cross_entropy = row_cross_entropy.sum()
+    target_entropy = row_target_entropy.sum()
+    kl = row_kl.sum()
     if reduction == "sum":
-        return total
+        return cross_entropy, target_entropy, kl
+
     decision_count = prefixes.complete_action_visits.shape[0]
-    return total / max(1, decision_count)
+    divisor = max(1, decision_count)
+    return cross_entropy / divisor, target_entropy / divisor, kl / divisor
+
+
+def conditional_prefix_cross_entropy(
+    logits: torch.Tensor,
+    prefixes: PrefixBatchV4,
+    *,
+    reduction: str = "mean",
+) -> torch.Tensor:
+    """Cross entropy over opened legal children at each visited prefix."""
+    cross_entropy, _target_entropy, _kl = conditional_prefix_policy_metrics(
+        logits, prefixes, reduction=reduction
+    )
+    return cross_entropy

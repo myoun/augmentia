@@ -10,7 +10,10 @@ import torch
 from v3.tensorize import V3Vocabulary
 
 from v4.batch import FACTOR_FIELD_IDS, tensorize_factorized_cases
-from v4.loss import conditional_prefix_cross_entropy
+from v4.loss import (
+    conditional_prefix_cross_entropy,
+    conditional_prefix_policy_metrics,
+)
 from v4.model import AugmentNetV4, V4ModelConfig
 
 
@@ -77,6 +80,19 @@ class FactorizedModelTests(unittest.TestCase):
         loss = conditional_prefix_cross_entropy(logits, batch.prefixes)
         expected = math.log(2.0)
         self.assertAlmostEqual(float(loss), expected, places=6)
+
+    def test_policy_metrics_decompose_cross_entropy(self) -> None:
+        batch = self._batch([3, 1])
+        logits = torch.zeros_like(batch.prefixes.visit_counts, dtype=torch.float32)
+        cross_entropy, target_entropy, kl = conditional_prefix_policy_metrics(
+            logits, batch.prefixes
+        )
+        expected_target_entropy = -(0.75 * math.log(0.75) + 0.25 * math.log(0.25))
+        self.assertAlmostEqual(float(target_entropy), expected_target_entropy, places=6)
+        self.assertAlmostEqual(
+            float(cross_entropy), float(target_entropy + kl), places=6
+        )
+        self.assertGreaterEqual(float(kl), -1e-7)
 
     def test_tiny_factorized_scorer_overfits(self) -> None:
         old_threads = torch.get_num_threads()

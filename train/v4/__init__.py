@@ -29,7 +29,10 @@ from .batch import (
     encode_factor_edge,
     tensorize_factorized_cases,
 )
-from .loss import conditional_prefix_cross_entropy
+from .loss import (
+    conditional_prefix_cross_entropy,
+    conditional_prefix_policy_metrics,
+)
 from .model import AugmentNetV4, V4ModelConfig, V4ModelOutput
 
 __all__ += [
@@ -44,6 +47,7 @@ __all__ += [
     "collate_factorized_batch",
     "collate_v4_batch",
     "conditional_prefix_cross_entropy",
+    "conditional_prefix_policy_metrics",
     "encode_factor_edge",
     "tensorize_factorized_cases",
 ]

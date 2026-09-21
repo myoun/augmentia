@@ -120,6 +120,8 @@ class PauseResumeV4Test(unittest.TestCase):
                     for metric in (
                         "loss",
                         "policy_loss",
+                        "policy_target_entropy",
+                        "policy_kl",
                         "value_loss",
                         "batches",
                         "examples",

@@ -23,7 +23,7 @@ from v3.tensorize import V3Vocabulary
 
 from .batch import tensorize_factorized_cases
 from .dataset import DatasetInputV4, load_dataset_input
-from .loss import conditional_prefix_cross_entropy
+from .loss import conditional_prefix_policy_metrics
 from .model import AugmentNetV4, V4ModelConfig
 from .replay import FactorizedTrainingExampleV4, load_game_v4
 
@@ -409,14 +409,28 @@ class V4Trainer:
         self,
         batch: Any,
         values: Sequence[float | None],
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, int]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor | None,
+        int,
+    ]:
         output = self.model(batch)
-        policy_loss = conditional_prefix_cross_entropy(
-            output.prefix_logits, batch.prefixes
+        policy_loss, policy_target_entropy, policy_kl = (
+            conditional_prefix_policy_metrics(output.prefix_logits, batch.prefixes)
         )
         targets = [item for item in values if item is not None]
         if not targets:
-            return policy_loss, policy_loss, None, 0
+            return (
+                policy_loss,
+                policy_loss,
+                policy_target_entropy,
+                policy_kl,
+                None,
+                0,
+            )
         value_tensor = torch.tensor(
             targets, dtype=torch.float32, device=self.device
         )
@@ -427,7 +441,14 @@ class V4Trainer:
         )
         value_loss = torch.nn.functional.mse_loss(output.value[mask], value_tensor)
         loss = policy_loss + self.config.value_weight * value_loss
-        return loss, policy_loss, value_loss, len(targets)
+        return (
+            loss,
+            policy_loss,
+            policy_target_entropy,
+            policy_kl,
+            value_loss,
+            len(targets),
+        )
 
     def train_epoch(self) -> dict[str, float | int] | None:
         self.model.train()
@@ -438,6 +459,8 @@ class V4Trainer:
                 "next_batch": 0,
                 "total_total": 0.0,
                 "policy_total": 0.0,
+                "policy_target_entropy_total": 0.0,
+                "policy_kl_total": 0.0,
                 "value_total": 0.0,
                 "value_batches": 0,
                 "value_samples": 0,
@@ -445,6 +468,8 @@ class V4Trainer:
                 "elapsed_seconds": 0.0,
             }
         progress = self.epoch_progress
+        progress.setdefault("policy_target_entropy_total", 0.0)
+        progress.setdefault("policy_kl_total", 0.0)
         if int(progress.get("epoch", -1)) != epoch:
             raise ValueError("checkpoint epoch progress does not match completed_epochs")
         started = time.perf_counter()
@@ -459,15 +484,24 @@ class V4Trainer:
             ):
                 batch = batch.to(self.device)
                 self.optimizer.zero_grad(set_to_none=True)
-                loss, policy_loss, value_loss, supervised = self._loss_for_batch(
-                    batch, values
-                )
+                (
+                    loss,
+                    policy_loss,
+                    policy_target_entropy,
+                    policy_kl,
+                    value_loss,
+                    supervised,
+                ) = self._loss_for_batch(batch, values)
                 if not torch.isfinite(loss):
                     raise FloatingPointError("training loss became NaN or infinity")
                 loss.backward()
                 self.optimizer.step()
                 progress["total_total"] += float(loss.detach())
                 progress["policy_total"] += float(policy_loss.detach())
+                progress["policy_target_entropy_total"] += float(
+                    policy_target_entropy.detach()
+                )
+                progress["policy_kl_total"] += float(policy_kl.detach())
                 if value_loss is not None:
                     progress["value_total"] += float(value_loss.detach())
                     progress["value_batches"] += 1
@@ -483,6 +517,9 @@ class V4Trainer:
         metrics = {
             "loss": float(progress["total_total"]) / max(1, batches),
             "policy_loss": float(progress["policy_total"]) / max(1, batches),
+            "policy_target_entropy": float(progress["policy_target_entropy_total"])
+            / max(1, batches),
+            "policy_kl": float(progress["policy_kl_total"]) / max(1, batches),
             "value_loss": float(progress["value_total"]) / max(1, value_batches),
             "batches": batches,
             "examples": len(self.examples),
@@ -508,6 +545,8 @@ class V4Trainer:
             return {
                 "loss": 0.0,
                 "policy_loss": 0.0,
+                "policy_target_entropy": 0.0,
+                "policy_kl": 0.0,
                 "value_loss": 0.0,
                 "batches": 0,
                 "examples": 0,
@@ -516,6 +555,8 @@ class V4Trainer:
         self.model.eval()
         total_total = 0.0
         policy_total = 0.0
+        policy_target_entropy_total = 0.0
+        policy_kl_total = 0.0
         value_total = 0.0
         value_batches = 0
         value_samples = 0
@@ -526,13 +567,20 @@ class V4Trainer:
             selected, shuffle=False, epoch=self.completed_epochs
         ):
             batch = batch.to(self.device)
-            loss, policy_loss, value_loss, supervised = self._loss_for_batch(
-                batch, values
-            )
+            (
+                loss,
+                policy_loss,
+                policy_target_entropy,
+                policy_kl,
+                value_loss,
+                supervised,
+            ) = self._loss_for_batch(batch, values)
             if not torch.isfinite(loss):
                 raise FloatingPointError("validation loss became NaN or infinity")
             total_total += float(loss.detach())
             policy_total += float(policy_loss.detach())
+            policy_target_entropy_total += float(policy_target_entropy.detach())
+            policy_kl_total += float(policy_kl.detach())
             if value_loss is not None:
                 value_total += float(value_loss.detach())
                 value_batches += 1
@@ -543,6 +591,8 @@ class V4Trainer:
         return {
             "loss": total_total / max(1, batches),
             "policy_loss": policy_total / max(1, batches),
+            "policy_target_entropy": policy_target_entropy_total / max(1, batches),
+            "policy_kl": policy_kl_total / max(1, batches),
             "value_loss": value_total / max(1, value_batches),
             "batches": batches,
             "examples": len(selected),

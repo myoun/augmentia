@@ -63,9 +63,15 @@ def main() -> None:
     )
     validation = trainer.evaluate()
     expected = sidecar["history"][-1]["validation"]
+    metric_keys = ["loss", "policy_loss", "value_loss"]
+    metric_keys.extend(
+        key
+        for key in ("policy_target_entropy", "policy_kl")
+        if key in expected
+    )
     errors = {
         key: abs(float(validation[key]) - float(expected[key]))
-        for key in ("loss", "policy_loss", "value_loss")
+        for key in metric_keys
     }
     if max(errors.values(), default=0.0) > 1e-7:
         raise ValueError(f"reloaded validation metrics drifted: {errors}")
