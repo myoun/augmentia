@@ -8,7 +8,9 @@
 ## 요약
 
 - **Phase 0 — chance 정확성: 완료.**
-- **Phase 1 — Rust split ONNX 런타임 및 MCTS 연결: 완료, 검증 통과.**
+- **opened-mask target contract recovery: 완료, contract gate 통과.**
+- **구현 Phase 1 — Rust split ONNX 런타임 및 MCTS 연결: 완료, 검증 통과.**
+- **개선 Phase 1 — legacy quarantine와 clean 0915 smoke: 완료. baseline paired A/B: 실행 완료, model gate 실패, strength gate 미진행.**
 - **Lazy prefix scoring: 완료, 실제 ONNX 경로 검증 통과.**
 - **Hybrid Encoder: opt-in 구현 및 eager/ONNX 계약 검증 완료.**
 - **0915 고정 예산 baseline: 재봉인 완료.** [baseline 기록](ai-v4-baseline.md)
@@ -32,10 +34,34 @@
 - `chance_outcome_samples`는 `1..=64`, 기본값은 8이다.
 - Gumbel seed와 chance/search seed의 도메인을 분리했다.
 - 실제 플레이는 `Engine::apply`, 탐색은 `Engine::apply_for_search`를 사용한다.
-- replay target은 `augmentia.factorized-mcts-visits.v2`이며,
-  chance sample 수와 search semantics provenance를 기록한다.
+- replay target은 `augmentia.factorized-mcts-visits.v3`이며,
+  chance sample 수와 search semantics provenance 및 root `opened_action_mask`를 기록한다.
 
-## Phase 1: split ONNX 런타임
+## Opened-mask target contract recovery
+
+- MCTS `SearchResultV4`는 legal action 순서의 `opened_action_mask`를 반환한다.
+- replay record는 `augmentia.replay.game.v5`로 bump하고 V3 target schema를 명시한다.
+- target은 root mask와 child-aligned prefix `opened_masks`를 모두 보존하며,
+  checksum은 두 정보를 함께 봉인한다.
+- positive visit는 opened, opened zero-visit는 허용, closed positive-visit는 거부한다.
+- loss denominator는 `legal_mask & opened_mask`만 사용한다.
+- Python replay example과 trainer는 root mask를 필수로 전달한다.
+- legacy V2 corpus/checkpoint는 새 trainer에 fail-closed되며 명시적 migration 없이
+  승격이나 학습에 사용할 수 없다.
+
+## Clean corpus와 baseline Phase 1
+
+- legacy artifact 8 runs, 304 games, 74 checkpoints를 read-only registry로 격리했다.
+- 동일 producer/seed/config로 v5/v3 20-game clean smoke를 재생성했다.
+- seed와 trajectory는 legacy reference와 20/20 일치하고, visit target도 320/320 일치한다.
+- 7,694 legal action 중 4,600 opened, 3,094 closed였고 mixed prefix row는 1,626개였다.
+- 동일 split/init/epoch의 baseline A/B에서 opened-only가 held-out conditional KL,
+  complete-action NLL/ECE와 top-1을 개선했다.
+- 두 실제 arm의 Python eager/ONNX/Rust parity가 tolerance `2e-4` 안에서 통과했다.
+- 20 games가 모두 truncated smoke이고 strength sample이 아니므로 모든 결과는
+  `promotable=false`다. 상세 seal은 [Phase 1 결과](ai-v4-phase1-status.md)에 있다.
+
+## 구현 Phase 1: split ONNX 런타임
 
 ### 평가 경로
 
@@ -95,11 +121,22 @@ promotion_indexes = torch.where(is_promotion, raw_index, torch.zeros_like(raw_in
 
 | 검증 | 결과 |
 |---|---|
-| `cargo test --workspace` | 통과, `augment-ai` 107개 포함 |
-| Python 전체 unittest | 101개 통과 |
-| Rust V4 runtime / MCTS / integration | 통과, 실제 ONNX Runtime 포함 |
+| `cargo test --workspace --exclude augment-snapshot` | 통과, `augment-ai` 112개 포함 |
+| `cargo clippy --workspace --all-targets --exclude augment-snapshot -- -D warnings` | 통과 |
+| Python 전체 unittest | 147개 통과 |
+| Python V4 unittest | 71개 통과 |
+| Phase 1 quarantine/corpus/paired-A-B tests | 24개 통과 |
+| current-code full A/B | 20 games, 224 train / 96 held-out decisions, 3 epochs, model gate `fail` |
+| 실제 opened-only checkpoint eager/Python ONNX/Rust parity | tolerance `2e-4` 통과; all-open experiment export 차단 확인 |
+| Rust/Python shared v3 target fixture | 동일 hash `e2c30b...9605`, 양쪽 round-trip 통과 |
+| clean v5 producer → Rust validator → Python audit | 20 games / 320 decisions, seed·trajectory 20/20 일치 |
 | 0915 fixed-budget baseline | standard/draft/wide 재현성 delta 0으로 봉인 |
 | `git diff --check` | 통과, 줄바꿈 경고만 발생 |
+
+전체 `cargo test --workspace`의 유일한 실패는 현재 작업 트리에 없는
+`rulesets/augment_chess_20260915/sources/raw/main-6qeAcxbX.js`를 요구하는
+`augment-snapshot`의 기존 로컬 입력 테스트다. Phase 0 변경 crate와 CLI/web/core
+회귀는 위 exclude 실행에서 모두 통과했다.
 
 V4 ONNX 테스트는 **실제 ONNX Runtime으로 실행**했다. skip 결과가 아니다.
 다음 항목을 확인했다.
@@ -121,9 +158,10 @@ V4 ONNX 테스트는 **실제 ONNX Runtime으로 실행**했다. skip 결과가 
 다른 환경에서는 해당 플랫폼의 라이브러리 경로를 사용한다.
 
 ```powershell
-$env:ORT_DYLIB_PATH = "D:/augmentia/train/.venv/Lib/site-packages/onnxruntime/capi/onnxruntime.dll"
+$env:ORT_DYLIB_PATH = "D:/augmentia/augmentia/train/.venv/Lib/site-packages/onnxruntime/capi/onnxruntime.dll"
 cargo test -p augment-ai runtime_v4 -- --nocapture
-cargo test --workspace
+cargo test --workspace --exclude augment-snapshot
+cargo clippy --workspace --all-targets --exclude augment-snapshot -- -D warnings
 ```
 
 V4 Rust ONNX 테스트는 `ORT_DYLIB_PATH`가 없을 때만 skip한다.
@@ -133,6 +171,7 @@ Python 전체 검증과 fixture 재생성은 `train/`에서 실행한다.
 
 ```text
 uv run python -m unittest discover -s . -p "test_*.py" -v
+uv run python -m unittest v4.test_quarantine_legacy v4.test_audit_phase1_corpus v4.test_phase1_ab -v
 uv run python -m v4.export_fixture_bundle
 ```
 
@@ -152,24 +191,31 @@ fixture는 작은 테스트 모델이며 배포용 학습 모델이나 품질 ba
 | `train/v4/hybrid.py` | opt-in typed-token attention Hybrid Encoder |
 | `train/v4/onnx_export.py` | split graph export 및 metadata |
 | `train/v4/export_fixture_bundle.py` | ruleset별 Python/Rust 공유 fixture bundle 재생성 |
+| `train/v4/quarantine_legacy.py` | legacy v4/v2 artifact read-only quarantine registry |
+| `train/v4/audit_phase1_corpus.py` | producer/trajectory/target regeneration audit |
+| `train/v4/phase1_ab.py` | 동일 corpus baseline paired A/B, export, parity CLI |
 | `train/v3/fixtures/v4_bundle/` | 0818 회귀 테스트 graph, metadata, parity 기대값 |
 | `train/v3/fixtures/0915/`, `train/v3/fixtures/v4_bundle_0915/` | 0915 baseline fixture와 split ONNX bundle |
 
 ## 남은 작업과 진행 순서
 
-실제 모델 학습은 [0915 native V4 training plan](ai-v4-training-plan-0915.md)의 M0~M7을 우선한다.
-특히 0818 policy/value target은 0915 학습에 변환·혼합하지 않는다.
+다음 순서는 [V4 개선 우선순위 조사](ai-v4-improvement-priority-audit.md)의
+Phase 1~3과 [0915 native V4 training plan](ai-v4-training-plan-0915.md)을 따른다.
 
-1. **0915 고정 예산 baseline: 재봉인 완료** — [baseline 기록](ai-v4-baseline.md).
-   lazy scoring 적용 상태에서 standard/draft와 wide stress fixture를 봉인했고 warm repeat visit delta는 모두 0이다.
-   V3 대비 paired arena 우위 비교는 아직 없다.
-2. **Hybrid Encoder: 구현/계약 검증 완료, 학습 A/B 남음.**
-   baseline encoder와 동일 입력 계약을 유지한 채 실제 학습 모델로 latency/strength를 비교해야 한다.
-3. **NN-only exact/beam fast path**: Engine 합법 행동 공간 안에서 동작시킨다.
-4. **Search-risk predictor**: 일반 confidence가 아니라 regret/필요 예산을 예측한다.
-   먼저 shadow 모드에서 검증한다.
-5. **Adaptive compute controller**: NN-only 선택, 탐색 진입, 탐색 계속 여부를 제어한다.
-   공개 정보만 사용하고 선택한 예산과 결정 경로를 기록한다.
-6. **Tactical verifier**: Engine 전이와 합법성 계약을 유지한다.
+1. **Opened-mask target contract recovery: 완료.** v5/v3 lineage, producer→replay→
+   trainer 전파, fail-closed legacy 차이와 contract regression을 봉인했다.
+2. **Clean 0915 native corpus: 완료.** legacy v4/v2 corpus/checkpoint를 격리하고
+   v5/v3 producer로 20-game deterministic smoke를 재생성·검증했다.
+3. **Baseline Model-1 A/B: 실행 완료, model gate 실패, 비승격.** 동일 producer,
+   trajectory, split, baseline encoder와 initial hash로 opened-only와 all-open experiment을
+   비교하고 opened-only eager/Python ONNX/Rust parity를 통과했다. 그러나 conditional KL,
+   visited-tail recall, complete-action NLL/top-1/ECE gate를 통과하지 못했다.
+4. **Model gate recovery가 다음 작업.** canonical 결과는
+   [`ai-v4-phase1-status.md`](ai-v4-phase1-status.md)의 current-code full 20-game report다.
+   gate를 다시 통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
+5. **Strength evidence와 조건부 최적화.** model gate recovery 뒤에만 최소 100 paired
+   seeds/색 교환/fixed-simulation/fixed-wall-clock/p95/CI를 봉인하고, 그 다음 Gumbel
+   16/32/64, worker scaling, Hybrid A/B, capacity, adaptive compute를 비교한다.
 
-이 단계들이 검증되기 전에는 V4를 기본 모델로 승격하지 않는다.
+이 gate가 통과되기 전에는 epoch2를 experimental preview로 유지하고 기존 V4 corpus
+또는 checkpoint를 승격용 self-play producer로 사용하지 않는다.

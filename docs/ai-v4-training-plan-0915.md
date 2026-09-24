@@ -81,7 +81,7 @@ ruleset semantics를 사용하면 현재 root의 target까지 영향을 받을 �
 - chance outcome sample 수
 - Gumbel/root-selection 설정
 - temperature 및 적용 decision 범위
-- replay schema와 factorized-policy schema ID
+- replay schema, factorized-policy schema, factorized-target schema ID
 - trainer configuration
 - CUDA/PyTorch/ONNX Runtime 환경
 
@@ -111,8 +111,12 @@ CLI는 다음을 지원해야 한다.
 - overwrite 방지
 - provenance 출력
 
-기록은 `augmentia.replay.game.v4`와
-`augmentia.factorized-mcts-visits.v2` 계약을 그대로 사용한다.
+기록은 `augmentia.replay.game.v5`와
+`augmentia.factorized-mcts-visits.v3` 계약을 사용한다. replay record는 사용하는
+target schema lineage를 명시하고, trainer는 이 lineage가 일치하는 dataset/checkpoint만
+허용한다. 현재 multi-shard index는 `augmentia.self-play-v4-dataset-index.v2`,
+trainer checkpoint는 `augmentia.v4-trainer-checkpoint.v3`, training run은
+`augmentia.v4-training-run.v2`를 사용한다.
 
 #### M0 gate
 
@@ -146,9 +150,12 @@ CLI는 다음을 지원해야 한다.
 - action/observation schema validation
 - decision index 연속성
 - visit conservation
-- factorized prefix target 재계산 일치
-- trie SHA-256 일치
-- played action / visit 일치
+- root `opened_action_mask`와 action count 일치
+- positive visit action은 반드시 opened
+- opened zero-visit action 허용, closed action의 visit는 0
+- factorized prefix target 및 child-aligned `opened_masks` 재계산 일치
+- root mask와 전체 prefix target을 함께 봉인한 trie SHA-256 일치
+- played action / visit / opened 일치
 - terminal result / actor perspective 일치
 - ruleset ID/hash 일치
 - game seed 중복 없음
@@ -197,6 +204,7 @@ resume 시 최소 다음이 일치해야 한다.
 - model config
 - encoder kind
 - factorized policy schema
+- replay schema와 factorized target schema lineage
 - source checkpoint hash
 
 ### M3 — CUDA overfit / end-to-end smoke

@@ -5,10 +5,10 @@ use crate::data_v3::{
     TerminationV3,
 };
 use crate::{
-    ACTION_V3_SCHEMA_ID, CHANCE_SAMPLING_V4_ID, FACTORIZED_POLICY_V4_SCHEMA_ID,
-    FactorizedEvaluatorV4, FactorizedMctsTargetV4, GAME_RECORD_V4_SCHEMA_ID, GameRecordV4,
-    GameStepV4, LegalActionSetV3, MctsV4Config, MctsV4Tree, OBSERVATION_V3_SCHEMA_ID,
-    ROOT_SELECTION_V4_ID, SEARCH_SEMANTICS_V4_ID, encode_observation_v3,
+    ACTION_V3_SCHEMA_ID, CHANCE_SAMPLING_V4_ID, FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
+    FACTORIZED_POLICY_V4_SCHEMA_ID, FactorizedEvaluatorV4, FactorizedMctsTargetV4,
+    GAME_RECORD_V5_SCHEMA_ID, GameRecordV4, GameStepV4, LegalActionSetV3, MctsV4Config, MctsV4Tree,
+    OBSERVATION_V3_SCHEMA_ID, ROOT_SELECTION_V4_ID, SEARCH_SEMANTICS_V4_ID, encode_observation_v3,
 };
 use augment_core::{Engine, GameStatus, Mode};
 use rand::distributions::WeightedIndex;
@@ -112,13 +112,25 @@ pub fn generate_self_play_game_v4(
             .last_diagnostics
             .as_ref()
             .ok_or_else(|| SelfPlayV4Error("search diagnostics missing".to_owned()))?;
-        let mut visits = vec![0u32; legal.len()];
-        for item in &search.visits {
-            if item.action_index >= visits.len() {
-                return failure("search returned an invalid action index");
-            }
-            visits[item.action_index] = item.visits;
+        if search.visits.len() != legal.len()
+            || search
+                .visits
+                .iter()
+                .enumerate()
+                .any(|(index, item)| item.action_index != index)
+        {
+            return failure("search visits must be complete, ordered, and unique");
         }
+        if search.opened_action_mask.len() != legal.len()
+            || diagnostics.opened_action_mask != search.opened_action_mask
+        {
+            return failure("search opened-action mask is missing or inconsistent");
+        }
+        let visits = search
+            .visits
+            .iter()
+            .map(|item| item.visits)
+            .collect::<Vec<_>>();
         let temperature = if decision_index < config.temperature_decisions {
             config.temperature
         } else {
@@ -139,6 +151,7 @@ pub fn generate_self_play_game_v4(
         let target = FactorizedMctsTargetV4::from_complete_visits(
             &legal.actions,
             visits,
+            search.opened_action_mask,
             diagnostics.completed_simulations as u32,
             diagnostics.root_raw_value,
             SEARCH_SEMANTICS_V4_ID,
@@ -168,12 +181,13 @@ pub fn generate_self_play_game_v4(
                 final_state_fingerprint: fingerprint(state.fingerprint()),
             });
     let mut record = GameRecordV4 {
-        record_schema_id: GAME_RECORD_V4_SCHEMA_ID.to_owned(),
+        record_schema_id: GAME_RECORD_V5_SCHEMA_ID.to_owned(),
         game_id,
         ruleset,
         observation_schema_id: OBSERVATION_V3_SCHEMA_ID.to_owned(),
         action_schema_id: ACTION_V3_SCHEMA_ID.to_owned(),
         factorized_policy_schema_id: FACTORIZED_POLICY_V4_SCHEMA_ID.to_owned(),
+        factorized_target_schema_id: FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID.to_owned(),
         generator,
         mode_id: mode_id(&mode),
         seed_hex: fingerprint(config.seed),
@@ -302,14 +316,45 @@ mod tests {
         };
         let first = make();
         let second = make();
-        assert_eq!(first.steps, second.steps);
+        assert_eq!(first, second);
         assert_eq!(first.trajectory_sha256, second.trajectory_sha256);
+        assert_eq!(first.record_schema_id, GAME_RECORD_V5_SCHEMA_ID);
+        assert_eq!(
+            first.factorized_target_schema_id,
+            FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID
+        );
         assert_eq!(first.steps.len(), 2);
         for step in &first.steps {
             assert_eq!(step.policy_target.completed_simulations, 16);
             assert_eq!(step.policy_target.chance_sampling_id, CHANCE_SAMPLING_V4_ID,);
             assert_eq!(step.policy_target.chance_outcome_samples, 4);
+            assert_eq!(
+                step.policy_target.opened_action_mask.len(),
+                step.legal_actions.len()
+            );
+            assert!(
+                step.policy_target
+                    .opened_action_mask
+                    .iter()
+                    .any(|opened| *opened)
+            );
             step.validate().unwrap();
         }
+        let canonical = serde_json::to_vec(&first).unwrap();
+        let decoded: GameRecordV4 = serde_json::from_slice(&canonical).unwrap();
+        decoded.validate().unwrap();
+        assert_eq!(decoded, first);
+        assert_eq!(canonical, serde_json::to_vec(&decoded).unwrap());
+
+        let mut missing_lineage = serde_json::to_value(&first).unwrap();
+        missing_lineage
+            .as_object_mut()
+            .unwrap()
+            .remove("factorized_target_schema_id");
+        assert!(serde_json::from_value::<GameRecordV4>(missing_lineage).is_err());
+
+        let mut legacy = decoded;
+        legacy.record_schema_id = "augmentia.replay.game.v4".to_owned();
+        assert!(legacy.validate().is_err());
     }
 }

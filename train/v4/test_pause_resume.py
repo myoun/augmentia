@@ -3,13 +3,18 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import torch
 
 from v3.tensorize import V3Vocabulary
 from v4.replay import FactorizedTrainingExampleV4
-from v4.train import V4Trainer, V4TrainingConfig
+from v4.train import (
+    POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT,
+    V4Trainer,
+    V4TrainingConfig,
+)
 
 
 FIXTURE = Path(__file__).parents[1] / "v3" / "fixtures" / "observation_action_v3.json"
@@ -32,6 +37,9 @@ class PauseResumeV4Test(unittest.TestCase):
                 legal_actions=self.case["legal_actions"],
                 complete_visit_counts=visits,
                 prefix_targets=(),
+                opened_action_mask=(True, *([False] * (action_count - 1))),
+                opened_masks=(),
+                synthetic=True,
                 value=1.0 if index % 2 == 0 else -1.0,
             )
             for index in range(count)
@@ -134,6 +142,38 @@ class PauseResumeV4Test(unittest.TestCase):
         finally:
             torch.set_num_threads(old_threads)
 
+    def test_legacy_all_open_experiment_checkpoint_cannot_resume(self) -> None:
+        opened = self._examples(1)
+        all_open = [
+            replace(
+                example,
+                opened_action_mask=(True,)
+                * len(example.legal_actions["actions"]),
+            )
+            for example in opened
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            trainer = V4Trainer(
+                all_open,
+                root,
+                self._config(),
+                vocabulary=self.vocabulary,
+                validation_examples=all_open,
+                policy_target_semantics_id=(
+                    POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT
+                ),
+            )
+            checkpoint, _sidecar = trainer.save_checkpoint(root / "experiment.pt")
+            with self.assertRaisesRegex(ValueError, "opened-only"):
+                V4Trainer.from_checkpoint(
+                    checkpoint,
+                    all_open,
+                    self._config(),
+                    validation_examples=all_open,
+                    expected_vocabulary=self.vocabulary,
+                )
+
     def test_bucketed_batches_group_similar_action_counts(self) -> None:
         actions = self.case["legal_actions"]["actions"]
         self.assertGreaterEqual(len(actions), 3)
@@ -148,6 +188,9 @@ class PauseResumeV4Test(unittest.TestCase):
                     legal_actions=legal_actions,
                     complete_visit_counts=(8, *([0] * (count - 1))),
                     prefix_targets=(),
+                    opened_action_mask=(True, *([False] * (count - 1))),
+                    opened_masks=(),
+                    synthetic=True,
                     value=0.0,
                 )
             )

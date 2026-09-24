@@ -57,9 +57,15 @@ class HybridOnnxTests(unittest.TestCase):
         torch.set_num_threads(cls.old_threads)
 
     def _batch(self, cases):
-        return tensorize_factorized_cases(cases, self.vocabulary, [
-            [i + 1 for i in range(len(case["legal_actions"]["actions"]))] for case in cases
-        ])
+        return tensorize_factorized_cases(
+            cases,
+            self.vocabulary,
+            [
+                [i + 1 for i in range(len(case["legal_actions"]["actions"]))]
+                for case in cases
+            ],
+            synthetic_all_open=True,
+        )
 
     def _model(self, kind):
         torch.manual_seed(29)

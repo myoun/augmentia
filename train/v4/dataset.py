@@ -9,11 +9,16 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from v3.factorized import FACTOR_POLICY_SCHEMA_ID
+from v3.schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID
 
 RUN_MANIFEST_SCHEMA_ID = "augmentia.self-play-v4-run.v1"
-DATASET_INDEX_SCHEMA_ID = "augmentia.self-play-v4-dataset-index.v1"
+DATASET_INDEX_SCHEMA_ID = "augmentia.self-play-v4-dataset-index.v2"
 VALIDATION_SCHEMA_ID = "augmentia.self-play-v4-validation.v1"
 RULESET_ID = "augment_chess_20260915"
+REPLAY_SCHEMA_ID = "augmentia.replay.game.v5"
+FACTORIZED_TARGET_SCHEMA_ID = "augmentia.factorized-mcts-visits.v3"
+LEGACY_REPLAY_SCHEMA_ID = "augmentia.replay.game.v4"
+LEGACY_FACTORIZED_TARGET_SCHEMA_ID = "augmentia.factorized-mcts-visits.v2"
 
 
 def sha256_file(path: Path) -> str:
@@ -40,6 +45,10 @@ class DatasetInputV4:
     run_kind: str
     ruleset: Mapping[str, Any]
     factorized_policy_schema_id: str
+    replay_schema_id: str
+    factorized_target_schema_id: str
+    observation_schema_id: str
+    action_schema_id: str
     source_seal_tag: str | None
     source_seal_commit: str | None
     engine_commit: str | None
@@ -48,7 +57,9 @@ class DatasetInputV4:
     source_manifests: tuple[Mapping[str, Any], ...]
 
 
-def _load_run_manifest(path: Path) -> dict[str, Any]:
+def _load_run_manifest(
+    path: Path, *, allow_legacy: bool = False
+) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("manifest_schema_id") != RUN_MANIFEST_SCHEMA_ID:
         raise ValueError(f"{path}: not a V4 self-play run manifest")
@@ -56,6 +67,23 @@ def _load_run_manifest(path: Path) -> dict[str, Any]:
         raise ValueError(f"{path}: not the 0915 ruleset")
     if payload.get("factorized_policy_schema_id") != FACTOR_POLICY_SCHEMA_ID:
         raise ValueError(f"{path}: factorized policy schema mismatch")
+    expected = (
+        (LEGACY_REPLAY_SCHEMA_ID, LEGACY_FACTORIZED_TARGET_SCHEMA_ID)
+        if allow_legacy
+        else (REPLAY_SCHEMA_ID, FACTORIZED_TARGET_SCHEMA_ID)
+    )
+    if (
+        payload.get("replay_schema_id") != expected[0]
+        or payload.get("factorized_target_schema_id") != expected[1]
+    ):
+        raise ValueError(
+            f"{path}: replay/target lineage must be {expected[0]}/{expected[1]}"
+        )
+    if (
+        payload.get("observation_schema_id") != OBSERVATION_SCHEMA_ID
+        or payload.get("action_schema_id") != ACTION_SCHEMA_ID
+    ):
+        raise ValueError(f"{path}: observation/action schema lineage mismatch")
     artifacts = payload.get("games_artifacts")
     if not isinstance(artifacts, list) or not artifacts:
         raise ValueError(f"{path}: manifest contains no games")
@@ -68,14 +96,17 @@ def _resolve(base: Path, value: str) -> Path:
 
 
 def _validated_index_manifest(
-    index_path: Path, entry: Mapping[str, Any]
+    index_path: Path,
+    entry: Mapping[str, Any],
+    *,
+    allow_legacy: bool = False,
 ) -> tuple[Path, dict[str, Any], Path]:
     if not isinstance(entry.get("path"), str) or not isinstance(entry.get("sha256"), str):
         raise ValueError("dataset index manifest entries require path and sha256")
     manifest_path = _resolve(index_path.parent, entry["path"])
     if sha256_file(manifest_path) != entry["sha256"]:
         raise ValueError(f"dataset source manifest hash mismatch: {manifest_path}")
-    manifest = _load_run_manifest(manifest_path)
+    manifest = _load_run_manifest(manifest_path, allow_legacy=allow_legacy)
 
     validation_value = entry.get("validation_path")
     validation_sha = entry.get("validation_sha256")
@@ -102,12 +133,14 @@ def _validated_index_manifest(
     return manifest_path, manifest, validation_path
 
 
-def load_dataset_input(path: str | Path) -> DatasetInputV4:
+def load_dataset_input(
+    path: str | Path, *, allow_legacy: bool = False
+) -> DatasetInputV4:
     input_path = Path(path).resolve()
     payload = json.loads(input_path.read_text(encoding="utf-8"))
 
     if payload.get("manifest_schema_id") == RUN_MANIFEST_SCHEMA_ID:
-        manifest = _load_run_manifest(input_path)
+        manifest = _load_run_manifest(input_path, allow_legacy=allow_legacy)
         manifest_records = [(input_path, manifest, None)]
         schema_id = RUN_MANIFEST_SCHEMA_ID
         dataset_id = manifest["run_id"]
@@ -118,8 +151,23 @@ def load_dataset_input(path: str | Path) -> DatasetInputV4:
         dataset_id = payload.get("dataset_id")
         if not isinstance(dataset_id, str) or not dataset_id:
             raise ValueError("dataset index requires a non-empty dataset_id")
+        expected_lineage = (
+            (LEGACY_REPLAY_SCHEMA_ID, LEGACY_FACTORIZED_TARGET_SCHEMA_ID)
+            if allow_legacy
+            else (REPLAY_SCHEMA_ID, FACTORIZED_TARGET_SCHEMA_ID)
+        )
+        if (
+            payload.get("replay_schema_id") != expected_lineage[0]
+            or payload.get("factorized_target_schema_id") != expected_lineage[1]
+            or payload.get("observation_schema_id") != OBSERVATION_SCHEMA_ID
+            or payload.get("action_schema_id") != ACTION_SCHEMA_ID
+        ):
+            raise ValueError("dataset index lineage metadata is missing or mismatched")
         manifest_records = [
-            _validated_index_manifest(input_path, entry) for entry in entries
+            _validated_index_manifest(
+                input_path, entry, allow_legacy=allow_legacy
+            )
+            for entry in entries
         ]
         schema_id = DATASET_INDEX_SCHEMA_ID
     else:
@@ -134,6 +182,10 @@ def load_dataset_input(path: str | Path) -> DatasetInputV4:
         "source_seal_commit",
         "engine_commit",
         "factorized_policy_schema_id",
+        "replay_schema_id",
+        "factorized_target_schema_id",
+        "observation_schema_id",
+        "action_schema_id",
     )
     for _, manifest, _ in manifest_records[1:]:
         for field in identity_fields:
@@ -156,6 +208,10 @@ def load_dataset_input(path: str | Path) -> DatasetInputV4:
             "sha256": sha256_file(manifest_path),
             "run_id": manifest["run_id"],
             "games": manifest["games"],
+            "replay_schema_id": manifest["replay_schema_id"],
+            "factorized_target_schema_id": manifest["factorized_target_schema_id"],
+            "observation_schema_id": manifest["observation_schema_id"],
+            "action_schema_id": manifest["action_schema_id"],
         }
         if validation_path is not None:
             source_record["validation_path"] = str(validation_path)
@@ -204,6 +260,10 @@ def load_dataset_input(path: str | Path) -> DatasetInputV4:
         run_kind=first["run_kind"],
         ruleset=first["ruleset"],
         factorized_policy_schema_id=first["factorized_policy_schema_id"],
+        replay_schema_id=first["replay_schema_id"],
+        factorized_target_schema_id=first["factorized_target_schema_id"],
+        observation_schema_id=first["observation_schema_id"],
+        action_schema_id=first["action_schema_id"],
         source_seal_tag=first.get("source_seal_tag"),
         source_seal_commit=first.get("source_seal_commit"),
         engine_commit=first.get("engine_commit"),

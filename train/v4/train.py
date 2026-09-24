@@ -25,14 +25,82 @@ from .batch import tensorize_factorized_cases
 from .dataset import DatasetInputV4, load_dataset_input
 from .loss import conditional_prefix_policy_metrics
 from .model import AugmentNetV4, V4ModelConfig
-from .replay import FactorizedTrainingExampleV4, load_game_v4
+from .replay import (
+    FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
+    GAME_RECORD_V5_SCHEMA_ID,
+    LEGACY_FACTORIZED_MCTS_TARGET_V2_SCHEMA_ID,
+    LEGACY_GAME_RECORD_V4_SCHEMA_ID,
+    FactorizedTrainingExampleV4,
+    load_game_v4,
+)
 
-V4_TRAINER_SCHEMA_ID = "augmentia.v4-trainer-checkpoint.v2"
-V4_TRAINING_RUN_SCHEMA_ID = "augmentia.v4-training-run.v1"
+V4_TRAINER_SCHEMA_ID = "augmentia.v4-trainer-checkpoint.v3"
+V4_TRAINING_RUN_SCHEMA_ID = "augmentia.v4-training-run.v2"
 RUNTIME_VOCABULARY_SCHEMA_ID = "augmentia.runtime-vocabulary.v3"
+POLICY_TARGET_SEMANTICS_SCHEMA_ID = "augmentia.v4-policy-target-semantics.v1"
+POLICY_TARGET_SEMANTICS_OPENED_ONLY = (
+    "augmentia.policy-target.opened-mask.v1"
+)
+POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT = (
+    "augmentia.policy-target.legacy-all-open-experiment.v1"
+)
 RULESET_ID = "augment_chess_20260915"
 SOURCE_SEAL_TAG = "ai/v4-training-base-20260919"
 SOURCE_SEAL_COMMIT = "f4e64c35f5adcb7f361ed845fb55eb4d123b370b"
+
+
+def policy_target_semantics_lineage(
+    semantics_id: str,
+) -> dict[str, Any]:
+    """Return the immutable training-denominator contract for one arm."""
+
+    if semantics_id == POLICY_TARGET_SEMANTICS_OPENED_ONLY:
+        return {
+            "schema_id": POLICY_TARGET_SEMANTICS_SCHEMA_ID,
+            "policy_target_semantics_id": semantics_id,
+            "root_opened_mask_field": "opened_action_mask",
+            "prefix_opened_mask_field": "opened_masks",
+            "closed_children_in_denominator": False,
+            "experiment_only": False,
+            "production_export_resume_eligible": True,
+        }
+    if semantics_id == POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT:
+        return {
+            "schema_id": POLICY_TARGET_SEMANTICS_SCHEMA_ID,
+            "policy_target_semantics_id": semantics_id,
+            "root_opened_mask_field": "all-legal-actions-open",
+            "prefix_opened_mask_field": "all-legal-children-open",
+            "closed_children_in_denominator": True,
+            "experiment_only": True,
+            "production_export_resume_eligible": False,
+            "non_promotable_reason": (
+                "legacy all-open denominator includes actions and prefix children "
+                "that the clean V3 target marks closed"
+            ),
+        }
+    raise ValueError(f"unknown policy target semantics id: {semantics_id!r}")
+
+
+def assert_production_policy_target_semantics(payload: Mapping[str, Any]) -> None:
+    """Reject a sidecar whose policy target cannot be production-exported/resumed."""
+
+    expected_id = POLICY_TARGET_SEMANTICS_OPENED_ONLY
+    expected_lineage = policy_target_semantics_lineage(expected_id)
+    if payload.get("policy_target_semantics_id") != expected_id:
+        raise ValueError("checkpoint policy target semantics are not opened-only")
+    if payload.get("policy_target_semantics_lineage") != expected_lineage:
+        raise ValueError("checkpoint policy target semantics lineage is invalid")
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, Mapping):
+        raise ValueError("checkpoint policy target provenance is missing")
+    if provenance.get("policy_target_semantics_id") != expected_id:
+        raise ValueError("checkpoint provenance policy target semantics are not opened-only")
+    if provenance.get("policy_target_semantics_lineage") != expected_lineage:
+        raise ValueError("checkpoint provenance policy target semantics lineage is invalid")
+    if provenance.get("policy_target_semantics_experiment_only") is not False:
+        raise ValueError("opened-only checkpoint is marked experiment-only")
+    if provenance.get("policy_target_semantics_production_eligible") is not True:
+        raise ValueError("opened-only checkpoint is not production-semantics eligible")
 
 
 @dataclass(frozen=True)
@@ -170,11 +238,27 @@ class V4Trainer:
         model_config: V4ModelConfig | None = None,
         validation_examples: Sequence[FactorizedTrainingExampleV4] = (),
         provenance: Mapping[str, Any] | None = None,
+        allow_legacy: bool = False,
+        policy_target_semantics_id: str | None = None,
     ) -> None:
         self.config = (config or V4TrainingConfig()).validate()
         self.run_dir = Path(run_dir)
         self.examples = list(examples)
         self.validation_examples = list(validation_examples)
+        self.allow_legacy = allow_legacy
+        (
+            self.target_schema_id,
+            self.replay_schema_id,
+            self._legacy_mode,
+        ) = self._validate_example_lineage(self.examples, self.validation_examples)
+        self.policy_target_semantics_id = policy_target_semantics_id or (
+            POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT
+            if self._legacy_mode or self.allow_legacy
+            else POLICY_TARGET_SEMANTICS_OPENED_ONLY
+        )
+        self.policy_target_semantics_lineage = self._validate_policy_target_semantics(
+            self.policy_target_semantics_id
+        )
         self._training_shape_keys = (
             [_factorized_shape_key(example) for example in self.examples]
             if self.config.batching_kind in {"bucketed", "cached_bucketed"}
@@ -240,6 +324,49 @@ class V4Trainer:
         self.completed_epochs = 0
         self.history: list[dict[str, Any]] = []
         self.provenance = dict(provenance or {})
+        for lineage_field, expected_lineage in (
+            ("factorized_target_schema_id", self.target_schema_id),
+            ("replay_schema_id", self.replay_schema_id),
+        ):
+            supplied_lineage = self.provenance.get(lineage_field)
+            if supplied_lineage is not None and supplied_lineage != expected_lineage:
+                raise ValueError(f"provenance {lineage_field} differs from training examples")
+            self.provenance[lineage_field] = expected_lineage
+        supplied_semantics = self.provenance.get("policy_target_semantics_id")
+        if (
+            supplied_semantics is not None
+            and supplied_semantics != self.policy_target_semantics_id
+        ):
+            raise ValueError(
+                "provenance policy_target_semantics_id differs from trainer semantics"
+            )
+        supplied_lineage = self.provenance.get("policy_target_semantics_lineage")
+        if (
+            supplied_lineage is not None
+            and supplied_lineage != self.policy_target_semantics_lineage
+        ):
+            raise ValueError(
+                "provenance policy_target_semantics_lineage differs from trainer semantics"
+            )
+        experiment_only = bool(
+            self.policy_target_semantics_lineage["experiment_only"]
+        )
+        self.provenance.update(
+            {
+                "policy_target_semantics_id": self.policy_target_semantics_id,
+                "policy_target_semantics_lineage": dict(
+                    self.policy_target_semantics_lineage
+                ),
+                "policy_target_semantics_experiment_only": experiment_only,
+                "policy_target_semantics_production_eligible": not experiment_only,
+            }
+        )
+        if experiment_only:
+            self.provenance.setdefault("promotable", False)
+            self.provenance.setdefault(
+                "non_promotable_reason",
+                self.policy_target_semantics_lineage["non_promotable_reason"],
+            )
         self.source_checkpoint_sha256: str | None = None
         self.stop_requested = False
         self.paused = False
@@ -247,6 +374,111 @@ class V4Trainer:
         self.epoch_progress: dict[str, Any] | None = None
         self.pending_validation: dict[str, Any] | None = None
         self._resume_target_epochs: int | None = None
+
+    def _validate_example_lineage(
+        self,
+        examples: Sequence[FactorizedTrainingExampleV4],
+        validation_examples: Sequence[FactorizedTrainingExampleV4],
+    ) -> tuple[str, str, bool]:
+        """Reject missing masks and mixed target/replay lineages fail-closed."""
+
+        all_examples = [*examples, *validation_examples]
+        if not all_examples:
+            raise ValueError("V4 training requires at least one decision example")
+        target_lineages = {item.target_schema_id for item in all_examples}
+        replay_lineages = {item.replay_schema_id for item in all_examples}
+        if len(target_lineages) != 1 or len(replay_lineages) != 1:
+            raise ValueError(
+                "V4 examples must share one factorized target/replay lineage; "
+                f"got targets={sorted(target_lineages)}, replay={sorted(replay_lineages)}"
+            )
+        target_lineage = next(iter(target_lineages))
+        replay_lineage = next(iter(replay_lineages))
+        if self.allow_legacy:
+            expected = (
+                LEGACY_FACTORIZED_MCTS_TARGET_V2_SCHEMA_ID,
+                LEGACY_GAME_RECORD_V4_SCHEMA_ID,
+            )
+            if (target_lineage, replay_lineage) != expected:
+                raise ValueError(
+                    "allow_legacy=True accepts only the explicitly quarantined V4/V2 lineage"
+                )
+        elif (target_lineage, replay_lineage) != (
+            FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
+            GAME_RECORD_V5_SCHEMA_ID,
+        ):
+            raise ValueError(
+                "opened-only V4 training requires replay.game.v5 / factorized-mcts-visits.v3"
+            )
+        legacy = target_lineage == LEGACY_FACTORIZED_MCTS_TARGET_V2_SCHEMA_ID
+        for item in all_examples:
+            actions = item.legal_actions.get("actions", [])
+            visits = item.complete_visit_counts
+            if not isinstance(actions, list) or len(actions) == 0:
+                raise ValueError("each training example must contain legal actions")
+            if len(visits) != len(actions):
+                raise ValueError("training visits must align with legal actions")
+            if legacy:
+                if item.opened_action_mask or item.opened_masks:
+                    raise ValueError("legacy examples must not carry v3 opened masks")
+                continue
+            if item.legacy:
+                raise ValueError("legacy example cannot enter an opened-only trainer")
+            opened = item.opened_action_mask
+            if len(opened) != len(actions) or any(type(value) is not bool for value in opened):
+                raise ValueError(
+                    f"training example {item.decision_id!r} is missing a valid opened_action_mask"
+                )
+            if not any(opened):
+                raise ValueError("each training example must open at least one action")
+            if any(
+                not isinstance(count, int) or isinstance(count, bool) or count < 0
+                for count in visits
+            ) or any(count > 0 and not is_open for count, is_open in zip(visits, opened)):
+                raise ValueError("positive visits require an opened action mask")
+            if not item.synthetic and (
+                not item.prefix_targets or not item.opened_masks
+            ):
+                raise ValueError(
+                    "production v3 examples require preserved prefix opened_masks"
+                )
+            if len(item.opened_masks) != len(item.prefix_targets):
+                raise ValueError("opened_masks must align with prefix_targets")
+            if any(
+                len(masks) != len(prefix.children)
+                for masks, prefix in zip(item.opened_masks, item.prefix_targets)
+            ):
+                raise ValueError("each prefix opened_masks row must align with children")
+        return target_lineage, replay_lineage, legacy
+
+    def _validate_policy_target_semantics(
+        self, semantics_id: str
+    ) -> dict[str, Any]:
+        """Bind the explicit target denominator to the supplied examples."""
+
+        lineage = policy_target_semantics_lineage(semantics_id)
+        experiment_only = bool(lineage["experiment_only"])
+        if self._legacy_mode and not experiment_only:
+            raise ValueError(
+                "legacy replay examples require the explicit legacy-all-open experiment semantics"
+            )
+        if not self._legacy_mode and not experiment_only:
+            return lineage
+        if self._legacy_mode:
+            return lineage
+        for item in [*self.examples, *self.validation_examples]:
+            actions = item.legal_actions.get("actions", [])
+            if not item.opened_action_mask or not all(item.opened_action_mask):
+                raise ValueError(
+                    "legacy-all-open experiment semantics require every root action opened"
+                )
+            if any(not all(masks) for masks in item.opened_masks):
+                raise ValueError(
+                    "legacy-all-open experiment semantics require every prefix child opened"
+                )
+            if len(item.opened_action_mask) != len(actions):
+                raise ValueError("opened_action_mask must align with legal actions")
+        return lineage
 
     def _tensorize_selected(
         self, selected: Sequence[FactorizedTrainingExampleV4]
@@ -256,7 +488,21 @@ class V4Trainer:
             for item in selected
         ]
         visits = [list(item.complete_visit_counts) for item in selected]
-        batch = tensorize_factorized_cases(cases, self.vocabulary, visits)
+        if self._legacy_mode:
+            batch = tensorize_factorized_cases(
+                cases,
+                self.vocabulary,
+                visits,
+                synthetic_all_open=True,
+            )
+        else:
+            opened_masks = [list(item.opened_action_mask) for item in selected]
+            batch = tensorize_factorized_cases(
+                cases,
+                self.vocabulary,
+                visits,
+                opened_action_masks=opened_masks,
+            )
         return batch, tuple(item.value for item in selected)
 
     def _initialize_tensor_cache_layout(self) -> None:
@@ -396,13 +642,7 @@ class V4Trainer:
             if batch_index < start_batch:
                 continue
             selected = [examples[index] for index in order[start : start + size]]
-            cases = [
-                {"observation": item.observation, "legal_actions": item.legal_actions}
-                for item in selected
-            ]
-            visits = [list(item.complete_visit_counts) for item in selected]
-            batch = tensorize_factorized_cases(cases, self.vocabulary, visits)
-            values = [item.value for item in selected]
+            batch, values = self._tensorize_selected(selected)
             yield batch_index, batch, values
 
     def _loss_for_batch(
@@ -706,6 +946,18 @@ class V4Trainer:
             "optimizer_path": optimizer_path.name,
             "optimizer_sha256": optimizer_sha256,
             "source_checkpoint_sha256": self.source_checkpoint_sha256,
+            "factorized_target_schema_id": self.target_schema_id,
+            "replay_schema_id": self.replay_schema_id,
+            "policy_target_semantics_id": self.policy_target_semantics_id,
+            "policy_target_semantics_lineage": dict(
+                self.policy_target_semantics_lineage
+            ),
+            "policy_target_semantics_experiment_only": bool(
+                self.policy_target_semantics_lineage["experiment_only"]
+            ),
+            "policy_target_semantics_production_eligible": not bool(
+                self.policy_target_semantics_lineage["experiment_only"]
+            ),
             "vocabulary": self.vocabulary.to_json(),
             "model_config": asdict(self.model.config),
             "training_config": asdict(self.config),
@@ -740,6 +992,15 @@ class V4Trainer:
         payload = json.loads(sidecar.read_text(encoding="utf-8"))
         if payload.get("schema_id") != V4_TRAINER_SCHEMA_ID:
             raise ValueError("checkpoint sidecar is not a production V4 trainer checkpoint")
+        assert_production_policy_target_semantics(payload)
+        if (
+            payload.get("factorized_target_schema_id")
+            != FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID
+            or payload.get("replay_schema_id") != GAME_RECORD_V5_SCHEMA_ID
+        ):
+            raise ValueError(
+                "checkpoint sidecar target/replay lineage is not opened-only v3/v5"
+            )
         actual_checkpoint_hash = _sha256_file(checkpoint_path)
         if payload.get("checkpoint_sha256") != actual_checkpoint_hash:
             raise ValueError("checkpoint SHA-256 differs from its sidecar")
@@ -799,6 +1060,12 @@ class V4Trainer:
                 "ruleset_id",
                 "ruleset_manifest_sha256",
                 "factorized_policy_schema_id",
+                "factorized_target_schema_id",
+                "replay_schema_id",
+                "policy_target_semantics_id",
+                "policy_target_semantics_lineage",
+                "policy_target_semantics_experiment_only",
+                "policy_target_semantics_production_eligible",
                 "dataset_manifest_sha256",
             ]
             if payload.get("paused"):
@@ -882,11 +1149,18 @@ def train_from_games(
     config: V4TrainingConfig | None = None,
     *,
     vocabulary: V3Vocabulary | None = None,
+    allow_legacy: bool = False,
 ) -> V4Trainer:
     examples: list[FactorizedTrainingExampleV4] = []
     for path in game_paths:
-        examples.extend(load_game_v4(path))
-    trainer = V4Trainer(examples, run_dir, config, vocabulary=vocabulary)
+        examples.extend(load_game_v4(path, allow_legacy=allow_legacy))
+    trainer = V4Trainer(
+        examples,
+        run_dir,
+        config,
+        vocabulary=vocabulary,
+        allow_legacy=allow_legacy,
+    )
     trainer.fit()
     return trainer
 
@@ -930,14 +1204,17 @@ def _split_games(
 
 
 def _load_examples(
-    paths: Sequence[Path], max_examples: int | None = None
+    paths: Sequence[Path],
+    max_examples: int | None = None,
+    *,
+    allow_legacy: bool = False,
 ) -> list[FactorizedTrainingExampleV4]:
     result: list[FactorizedTrainingExampleV4] = []
     for path in paths:
         remaining = None if max_examples is None else max_examples - len(result)
         if remaining is not None and remaining <= 0:
             break
-        examples = load_game_v4(path)
+        examples = load_game_v4(path, allow_legacy=allow_legacy)
         result.extend(examples if remaining is None else examples[:remaining])
     return result
 
@@ -958,6 +1235,16 @@ def _dataset_provenance(
         "ruleset_id": dataset.ruleset["id"],
         "ruleset_manifest_sha256": dataset.ruleset["manifest_sha256"],
         "factorized_policy_schema_id": dataset.factorized_policy_schema_id,
+        "replay_schema_id": dataset.replay_schema_id,
+        "factorized_target_schema_id": dataset.factorized_target_schema_id,
+        "policy_target_semantics_id": POLICY_TARGET_SEMANTICS_OPENED_ONLY,
+        "policy_target_semantics_lineage": policy_target_semantics_lineage(
+            POLICY_TARGET_SEMANTICS_OPENED_ONLY
+        ),
+        "policy_target_semantics_experiment_only": False,
+        "policy_target_semantics_production_eligible": True,
+        "observation_schema_id": dataset.observation_schema_id,
+        "action_schema_id": dataset.action_schema_id,
         "dataset_input_schema_id": dataset.schema_id,
         "dataset_manifest_path": str(dataset.path),
         "dataset_manifest_sha256": dataset.sha256,
@@ -1213,6 +1500,14 @@ def main() -> None:
         ),
         "config": asdict(config),
         "provenance": provenance,
+        "factorized_target_schema_id": dataset.factorized_target_schema_id,
+        "replay_schema_id": dataset.replay_schema_id,
+        "policy_target_semantics_id": POLICY_TARGET_SEMANTICS_OPENED_ONLY,
+        "policy_target_semantics_lineage": policy_target_semantics_lineage(
+            POLICY_TARGET_SEMANTICS_OPENED_ONLY
+        ),
+        "observation_schema_id": dataset.observation_schema_id,
+        "action_schema_id": dataset.action_schema_id,
         "environment": _environment_identity(torch.device(args.device)),
         "train_examples": len(train_examples),
         "validation_examples": len(validation_examples),
@@ -1291,6 +1586,8 @@ def main() -> None:
     if trainer.paused:
         metrics = {
             "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
+            "factorized_target_schema_id": trainer.target_schema_id,
+            "replay_schema_id": trainer.replay_schema_id,
             "paused": True,
             "completed_epochs": trainer.completed_epochs,
             "history": trainer.history,
@@ -1320,6 +1617,8 @@ def main() -> None:
     final_checkpoint, final_sidecar = trainer.save_checkpoint(run_dir / "final.pt")
     metrics = {
         "schema_id": V4_TRAINING_RUN_SCHEMA_ID,
+        "factorized_target_schema_id": trainer.target_schema_id,
+        "replay_schema_id": trainer.replay_schema_id,
         "paused": False,
         "completed_epochs": trainer.completed_epochs,
         "history": trainer.history,

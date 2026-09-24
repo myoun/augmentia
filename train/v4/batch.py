@@ -82,6 +82,7 @@ class PrefixBatchV4:
     prefix_mass: torch.Tensor
     complete_action_visits: torch.Tensor
     complete_action_mask: torch.Tensor
+    complete_action_opened_mask: torch.Tensor
 
     @property
     def row_count(self) -> int:
@@ -98,6 +99,7 @@ class PrefixBatchV4:
             prefix_mass=self.prefix_mass.to(device),
             complete_action_visits=self.complete_action_visits.to(device),
             complete_action_mask=self.complete_action_mask.to(device),
+            complete_action_opened_mask=self.complete_action_opened_mask.to(device),
         )
 
 
@@ -138,19 +140,26 @@ def collate_factorized_batch(
     complete_action_visits: Sequence[Sequence[int]],
     *,
     opened_action_masks: Sequence[Sequence[bool]] | None = None,
+    synthetic_all_open: bool = False,
     device: torch.device | str | None = None,
 ) -> V4Batch:
-    """Collate complete V3 actions and visits into conditional prefix rows.
+    """Collate complete V3 actions, visits, and search opening masks.
 
-    By default every legal action is treated as opened. A caller with explicit
-    search opening information can provide ``opened_action_masks``; an opened
-    zero-visit child remains in the conditional softmax, while a closed child does
-    not become a false zero target.
+    Production callers must provide ``opened_action_masks``.  The only implicit
+    all-open path is the explicitly named ``synthetic_all_open=True`` fixture or
+    export path; a missing production mask is an error rather than a semantic
+    change.
     """
     batch_size = states.batch_size
     if batch_size == 0 or len(action_sets) != batch_size or len(complete_action_visits) != batch_size:
         raise FactorizedPolicyError("state, action, and visit batches must be non-empty and aligned")
-    if opened_action_masks is not None and len(opened_action_masks) != batch_size:
+    if opened_action_masks is None:
+        if not synthetic_all_open:
+            raise FactorizedPolicyError(
+                "opened_action_masks are required; use synthetic_all_open=True only "
+                "for an explicit all-open fixture"
+            )
+    elif len(opened_action_masks) != batch_size:
         raise FactorizedPolicyError("opened action masks must align with the state batch")
 
     rows: list[_PrefixRow] = []
@@ -159,19 +168,26 @@ def collate_factorized_batch(
         raise FactorizedPolicyError("each factorized decision requires a legal action")
     complete_visits = torch.zeros((batch_size, max_actions), dtype=torch.long)
     complete_mask = torch.zeros((batch_size, max_actions), dtype=torch.bool)
+    complete_opened = torch.zeros((batch_size, max_actions), dtype=torch.bool)
 
     for state_index, (actions, visits) in enumerate(zip(action_sets, complete_action_visits)):
         if not actions or len(actions) != len(visits):
             raise FactorizedPolicyError("actions and visits must be non-empty and aligned")
         if any(not isinstance(v, int) or isinstance(v, bool) or v < 0 for v in visits):
             raise FactorizedPolicyError("visits must be non-negative integers")
-        opened = (
-            tuple(True for _ in actions)
-            if opened_action_masks is None
-            else tuple(opened_action_masks[state_index])
-        )
-        if len(opened) != len(actions) or any(not isinstance(value, bool) for value in opened):
+        if opened_action_masks is None:
+            opened = tuple(True for _ in actions)
+        else:
+            try:
+                opened = tuple(opened_action_masks[state_index])
+            except (IndexError, TypeError) as error:
+                raise FactorizedPolicyError(
+                    "opened action masks must be boolean and action-aligned"
+                ) from error
+        if len(opened) != len(actions) or any(type(value) is not bool for value in opened):
             raise FactorizedPolicyError("opened action masks must be boolean and action-aligned")
+        if not any(opened):
+            raise FactorizedPolicyError("each decision must open at least one complete action")
         if any(count > 0 and not is_open for count, is_open in zip(visits, opened)):
             raise FactorizedPolicyError("a positive-visit action cannot be closed")
         root_total = sum(visits)
@@ -180,6 +196,7 @@ def collate_factorized_batch(
 
         complete_visits[state_index, : len(visits)] = torch.tensor(visits, dtype=torch.long)
         complete_mask[state_index, : len(visits)] = True
+        complete_opened[state_index, : len(opened)] = torch.tensor(opened, dtype=torch.bool)
         trie = _build_trie(actions)
 
         def descend(node: _Trie, prefix: Path) -> tuple[int, bool]:
@@ -240,6 +257,7 @@ def collate_factorized_batch(
         prefix_mass,
         complete_visits,
         complete_mask,
+        complete_opened,
     )
     assert_visit_conservation(prefix_batch)
     result = V4Batch(states, prefix_batch)
@@ -252,9 +270,11 @@ def tensorize_factorized_cases(
     complete_action_visits: Sequence[Sequence[int]],
     *,
     opened_action_masks: Sequence[Sequence[bool]] | None = None,
+    synthetic_all_open: bool = False,
     device: torch.device | str | None = None,
 ) -> V4Batch:
-    """Tensorize serialized V3 observation/action cases and their V4 visits."""
+    """Tensorize cases and propagate their explicit action opening masks."""
+
     states = tensorize_cases(cases, vocabulary, include_actions=False)
     actions = [case["legal_actions"]["actions"] for case in cases]
     return collate_factorized_batch(
@@ -262,6 +282,7 @@ def tensorize_factorized_cases(
         actions,
         complete_action_visits,
         opened_action_masks=opened_action_masks,
+        synthetic_all_open=synthetic_all_open,
         device=device,
     )
 
@@ -270,12 +291,24 @@ def assert_visit_conservation(batch: PrefixBatchV4) -> None:
     """Raise when any prefix or root violates descendant-visit conservation."""
     if batch.visit_counts.shape != batch.legal_mask.shape or batch.opened_mask.shape != batch.legal_mask.shape:
         raise FactorizedPolicyError("prefix child tensors must have the same shape")
+    if (
+        batch.complete_action_opened_mask.shape != batch.complete_action_mask.shape
+        or batch.complete_action_visits.shape != batch.complete_action_mask.shape
+    ):
+        raise FactorizedPolicyError("complete-action mask tensors must have the same shape")
     if torch.any(batch.visit_counts < 0) or torch.any((batch.visit_counts > 0) & ~batch.opened_mask):
         raise FactorizedPolicyError("positive visits require an opened legal child")
     if torch.any(batch.opened_mask & ~batch.legal_mask):
         raise FactorizedPolicyError("opened children must be legal")
+    if torch.any((batch.complete_action_visits > 0) & ~batch.complete_action_opened_mask):
+        raise FactorizedPolicyError("positive visits require an opened complete action")
+    if torch.any(batch.complete_action_opened_mask & ~batch.complete_action_mask):
+        raise FactorizedPolicyError("opened complete actions must be legal")
     root_visits = (batch.complete_action_visits * batch.complete_action_mask).sum(dim=1)
     for decision in range(batch.complete_action_visits.shape[0]):
+        legal_actions = batch.complete_action_mask[decision]
+        if not torch.any(batch.complete_action_opened_mask[decision] & legal_actions):
+            raise FactorizedPolicyError("each decision must open at least one complete action")
         indexes = torch.nonzero(batch.state_index == decision, as_tuple=False).flatten()
         roots = [int(index) for index in indexes if not bool(batch.prefix.mask[index].any())]
         if len(roots) != 1:

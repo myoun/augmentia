@@ -43,7 +43,9 @@ class FactorizedOnnxExportTests(unittest.TestCase):
             [index + 1 for index in range(len(case["legal_actions"]["actions"]))]
             for case in self.cases
         ]
-        return tensorize_factorized_cases(self.cases, self.vocabulary, visits)
+        return tensorize_factorized_cases(
+            self.cases, self.vocabulary, visits, synthetic_all_open=True
+        )
 
     def _model(self) -> AugmentNetV4:
         torch.manual_seed(11)

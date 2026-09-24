@@ -101,6 +101,7 @@ class V4FactorizedScorerOnnxWrapper(nn.Module):
             prefix_mass=torch.ones(state_index.shape[0], dtype=torch.float32),
             complete_action_visits=torch.zeros((1, 1), dtype=torch.long),
             complete_action_mask=torch.ones((1, 1), dtype=torch.bool),
+            complete_action_opened_mask=torch.ones((1, 1), dtype=torch.bool),
         )
         states = SimpleNamespace(**dict(zip(SCORER_LOOKUP_INPUT_NAMES, lookup, strict=True)))
         encoding = V3StateEncoding(

@@ -17,6 +17,9 @@ pub enum FactorizedPolicyV4Error {
     InvalidTargetSquare(u8),
     EmptySquaresTarget,
     VisitsLengthMismatch,
+    OpenedMasksLengthMismatch,
+    PositiveVisitClosed,
+    NoOpenedActions,
     EmptyActions,
 }
 
@@ -40,6 +43,14 @@ impl fmt::Display for FactorizedPolicyV4Error {
                 formatter,
                 "actions and visits must be non-empty and aligned"
             ),
+            Self::OpenedMasksLengthMismatch => write!(
+                formatter,
+                "actions and opened masks must be non-empty and aligned"
+            ),
+            Self::PositiveVisitClosed => {
+                write!(formatter, "an action with positive visits must be opened")
+            }
+            Self::NoOpenedActions => write!(formatter, "at least one action must be opened"),
             Self::EmptyActions => {
                 write!(formatter, "factorized policy requires at least one action")
             }
@@ -56,10 +67,13 @@ pub struct FactorizedTrieV4 {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FactorizedPrefixVisitsV4 {
     pub prefix: Vec<String>,
     pub children: Vec<String>,
     pub visit_counts: Vec<u32>,
+    /// One entry per direct child in canonical order.
+    pub opened_masks: Vec<bool>,
 }
 
 pub fn factorized_action_path_v4(
@@ -143,6 +157,7 @@ pub fn build_factorized_trie_v4(
 pub fn aggregate_factorized_prefix_visits_v4(
     actions: &[ActionDescriptorV3],
     visits: &[u32],
+    opened_masks: &[bool],
 ) -> Result<Vec<FactorizedPrefixVisitsV4>, FactorizedPolicyV4Error> {
     if actions.is_empty() {
         return Err(FactorizedPolicyV4Error::EmptyActions);
@@ -150,9 +165,22 @@ pub fn aggregate_factorized_prefix_visits_v4(
     if actions.len() != visits.len() {
         return Err(FactorizedPolicyV4Error::VisitsLengthMismatch);
     }
+    if actions.len() != opened_masks.len() {
+        return Err(FactorizedPolicyV4Error::OpenedMasksLengthMismatch);
+    }
+    if !opened_masks.iter().any(|opened| *opened) {
+        return Err(FactorizedPolicyV4Error::NoOpenedActions);
+    }
+    if visits
+        .iter()
+        .zip(opened_masks)
+        .any(|(visit, opened)| *visit > 0 && !opened)
+    {
+        return Err(FactorizedPolicyV4Error::PositiveVisitClosed);
+    }
     let trie = build_factorized_trie_v4(actions)?;
     let mut output = Vec::new();
-    aggregate_node(&trie, &mut Vec::new(), visits, &mut output)?;
+    aggregate_node(&trie, &mut Vec::new(), visits, opened_masks, &mut output)?;
     Ok(output)
 }
 
@@ -160,31 +188,48 @@ fn aggregate_node(
     node: &FactorizedTrieV4,
     prefix: &mut Vec<String>,
     visits: &[u32],
+    opened_masks: &[bool],
     output: &mut Vec<FactorizedPrefixVisitsV4>,
-) -> Result<u32, FactorizedPolicyV4Error> {
+) -> Result<(u32, bool), FactorizedPolicyV4Error> {
     if node.children.is_empty() {
-        return node
+        let action_index = node
             .action_index
-            .and_then(|index| visits.get(index).copied())
-            .ok_or(FactorizedPolicyV4Error::PrefixCollision);
+            .ok_or(FactorizedPolicyV4Error::PrefixCollision)?;
+        let visit = *visits
+            .get(action_index)
+            .ok_or(FactorizedPolicyV4Error::VisitsLengthMismatch)?;
+        let opened = *opened_masks
+            .get(action_index)
+            .ok_or(FactorizedPolicyV4Error::OpenedMasksLengthMismatch)?;
+        if visit > 0 && !opened {
+            return Err(FactorizedPolicyV4Error::PositiveVisitClosed);
+        }
+        return Ok((visit, opened));
     }
     let mut children = Vec::with_capacity(node.children.len());
     let mut counts = Vec::with_capacity(node.children.len());
+    let mut child_opened = Vec::with_capacity(node.children.len());
     let mut total = 0u32;
+    let mut any_opened = false;
     for (token, child) in &node.children {
         prefix.push(token.clone());
-        let count = aggregate_node(child, prefix, visits, output)?;
+        let (count, opened) = aggregate_node(child, prefix, visits, opened_masks, output)?;
         prefix.pop();
-        total = total.saturating_add(count);
+        total = total
+            .checked_add(count)
+            .ok_or(FactorizedPolicyV4Error::VisitsLengthMismatch)?;
+        any_opened |= opened;
         children.push(token.clone());
         counts.push(count);
+        child_opened.push(opened);
     }
     output.push(FactorizedPrefixVisitsV4 {
         prefix: prefix.clone(),
         children,
         visit_counts: counts,
+        opened_masks: child_opened,
     });
-    Ok(total)
+    Ok((total, any_opened))
 }
 
 fn target_path(target: &ActionTargetV3) -> Result<Vec<String>, FactorizedPolicyV4Error> {
@@ -278,7 +323,8 @@ mod tests {
                 promotion: None,
             },
         ];
-        let targets = aggregate_factorized_prefix_visits_v4(&actions, &[3, 7]).unwrap();
+        let targets =
+            aggregate_factorized_prefix_visits_v4(&actions, &[3, 7], &[true, true]).unwrap();
         let root = targets
             .iter()
             .find(|target| target.prefix.is_empty())

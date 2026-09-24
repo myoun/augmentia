@@ -1,7 +1,7 @@
 use augment_ai::data_v3::{AbsolutePlayerV3, RulesetRefV3, TerminationV3};
 use augment_ai::{
-    ACTION_V3_SCHEMA_ID, FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID, FACTORIZED_POLICY_V4_SCHEMA_ID,
-    GAME_RECORD_V4_SCHEMA_ID, GameRecordV4, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID,
+    ACTION_V3_SCHEMA_ID, FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID, FACTORIZED_POLICY_V4_SCHEMA_ID,
+    GAME_RECORD_V5_SCHEMA_ID, GameRecordV4, LegalActionSetV3, OBSERVATION_V3_SCHEMA_ID,
     encode_observation_v3,
 };
 use augment_core::{Engine, GameStatus, Mode};
@@ -206,8 +206,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "game_schema_and_fingerprint_chain".to_owned(),
             "decision_index_contiguity".to_owned(),
             "visit_conservation".to_owned(),
-            "factorized_prefix_recalculation".to_owned(),
-            "factorized_trie_sha256".to_owned(),
+            "root_opened_action_mask_conservation".to_owned(),
+            "positive_visit_requires_opened".to_owned(),
+            "opened_zero_visit_allowed".to_owned(),
+            "factorized_prefix_and_opened_masks_recalculation".to_owned(),
+            "root_mask_and_prefix_trie_sha256".to_owned(),
             "played_action_positive_visit".to_owned(),
             "engine_observation_replay".to_owned(),
             "engine_legal_action_replay".to_owned(),
@@ -235,9 +238,9 @@ fn validate_manifest_identity(manifest: &RunManifestV4) -> Result<(), Box<dyn st
         || manifest.source_seal_tag != SOURCE_SEAL_TAG
         || manifest.source_seal_commit != SOURCE_SEAL_COMMIT
         || manifest.ruleset.id != RULESET_ID
-        || manifest.replay_schema_id != GAME_RECORD_V4_SCHEMA_ID
+        || manifest.replay_schema_id != GAME_RECORD_V5_SCHEMA_ID
         || manifest.factorized_policy_schema_id != FACTORIZED_POLICY_V4_SCHEMA_ID
-        || manifest.factorized_target_schema_id != FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID
+        || manifest.factorized_target_schema_id != FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID
         || manifest.observation_schema_id != OBSERVATION_V3_SCHEMA_ID
         || manifest.action_schema_id != ACTION_V3_SCHEMA_ID
     {
@@ -312,6 +315,7 @@ fn validate_game_identity(
         || game.steps.len() != artifact.decisions
         || game.termination != artifact.termination
         || game.ruleset != manifest.ruleset
+        || game.factorized_target_schema_id != manifest.factorized_target_schema_id
         || game.mode_id != manifest.mode_id
         || game.generator.run_id != manifest.run_id
         || game.generator.engine_commit != manifest.engine_commit

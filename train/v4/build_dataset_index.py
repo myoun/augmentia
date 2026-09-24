@@ -7,7 +7,15 @@ import json
 import os
 from pathlib import Path
 
-from .dataset import DATASET_INDEX_SCHEMA_ID, _load_run_manifest, sha256_file
+from .dataset import (
+    ACTION_SCHEMA_ID,
+    DATASET_INDEX_SCHEMA_ID,
+    FACTORIZED_TARGET_SCHEMA_ID,
+    OBSERVATION_SCHEMA_ID,
+    REPLAY_SCHEMA_ID,
+    _load_run_manifest,
+    sha256_file,
+)
 
 
 def _relative(path: Path, base: Path) -> str:
@@ -26,9 +34,20 @@ def main() -> None:
     entries = []
     game_indices: list[int] = []
     seen_run_ids: set[str] = set()
+    lineage: dict[str, str] | None = None
     for value in args.manifests:
         manifest_path = value.resolve()
         manifest = _load_run_manifest(manifest_path)
+        current_lineage = {
+            "replay_schema_id": manifest["replay_schema_id"],
+            "factorized_target_schema_id": manifest["factorized_target_schema_id"],
+            "observation_schema_id": manifest["observation_schema_id"],
+            "action_schema_id": manifest["action_schema_id"],
+        }
+        if lineage is None:
+            lineage = current_lineage
+        elif current_lineage != lineage:
+            raise ValueError("source manifests disagree on replay/target lineage")
         if manifest["run_id"] in seen_run_ids:
             raise ValueError(f"duplicate source run_id: {manifest['run_id']}")
         seen_run_ids.add(manifest["run_id"])
@@ -52,12 +71,18 @@ def main() -> None:
     expected_indices = list(range(ordered_indices[0], ordered_indices[-1] + 1))
     if ordered_indices != expected_indices:
         raise ValueError("source manifests do not form a contiguous game_index range")
+    if lineage is None:
+        raise ValueError("dataset contains no manifests")
     payload = {
         "dataset_schema_id": DATASET_INDEX_SCHEMA_ID,
         "dataset_id": args.dataset_id,
         "games": len(ordered_indices),
         "game_index_start": ordered_indices[0],
         "game_index_end": ordered_indices[-1],
+        "replay_schema_id": REPLAY_SCHEMA_ID,
+        "factorized_target_schema_id": FACTORIZED_TARGET_SCHEMA_ID,
+        "observation_schema_id": OBSERVATION_SCHEMA_ID,
+        "action_schema_id": ACTION_SCHEMA_ID,
         "manifests": entries,
     }
     output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

@@ -36,8 +36,9 @@ pub use data_v3::{
     write_jsonl_zstd_shard,
 };
 pub use data_v4::{
-    FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID, FactorizedMctsTargetV4, GAME_RECORD_V4_SCHEMA_ID,
-    GameRecordV4, GameStepV4, V4DataError,
+    FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID, FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID,
+    FactorizedMctsTargetV4, GAME_RECORD_V4_SCHEMA_ID, GAME_RECORD_V5_SCHEMA_ID, GameRecordV4,
+    GameStepV4, V4DataError,
 };
 pub use encoder_v3::{
     BoardPieceV3, CardRecordV3, GlobalStateV3, NamedRuntimeValueV3, OBSERVATION_V3_GLOBAL_FEATURES,

@@ -29,7 +29,9 @@ class FactorizedModelTests(unittest.TestCase):
 
     def _batch(self, visits: list[int]):
         case = {**self.case, "legal_actions": {**self.case["legal_actions"], "actions": self.case["legal_actions"]["actions"][:len(visits)]}}
-        return tensorize_factorized_cases([case], self.vocabulary, [visits])
+        return tensorize_factorized_cases(
+            [case], self.vocabulary, [visits], synthetic_all_open=True
+        )
 
     def _model(self) -> AugmentNetV4:
         torch.manual_seed(7)

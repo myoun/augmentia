@@ -194,6 +194,8 @@ pub struct SearchResultV4 {
     pub descriptor: ActionDescriptorV3,
     pub action_index: usize,
     pub visits: Vec<RootActionVisitV4>,
+    /// One entry per complete legal action in legal-set order.
+    pub opened_action_mask: Vec<bool>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -210,6 +212,8 @@ pub struct SearchDiagnosticsV4 {
     pub sampled_chance_outcomes: usize,
     pub root_gumbel_candidates: usize,
     pub root_gumbel_halving_rounds: usize,
+    /// Same complete-action order and semantics as `SearchResultV4::opened_action_mask`.
+    pub opened_action_mask: Vec<bool>,
     pub maximum_depth: usize,
 }
 
@@ -580,6 +584,7 @@ impl MctsV4Tree {
             )));
         }
         let result = self.build_result(root_state)?;
+        diagnostics.opened_action_mask = result.opened_action_mask.clone();
         self.last_diagnostics = Some(diagnostics);
         Ok(result)
     }
@@ -1048,6 +1053,22 @@ impl MctsV4Tree {
                 q_root: leaf.q(),
             });
         }
+        let opened_action_mask = trie
+            .action_leaves
+            .iter()
+            .map(|leaf| trie.arena[*leaf].opened)
+            .collect::<Vec<_>>();
+        if opened_action_mask.len() != visits.len()
+            || !opened_action_mask.iter().any(|opened| *opened)
+            || visits
+                .iter()
+                .zip(&opened_action_mask)
+                .any(|(visit, opened)| visit.visits > 0 && !opened)
+        {
+            return Err(MctsV4Error::Invariant(
+                "root opened-action mask is incomplete or violates positive visits".into(),
+            ));
+        }
         let active = &self
             .root_gumbel
             .as_ref()
@@ -1076,11 +1097,17 @@ impl MctsV4Tree {
                     .then_with(|| right.cmp(left))
             })
             .ok_or_else(|| MctsV4Error::Invariant("root Gumbel has no survivor".into()))?;
+        if !opened_action_mask[selected] {
+            return Err(MctsV4Error::Invariant(
+                "selected root action was never opened".into(),
+            ));
+        }
         Ok(SearchResultV4 {
             action: visits[selected].action.clone(),
             descriptor: visits[selected].descriptor.clone(),
             action_index: selected,
             visits,
+            opened_action_mask,
         })
     }
 }
@@ -1208,6 +1235,28 @@ mod tests {
         state
     }
 
+    fn wide_legal_state() -> GameState {
+        let mut board = Board::empty();
+        for (square, piece, kind, id) in [
+            ("h1", Player::White, PieceKind::King, 1),
+            ("b1", Player::White, PieceKind::Queen, 2),
+            ("c1", Player::White, PieceKind::Rook, 3),
+            ("d1", Player::White, PieceKind::Bishop, 4),
+            ("e1", Player::White, PieceKind::Knight, 5),
+            ("f1", Player::White, PieceKind::Rook, 6),
+            ("a8", Player::Black, PieceKind::King, 7),
+        ] {
+            board.set(
+                square.parse().unwrap(),
+                Some(Piece::new(piece, kind).with_id(id)),
+            );
+        }
+        let mut state =
+            GameState::from_board(BUNDLED_RULESET_ID, Mode::Standard, board, Player::White, 29);
+        state.phase = GamePhase::Playing;
+        state
+    }
+
     fn config(simulations: usize, seed: u64) -> MctsV4Config {
         MctsV4Config {
             num_simulations: simulations,
@@ -1242,6 +1291,84 @@ mod tests {
             let decoded = legal.decode_action(action_index, &state).unwrap();
             assert!(engine.legal_actions(&state).unwrap().contains(&decoded));
         }
+    }
+
+    #[test]
+    fn wide_root_reports_exact_sixteen_opened_candidates() {
+        let engine = Engine::bundled_20260818().unwrap();
+        let state = wide_legal_state();
+        let legal = LegalActionSetV3::from_state(&state, &engine).unwrap();
+        assert!(
+            legal.len() >= 28,
+            "fixture must have at least 28 legal actions"
+        );
+        let config = MctsV4Config {
+            num_simulations: 97,
+            gumbel_candidates: 16,
+            search_seed: 0x1234,
+            gumbel_seed: 0x5678,
+            widening_k0: 1,
+            widening_c: 1.0,
+            ..MctsV4Config::default()
+        };
+        let mut tree = MctsV4Tree::new(config).unwrap();
+        let result = tree.search(&state, &engine, &evaluator()).unwrap();
+        let diagnostics = tree.last_diagnostics.as_ref().unwrap();
+
+        assert_eq!(result.opened_action_mask.len(), legal.len());
+        assert_eq!(diagnostics.opened_action_mask, result.opened_action_mask);
+        assert_eq!(
+            result
+                .opened_action_mask
+                .iter()
+                .filter(|opened| **opened)
+                .count(),
+            16
+        );
+        assert!(result.opened_action_mask[result.action_index]);
+        assert!(
+            result
+                .visits
+                .iter()
+                .zip(&result.opened_action_mask)
+                .all(|(visit, opened)| visit.visits == 0 || *opened)
+        );
+        assert_eq!(
+            result.visits.iter().map(|visit| visit.visits).sum::<u32>(),
+            config.num_simulations as u32
+        );
+        let target = crate::FactorizedMctsTargetV4::from_complete_visits(
+            &legal.actions,
+            result.visits.iter().map(|visit| visit.visits).collect(),
+            result.opened_action_mask.clone(),
+            diagnostics.completed_simulations as u32,
+            diagnostics.root_raw_value,
+            SEARCH_SEMANTICS_V4_ID,
+            ROOT_SELECTION_V4_ID,
+            CHANCE_SAMPLING_V4_ID,
+            config.chance_outcome_samples as u32,
+        )
+        .unwrap();
+        target.validate(&legal.actions).unwrap();
+        let mixed = target
+            .prefix_targets
+            .iter()
+            .find(|row| {
+                row.prefix.as_slice() == ["family:move"]
+                    && row.visit_counts.iter().any(|visits| *visits > 0)
+                    && row.opened_masks.iter().any(|opened| *opened)
+                    && row.opened_masks.iter().any(|opened| !*opened)
+            })
+            .expect("wide move root must contain a mixed opened/closed positive prefix");
+        let denominator = mixed
+            .visit_counts
+            .iter()
+            .zip(&mixed.opened_masks)
+            .filter(|(_, opened)| **opened)
+            .map(|(visits, _)| visits)
+            .sum::<u32>();
+        assert_eq!(denominator, config.num_simulations as u32);
+        assert_eq!(diagnostics.root_gumbel_candidates, 16);
     }
 
     #[test]

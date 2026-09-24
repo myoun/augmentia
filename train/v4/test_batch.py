@@ -10,6 +10,7 @@ import torch
 from v3.factorized import FactorizedPolicyError
 from v3.tensorize import V3Vocabulary, tensorize_cases
 
+from v4.loss import conditional_prefix_cross_entropy
 from v4.batch import (
     FACTOR_FIELD_IDS,
     assert_visit_conservation,
@@ -34,7 +35,12 @@ class FactorizedBatchTests(unittest.TestCase):
             [index + 1 for index in range(len(case["legal_actions"]["actions"]))]
             for case in cases
         ]
-        batch = tensorize_factorized_cases(cases, vocabulary, visits)
+        batch = tensorize_factorized_cases(
+            cases,
+            vocabulary,
+            visits,
+            opened_action_masks=[[True] * len(visit) for visit in visits],
+        )
         self.assertEqual(batch.batch_size, 2)
         self.assertEqual(batch.prefixes.prefix.field.ndim, 2)
         self.assertEqual(batch.prefixes.children.field.shape, batch.prefixes.visit_counts.shape)
@@ -50,7 +56,9 @@ class FactorizedBatchTests(unittest.TestCase):
         vocabulary = V3Vocabulary.from_cases([case])
         states = tensorize_cases([case], vocabulary)
         actions = case["legal_actions"]["actions"][:3]
-        opened = collate_factorized_batch(states, [actions], [[7, 0, 1]])
+        opened = collate_factorized_batch(
+            states, [actions], [[7, 0, 1]], opened_action_masks=[[True, True, True]]
+        )
         closed = collate_factorized_batch(
             states, [actions], [[7, 0, 1]], opened_action_masks=[[True, False, True]]
         )
@@ -61,7 +69,61 @@ class FactorizedBatchTests(unittest.TestCase):
         self.assertEqual(int(closed.prefixes.opened_mask[row_b].sum()), 2)
         self.assertTrue(torch.equal(opened.prefixes.visit_counts[row_a], closed.prefixes.visit_counts[row_b]))
 
-    def test_structured_edge_encoding_preserves_type_and_target_order(self) -> None:
+    def test_wide_mixed_row_excludes_closed_zero_visit_siblings(self) -> None:
+        # Use a wide same-family action family so the mixed row has 32 direct
+        # children (the production corpus has 28+ legal actions and 16 opened).
+        case = self.suite["cases"][0]
+        actions = [
+            {
+                "kind": "card",
+                "card": index,
+                "definition_id": f"fixture-card-{index}",
+                "target": {"kind": "none"},
+            }
+            for index in range(32)
+        ]
+        visits = [1] * 15 + [0] * (len(actions) - 15)
+        opened = [True] * 16 + [False] * (len(actions) - 16)
+        vocabulary = V3Vocabulary.from_cases([case])
+        states = tensorize_cases([case], vocabulary)
+        batch = collate_factorized_batch(
+            states,
+            [actions],
+            [visits],
+            opened_action_masks=[opened],
+        )
+        row_candidates = torch.nonzero(
+            (batch.prefixes.legal_mask.sum(dim=1) >= 28)
+            & (batch.prefixes.opened_mask.sum(dim=1) == 16)
+        ).flatten()
+        self.assertGreaterEqual(len(row_candidates), 1)
+        self.assertEqual(int(batch.prefixes.complete_action_opened_mask[0].sum()), 16)
+        row = int(row_candidates[0])
+        self.assertTrue(bool(batch.prefixes.opened_mask[row, 0]))
+        self.assertTrue(bool((batch.prefixes.visit_counts[row] == 0).logical_and(
+            batch.prefixes.opened_mask[row]
+        ).any()))
+        self.assertTrue(bool((batch.prefixes.visit_counts[row] == 0).logical_and(
+            ~batch.prefixes.opened_mask[row]
+        ).any()))
+        logits = torch.randn_like(batch.prefixes.visit_counts, dtype=torch.float32)
+        baseline = conditional_prefix_cross_entropy(logits, batch.prefixes)
+        changed = logits.clone()
+        closed_columns = ~batch.prefixes.opened_mask[row]
+        changed[row, closed_columns] += 1000.0
+        self.assertTrue(
+            torch.equal(
+                baseline,
+                conditional_prefix_cross_entropy(changed, batch.prefixes),
+            )
+        )
+
+    def test_missing_production_mask_fails_closed(self) -> None:
+        case = self.suite["cases"][0]
+        states = tensorize_cases([case], V3Vocabulary.from_cases([case]))
+        with self.assertRaisesRegex(FactorizedPolicyError, "opened_action_masks"):
+            collate_factorized_batch(states, [case["legal_actions"]["actions"]], [[1]])
+
         first = encode_factor_edge(("target_0", 9))
         second = encode_factor_edge(("target_1", 9))
         square = encode_factor_edge(("target_square", 9))
@@ -77,7 +139,9 @@ class FactorizedBatchTests(unittest.TestCase):
             {"kind": "move", "piece": 0, "from": 55, "to": 63, "promotion": None},
             {"kind": "move", "piece": 0, "from": 55, "to": 63, "promotion": 5},
         ]
-        batch = collate_factorized_batch(states, [actions], [[2, 3]])
+        batch = collate_factorized_batch(
+            states, [actions], [[2, 3]], opened_action_masks=[[True, True]]
+        )
         two_way = torch.nonzero(batch.prefixes.legal_mask.sum(1) == 2).flatten()
         self.assertEqual(len(two_way), 1)
         self.assertEqual(sorted(batch.prefixes.visit_counts[int(two_way[0]), :2].tolist()), [2.0, 3.0])
@@ -86,7 +150,12 @@ class FactorizedBatchTests(unittest.TestCase):
         case = self.suite["cases"][0]
         vocabulary = V3Vocabulary.from_cases([case])
         actions = case["legal_actions"]["actions"][:2]
-        batch = collate_factorized_batch(tensorize_cases([case], vocabulary), [actions], [[2, 1]])
+        batch = collate_factorized_batch(
+            tensorize_cases([case], vocabulary),
+            [actions],
+            [[2, 1]],
+            opened_action_masks=[[True, True]],
+        )
         bad_counts = batch.prefixes.visit_counts.clone()
         root = int(torch.nonzero(~batch.prefixes.prefix.mask.any(1)).flatten()[0])
         bad_counts[root, 0] += 1

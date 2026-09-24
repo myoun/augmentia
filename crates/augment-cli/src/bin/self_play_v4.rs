@@ -4,8 +4,8 @@ use augment_ai::data_v3::{
 };
 use augment_ai::{
     ACTION_V3_SCHEMA_ID, CHANCE_SAMPLING_V4_ID, DeterministicFactorizedEvaluatorV4,
-    FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID, FACTORIZED_POLICY_V4_SCHEMA_ID, FactorizedEvaluatorV4,
-    GAME_RECORD_V4_SCHEMA_ID, OBSERVATION_V3_SCHEMA_ID, ROOT_SELECTION_V4_ID,
+    FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID, FACTORIZED_POLICY_V4_SCHEMA_ID, FactorizedEvaluatorV4,
+    GAME_RECORD_V5_SCHEMA_ID, OBSERVATION_V3_SCHEMA_ID, ROOT_SELECTION_V4_ID,
     SEARCH_SEMANTICS_V4_ID, SelfPlayAgentV4, SelfPlayGameConfigV4, V3ExecutionProvider,
     V3RuntimeOptions, V4OnnxRuntime, generate_self_play_game_v4,
 };
@@ -361,9 +361,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         search_semantics_id: SEARCH_SEMANTICS_V4_ID.to_owned(),
         root_selection_id: ROOT_SELECTION_V4_ID.to_owned(),
         chance_sampling_id: CHANCE_SAMPLING_V4_ID.to_owned(),
-        replay_schema_id: GAME_RECORD_V4_SCHEMA_ID.to_owned(),
+        replay_schema_id: GAME_RECORD_V5_SCHEMA_ID.to_owned(),
         factorized_policy_schema_id: FACTORIZED_POLICY_V4_SCHEMA_ID.to_owned(),
-        factorized_target_schema_id: FACTORIZED_MCTS_TARGET_V4_SCHEMA_ID.to_owned(),
+        factorized_target_schema_id: FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID.to_owned(),
         observation_schema_id: OBSERVATION_V3_SCHEMA_ID.to_owned(),
         action_schema_id: ACTION_V3_SCHEMA_ID.to_owned(),
         games_artifacts: artifacts,

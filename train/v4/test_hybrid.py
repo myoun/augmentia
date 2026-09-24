@@ -42,7 +42,9 @@ class HybridEncoderTests(unittest.TestCase):
     def _batch(self, cases=None):
         cases = self.cases if cases is None else cases
         visits = [[i + 1 for i in range(len(case["legal_actions"]["actions"]))] for case in cases]
-        return tensorize_factorized_cases(cases, self.vocabulary, visits)
+        return tensorize_factorized_cases(
+            cases, self.vocabulary, visits, synthetic_all_open=True
+        )
 
     def test_baseline_remains_default_and_checkpoint_compatible(self):
         torch.manual_seed(13)

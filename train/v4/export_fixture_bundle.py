@@ -109,7 +109,9 @@ def main() -> None:
         [index + 1 for index in range(len(case["legal_actions"]["actions"]))]
         for case in cases
     ]
-    factorized = tensorize_factorized_cases(cases, vocabulary, visits)
+    factorized = tensorize_factorized_cases(
+        cases, vocabulary, visits, synthetic_all_open=True
+    )
     states = factorized.states
     model = AugmentNetV4(
         V4ModelConfig(

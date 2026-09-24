@@ -1,0 +1,336 @@
+{
+  "actions": [
+    {
+      "kind": "move",
+      "piece": 1,
+      "piece_kind": 2,
+      "from": 1,
+      "to": 16,
+      "promotion": null
+    },
+    {
+      "kind": "piece_ability",
+      "piece": 2,
+      "piece_kind": 21,
+      "from": 18,
+      "ability": "wizard_lightning",
+      "target": {
+        "kind": "square",
+        "square": 7
+      }
+    },
+    {
+      "kind": "card",
+      "card": 3,
+      "definition_id": "gale",
+      "target": {
+        "kind": "squares",
+        "squares": [
+          1,
+          9,
+          18
+        ]
+      }
+    }
+  ],
+  "target": {
+    "schema_id": "augmentia.factorized-mcts-visits.v3",
+    "factorized_policy_schema_id": "augmentia.factorized-policy.v4.1",
+    "opened_action_mask": [
+      true,
+      true,
+      false
+    ],
+    "complete_visit_counts": [
+      3,
+      0,
+      0
+    ],
+    "completed_simulations": 3,
+    "root_value": 0.25,
+    "prefix_targets": [
+      {
+        "prefix": [
+          "family:card",
+          "card:3",
+          "target_kind:squares",
+          "target_0:1",
+          "target_1:9",
+          "target_2:18"
+        ],
+        "children": [
+          "complete:action"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:card",
+          "card:3",
+          "target_kind:squares",
+          "target_0:1",
+          "target_1:9"
+        ],
+        "children": [
+          "target_2:18"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:card",
+          "card:3",
+          "target_kind:squares",
+          "target_0:1"
+        ],
+        "children": [
+          "target_1:9"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:card",
+          "card:3",
+          "target_kind:squares"
+        ],
+        "children": [
+          "target_0:1"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:card",
+          "card:3"
+        ],
+        "children": [
+          "target_kind:squares"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:card"
+        ],
+        "children": [
+          "card:3"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          false
+        ]
+      },
+      {
+        "prefix": [
+          "family:move",
+          "piece:1",
+          "source_square:1",
+          "destination:16",
+          "promotion:none"
+        ],
+        "children": [
+          "complete:action"
+        ],
+        "visit_counts": [
+          3
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:move",
+          "piece:1",
+          "source_square:1",
+          "destination:16"
+        ],
+        "children": [
+          "promotion:none"
+        ],
+        "visit_counts": [
+          3
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:move",
+          "piece:1",
+          "source_square:1"
+        ],
+        "children": [
+          "destination:16"
+        ],
+        "visit_counts": [
+          3
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:move",
+          "piece:1"
+        ],
+        "children": [
+          "source_square:1"
+        ],
+        "visit_counts": [
+          3
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:move"
+        ],
+        "children": [
+          "piece:1"
+        ],
+        "visit_counts": [
+          3
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:piece_ability",
+          "piece:2",
+          "ability:wizard_lightning",
+          "target_kind:square",
+          "target_square:7"
+        ],
+        "children": [
+          "complete:action"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:piece_ability",
+          "piece:2",
+          "ability:wizard_lightning",
+          "target_kind:square"
+        ],
+        "children": [
+          "target_square:7"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:piece_ability",
+          "piece:2",
+          "ability:wizard_lightning"
+        ],
+        "children": [
+          "target_kind:square"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:piece_ability",
+          "piece:2"
+        ],
+        "children": [
+          "ability:wizard_lightning"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [
+          "family:piece_ability"
+        ],
+        "children": [
+          "piece:2"
+        ],
+        "visit_counts": [
+          0
+        ],
+        "opened_masks": [
+          true
+        ]
+      },
+      {
+        "prefix": [],
+        "children": [
+          "family:card",
+          "family:move",
+          "family:piece_ability"
+        ],
+        "visit_counts": [
+          0,
+          3,
+          0
+        ],
+        "opened_masks": [
+          false,
+          true,
+          true
+        ]
+      }
+    ],
+    "trie_sha256": "e2c30b93c35768e1364720b2aaefa5cfee33bdc59c3fbb0f7debfa83e9a39605",
+    "search_semantics_id": "augmentia.mcts-v4.factorized-gumbel-widening-public-chance.v2",
+    "root_selection_id": "augmentia.gumbel-sequential-halving.v1",
+    "chance_sampling_id": "augmentia.public-information-multisample-chance.v1",
+    "chance_outcome_samples": 8
+  }
+}

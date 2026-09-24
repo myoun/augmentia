@@ -7,6 +7,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from v3.factorized import FACTOR_POLICY_SCHEMA_ID
+from v3.schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID
+from v4.replay import FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID, GAME_RECORD_V5_SCHEMA_ID
 
 from v4.dataset import DATASET_INDEX_SCHEMA_ID, load_dataset_input, sha256_file
 from v4.train import _load_examples
@@ -34,6 +36,10 @@ class DatasetInputV4Test(unittest.TestCase):
             },
             "evaluator": {"kind": "onnx", "agent_id": "model", "model_sha256": "model"},
             "factorized_policy_schema_id": FACTOR_POLICY_SCHEMA_ID,
+            "replay_schema_id": GAME_RECORD_V5_SCHEMA_ID,
+            "factorized_target_schema_id": FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
+            "observation_schema_id": OBSERVATION_SCHEMA_ID,
+            "action_schema_id": ACTION_SCHEMA_ID,
             "games": 1,
             "games_artifacts": [
                 {
@@ -74,6 +80,10 @@ class DatasetInputV4Test(unittest.TestCase):
             "games": len(indices),
             "game_index_start": min(indices),
             "game_index_end": max(indices),
+            "replay_schema_id": GAME_RECORD_V5_SCHEMA_ID,
+            "factorized_target_schema_id": FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
+            "observation_schema_id": OBSERVATION_SCHEMA_ID,
+            "action_schema_id": ACTION_SCHEMA_ID,
             "manifests": [
                 {
                     "path": str(manifest.relative_to(root)),
@@ -94,6 +104,16 @@ class DatasetInputV4Test(unittest.TestCase):
             dataset = load_dataset_input(manifest)
             self.assertEqual(dataset.dataset_id, "single")
             self.assertEqual([game.game_index for game in dataset.games], [0])
+
+    def test_legacy_target_lineage_is_rejected_by_default_loader(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest, _validation = self._write_run(root, "legacy-lineage", 0)
+            payload = json.loads(manifest.read_text(encoding="utf-8"))
+            payload["factorized_target_schema_id"] = "augmentia.factorized-mcts-visits.v2"
+            manifest.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "lineage"):
+                load_dataset_input(manifest)
 
     def test_multi_shard_index_loads_games_in_global_index_order(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

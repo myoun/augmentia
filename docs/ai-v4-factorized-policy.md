@@ -35,24 +35,33 @@ existing V3 stable encodings. A change to this grammar requires a new
 
 ## Policy target
 
-`augmentia.factorized-mcts-visits.v2` stores a complete-action visit vector plus the
-generated trie version. V2 also records the number of public-information chance outcomes
-sampled per stochastic action; the earlier experimental V1 target must not be mixed silently. The loader derives every prefix target by summing visits below each
-legal child. It applies cross entropy at every visited prefix with its full engine
-legal child mask. A child is zero only when it was legal and opened at that prefix;
-it is never created merely because its complete-action visit is zero.
+`augmentia.factorized-mcts-visits.v3` stores a complete-action visit vector, the exact
+root `opened_action_mask` returned by MCTS, and the generated trie version. V3 also records
+the number of public-information chance outcomes sampled per stochastic action. The V1/V2
+experimental targets do not carry sufficient opening information and must not be loaded
+silently or mixed with V3 targets.
+
+The loader derives every prefix target by summing visits below each legal child and an
+`opened_masks` vector by propagating whether any complete action below that child was
+opened. Cross entropy at a visited prefix is normalized only over
+`legal_mask & opened_mask`. An opened child may have zero visits; a closed child is
+excluded from the denominator even when the complete action is legal.
 
 The target record includes:
 
 - `factorized_policy_schema_id`;
 - exact legal complete actions in V3 local order;
-- complete-action visits and completed simulations;
-- canonical trie checksum and all prefix legal-child masks;
+- complete-action visits, the action-aligned `opened_action_mask`, and completed simulations;
+- canonical prefix targets with child-aligned `opened_masks`;
+- a trie checksum over both the root mask and the complete prefix target sequence;
 - `search_semantics_id`, chance-sampling and root-selection provenance;
 - `chance_outcome_samples` in `1..=64`.
 
-V3 flat targets and V4 factorized targets must not share a model checkpoint or be
-silently mixed in a loss.
+Positive-visit actions must be opened, opened zero-visit actions are valid, and closed
+positive-visit actions are invalid. V4 replay records use
+`augmentia.replay.game.v5` and explicitly carry the V3 target schema ID. V3 flat targets,
+legacy V4 targets, and opened-mask V4 targets must not share a model checkpoint or be
+silently mixed in a dataset or loss.
 
 ## Search
 
