@@ -132,6 +132,8 @@ promotion_indexes = torch.where(is_promotion, raw_index, torch.zeros_like(raw_in
 | P2 recovery sweep | 4 seeds × 2 learning rates, 1 epoch/cell, 8 sealed cells, evidence 부족 |
 | P3 A단계 corpus | 30 games / 1,692 decisions, 11 terminal / 19 truncated, longer horizon 64 |
 | P3 A단계 recovery | P0 `inconclusive`, P1 λ0.05 no longer-horizon KL/NLL gain, 모두 `promotable=false` |
+| P3 B300 corpus | 300 games / 16,539 decisions, 118 terminal / 182 truncated, seal 통과 |
+| P3 B300 gate | 93 held-out blocks, `evidence_sufficient=true`, `outcome=fail`, KL improvement `-0.007601` |
 | 실제 opened-only checkpoint eager/Python ONNX/Rust parity | tolerance `2e-4` 통과; all-open experiment export 차단 확인 |
 | Rust/Python shared v3 target fixture | 동일 hash `e2c30b...9605`, 양쪽 round-trip 통과 |
 | clean v5 producer → Rust validator → Python audit | 20 games / 320 decisions, seed·trajectory 20/20 일치 |
@@ -217,14 +219,20 @@ Phase 1~3과 [0915 native V4 training plan](ai-v4-training-plan-0915.md)을 따�
    trajectory, split, baseline encoder와 initial hash로 opened-only와 all-open experiment을
    비교하고 opened-only eager/Python ONNX/Rust parity를 통과했다. 그러나 conditional KL,
    visited-tail recall, complete-action NLL/top-1/ECE gate를 통과하지 못했다.
-4. **P0–P2 bounded recovery와 P3 A단계: 실행 완료, gate recovery 미확정.**
+4. **P0–P2 bounded recovery, P3 A단계, P3 B300: 실행 완료, gate recovery 실패.**
    metric contract, mixed-row shadow ablation, multi-seed learning-rate sweep은
    [`ai-v4-phase1-recovery-p0-p2.md`](ai-v4-phase1-recovery-p0-p2.md)에,
    30-game longer-horizon/terminal A단계는
    [`ai-v4-p3-a-stage-diagnostic.md`](ai-v4-p3-a-stage-diagnostic.md)에 봉인했다.
    A단계는 30 games/1,692 decisions와 terminal 11개를 검증했지만 실제 validation
-   block은 6개였고, λ=0.05의 longer-horizon 이득은 재현되지 않았다. gate를 다시
-   통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
+   block은 6개였고, λ=0.05의 longer-horizon 이득은 재현되지 않았다.
+   B300은 300 games/16,539 decisions와 93 held-out blocks로
+   [`ai-v4-p3-b300-gate-contract.md`](ai-v4-p3-b300-gate-contract.md)를 실행했고,
+   [`ai-v4-p3-b300-gate-result.md`](ai-v4-p3-b300-gate-result.md)에서
+   `evidence_sufficient=true` + `outcome=fail`을 기록했다. A단계의 양의 KL 방향이
+   93 blocks에서 유의하게 반전(`-0.007601`, CI `[-0.010698, -0.004466]`)되었으므로
+   동결 계약에 따라 4-seed 확장을 중단한다. Phase 2 strength 실행은 승격 근거가
+   되지 못한다.
 5. **Strength evidence와 조건부 최적화.** model gate recovery 뒤에만 최소 100 paired
    seeds/색 교환/fixed-simulation/fixed-wall-clock/p95/CI를 봉인하고, 그 다음 Gumbel
    16/32/64, worker scaling, Hybrid A/B, capacity, adaptive compute를 비교한다.

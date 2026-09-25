@@ -123,6 +123,8 @@ docs/ai-v4-phase1-status.md            opened-mask clean corpus·paired A/B·mod
 docs/ai-v4-phase1-model-gate-diagnosis.md  model gate 실패 원인·metric bias·recovery 실험 순서
 docs/ai-v4-phase1-recovery-p0-p2.md      P0–P2 shadow ablation·optimization sweep 결과
 docs/ai-v4-p3-a-stage-diagnostic.md      30-game longer-horizon P3 A단계 결과
+docs/ai-v4-p3-b300-gate-contract.md      300-game B단계 사전 동결 gate 계약
+docs/ai-v4-p3-b300-gate-result.md        93-block B300 gate 결과 (evidence 충분, fail)
 docs/ai-v4-legacy-artifact-quarantine.md  V2 target artifact 비파괴 격리 정책과 검증
 docs/ai-v4-training-plan-0915.md       0915 native data 기반 실제 V4 학습 계획과 단계별 gate
 rulesets/augment_chess_20260818/      최신 불변 규칙 스냅숏
