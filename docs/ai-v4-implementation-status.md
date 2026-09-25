@@ -130,6 +130,8 @@ promotion_indexes = torch.where(is_promotion, raw_index, torch.zeros_like(raw_in
 | P0 contract A/B smoke | 1 epoch, 6 validation blocks, gate `inconclusive`, `promotable=false` |
 | P1 shadow-negative smoke | λ `0/0.01/0.05/0.1`, 1 epoch, 4 sealed cells, evidence 부족 |
 | P2 recovery sweep | 4 seeds × 2 learning rates, 1 epoch/cell, 8 sealed cells, evidence 부족 |
+| P3 A단계 corpus | 30 games / 1,692 decisions, 11 terminal / 19 truncated, longer horizon 64 |
+| P3 A단계 recovery | P0 `inconclusive`, P1 λ0.05 no longer-horizon KL/NLL gain, 모두 `promotable=false` |
 | 실제 opened-only checkpoint eager/Python ONNX/Rust parity | tolerance `2e-4` 통과; all-open experiment export 차단 확인 |
 | Rust/Python shared v3 target fixture | 동일 hash `e2c30b...9605`, 양쪽 round-trip 통과 |
 | clean v5 producer → Rust validator → Python audit | 20 games / 320 decisions, seed·trajectory 20/20 일치 |
@@ -215,12 +217,14 @@ Phase 1~3과 [0915 native V4 training plan](ai-v4-training-plan-0915.md)을 따�
    trajectory, split, baseline encoder와 initial hash로 opened-only와 all-open experiment을
    비교하고 opened-only eager/Python ONNX/Rust parity를 통과했다. 그러나 conditional KL,
    visited-tail recall, complete-action NLL/top-1/ECE gate를 통과하지 못했다.
-4. **P0–P2 bounded recovery: 완료, gate recovery 미확정.** metric contract, mixed-row
-   shadow ablation, multi-seed learning-rate sweep을
-   [`ai-v4-phase1-recovery-p0-p2.md`](ai-v4-phase1-recovery-p0-p2.md)에 봉인했다.
-   λ=0.05–0.1은 현재 smoke에서 KL/NLL을 일부 개선했지만 top-1 trade-off가 남았고,
-   6-game validation은 여전히 evidence 부족이다. gate를 다시 통과하기 전에는
-   Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
+4. **P0–P2 bounded recovery와 P3 A단계: 실행 완료, gate recovery 미확정.**
+   metric contract, mixed-row shadow ablation, multi-seed learning-rate sweep은
+   [`ai-v4-phase1-recovery-p0-p2.md`](ai-v4-phase1-recovery-p0-p2.md)에,
+   30-game longer-horizon/terminal A단계는
+   [`ai-v4-p3-a-stage-diagnostic.md`](ai-v4-p3-a-stage-diagnostic.md)에 봉인했다.
+   A단계는 30 games/1,692 decisions와 terminal 11개를 검증했지만 실제 validation
+   block은 6개였고, λ=0.05의 longer-horizon 이득은 재현되지 않았다. gate를 다시
+   통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
 5. **Strength evidence와 조건부 최적화.** model gate recovery 뒤에만 최소 100 paired
    seeds/색 교환/fixed-simulation/fixed-wall-clock/p95/CI를 봉인하고, 그 다음 Gumbel
    16/32/64, worker scaling, Hybrid A/B, capacity, adaptive compute를 비교한다.

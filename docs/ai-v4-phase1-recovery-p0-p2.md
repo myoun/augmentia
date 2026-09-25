@@ -186,4 +186,6 @@ P0–P2는 다음을 확인했다.
 - shadow λ, learning rate, early-stop 조건을 사전 등록
 - 별도 Phase 2 paired strength/CI gate 수행
 
-현재 P0–P2 artifact의 `promotable`은 계속 `false`다.
+현재 P0–P2 artifact의 `promotable`은 계속 `false`다. 이후 P3 A단계의
+30-game longer-horizon 결과는 [ai-v4-p3-a-stage-diagnostic.md](ai-v4-p3-a-stage-diagnostic.md)에
+기록했다.
