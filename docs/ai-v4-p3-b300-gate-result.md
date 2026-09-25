@@ -48,6 +48,13 @@ Corpus 품질 자체는 A단계보다 크게 개선되었고 계약 위반은 �
 - Wall time: 26,130.2s (약 7.26시간)
 - Train 11,493 examples / 719 batches, validation 5,046 examples / 316 batches
 
+코드 기준선: B300 실행은 `fdbca1c Optimize V4 loss validation` 이후 코드로
+수행되었다. 이 커밋은 `assert_visit_conservation`의 반복 호출을
+`PrefixBatchV4.validated` 플래그로 대체하는 성능 변경이며, 검증 로직은
+`collate_factorized_batch`로 이동했다. 테스트 78줄이 추가되었다. 계산 결과는
+동일하므로 metric 수치는 유효하지만, A단계(6 blocks)와의 비교에서 코드 버전이
+달라진 점을 감안해야 한다.
+
 Artifact:
 
 - [ab-summary.json](../../augmentia-v4-artifacts/phase1-p3-b300-p0-smoke/ab-summary.json)
