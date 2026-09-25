@@ -212,7 +212,8 @@ Phase 1~3과 [0915 native V4 training plan](ai-v4-training-plan-0915.md)을 따�
    visited-tail recall, complete-action NLL/top-1/ECE gate를 통과하지 못했다.
 4. **Model gate recovery가 다음 작업.** canonical 결과는
    [`ai-v4-phase1-status.md`](ai-v4-phase1-status.md)의 current-code full 20-game report다.
-   gate를 다시 통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
+   원인과 실험 순서는 [`ai-v4-phase1-model-gate-diagnosis.md`](ai-v4-phase1-model-gate-diagnosis.md)에
+   정리했다. gate를 다시 통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
 5. **Strength evidence와 조건부 최적화.** model gate recovery 뒤에만 최소 100 paired
    seeds/색 교환/fixed-simulation/fixed-wall-clock/p95/CI를 봉인하고, 그 다음 Gumbel
    16/32/64, worker scaling, Hybrid A/B, capacity, adaptive compute를 비교한다.

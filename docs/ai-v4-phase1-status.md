@@ -4,6 +4,11 @@ Phase 1 실행과 증거 봉인은 **완료**했지만, 현재 코드로 재실�
 model gate는 **실패**했다. 따라서 strength 승격이나 web default 변경을 의미하지
 않으며, 모든 새 checkpoint와 report는 `promotable=false`로 유지한다.
 
+실패 원인의 독립 감사는 [ai-v4-phase1-model-gate-diagnosis.md](ai-v4-phase1-model-gate-diagnosis.md)에
+정리했다. canonical gate 계산 오류는 확인되지 않았고, 현재 결과는 작은 smoke
+corpus의 낮은 검출력, mixed-row negative supervision 부재, metric support와 modal
+tie 정의를 함께 고려해야 한다.
+
 ## 1. Legacy quarantine
 
 기존 replay v4 / target v2 artifact 8개 corpus run, 304 games, 74개 checkpoint,
