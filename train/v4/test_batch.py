@@ -4,19 +4,25 @@ import json
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 
 from v3.factorized import FactorizedPolicyError
 from v3.tensorize import V3Vocabulary, tensorize_cases
 
-from v4.loss import conditional_prefix_cross_entropy
+import v4.loss as loss_module
 from v4.batch import (
     FACTOR_FIELD_IDS,
+    PrefixBatchV4,
     assert_visit_conservation,
     collate_factorized_batch,
     encode_factor_edge,
     tensorize_factorized_cases,
+)
+from v4.loss import (
+    conditional_prefix_cross_entropy,
+    mixed_row_all_legal_shadow_cross_entropy,
 )
 
 
@@ -42,6 +48,8 @@ class FactorizedBatchTests(unittest.TestCase):
             opened_action_masks=[[True] * len(visit) for visit in visits],
         )
         self.assertEqual(batch.batch_size, 2)
+        self.assertTrue(batch.prefixes.validated)
+        self.assertTrue(batch.prefixes.to("cpu").validated)
         self.assertEqual(batch.prefixes.prefix.field.ndim, 2)
         self.assertEqual(batch.prefixes.children.field.shape, batch.prefixes.visit_counts.shape)
         assert_visit_conservation(batch.prefixes)
@@ -145,6 +153,74 @@ class FactorizedBatchTests(unittest.TestCase):
         two_way = torch.nonzero(batch.prefixes.legal_mask.sum(1) == 2).flatten()
         self.assertEqual(len(two_way), 1)
         self.assertEqual(sorted(batch.prefixes.visit_counts[int(two_way[0]), :2].tolist()), [2.0, 3.0])
+
+    def test_losses_reject_prefixes_that_bypass_collation_validation(self) -> None:
+        self.assertIs(PrefixBatchV4.__dataclass_fields__["validated"].default, False)
+        case = self.suite["cases"][0]
+        vocabulary = V3Vocabulary.from_cases([case])
+        actions = case["legal_actions"]["actions"][:2]
+        batch = collate_factorized_batch(
+            tensorize_cases([case], vocabulary),
+            [actions],
+            [[2, 1]],
+            opened_action_masks=[[True, True]],
+        )
+        unvalidated = replace(batch.prefixes, validated=False)
+        logits = torch.zeros_like(unvalidated.visit_counts, dtype=torch.float32)
+        for loss in (
+            conditional_prefix_cross_entropy,
+            mixed_row_all_legal_shadow_cross_entropy,
+        ):
+            with self.subTest(loss=loss.__name__):
+                with self.assertRaisesRegex(
+                    FactorizedPolicyError,
+                    "validated by collate_factorized_batch",
+                ):
+                    loss(logits, unvalidated)
+
+    def test_losses_do_not_repeat_conservation_scan(self) -> None:
+        case = self.suite["cases"][0]
+        vocabulary = V3Vocabulary.from_cases([case])
+        actions = case["legal_actions"]["actions"][:2]
+        with patch(
+            "v4.batch.assert_visit_conservation",
+            wraps=assert_visit_conservation,
+        ) as conservation_check:
+            batch = collate_factorized_batch(
+                tensorize_cases([case], vocabulary),
+                [actions],
+                [[2, 1]],
+                opened_action_masks=[[True, True]],
+            )
+            logits = torch.zeros_like(
+                batch.prefixes.visit_counts,
+                dtype=torch.float32,
+            )
+            conditional_prefix_cross_entropy(logits, batch.prefixes)
+            mixed_row_all_legal_shadow_cross_entropy(logits, batch.prefixes)
+
+        self.assertEqual(conservation_check.call_count, 1)
+        self.assertNotIn("assert_visit_conservation", vars(loss_module))
+
+    @unittest.skipUnless(torch.cuda.is_available(), "CUDA is required")
+    def test_losses_do_not_force_cuda_synchronization(self) -> None:
+        case = self.suite["cases"][0]
+        vocabulary = V3Vocabulary.from_cases([case])
+        actions = case["legal_actions"]["actions"][:2]
+        batch = collate_factorized_batch(
+            tensorize_cases([case], vocabulary),
+            [actions],
+            [[2, 1]],
+            opened_action_masks=[[True, True]],
+        ).to("cuda")
+        logits = torch.zeros_like(batch.prefixes.visit_counts, dtype=torch.float32)
+
+        torch.cuda.set_sync_debug_mode("error")
+        try:
+            conditional_prefix_cross_entropy(logits, batch.prefixes)
+            mixed_row_all_legal_shadow_cross_entropy(logits, batch.prefixes)
+        finally:
+            torch.cuda.set_sync_debug_mode("default")
 
     def test_conservation_detects_corruption(self) -> None:
         case = self.suite["cases"][0]

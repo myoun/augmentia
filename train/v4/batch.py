@@ -8,7 +8,7 @@ prefix.  Complete-action visits remain in the batch so conservation can be check
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from typing import Any
 
 import torch
@@ -71,7 +71,14 @@ class FactorEdgeBatch:
 
 @dataclass(frozen=True)
 class PrefixBatchV4:
-    """Ragged prefix rows packed as ``R x L`` and ``R x C`` tensors."""
+    """Ragged prefix rows packed as ``R x L`` and ``R x C`` tensors.
+
+    ``validated`` is set only by :func:`collate_factorized_batch` after the
+    complete CPU-side conservation check succeeds.  Losses require this marker
+    instead of repeating the Python-heavy check after tensors move to CUDA.
+    This is a one-shot construction guarantee: callers must not mutate prefix
+    tensors after collation.
+    """
 
     state_index: torch.Tensor
     prefix: FactorEdgeBatch
@@ -83,6 +90,7 @@ class PrefixBatchV4:
     complete_action_visits: torch.Tensor
     complete_action_mask: torch.Tensor
     complete_action_opened_mask: torch.Tensor
+    validated: bool = False
 
     @property
     def row_count(self) -> int:
@@ -100,6 +108,7 @@ class PrefixBatchV4:
             complete_action_visits=self.complete_action_visits.to(device),
             complete_action_mask=self.complete_action_mask.to(device),
             complete_action_opened_mask=self.complete_action_opened_mask.to(device),
+            validated=self.validated,
         )
 
 
@@ -260,6 +269,7 @@ def collate_factorized_batch(
         complete_opened,
     )
     assert_visit_conservation(prefix_batch)
+    prefix_batch = replace(prefix_batch, validated=True)
     result = V4Batch(states, prefix_batch)
     return result if device is None else result.to(device)
 

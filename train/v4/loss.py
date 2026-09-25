@@ -7,7 +7,16 @@ from torch.nn import functional as F
 
 from v3.factorized import FactorizedPolicyError
 
-from .batch import PrefixBatchV4, assert_visit_conservation
+from .batch import PrefixBatchV4
+
+
+def _require_validated_prefixes(prefixes: PrefixBatchV4) -> None:
+    """Reject batches that bypassed the conservation-checking collator."""
+
+    if not prefixes.validated:
+        raise FactorizedPolicyError(
+            "prefix batch must be validated by collate_factorized_batch"
+        )
 
 
 def conditional_prefix_policy_metrics(
@@ -27,11 +36,9 @@ def conditional_prefix_policy_metrics(
         raise ValueError("prefix logits and visit counts must have the same shape")
     if reduction not in {"none", "sum", "mean"}:
         raise ValueError("reduction must be 'none', 'sum', or 'mean'")
-    assert_visit_conservation(prefixes)
+    _require_validated_prefixes(prefixes)
 
     training_mask = prefixes.legal_mask & prefixes.opened_mask
-    if torch.any((prefixes.visit_counts > 0) & ~training_mask):
-        raise FactorizedPolicyError("a positive target must be an opened legal child")
     masked_logits = logits.masked_fill(~training_mask, torch.finfo(logits.dtype).min)
     row_visits = prefixes.visit_counts.sum(dim=1)
     target = prefixes.visit_counts / row_visits.clamp_min(1).unsqueeze(1)
@@ -104,7 +111,7 @@ def mixed_row_all_legal_shadow_cross_entropy(
         raise ValueError("prefix logits and visit counts must have the same shape")
     if reduction not in {"none", "sum", "mean"}:
         raise ValueError("reduction must be 'none', 'sum', or 'mean'")
-    assert_visit_conservation(prefixes)
+    _require_validated_prefixes(prefixes)
     mixed_visited = mixed_row_shadow_mask(prefixes)
 
     legal = prefixes.legal_mask
