@@ -7,7 +7,8 @@ model gate는 **실패**했다. 따라서 strength 승격이나 web default 변�
 실패 원인의 독립 감사는 [ai-v4-phase1-model-gate-diagnosis.md](ai-v4-phase1-model-gate-diagnosis.md)에
 정리했다. canonical gate 계산 오류는 확인되지 않았고, 현재 결과는 작은 smoke
 corpus의 낮은 검출력, mixed-row negative supervision 부재, metric support와 modal
-tie 정의를 함께 고려해야 한다.
+tie 정의를 함께 고려해야 한다. P0–P2 bounded recovery 결과는
+[ai-v4-phase1-recovery-p0-p2.md](ai-v4-phase1-recovery-p0-p2.md)에 정리했다.
 
 ## 1. Legacy quarantine
 

@@ -73,6 +73,63 @@ def conditional_prefix_policy_metrics(
     return cross_entropy / divisor, target_entropy / divisor, kl / divisor
 
 
+def mixed_row_shadow_mask(prefixes: PrefixBatchV4) -> torch.Tensor:
+    """Return visited rows that contain both opened and closed legal children."""
+
+    legal = prefixes.legal_mask
+    opened = legal & prefixes.opened_mask
+    closed = legal & ~prefixes.opened_mask
+    return (
+        (prefixes.visit_counts.sum(dim=1) > 0)
+        & opened.any(dim=1)
+        & closed.any(dim=1)
+    )
+
+
+def mixed_row_all_legal_shadow_cross_entropy(
+    logits: torch.Tensor,
+    prefixes: PrefixBatchV4,
+    *,
+    reduction: str = "mean",
+) -> torch.Tensor:
+    """All-legal CE over visited prefix rows that contain opened and closed children.
+
+    This is an auxiliary training signal for the opened-only objective. The
+    primary production loss remains :func:`conditional_prefix_cross_entropy`.
+    Rows with no opened child (including zero-target, all-closed rows) are
+    excluded, so the shadow objective cannot assign them a gradient.
+    """
+
+    if logits.shape != prefixes.visit_counts.shape:
+        raise ValueError("prefix logits and visit counts must have the same shape")
+    if reduction not in {"none", "sum", "mean"}:
+        raise ValueError("reduction must be 'none', 'sum', or 'mean'")
+    assert_visit_conservation(prefixes)
+    mixed_visited = mixed_row_shadow_mask(prefixes)
+
+    legal = prefixes.legal_mask
+    row_visits = prefixes.visit_counts.sum(dim=1)
+    masked_logits = logits.masked_fill(
+        ~legal, torch.finfo(logits.dtype).min
+    )
+    target = prefixes.visit_counts / row_visits.clamp_min(1).unsqueeze(1)
+    log_probabilities = F.log_softmax(masked_logits, dim=1)
+    row_cross_entropy = -(target * log_probabilities).sum(dim=1)
+    row_cross_entropy = torch.where(
+        mixed_visited,
+        row_cross_entropy * prefixes.prefix_mass,
+        torch.zeros_like(row_cross_entropy),
+    )
+    if reduction == "none":
+        return row_cross_entropy
+
+    total = row_cross_entropy.sum()
+    if reduction == "sum":
+        return total
+    decision_count = prefixes.complete_action_visits.shape[0]
+    return total / max(1, decision_count)
+
+
 def conditional_prefix_cross_entropy(
     logits: torch.Tensor,
     prefixes: PrefixBatchV4,

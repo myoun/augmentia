@@ -7,12 +7,18 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 import torch
 
 from v3.schema import ACTION_SCHEMA_ID, OBSERVATION_SCHEMA_ID, SchemaError
 from v3.tensorize import V3Vocabulary
 
+from v4.loss import (
+    conditional_prefix_policy_metrics,
+    mixed_row_all_legal_shadow_cross_entropy,
+    mixed_row_shadow_mask,
+)
 from v4.replay import (
     FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
     GAME_RECORD_V5_SCHEMA_ID,
@@ -22,7 +28,12 @@ from v4.replay import (
     make_factorized_target_v4,
     parse_game_v4,
 )
-from v4.train import V4Trainer, V4TrainingConfig
+from v4.train import (
+    MIXED_ROW_SHADOW_LOSS_ID,
+    MIXED_ROW_SHADOW_LOSS_SCHEMA_ID,
+    V4Trainer,
+    V4TrainingConfig,
+)
 
 
 FIXTURE = Path(__file__).parents[1] / "v3" / "fixtures" / "0915" / "observation_action_v3.json"
@@ -135,6 +146,150 @@ class ReplayTrainerOpenedMaskTests(unittest.TestCase):
                 & (batch.prefixes.opened_mask.sum(dim=1) > 0)
             ).flatten()
             self.assertGreaterEqual(len(mixed_rows), 1)
+
+    def test_mixed_shadow_loss_excludes_all_closed_rows_from_gradient(self) -> None:
+        example = parse_game_v4(self._record())[0]
+        with tempfile.TemporaryDirectory() as temp:
+            trainer = V4Trainer(
+                [example],
+                Path(temp),
+                self._config(),
+                vocabulary=V3Vocabulary.from_cases([self.case]),
+            )
+            batch, _values = trainer._tensorize_selected([example])
+            logits = torch.randn(
+                batch.prefixes.visit_counts.shape,
+                dtype=torch.float32,
+                requires_grad=True,
+            )
+            mixed = mixed_row_shadow_mask(batch.prefixes)
+            all_closed = (
+                batch.prefixes.legal_mask.any(dim=1)
+                & ~batch.prefixes.opened_mask.any(dim=1)
+            )
+            self.assertGreater(int(mixed.sum()), 0)
+            self.assertGreater(int(all_closed.sum()), 0)
+            row_loss = mixed_row_all_legal_shadow_cross_entropy(
+                logits, batch.prefixes, reduction="none"
+            )
+            self.assertTrue(torch.equal(row_loss[all_closed], torch.zeros_like(row_loss[all_closed])))
+            loss = mixed_row_all_legal_shadow_cross_entropy(logits, batch.prefixes)
+            loss.backward()
+            self.assertIsNotNone(logits.grad)
+            self.assertEqual(int(torch.count_nonzero(logits.grad[all_closed])), 0)
+            self.assertGreater(int(torch.count_nonzero(logits.grad[mixed])), 0)
+            self.assertEqual(
+                int(torch.count_nonzero(logits.grad[~batch.prefixes.legal_mask])),
+                0,
+            )
+
+    def test_lambda_zero_is_exact_opened_only_loss_and_gradient(self) -> None:
+        example = parse_game_v4(self._record())[0]
+        with tempfile.TemporaryDirectory() as temp:
+            trainer = V4Trainer(
+                [example],
+                Path(temp),
+                self._config(),
+                vocabulary=V3Vocabulary.from_cases([self.case]),
+            )
+            trainer.model.eval()
+            batch, values = trainer._tensorize_selected([example])
+            output = trainer.model(batch)
+            expected, _entropy, _kl = conditional_prefix_policy_metrics(
+                output.prefix_logits, batch.prefixes
+            )
+            with mock.patch.object(trainer.model, "forward", return_value=output):
+                total, policy, _entropy, _kl, shadow_ce, _weighted, _value, _count = (
+                    trainer._loss_for_batch(batch, values)
+                )
+            self.assertEqual(total.item(), policy.item())
+            self.assertEqual(total.item(), expected.item())
+            self.assertGreater(shadow_ce.item(), 0.0)
+            expected_gradient = torch.autograd.grad(
+                expected, output.prefix_logits, retain_graph=True
+            )[0]
+            actual_gradient = torch.autograd.grad(total, output.prefix_logits)[0]
+            self.assertTrue(
+                torch.equal(expected_gradient, actual_gradient)
+            )
+
+    def test_shadow_lambda_provenance_history_and_resume_contract(self) -> None:
+        example = parse_game_v4(self._record())[0]
+        config = replace(self._config(), mixed_row_shadow_lambda=0.05)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            trainer = V4Trainer(
+                [example],
+                root,
+                config,
+                vocabulary=V3Vocabulary.from_cases([self.case]),
+                validation_examples=[example],
+            )
+            trainer.fit()
+            for section in ("train", "validation"):
+                metrics = trainer.history[0][section]
+                self.assertEqual(metrics["mixed_row_shadow_lambda"], 0.05)
+                self.assertGreater(metrics["mixed_row_shadow_ce"], 0.0)
+                self.assertGreater(metrics["mixed_row_shadow_rows"], 0)
+                self.assertAlmostEqual(
+                    metrics["mixed_row_shadow_weighted_loss"],
+                    0.05 * metrics["mixed_row_shadow_ce"],
+                    places=7,
+                )
+                self.assertAlmostEqual(
+                    metrics["loss"],
+                    metrics["policy_loss"]
+                    + metrics["mixed_row_shadow_weighted_loss"],
+                    places=7,
+                )
+            checkpoint, sidecar = trainer.save_checkpoint(root / "final.pt")
+            payload = json.loads(sidecar.read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["training_config"]["mixed_row_shadow_lambda"], 0.05
+            )
+            shadow = payload["provenance"]["mixed_row_shadow"]
+            self.assertEqual(shadow["schema_id"], MIXED_ROW_SHADOW_LOSS_SCHEMA_ID)
+            self.assertEqual(shadow["loss_id"], MIXED_ROW_SHADOW_LOSS_ID)
+            self.assertEqual(shadow["lambda"], 0.05)
+            self.assertFalse(shadow["all_closed_rows_contribute"])
+            self.assertFalse(shadow["production_runtime_semantics_changed"])
+            self.assertEqual(
+                payload["policy_target_semantics_id"],
+                "augmentia.policy-target.opened-mask.v1",
+            )
+            V4Trainer.from_checkpoint(
+                checkpoint,
+                [example],
+                config,
+                validation_examples=[example],
+                expected_vocabulary=V3Vocabulary.from_cases([self.case]),
+            )
+            with self.assertRaisesRegex(
+                ValueError, "mixed_row_shadow_lambda changed"
+            ):
+                V4Trainer.from_checkpoint(
+                    checkpoint,
+                    [example],
+                    replace(config, mixed_row_shadow_lambda=0.1),
+                    validation_examples=[example],
+                    expected_vocabulary=V3Vocabulary.from_cases([self.case]),
+                )
+
+    def test_shadow_lambda_validation_and_opened_only_scope(self) -> None:
+        for invalid in (-0.1, float("nan"), float("inf")):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "shadow lambda"):
+                    replace(self._config(), mixed_row_shadow_lambda=invalid).validate()
+        legacy = parse_game_v4(self._record(legacy=True), allow_legacy=True)[0]
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, "opened-only policy semantics"):
+                V4Trainer(
+                    [legacy],
+                    Path(temp),
+                    replace(self._config(), mixed_row_shadow_lambda=0.05),
+                    vocabulary=V3Vocabulary.from_cases([self.case]),
+                    allow_legacy=True,
+                )
 
     def test_production_record_and_trainer_reject_missing_masks(self) -> None:
         record = self._record()

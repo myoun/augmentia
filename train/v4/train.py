@@ -18,12 +18,16 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
-from v3.factorized import FACTOR_POLICY_SCHEMA_ID, factorized_action_path
+from v3.factorized import factorized_action_path
 from v3.tensorize import V3Vocabulary
 
 from .batch import tensorize_factorized_cases
 from .dataset import DatasetInputV4, load_dataset_input
-from .loss import conditional_prefix_policy_metrics
+from .loss import (
+    conditional_prefix_policy_metrics,
+    mixed_row_all_legal_shadow_cross_entropy,
+    mixed_row_shadow_mask,
+)
 from .model import AugmentNetV4, V4ModelConfig
 from .replay import (
     FACTORIZED_MCTS_TARGET_V3_SCHEMA_ID,
@@ -43,6 +47,10 @@ POLICY_TARGET_SEMANTICS_OPENED_ONLY = (
 )
 POLICY_TARGET_SEMANTICS_LEGACY_ALL_OPEN_EXPERIMENT = (
     "augmentia.policy-target.legacy-all-open-experiment.v1"
+)
+MIXED_ROW_SHADOW_LOSS_SCHEMA_ID = "augmentia.v4-mixed-row-shadow-loss.v1"
+MIXED_ROW_SHADOW_LOSS_ID = (
+    "augmentia.loss.mixed-row-all-legal-shadow-ce.v1"
 )
 RULESET_ID = "augment_chess_20260915"
 SOURCE_SEAL_TAG = "ai/v4-training-base-20260919"
@@ -81,6 +89,23 @@ def policy_target_semantics_lineage(
     raise ValueError(f"unknown policy target semantics id: {semantics_id!r}")
 
 
+def mixed_row_shadow_provenance(lambda_value: float) -> dict[str, Any]:
+    """Return the immutable auxiliary-loss contract recorded beside training."""
+
+    if not math.isfinite(lambda_value) or lambda_value < 0.0:
+        raise ValueError("mixed-row shadow lambda must be finite and non-negative")
+    return {
+        "schema_id": MIXED_ROW_SHADOW_LOSS_SCHEMA_ID,
+        "loss_id": MIXED_ROW_SHADOW_LOSS_ID,
+        "lambda": float(lambda_value),
+        "scope": "visited-prefix-rows-with-opened-and-closed-children",
+        "denominator": "all-legal-children",
+        "primary_policy_objective": "opened-only",
+        "all_closed_rows_contribute": False,
+        "production_runtime_semantics_changed": False,
+    }
+
+
 def assert_production_policy_target_semantics(payload: Mapping[str, Any]) -> None:
     """Reject a sidecar whose policy target cannot be production-exported/resumed."""
 
@@ -101,6 +126,14 @@ def assert_production_policy_target_semantics(payload: Mapping[str, Any]) -> Non
         raise ValueError("opened-only checkpoint is marked experiment-only")
     if provenance.get("policy_target_semantics_production_eligible") is not True:
         raise ValueError("opened-only checkpoint is not production-semantics eligible")
+    shadow = provenance.get("mixed_row_shadow")
+    if shadow is not None:
+        training = payload.get("training_config")
+        if not isinstance(training, Mapping):
+            raise ValueError("checkpoint training config is missing")
+        lambda_value = training.get("mixed_row_shadow_lambda", 0.0)
+        if shadow != mixed_row_shadow_provenance(lambda_value):
+            raise ValueError("checkpoint mixed-row shadow provenance is invalid")
 
 
 @dataclass(frozen=True)
@@ -109,6 +142,7 @@ class V4TrainingConfig:
     batch_size: int = 16
     epochs: int = 1
     value_weight: float = 1.0
+    mixed_row_shadow_lambda: float = 0.0
     seed: int = 2026091401
     device: str = "cpu"
     model_dim: int = 128
@@ -131,6 +165,13 @@ class V4TrainingConfig:
             raise ValueError("learning rate, batch size, and epochs must be positive")
         if not math.isfinite(self.value_weight) or self.value_weight < 0.0:
             raise ValueError("value weight must be finite and non-negative")
+        if (
+            not math.isfinite(self.mixed_row_shadow_lambda)
+            or self.mixed_row_shadow_lambda < 0.0
+        ):
+            raise ValueError(
+                "mixed-row shadow lambda must be finite and non-negative"
+            )
         if self.device not in {"cpu", "cuda"}:
             raise ValueError("device must be cpu or cuda")
         if self.encoder_kind not in {"baseline", "hybrid"}:
@@ -351,6 +392,20 @@ class V4Trainer:
         experiment_only = bool(
             self.policy_target_semantics_lineage["experiment_only"]
         )
+        if self.config.mixed_row_shadow_lambda > 0.0 and (
+            self._legacy_mode or experiment_only
+        ):
+            raise ValueError(
+                "mixed-row shadow loss requires opened-only policy semantics"
+            )
+        shadow_provenance = mixed_row_shadow_provenance(
+            self.config.mixed_row_shadow_lambda
+        )
+        supplied_shadow = self.provenance.get("mixed_row_shadow")
+        if supplied_shadow is not None and supplied_shadow != shadow_provenance:
+            raise ValueError(
+                "provenance mixed_row_shadow differs from trainer config"
+            )
         self.provenance.update(
             {
                 "policy_target_semantics_id": self.policy_target_semantics_id,
@@ -359,6 +414,7 @@ class V4Trainer:
                 ),
                 "policy_target_semantics_experiment_only": experiment_only,
                 "policy_target_semantics_production_eligible": not experiment_only,
+                "mixed_row_shadow": shadow_provenance,
             }
         )
         if experiment_only:
@@ -654,6 +710,8 @@ class V4Trainer:
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
         torch.Tensor | None,
         int,
     ]:
@@ -661,13 +719,20 @@ class V4Trainer:
         policy_loss, policy_target_entropy, policy_kl = (
             conditional_prefix_policy_metrics(output.prefix_logits, batch.prefixes)
         )
+        shadow_ce = mixed_row_all_legal_shadow_cross_entropy(
+            output.prefix_logits, batch.prefixes
+        )
+        shadow_weighted = self.config.mixed_row_shadow_lambda * shadow_ce
+        loss = policy_loss + shadow_weighted
         targets = [item for item in values if item is not None]
         if not targets:
             return (
-                policy_loss,
+                loss,
                 policy_loss,
                 policy_target_entropy,
                 policy_kl,
+                shadow_ce,
+                shadow_weighted,
                 None,
                 0,
             )
@@ -680,12 +745,14 @@ class V4Trainer:
             device=self.device,
         )
         value_loss = torch.nn.functional.mse_loss(output.value[mask], value_tensor)
-        loss = policy_loss + self.config.value_weight * value_loss
+        loss = loss + self.config.value_weight * value_loss
         return (
             loss,
             policy_loss,
             policy_target_entropy,
             policy_kl,
+            shadow_ce,
+            shadow_weighted,
             value_loss,
             len(targets),
         )
@@ -701,6 +768,9 @@ class V4Trainer:
                 "policy_total": 0.0,
                 "policy_target_entropy_total": 0.0,
                 "policy_kl_total": 0.0,
+                "mixed_row_shadow_ce_total": 0.0,
+                "mixed_row_shadow_weighted_total": 0.0,
+                "mixed_row_shadow_rows_total": 0,
                 "value_total": 0.0,
                 "value_batches": 0,
                 "value_samples": 0,
@@ -710,6 +780,9 @@ class V4Trainer:
         progress = self.epoch_progress
         progress.setdefault("policy_target_entropy_total", 0.0)
         progress.setdefault("policy_kl_total", 0.0)
+        progress.setdefault("mixed_row_shadow_ce_total", 0.0)
+        progress.setdefault("mixed_row_shadow_weighted_total", 0.0)
+        progress.setdefault("mixed_row_shadow_rows_total", 0)
         if int(progress.get("epoch", -1)) != epoch:
             raise ValueError("checkpoint epoch progress does not match completed_epochs")
         started = time.perf_counter()
@@ -729,6 +802,8 @@ class V4Trainer:
                     policy_loss,
                     policy_target_entropy,
                     policy_kl,
+                    shadow_ce,
+                    shadow_weighted,
                     value_loss,
                     supervised,
                 ) = self._loss_for_batch(batch, values)
@@ -742,6 +817,15 @@ class V4Trainer:
                     policy_target_entropy.detach()
                 )
                 progress["policy_kl_total"] += float(policy_kl.detach())
+                progress["mixed_row_shadow_ce_total"] += float(
+                    shadow_ce.detach()
+                )
+                progress["mixed_row_shadow_weighted_total"] += float(
+                    shadow_weighted.detach()
+                )
+                progress["mixed_row_shadow_rows_total"] += int(
+                    mixed_row_shadow_mask(batch.prefixes).sum()
+                )
                 if value_loss is not None:
                     progress["value_total"] += float(value_loss.detach())
                     progress["value_batches"] += 1
@@ -760,6 +844,18 @@ class V4Trainer:
             "policy_target_entropy": float(progress["policy_target_entropy_total"])
             / max(1, batches),
             "policy_kl": float(progress["policy_kl_total"]) / max(1, batches),
+            "mixed_row_shadow_lambda": float(
+                self.config.mixed_row_shadow_lambda
+            ),
+            "mixed_row_shadow_ce": float(
+                progress["mixed_row_shadow_ce_total"]
+            ) / max(1, batches),
+            "mixed_row_shadow_weighted_loss": float(
+                progress["mixed_row_shadow_weighted_total"]
+            ) / max(1, batches),
+            "mixed_row_shadow_rows": int(
+                progress["mixed_row_shadow_rows_total"]
+            ),
             "value_loss": float(progress["value_total"]) / max(1, value_batches),
             "batches": batches,
             "examples": len(self.examples),
@@ -787,6 +883,12 @@ class V4Trainer:
                 "policy_loss": 0.0,
                 "policy_target_entropy": 0.0,
                 "policy_kl": 0.0,
+                "mixed_row_shadow_lambda": float(
+                    self.config.mixed_row_shadow_lambda
+                ),
+                "mixed_row_shadow_ce": 0.0,
+                "mixed_row_shadow_weighted_loss": 0.0,
+                "mixed_row_shadow_rows": 0,
                 "value_loss": 0.0,
                 "batches": 0,
                 "examples": 0,
@@ -797,6 +899,9 @@ class V4Trainer:
         policy_total = 0.0
         policy_target_entropy_total = 0.0
         policy_kl_total = 0.0
+        shadow_ce_total = 0.0
+        shadow_weighted_total = 0.0
+        shadow_rows_total = 0
         value_total = 0.0
         value_batches = 0
         value_samples = 0
@@ -812,6 +917,8 @@ class V4Trainer:
                 policy_loss,
                 policy_target_entropy,
                 policy_kl,
+                shadow_ce,
+                shadow_weighted,
                 value_loss,
                 supervised,
             ) = self._loss_for_batch(batch, values)
@@ -821,6 +928,9 @@ class V4Trainer:
             policy_total += float(policy_loss.detach())
             policy_target_entropy_total += float(policy_target_entropy.detach())
             policy_kl_total += float(policy_kl.detach())
+            shadow_ce_total += float(shadow_ce.detach())
+            shadow_weighted_total += float(shadow_weighted.detach())
+            shadow_rows_total += int(mixed_row_shadow_mask(batch.prefixes).sum())
             if value_loss is not None:
                 value_total += float(value_loss.detach())
                 value_batches += 1
@@ -833,6 +943,13 @@ class V4Trainer:
             "policy_loss": policy_total / max(1, batches),
             "policy_target_entropy": policy_target_entropy_total / max(1, batches),
             "policy_kl": policy_kl_total / max(1, batches),
+            "mixed_row_shadow_lambda": float(
+                self.config.mixed_row_shadow_lambda
+            ),
+            "mixed_row_shadow_ce": shadow_ce_total / max(1, batches),
+            "mixed_row_shadow_weighted_loss": shadow_weighted_total
+            / max(1, batches),
+            "mixed_row_shadow_rows": shadow_rows_total,
             "value_loss": value_total / max(1, value_batches),
             "batches": batches,
             "examples": len(selected),
@@ -1028,12 +1145,14 @@ class V4Trainer:
                 "hybrid_layers",
                 "hybrid_heads",
                 "batching_kind",
+                "mixed_row_shadow_lambda",
             ):
-                saved_value = (
-                    saved_training.get(field, "random")
-                    if field == "batching_kind"
-                    else saved_training[field]
-                )
+                if field == "batching_kind":
+                    saved_value = saved_training.get(field, "random")
+                elif field == "mixed_row_shadow_lambda":
+                    saved_value = saved_training.get(field, 0.0)
+                else:
+                    saved_value = saved_training[field]
                 if getattr(config, field) != saved_value:
                     raise ValueError(f"resume model/training field {field} changed")
             if payload.get("paused"):
@@ -1055,6 +1174,17 @@ class V4Trainer:
                             f"paused resume training field {field} changed"
                         )
         provenance = dict(payload.get("provenance", {}))
+        if (
+            "mixed_row_shadow" not in provenance
+            and config.mixed_row_shadow_lambda != 0.0
+        ):
+            raise ValueError(
+                "nonzero mixed-row shadow resume requires recorded provenance"
+            )
+        provenance.setdefault(
+            "mixed_row_shadow",
+            mixed_row_shadow_provenance(config.mixed_row_shadow_lambda),
+        )
         if expected_provenance is not None:
             fields = [
                 "ruleset_id",
@@ -1066,6 +1196,7 @@ class V4Trainer:
                 "policy_target_semantics_lineage",
                 "policy_target_semantics_experiment_only",
                 "policy_target_semantics_production_eligible",
+                "mixed_row_shadow",
                 "dataset_manifest_sha256",
             ]
             if payload.get("paused"):
@@ -1227,6 +1358,7 @@ def _dataset_provenance(
     *,
     max_train_examples: int | None,
     max_validation_examples: int | None,
+    mixed_row_shadow_lambda: float = 0.0,
 ) -> dict[str, Any]:
     return {
         "source_seal_tag": dataset.source_seal_tag,
@@ -1243,6 +1375,9 @@ def _dataset_provenance(
         ),
         "policy_target_semantics_experiment_only": False,
         "policy_target_semantics_production_eligible": True,
+        "mixed_row_shadow": mixed_row_shadow_provenance(
+            mixed_row_shadow_lambda
+        ),
         "observation_schema_id": dataset.observation_schema_id,
         "action_schema_id": dataset.action_schema_id,
         "dataset_input_schema_id": dataset.schema_id,
@@ -1380,6 +1515,7 @@ def main() -> None:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--value-weight", type=float, default=1.0)
+    parser.add_argument("--mixed-row-shadow-lambda", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=2026091401)
     parser.add_argument("--encoder", choices=("baseline", "hybrid"), default="baseline")
     parser.add_argument("--channels", type=int, default=128)
@@ -1431,6 +1567,13 @@ def main() -> None:
         parser.error("--learning-rate must be finite and positive")
     if not math.isfinite(args.value_weight) or args.value_weight < 0:
         parser.error("--value-weight must be finite and non-negative")
+    if (
+        not math.isfinite(args.mixed_row_shadow_lambda)
+        or args.mixed_row_shadow_lambda < 0
+    ):
+        parser.error(
+            "--mixed-row-shadow-lambda must be finite and non-negative"
+        )
 
     dataset_path = args.manifest.resolve()
     run_dir = args.run_dir.resolve()
@@ -1466,6 +1609,7 @@ def main() -> None:
         validation_ids,
         max_train_examples=args.max_train_examples,
         max_validation_examples=args.max_validation_examples,
+        mixed_row_shadow_lambda=args.mixed_row_shadow_lambda,
     )
     provenance["trainer_git_commit"] = commit
     provenance["trainer_dirty_worktree"] = dirty
@@ -1475,6 +1619,7 @@ def main() -> None:
         batch_size=args.batch_size,
         epochs=args.epochs,
         value_weight=args.value_weight,
+        mixed_row_shadow_lambda=args.mixed_row_shadow_lambda,
         seed=args.seed,
         device=args.device,
         model_dim=args.model_dim,

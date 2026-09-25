@@ -24,6 +24,7 @@ from v4.phase1_ab import (
     TRAINING_VIEW_ALL_OPEN_CONTROL,
     TRAINING_VIEW_OPENED_ONLY,
     Phase1ABConfig,
+    PHASE1_AB_METRIC_CONTRACT_ID,
     Phase1ABError,
     _arm_provenance,
     _game_identities,
@@ -37,6 +38,7 @@ from v4.phase1_ab import (
     evaluate_prefix_batch,
     make_training_view,
     model_state_sha256,
+    opened_support_action_log_probabilities,
     run_export_and_rust_parity,
     verify_payload_seal,
 )
@@ -300,6 +302,10 @@ class Phase1ABTests(unittest.TestCase):
             {"commit": "commit", "dirty": True},
         )
         verify_payload_seal(plan, "plan_sha256")
+        self.assertEqual(
+            plan["metric_contract_id"], PHASE1_AB_METRIC_CONTRACT_ID
+        )
+        self.assertEqual(plan["phase1_config"]["minimum_game_blocks"], 30)
         self.assertNotEqual(
             plan["evaluation_view_sha256"], plan["views"][ARM_OPENED_ONLY]["training_view_sha256"]
         )
@@ -429,7 +435,6 @@ class Phase1ABTests(unittest.TestCase):
             )
 
     def test_conditional_metrics_ignore_closed_logits_but_complete_metrics_do_not(self) -> None:
-        example = self._example()
         batch = tensorize_factorized_cases(
             [self.case],
             self.vocabulary,
@@ -453,11 +458,12 @@ class Phase1ABTests(unittest.TestCase):
             "conditional_cross_entropy",
             "conditional_target_entropy",
             "conditional_kl",
+            "opened_support_complete_action_soft_nll",
         ):
             self.assertAlmostEqual(base_rows[0][key], changed_rows[0][key], places=6)
         self.assertNotAlmostEqual(
-            base_rows[0]["complete_action_soft_nll"],
-            changed_rows[0]["complete_action_soft_nll"],
+            base_rows[0]["all_legal_complete_action_soft_nll"],
+            changed_rows[0]["all_legal_complete_action_soft_nll"],
             places=5,
         )
         self.assertGreater(base_rows[0]["closed_children_excluded"], 0)
@@ -482,6 +488,77 @@ class Phase1ABTests(unittest.TestCase):
                 rtol=0.0,
             )
         )
+        support_log_probabilities, support_valid = (
+            opened_support_action_log_probabilities(
+                actions, batch.prefixes, changed_logits
+            )
+        )
+        self.assertTrue(
+            torch.allclose(
+                support_log_probabilities[support_valid].exp().sum(),
+                torch.tensor(1.0),
+                atol=5e-4,
+                rtol=0.0,
+            )
+        )
+
+    def test_modal_ties_credit_every_mode_and_exclude_all_from_tail(self) -> None:
+        visits = [5, 5] + [1] * 13 + [0] * (len(self.actions) - 15)
+        opened = [True] * 16 + [False] * (len(self.actions) - 16)
+        batch = tensorize_factorized_cases(
+            [self.case], self.vocabulary, [visits], opened_action_masks=[opened]
+        )
+        logits = torch.zeros(
+            batch.prefixes.visit_counts.shape, dtype=torch.float32
+        )
+        row = evaluate_prefix_batch(
+            logits,
+            batch.prefixes,
+            [self.actions],
+            ["tie-aware:0"],
+        )[0]
+        prediction = row["opened_support_prediction"]
+        self.assertEqual(row["modal_actions"], 2)
+        self.assertEqual(row["opened_support_visited_tail_actions"], 13)
+        self.assertEqual(row["all_legal_visited_tail_actions"], 13)
+        expected_hit = float(prediction in {0, 1})
+        self.assertEqual(row["opened_support_all_modal_top1"], expected_hit)
+        self.assertAlmostEqual(
+            row["opened_support_fractional_modal_score"],
+            0.5 * expected_hit,
+        )
+        self.assertEqual(
+            row["mcts_modal_top1"], float(prediction == 0)
+        )
+        legacy_top1 = row["mcts_modal_top1"]
+        row["mcts_modal_top1"] = 1.0 - legacy_top1
+        aggregate = aggregate_evaluation([row], ece_bins=10)
+        self.assertEqual(
+            aggregate["metric_contract_id"], PHASE1_AB_METRIC_CONTRACT_ID
+        )
+        self.assertEqual(
+            aggregate["opened_support_primary"]["all_modal_top1"],
+            expected_hit,
+        )
+        self.assertEqual(
+            aggregate["opened_support_primary"]["fractional_modal_score"],
+            0.5 * expected_hit,
+        )
+        self.assertEqual(
+            aggregate["all_legal_secondary"]["all_modal_top1"],
+            expected_hit,
+        )
+        self.assertAlmostEqual(
+            aggregate["opened_support_mcts_modal_ece"],
+            abs(expected_hit - row["opened_support_mcts_modal_confidence"]),
+        )
+        self.assertEqual(aggregate["mcts_modal_top1"], 1.0 - legacy_top1)
+        self.assertEqual(
+            aggregate["opened_support_primary"]["visited_tail_recall_at_3"][
+                "actions"
+            ],
+            13,
+        )
 
     def test_evaluation_aggregate_and_paired_bootstrap_are_deterministic(self) -> None:
         opened = aggregate_evaluation(
@@ -499,6 +576,9 @@ class Phase1ABTests(unittest.TestCase):
                     "calibration_gap": 0.2,
                     "opened_children": 3,
                     "closed_children_excluded": 1,
+                    "visited_tail_actions": 1,
+                    "visited_tail_hits_at_3": 1,
+                    "visited_tail_recall_at_3": 1.0,
                 }
             ],
             ece_bins=10,
@@ -510,10 +590,26 @@ class Phase1ABTests(unittest.TestCase):
                 "conditional_target_entropy": 0.5,
                 "conditional_kl": 1.5,
                 "complete_action_soft_nll": 2.0,
+                "opened_support_complete_action_soft_nll": 2.0,
+                "all_legal_complete_action_soft_nll": 2.0,
                 "complete_action_modal_nll": 2.2,
                 "mcts_modal_top1": 0.0,
                 "mcts_modal_confidence": 0.6,
                 "calibration_gap": 0.6,
+                "opened_support_all_modal_top1": 0.0,
+                "opened_support_fractional_modal_score": 0.0,
+                "opened_support_mcts_modal_confidence": 0.6,
+                "opened_support_mcts_modal_all_modal_calibration_gap": 0.6,
+                "opened_support_mcts_modal_fractional_calibration_gap": 0.6,
+                "opened_support_visited_tail_hits_at_3": 0,
+                "opened_support_visited_tail_recall_at_3": 0.0,
+                "all_legal_all_modal_top1": 0.0,
+                "all_legal_fractional_modal_score": 0.0,
+                "all_legal_mcts_modal_confidence": 0.6,
+                "all_legal_mcts_modal_all_modal_calibration_gap": 0.6,
+                "all_legal_mcts_modal_fractional_calibration_gap": 0.6,
+                "all_legal_visited_tail_hits_at_3": 0,
+                "all_legal_visited_tail_recall_at_3": 0.0,
             }
         )
         control = aggregate_evaluation([control_row], ece_bins=10)
@@ -529,12 +625,12 @@ class Phase1ABTests(unittest.TestCase):
         self.assertGreater(
             improvements["complete_action_soft_nll_improvement"]["mean"], 0.0
         )
-        self.assertEqual(improvements["mcts_modal_top1_improvement"]["mean"], 1.0)
-        ece_improvement = improvements["mcts_modal_ece_reduction"]
+        self.assertEqual(improvements["all_modal_top1_improvement"]["mean"], 1.0)
+        ece_improvement = improvements["mcts_modal_all_modal_ece_reduction"]
         self.assertGreater(ece_improvement["mean"], 0.0)
         self.assertEqual(
             ece_improvement["definition"],
-            "control aggregate ECE - opened aggregate ECE",
+            "control opened-support all-modal ECE - opened ECE",
         )
         self.assertEqual(ece_improvement["bootstrap"]["bins"], 10)
         self.assertAlmostEqual(
@@ -574,24 +670,25 @@ class Phase1ABTests(unittest.TestCase):
             evaluation["mean_calibration_gap"],
         )
 
-    def test_model_gate_requires_primary_gain_and_complete_action_non_degradation(self) -> None:
+    def test_model_gate_uses_opened_support_and_requires_minimum_blocks(self) -> None:
         def row(
-            decision_id: str,
+            game: str,
             *,
             kl: float,
             nll: float,
             top1: float,
             confidence: float,
             tail_recall: float,
+            all_legal_nll: float | None = None,
         ) -> dict:
             return {
-                "decision_id": decision_id,
-                "game_id": "gate-game",
+                "decision_id": f"{game}:0",
+                "game_id": game,
                 "conditional_cross_entropy": 0.5 + kl,
                 "conditional_target_entropy": 0.5,
                 "conditional_kl": kl,
-                "complete_action_soft_nll": nll,
-                "complete_action_modal_nll": nll + 0.1,
+                "complete_action_soft_nll": all_legal_nll or nll,
+                "complete_action_modal_nll": (all_legal_nll or nll) + 0.1,
                 "mcts_modal_top1": top1,
                 "mcts_modal_confidence": confidence,
                 "calibration_gap": abs(top1 - confidence),
@@ -601,16 +698,47 @@ class Phase1ABTests(unittest.TestCase):
                 "visited_tail_actions": 1,
                 "visited_tail_hits_at_3": int(tail_recall),
                 "visited_tail_recall_at_3": tail_recall,
+                "opened_support_complete_action_soft_nll": nll,
+                "opened_support_all_modal_top1": top1,
+                "opened_support_fractional_modal_score": top1,
+                "opened_support_mcts_modal_confidence": confidence,
+                "opened_support_mcts_modal_all_modal_calibration_gap": abs(
+                    top1 - confidence
+                ),
+                "opened_support_mcts_modal_fractional_calibration_gap": abs(
+                    top1 - confidence
+                ),
+                "opened_support_visited_tail_actions": 1,
+                "opened_support_visited_tail_hits_at_3": int(tail_recall),
+                "opened_support_visited_tail_recall_at_3": tail_recall,
             }
 
-        opened = aggregate_evaluation(
-            [row("gate-game:0", kl=0.5, nll=1.0, top1=1.0, confidence=0.8, tail_recall=1.0)],
-            ece_bins=10,
-        )
-        control = aggregate_evaluation(
-            [row("gate-game:0", kl=1.0, nll=1.01, top1=0.0, confidence=0.6, tail_recall=0.0)],
-            ece_bins=10,
-        )
+        opened_rows = [
+            row(
+                game,
+                kl=0.5,
+                nll=1.0,
+                top1=1.0,
+                confidence=0.8,
+                tail_recall=1.0,
+                all_legal_nll=2.0,
+            )
+            for game in (f"gate-{index}" for index in range(8))
+        ]
+        control_rows = [
+            row(
+                game,
+                kl=1.0,
+                nll=1.01,
+                top1=0.0,
+                confidence=0.6,
+                tail_recall=0.0,
+                all_legal_nll=1.5,
+            )
+            for game in (f"gate-{index}" for index in range(8))
+        ]
+        opened = aggregate_evaluation(opened_rows, ece_bins=10)
+        control = aggregate_evaluation(control_rows, ece_bins=10)
         comparison = compare_evaluations(
             opened, control, bootstrap_samples=10, bootstrap_seed=7
         )
@@ -618,6 +746,7 @@ class Phase1ABTests(unittest.TestCase):
             trainer=self._config(),
             run_parity=False,
             allow_smoke_corpus=True,
+            minimum_game_blocks=8,
             nll_non_degradation_tolerance=0.02,
             top1_non_degradation_tolerance=0.01,
             ece_non_degradation_tolerance=0.01,
@@ -630,21 +759,36 @@ class Phase1ABTests(unittest.TestCase):
             parity_complete=False,
         )
         self.assertEqual(gate["outcome"], "pass")
-        self.assertGreater(
-            comparison["improvements"][
-                "conditional_cross_entropy_improvement"
-            ]["mean"],
-            0.0,
-        )
         self.assertTrue(gate["primary"]["conditional_kl"]["consistent_improvement"])
         self.assertTrue(gate["non_degradation_passed"])
+        self.assertFalse(gate["all_legal_secondary"]["gate_effect"])
         self.assertFalse(gate["promotable"])
-        regressed_control_row = dict(control["per_decision"][0])
-        regressed_control_row["complete_action_soft_nll"] = 0.5
-        regressed_control_row["complete_action_modal_nll"] = 0.6
-        regressed_control = aggregate_evaluation(
-            [regressed_control_row], ece_bins=10
+
+        low_power_opened = aggregate_evaluation(opened_rows[:6], ece_bins=10)
+        low_power_control = aggregate_evaluation(control_rows[:6], ece_bins=10)
+        low_power_comparison = compare_evaluations(
+            low_power_opened,
+            low_power_control,
+            bootstrap_samples=10,
+            bootstrap_seed=7,
         )
+        insufficient_config = replace(config, minimum_game_blocks=8)
+        insufficient = build_phase1_model_gate(
+            low_power_opened,
+            low_power_control,
+            low_power_comparison,
+            insufficient_config,
+            parity_complete=False,
+        )
+        self.assertEqual(insufficient["outcome"], "inconclusive")
+        self.assertIn("minimum-game-blocks-not-met", insufficient["inconclusive_reasons"])
+        self.assertFalse(insufficient["evidence_sufficient"])
+        self.assertFalse(insufficient["promotable"])
+
+        regressed_rows = [dict(item) for item in control_rows]
+        for item in regressed_rows:
+            item["opened_support_complete_action_soft_nll"] = 0.5
+        regressed_control = aggregate_evaluation(regressed_rows, ece_bins=10)
         regressed_comparison = compare_evaluations(
             opened, regressed_control, bootstrap_samples=10, bootstrap_seed=7
         )
@@ -668,6 +812,13 @@ class Phase1ABTests(unittest.TestCase):
             ).validate()
         with self.assertRaisesRegex(Phase1ABError, "Rust validator"):
             Phase1ABConfig(trainer=self._config()).validate()
+        with self.assertRaisesRegex(Phase1ABError, "minimum_game_blocks"):
+            Phase1ABConfig(
+                trainer=self._config(),
+                run_parity=False,
+                allow_smoke_corpus=True,
+                minimum_game_blocks=1,
+            ).validate()
 
     def test_export_and_rust_parity_commands_are_explicit(self) -> None:
         export = build_export_command(

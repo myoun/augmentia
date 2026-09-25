@@ -329,3 +329,4 @@ All-open control의 상대 우위가 production semantics의 승인이 아니다
 - [Opened training loss](../train/v4/loss.py)
 - [Rust runtime](../crates/augment-ai/src/runtime_v4.rs)
 - [Legacy quarantine 정책](ai-v4-legacy-artifact-quarantine.md)
+- [P0–P2 recovery 실행 결과](ai-v4-phase1-recovery-p0-p2.md)

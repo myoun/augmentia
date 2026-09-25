@@ -123,10 +123,13 @@ promotion_indexes = torch.where(is_promotion, raw_index, torch.zeros_like(raw_in
 |---|---|
 | `cargo test --workspace --exclude augment-snapshot` | 통과, `augment-ai` 112개 포함 |
 | `cargo clippy --workspace --all-targets --exclude augment-snapshot -- -D warnings` | 통과 |
-| Python 전체 unittest | 147개 통과 |
-| Python V4 unittest | 71개 통과 |
-| Phase 1 quarantine/corpus/paired-A-B tests | 24개 통과 |
+| Python 전체 unittest | 167개 통과 |
+| Python V4 unittest | 86개 통과 |
+| P0–P2 focused tests | phase1_ab·shadow trainer·recovery sweep 포함 V4 회귀에 포함 |
 | current-code full A/B | 20 games, 224 train / 96 held-out decisions, 3 epochs, model gate `fail` |
+| P0 contract A/B smoke | 1 epoch, 6 validation blocks, gate `inconclusive`, `promotable=false` |
+| P1 shadow-negative smoke | λ `0/0.01/0.05/0.1`, 1 epoch, 4 sealed cells, evidence 부족 |
+| P2 recovery sweep | 4 seeds × 2 learning rates, 1 epoch/cell, 8 sealed cells, evidence 부족 |
 | 실제 opened-only checkpoint eager/Python ONNX/Rust parity | tolerance `2e-4` 통과; all-open experiment export 차단 확인 |
 | Rust/Python shared v3 target fixture | 동일 hash `e2c30b...9605`, 양쪽 round-trip 통과 |
 | clean v5 producer → Rust validator → Python audit | 20 games / 320 decisions, seed·trajectory 20/20 일치 |
@@ -171,7 +174,7 @@ Python 전체 검증과 fixture 재생성은 `train/`에서 실행한다.
 
 ```text
 uv run python -m unittest discover -s . -p "test_*.py" -v
-uv run python -m unittest v4.test_quarantine_legacy v4.test_audit_phase1_corpus v4.test_phase1_ab -v
+uv run python -m unittest v4.test_quarantine_legacy v4.test_audit_phase1_corpus v4.test_phase1_ab v4.test_replay_trainer v4.test_phase1_shadow_ablation v4.test_phase1_recovery_sweep -v
 uv run python -m v4.export_fixture_bundle
 ```
 
@@ -193,7 +196,9 @@ fixture는 작은 테스트 모델이며 배포용 학습 모델이나 품질 ba
 | `train/v4/export_fixture_bundle.py` | ruleset별 Python/Rust 공유 fixture bundle 재생성 |
 | `train/v4/quarantine_legacy.py` | legacy v4/v2 artifact read-only quarantine registry |
 | `train/v4/audit_phase1_corpus.py` | producer/trajectory/target regeneration audit |
-| `train/v4/phase1_ab.py` | 동일 corpus baseline paired A/B, export, parity CLI |
+| `train/v4/phase1_ab.py` | 동일 corpus baseline paired A/B, P0 metric/gate, export, parity CLI |
+| `train/v4/phase1_shadow_ablation.py` | mixed-row shadow-negative bounded ablation runner |
+| `train/v4/phase1_recovery_sweep.py` | 4-seed·2-LR fixed-update recovery sweep runner |
 | `train/v3/fixtures/v4_bundle/` | 0818 회귀 테스트 graph, metadata, parity 기대값 |
 | `train/v3/fixtures/0915/`, `train/v3/fixtures/v4_bundle_0915/` | 0915 baseline fixture와 split ONNX bundle |
 
@@ -210,10 +215,12 @@ Phase 1~3과 [0915 native V4 training plan](ai-v4-training-plan-0915.md)을 따�
    trajectory, split, baseline encoder와 initial hash로 opened-only와 all-open experiment을
    비교하고 opened-only eager/Python ONNX/Rust parity를 통과했다. 그러나 conditional KL,
    visited-tail recall, complete-action NLL/top-1/ECE gate를 통과하지 못했다.
-4. **Model gate recovery가 다음 작업.** canonical 결과는
-   [`ai-v4-phase1-status.md`](ai-v4-phase1-status.md)의 current-code full 20-game report다.
-   원인과 실험 순서는 [`ai-v4-phase1-model-gate-diagnosis.md`](ai-v4-phase1-model-gate-diagnosis.md)에
-   정리했다. gate를 다시 통과하기 전에는 Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
+4. **P0–P2 bounded recovery: 완료, gate recovery 미확정.** metric contract, mixed-row
+   shadow ablation, multi-seed learning-rate sweep을
+   [`ai-v4-phase1-recovery-p0-p2.md`](ai-v4-phase1-recovery-p0-p2.md)에 봉인했다.
+   λ=0.05–0.1은 현재 smoke에서 KL/NLL을 일부 개선했지만 top-1 trade-off가 남았고,
+   6-game validation은 여전히 evidence 부족이다. gate를 다시 통과하기 전에는
+   Phase 2 strength 실행도 승격 근거로 사용할 수 없다.
 5. **Strength evidence와 조건부 최적화.** model gate recovery 뒤에만 최소 100 paired
    seeds/색 교환/fixed-simulation/fixed-wall-clock/p95/CI를 봉인하고, 그 다음 Gumbel
    16/32/64, worker scaling, Hybrid A/B, capacity, adaptive compute를 비교한다.

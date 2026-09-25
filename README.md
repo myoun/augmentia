@@ -121,6 +121,7 @@ docs/ai-v4-factorized-policy.md       V4 factorized policy·조건부 visit targ
 docs/ai-v4-implementation-status.md   V4 Phase 0/1 구현 현황·검증 결과·후속 계획
 docs/ai-v4-phase1-status.md            opened-mask clean corpus·paired A/B·model gate 결과
 docs/ai-v4-phase1-model-gate-diagnosis.md  model gate 실패 원인·metric bias·recovery 실험 순서
+docs/ai-v4-phase1-recovery-p0-p2.md      P0–P2 shadow ablation·optimization sweep 결과
 docs/ai-v4-legacy-artifact-quarantine.md  V2 target artifact 비파괴 격리 정책과 검증
 docs/ai-v4-training-plan-0915.md       0915 native data 기반 실제 V4 학습 계획과 단계별 gate
 rulesets/augment_chess_20260818/      최신 불변 규칙 스냅숏
