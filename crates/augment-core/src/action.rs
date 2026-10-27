@@ -1,7 +1,8 @@
 use crate::{PieceKind, Square};
 use std::fmt;
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum Action {
     Move(MoveAction),
     UsePieceAbility {
@@ -22,7 +23,9 @@ pub enum Action {
     },
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
 pub enum PieceAbility {
     WizardLightning,
     WizardShield,
@@ -32,7 +35,10 @@ pub enum PieceAbility {
     MerchantBuy,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
+#[serde(deny_unknown_fields)]
 pub struct MoveAction {
     pub from: Square,
     pub to: Square,
@@ -59,7 +65,7 @@ impl fmt::Display for MoveAction {
     }
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub enum ActionTarget {
     None,
     Square(Square),

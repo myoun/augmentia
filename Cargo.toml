@@ -1,10 +1,8 @@
 [workspace]
 members = [
     "crates/augment-core",
-    "crates/augment-cli",
-    "crates/augment-snapshot",
-    "crates/augment-web",
-    "crates/augment-ai",
+    "crates/augment-search",
+    "crates/augment-app",
 ]
 resolver = "2"
 

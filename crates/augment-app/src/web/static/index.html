@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Augmentia · 분석 워크스페이스</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="workspace" aria-label="증강체스 분석 워크스페이스">
+    <aside class="notation-column panel" aria-label="기보와 분기">
+      <div class="panel-heading"><div><span class="eyebrow">ANALYSIS WORKSPACE</span><h1>기보 · 분기</h1></div><span id="statusBadge" class="status-badge">진행 중</span></div>
+      <details id="acgPanel" class="acg-panel hidden" open>
+        <summary>원본 ACG</summary>
+        <div class="acg-content">
+          <p id="acgMetadata" class="analysis-warning"></p>
+          <input id="acgSeek" type="range" min="0" value="0" aria-label="ACG 국면">
+          <p id="acgPosition" class="model-meta"></p>
+          <div class="editor-tools">
+            <button id="acgPrevious" class="button secondary" type="button" aria-label="원본 이전 국면">←</button>
+            <button id="acgNext" class="button secondary" type="button" aria-label="원본 다음 국면">→</button>
+            <button id="acgExport" class="button secondary" type="button">원본 저장</button>
+            <button id="acgCopyBoard" class="button secondary" type="button">보드만 편집</button>
+            <button id="acgReturn" class="button ghost" type="button">엔진 분석으로 돌아가기</button>
+          </div>
+          <p class="analysis-warning">공개 ACG의 비공개 RNG·반복 이력·모든 런타임 상태를 정확히 복원할 수 없어 원본 국면은 읽기 전용입니다.</p>
+          <p id="acgRestoreNotice" class="analysis-warning"></p>
+        </div>
+      </details>
+      <div id="notationTree" class="notation-tree" aria-label="국면 목록"></div>
+      <footer class="notation-footer">
+        <nav class="navigation-controls" aria-label="국면 탐색">
+          <button id="firstNode" type="button" aria-label="현재 분기의 처음 국면" title="처음">|‹</button>
+          <button id="previousNode" type="button" aria-label="이전 국면" title="이전">‹</button>
+          <button id="nextNode" type="button" aria-label="선택한 분기의 다음 국면" title="다음">›</button>
+          <button id="lastNode" type="button" aria-label="선택한 분기의 마지막 국면" title="마지막">›|</button>
+        </nav>
+        <div class="document-tools">
+          <button id="newGameButton" class="button ghost" type="button">＋ 새 분석</button>
+          <button id="exportAnalysisButton" class="button ghost" type="button" title="현재 분기의 스냅샷 ACG 저장 · RNG와 일부 상태효과 미포함">↓ 저장</button>
+          <details class="more-tools"><summary class="button ghost" aria-label="추가 작업">···</summary>
+            <div class="tools-menu">
+              <h2>분석 작업</h2>
+              <label class="button secondary acg-upload" tabindex="0">ACG 열기<input id="acgFile" type="file" accept=".acg,text/plain" hidden></label>
+              <label class="field-label">시작 seed<input id="seedInput" inputmode="numeric" value="20260807" aria-label="게임 seed"></label>
+              <details><summary>국면 상세</summary><dl class="status-grid">
+                <div><dt>룰셋</dt><dd id="rulesetValue">—</dd></div>
+                <div><dt>식별값</dt><dd id="fingerprintValue">—</dd></div>
+                <div><dt>오버타임</dt><dd id="deathmatchValue">대기</dd></div>
+                <div><dt>발판</dt><dd id="platformValue">없음</dd></div>
+              </dl></details>
+              <details><summary>진행 기록</summary><ol id="eventLog" class="event-log"></ol></details>
+            </div>
+          </details>
+        </div>
+        <div id="connectionState" class="connection" data-state="loading"><span class="connection-dot"></span><span>연결 중</span></div>
+      </footer>
+    </aside>
+
+    <section class="board-column" aria-label="보드와 보유 카드">
+      <section id="blackCardRow" class="player-strip black-panel" aria-label="흑 보유 카드">
+        <span class="player-label"><span class="player-dot black"></span>흑 <span id="blackStars" class="star-count">0 ★</span></span>
+        <div id="blackCards" class="card-list empty-message">카드 없음</div>
+        <button class="strip-add icon-button" type="button" data-setup-owner="black" aria-label="흑 카드 추가">＋</button>
+      </section>
+      <div class="board-arena">
+        <div class="board-stage">
+          <div class="eval-bar-container" aria-label="백 기준 기물 가치 평가">
+            <span id="evalScoreBlack" class="eval-score-tag top">흑</span>
+            <div class="eval-bar-track"><div id="evalBarFill" class="eval-bar-fill" style="height:50%"></div></div>
+            <span id="evalScoreWhite" class="eval-score-tag bottom">백</span>
+            <span id="evalBadge" class="eval-badge">—</span>
+          </div>
+          <div id="board" class="board" role="grid" aria-label="증강체스 보드"></div>
+        </div>
+        <div id="decisionPanel" class="decision-panel hidden" aria-live="polite"></div>
+      </div>
+      <section id="whiteCardRow" class="player-strip white-panel" aria-label="백 보유 카드">
+        <span class="player-label"><span class="player-dot white"></span>백 <span id="whiteStars" class="star-count">0 ★</span></span>
+        <div id="whiteCards" class="card-list empty-message">카드 없음</div>
+        <button class="strip-add icon-button" type="button" data-setup-owner="white" aria-label="백 카드 추가">＋</button>
+      </section>
+      <div class="board-footer">
+        <span id="turnPill" class="turn-pill white">백 차례</span>
+        <div class="board-context"><strong id="phaseLabel">드래프트</strong><span id="selectedHint">카드를 선택하세요.</span><span id="phaseDetail" class="sr-only"></span></div>
+        <div class="match-metrics" title="진행 액션 · 남은 행동 · 양측 턴"><span id="plyValue">0</span><span>/</span><span id="actionValue">1</span><span id="turnValue" class="sr-only">0 / 0</span></div>
+        <button id="cancelSelection" class="icon-button hidden" type="button" aria-label="선택 취소">×</button>
+        <button id="editBoardButton" class="icon-button" type="button" aria-label="보드 편집" title="보드 편집">✎</button>
+        <button id="flipBoardButton" class="icon-button" type="button" aria-label="보드 뒤집기" title="보드 뒤집기" aria-pressed="false">⇅</button>
+      </div>
+    </section>
+
+    <aside class="info-column" aria-label="룰과 엔진 분석">
+      <section class="panel rules-panel">
+        <div class="panel-heading"><h2>적용 룰</h2><button id="manualSetupButton" class="icon-button" type="button" aria-label="카드 또는 룰 추가" title="카드·룰 추가">＋</button></div>
+        <div id="rulesList" class="tag-list"></div>
+      </section>
+      <section class="panel analysis-panel" aria-label="엔진 분석">
+        <div class="panel-heading"><div><span class="eyebrow">ALPHA–BETA / NO MODEL</span><h2>엔진 분석</h2></div><button id="analysisToggle" class="button secondary" type="button">중지</button></div>
+        <div class="analysis-primary">
+          <div id="analysisScore" class="analysis-score" aria-live="polite">—</div>
+          <div id="analysisMove" class="model-move">분석 대기</div>
+          <p id="analysisMeta" class="model-meta"></p>
+          <button id="playRecommendation" class="button primary" type="button" disabled>추천 행동으로 분기</button>
+        </div>
+        <div class="analysis-content">
+          <details class="engine-settings"><summary>엔진 설정</summary><div class="settings-grid">
+            <label>최대 깊이<input id="depthInput" type="number" min="1" max="32" value="4"></label>
+            <label>깊이 단위<select id="depthUnitInput"><option value="turns">턴</option><option value="actions">액션</option></select></label>
+            <label>시간 제한(ms)<input id="timeInput" type="number" min="10" max="30000" value="1000"></label>
+            <label>노드 제한<input id="nodesInput" type="number" min="1" max="10000000" value="100000"></label>
+            <label>확률 표본 수<input id="chanceInput" type="number" min="1" max="64" value="4"></label>
+            <label>탐색 seed<input id="searchSeedInput" type="number" min="0" max="9007199254740991" value="19"></label>
+          </div></details>
+          <details class="ability-panel" open><summary>특수 행동</summary><div id="abilityList" class="ability-list empty-message">사용 가능한 특수 행동이 없습니다.</div></details>
+          <div class="analysis-notes"><p id="analysisWarning" class="analysis-warning">기물 가치·승패 기반 평가입니다. 승률이 아닙니다.</p><p class="analysis-warning">판정 미구현 카드는 드래프트 후보에서 제외합니다. 카드 시너지 평가는 제한적입니다.</p></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <section id="manualSetupPanel" class="workspace-drawer hidden" aria-label="수동 카드와 룰 설정">
+    <div class="panel-heading"><h2>카드 · 룰 추가</h2><button id="setupClose" class="icon-button" type="button" aria-label="설정 닫기">×</button></div>
+    <div class="drawer-content"><p class="analysis-warning">현재 획득 조건을 검사합니다. 적용 즉시 효과·룰을 설치하는 분석용 분기이며 드래프트 대기를 재현하지 않습니다. 조건 미구현 카드는 비활성화합니다.</p>
+      <div class="settings-grid"><label>소유자<select id="setupOwner"><option value="white">백</option><option value="black">흑</option></select></label><label>검색<input id="setupFilter" type="search" placeholder="이름 / ID / RULE"></label></div>
+      <div id="setupCardList" class="setup-card-list"></div>
+    </div>
+  </section>
+  <section id="boardEditor" class="workspace-drawer hidden" aria-label="보드 편집">
+    <div class="panel-heading"><h2>보드 편집</h2><button id="editorCancel" class="icon-button" type="button" aria-label="편집 취소">×</button></div>
+    <div class="drawer-content"><p class="analysis-warning">칸을 클릭하여 배치합니다. 적용하면 카드·룰·상태가 초기화된 새 분석 분기를 만듭니다. 원래 기보는 유지됩니다.</p>
+      <div class="settings-grid">
+        <label>기물<select id="editorKind"></select></label>
+        <label>색<select id="editorOwner"><option value="white">백</option><option value="black">흑</option></select></label>
+        <label>시작 차례<select id="editorTurn"><option value="white">백</option><option value="black">흑</option></select></label>
+      </div>
+      <label class="checkbox-label"><input id="editorCastling" type="checkbox">초기 킹·룩의 캐슬링 허용</label>
+      <label class="checkbox-label"><input id="editorDrafts" type="checkbox">이후 드래프트 허용</label>
+      <div class="editor-tools"><button id="editorStandard" class="button secondary" type="button">표준 배치</button><button id="editorClear" class="button secondary" type="button">비우기</button><button id="editorCommit" class="button primary" type="button">분기로 적용</button></div>
+    </div>
+  </section>
+  <aside id="infoPopover" class="info-popover hidden" role="dialog" aria-modal="false" aria-labelledby="selectionTitle" tabindex="-1">
+    <div class="popover-heading"><h2 id="selectionTitle">상세 정보</h2><button id="popoverClose" class="icon-button" type="button" aria-label="설명 닫기">×</button></div>
+    <p id="selectionDescription" class="selection-description" tabindex="0"></p>
+  </aside>
+  <dialog id="actionDialog" class="action-dialog"><div class="dialog-heading"><h2 id="dialogTitle">행동 선택</h2><button id="dialogClose" class="icon-button" type="button" aria-label="닫기">×</button></div><div id="dialogOptions" class="dialog-options"></div></dialog>
+  <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

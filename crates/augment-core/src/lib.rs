@@ -5,6 +5,7 @@
 //! state plus an ordered event log.
 
 mod action;
+mod card_eligibility;
 mod cards;
 mod effect;
 mod engine;
@@ -16,6 +17,10 @@ mod ruleset;
 mod state;
 
 pub use action::{Action, ActionTarget, MoveAction, PieceAbility};
+pub use card_eligibility::{
+    AcquisitionContext, CardEligibility, EligibilityReason, EligibilityReasonCode,
+    canonical_card_id, check_card_eligibility, mutually_exclusive_cards,
+};
 pub use cards::{
     ACCELERATION, ALEKHINE_MACHINE_GUN, AMAZON, APPRENTICE_KNIGHTS, ARMISTICE, ASSASSIN, BABY_BEAR,
     BACKWARD_KNIGHT, BARRICADE, BASIC_TRAINING, BERSERKER, BIG_BISHOP, BIG_ROOK, BINA_MATE,
@@ -55,7 +60,7 @@ pub use effect::{
     ChoiceHandler, ChoiceRegistry, ChoiceRegistryError, EffectCommand, EffectHandler,
     EffectRegistry, EffectRegistryError,
 };
-pub use engine::{Engine, EngineError, SearchChanceContext, SearchTransition};
+pub use engine::{Engine, EngineError, LegalActionBatch, SearchChanceContext, SearchTransition};
 pub use event::{Event, Transition};
 pub use model::{Board, Piece, PieceKind, Player, Square, SquareParseError};
 pub use notation::{

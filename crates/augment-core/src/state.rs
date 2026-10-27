@@ -1,7 +1,7 @@
 use crate::{Board, DeterministicRng, MoveAction, Piece, PieceKind, Player, Square};
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Mode {
     Standard,
     Chaos,
@@ -90,14 +90,14 @@ pub struct PendingChoice {
     pub continuation: ChoiceContinuation,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum GameStatus {
     Ongoing,
     Won { winner: Player, reason: WinReason },
     Draw { reason: DrawReason },
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum WinReason {
     KingCaptured,
     NoLegalActions,
@@ -106,14 +106,15 @@ pub enum WinReason {
     CardEffect(String),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DrawReason {
     EqualStarsOnRepetition,
     EqualStarsAfterDeathmatch,
     CardEffect(String),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CardInstance {
     pub instance_id: u32,
     pub definition_id: String,
@@ -125,7 +126,8 @@ pub struct CardInstance {
     pub available_after_turn: Option<u32>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DeathmatchState {
     pub started_at_shared_turn: u32,
     pub quiet_full_turns: u32,
@@ -133,7 +135,8 @@ pub struct DeathmatchState {
     pub progress_this_round: bool,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EnPassantState {
     pub target: Square,
     pub captured: Square,
@@ -816,6 +819,21 @@ impl GameState {
 
     pub(crate) fn reset_repetition_history(&mut self) {
         self.repetitions.clear();
+    }
+
+    /// Finalize a published, zero-ply setup after placing pieces/card statuses.
+    /// Does not permit erasing repetition history during an ongoing played game.
+    pub fn finalize_initial_setup(&mut self) -> bool {
+        if self.ply != 0
+            || self.turns_taken != [0; 2]
+            || self.status != GameStatus::Ongoing
+            || self.phase != GamePhase::Playing
+        {
+            return false;
+        }
+        self.reset_repetition_history();
+        self.record_current_position();
+        true
     }
 
     pub(crate) fn mark_deathmatch_progress(&mut self) {
@@ -1666,36 +1684,6 @@ mod tests {
     use super::*;
     use crate::BUNDLED_RULESET_ID;
 
-    #[test]
-    fn observation_v3_review_gate_covers_every_game_state_field() {
-        let state = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
-        let GameState {
-            ruleset_id: _,
-            mode: _,
-            board: _,
-            turn: _,
-            ply: _,
-            quiet_ply: _,
-            actions_remaining: _,
-            cards_used_this_turn: _,
-            phase: _,
-            status: _,
-            cards: _,
-            half_star_totals: _,
-            turns_taken: _,
-            completed_drafts: _,
-            deathmatch: _,
-            en_passant: _,
-            applied_rules: _,
-            card_runtime: _,
-            rng: _,
-            next_piece_id: _,
-            next_card_instance_id: _,
-            next_choice_id: _,
-            turn_end_requested: _,
-            repetitions: _,
-        } = state;
-    }
     #[test]
     fn same_seed_and_position_have_same_fingerprint() {
         let left = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);

@@ -18,6 +18,7 @@ use crate::{
     STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD, WINDMILL,
     WIZARD, WinReason, WindmillMode, implemented_card,
 };
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -36,6 +37,61 @@ pub struct Engine {
     ruleset: RulesetManifest,
     effects: EffectRegistry,
     choices: ChoiceRegistry,
+    checked_draft_eligibility: bool,
+}
+
+/// A legal action list bound to the exact immutable engine and state that generated it.
+/// No caller-supplied state can be substituted when applying an enumerated action.
+///
+/// This authorizes only the enumerated action-space subset, not every action accepted
+/// by [`Engine::apply`]. Dynamic CLEANUP/HYPOCRISY square sets absent from the list
+/// must use the checked public API; the batch does not make enumeration exhaustive.
+///
+/// The source state cannot be mutated while its batch is still used:
+/// ```compile_fail
+/// use augment_core::{Engine, Mode, Player};
+/// let engine = Engine::bundled_20260915().unwrap();
+/// let mut state = engine.new_game(Mode::Standard, 1).unwrap();
+/// let batch = engine.legal_action_batch(&state).unwrap();
+/// state.turn = Player::Black;
+/// let _ = batch.apply(&batch[0]);
+/// ```
+pub struct LegalActionBatch<'a> {
+    engine: &'a Engine,
+    state: &'a GameState,
+    actions: Vec<Action>,
+}
+
+impl std::ops::Deref for LegalActionBatch<'_> {
+    type Target = [Action];
+
+    fn deref(&self) -> &Self::Target {
+        &self.actions
+    }
+}
+
+impl LegalActionBatch<'_> {
+    pub fn apply(&self, action: &Action) -> Result<Transition, EngineError> {
+        self.check_action(action)?;
+        self.engine.apply_validated(self.state, action.clone())
+    }
+
+    pub fn apply_for_search(
+        &self,
+        action: &Action,
+        chance: &mut SearchChanceContext,
+    ) -> Result<SearchTransition, EngineError> {
+        self.check_action(action)?;
+        self.engine
+            .apply_validated_for_search(self.state, action.clone(), chance)
+    }
+
+    fn check_action(&self, action: &Action) -> Result<(), EngineError> {
+        if self.actions.binary_search(action).is_err() {
+            return Err(EngineError::IllegalAction(format!("{action:?}")));
+        }
+        Ok(())
+    }
 }
 
 /// Search-only random stream carried by one determinization.
@@ -161,6 +217,7 @@ impl Engine {
             ruleset,
             effects: EffectRegistry::default(),
             choices: ChoiceRegistry::default(),
+            checked_draft_eligibility: false,
         }
     }
 
@@ -170,6 +227,13 @@ impl Engine {
 
     pub fn bundled_20260818() -> Result<Self, crate::RulesetError> {
         RulesetManifest::bundled_20260818().map(Self::new)
+    }
+
+    /// Conservative official predicates for analyzer drafts. Unmodeled predicates
+    /// are excluded. Legacy simulators retain their seeded pool unless opted in.
+    pub fn with_checked_draft_eligibility(mut self) -> Self {
+        self.checked_draft_eligibility = true;
+        self
     }
 
     pub fn bundled_20260915() -> Result<Self, crate::RulesetError> {
@@ -267,10 +331,45 @@ impl Engine {
         Ok(())
     }
 
-    /// Add a player-owned card as a draft/acquisition transition.
-    ///
-    /// Passive cards are applied immediately, matching the web bundle. Active cards receive one
-    /// charge and appear in `legal_actions` without consuming the player's board move.
+    /// Checked analysis setup acquisition. This is not a mid-game draft action:
+    /// passives install immediately, actives receive one charge, and no turn advances.
+    /// Unsupported official acquisition predicates fail closed with a reason.
+    pub fn acquire_for_setup(
+        &self,
+        state: &GameState,
+        definition_id: &str,
+        owner: Player,
+    ) -> Result<Transition, EngineError> {
+        self.ensure_ruleset(state)?;
+        if !matches!(state.phase, GamePhase::Playing) || state.status != GameStatus::Ongoing {
+            return Err(EngineError::Invariant("수동 설정은 진행 중인 일반 국면에서만 가능합니다. 드래프트/선택을 완료하거나 보드 편집으로 새 국면을 만드세요.".into()));
+        }
+        let definition_id = crate::canonical_card_id(definition_id);
+        if let Some(reason) = crate::check_card_eligibility(
+            state,
+            definition_id,
+            owner,
+            crate::AcquisitionContext::Setup,
+        )
+        .reason()
+        {
+            return Err(EngineError::Invariant(reason.message_ko.clone()));
+        }
+        let definition = implemented_card(definition_id)
+            .ok_or_else(|| EngineError::UnknownCard(definition_id.into()))?;
+        let mut transition = if definition.activation == CardActivation::Rule {
+            self.apply_rule(state, definition_id)?
+        } else {
+            let mut allocated = state.clone();
+            let id = allocated.allocate_card_instance_id();
+            self.grant_card(&allocated, id, definition_id, owner)?
+        };
+        transition.state.reset_repetition_history();
+        Ok(transition)
+    }
+
+    /// Low-level unchecked acquisition: caller owns eligibility and timing validation.
+    /// Passives install immediately; active cards receive one charge.
     pub fn grant_card(
         &self,
         state: &GameState,
@@ -1529,12 +1628,19 @@ impl Engine {
     fn draw_weighted_draft_cards(
         &self,
         state: &mut GameState,
+        owner: Player,
         phase: DraftPhase,
         categories: &[CardPhase],
         count: usize,
         excluded: &mut BTreeSet<String>,
     ) -> Vec<String> {
         let mut candidates = self.draft_candidates_for_categories(state, categories, excluded);
+        if self.checked_draft_eligibility {
+            candidates.retain(|id| {
+                crate::check_card_eligibility(state, id, owner, crate::AcquisitionContext::Draft)
+                    .is_eligible()
+            });
+        }
         let mut picked = Vec::new();
         while picked.len() < count && !candidates.is_empty() {
             let weights: Vec<_> = candidates
@@ -1562,13 +1668,14 @@ impl Engine {
     fn draw_draft_offers_once(
         &self,
         state: &mut GameState,
-        _player: Player,
+        player: Player,
         phase: DraftPhase,
     ) -> Vec<String> {
         let mut excluded = BTreeSet::new();
         match phase {
             DraftPhase::Opening => self.draw_weighted_draft_cards(
                 state,
+                player,
                 phase,
                 &[CardPhase::Opening, CardPhase::Middle, CardPhase::Piece],
                 3,
@@ -1577,6 +1684,7 @@ impl Engine {
             DraftPhase::Middle => {
                 let mut offers = self.draw_weighted_draft_cards(
                     state,
+                    player,
                     phase,
                     &[CardPhase::Middle],
                     2,
@@ -1584,6 +1692,7 @@ impl Engine {
                 );
                 offers.extend(self.draw_weighted_draft_cards(
                     state,
+                    player,
                     phase,
                     &[CardPhase::Piece],
                     1,
@@ -1592,6 +1701,7 @@ impl Engine {
                 if offers.len() < 3 {
                     offers.extend(self.draw_weighted_draft_cards(
                         state,
+                        player,
                         phase,
                         &[CardPhase::Middle, CardPhase::Piece],
                         3 - offers.len(),
@@ -1602,6 +1712,7 @@ impl Engine {
             }
             DraftPhase::End => self.draw_weighted_draft_cards(
                 state,
+                player,
                 phase,
                 &[CardPhase::Middle, CardPhase::End],
                 3,
@@ -2031,6 +2142,17 @@ impl Engine {
             .ok_or_else(|| EngineError::Invariant("legal draft index is missing".to_owned()))?;
         let definition = implemented_card(&definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.clone()))?;
+        if self.checked_draft_eligibility {
+            let eligibility = crate::check_card_eligibility(
+                state,
+                &definition_id,
+                actor,
+                crate::AcquisitionContext::Draft,
+            );
+            if let Some(reason) = eligibility.reason() {
+                return Err(EngineError::IllegalAction(reason.message_ko.clone()));
+            }
+        }
         let instance_id = next.allocate_card_instance_id();
         let delayed = draft_card_uses_next_turn_delay(draft.phase, definition.phase);
         next.add_card(CardInstance {
@@ -2164,6 +2286,16 @@ impl Engine {
                 Ok(self.generate_piece_move_actions(state, *piece_id))
             }
             GamePhase::Draft(draft) => Ok((0..draft.offers.len())
+                .filter(|index| {
+                    !self.checked_draft_eligibility
+                        || crate::check_card_eligibility(
+                            state,
+                            &draft.offers[*index],
+                            state.turn,
+                            crate::AcquisitionContext::Draft,
+                        )
+                        .is_eligible()
+                })
                 .map(|index| Action::DraftPick {
                     offer_index: index as u16,
                 })
@@ -2184,20 +2316,47 @@ impl Engine {
         }
     }
 
+    /// Generate once, then apply any number of actions without regenerating legality.
+    /// The immutable borrows prevent stale-state or cross-engine reuse.
+    pub fn legal_action_batch<'a>(
+        &'a self,
+        state: &'a GameState,
+    ) -> Result<LegalActionBatch<'a>, EngineError> {
+        Ok(LegalActionBatch {
+            engine: self,
+            state,
+            actions: self.legal_actions(state)?,
+        })
+    }
+
     /// Apply an action transactionally. The input state is never mutated on success or failure.
     pub fn apply(&self, state: &GameState, action: Action) -> Result<Transition, EngineError> {
+        self.validate_action(state, &action)?;
+        self.apply_validated(state, action)
+    }
+
+    fn validate_action(&self, state: &GameState, action: &Action) -> Result<(), EngineError> {
         self.ensure_ruleset(state)?;
         if state.status != GameStatus::Ongoing {
             return Err(EngineError::GameAlreadyEnded);
         }
 
         let legal_actions = self.legal_actions(state)?;
-        if legal_actions.binary_search(&action).is_err()
-            && !self.is_dynamic_card_action_legal(state, &action)
+        if legal_actions.binary_search(action).is_err()
+            && !self.is_dynamic_card_action_legal(state, action)
         {
             return Err(EngineError::IllegalAction(format!("{action:?}")));
         }
 
+        Ok(())
+    }
+
+    // Only checked public input or an immutable state-bound batch may enter here.
+    fn apply_validated(
+        &self,
+        state: &GameState,
+        action: Action,
+    ) -> Result<Transition, EngineError> {
         let mut transition = match action.clone() {
             Action::Move(movement) => self.apply_move(state, action, movement),
             Action::UsePieceAbility {
@@ -2227,17 +2386,52 @@ impl Engine {
 
     /// Apply an action for search without revealing the actual future RNG stream.
     ///
-    /// A deterministic transition is returned byte-for-byte as the normal engine would produce
-    /// it. If the normal transition would consume RNG, the discarded probe is repeated from the
-    /// same public state with a seed supplied by `SearchChanceContext`. The probe is never exposed
-    /// to the caller, so the actual future outcome cannot enter tree statistics.
+    /// Built-in rules execute once using an independent search seed. If no RNG is consumed,
+    /// the original RNG is restored, preserving the complete deterministic transition.
+    /// Registered custom effect/choice handlers retain the probe/reapply compatibility path
+    /// because they can inspect RNG directly. A discarded probe is never exposed to search.
     pub fn apply_for_search(
         &self,
         state: &GameState,
         action: Action,
         chance: &mut SearchChanceContext,
     ) -> Result<SearchTransition, EngineError> {
-        let probed = self.apply(state, action.clone())?;
+        self.validate_action(state, &action)?;
+        self.apply_validated_for_search(state, action, chance)
+    }
+
+    fn apply_validated_for_search(
+        &self,
+        state: &GameState,
+        action: Action,
+        chance: &mut SearchChanceContext,
+    ) -> Result<SearchTransition, EngineError> {
+        // Built-in rules only inspect RNG through draws; repetition/replay identity
+        // excludes RNG. Opaque user handlers may inspect rng_state(), so retain their
+        // original probe semantics rather than silently changing callback behavior.
+        if self.effects.is_empty() && self.choices.is_empty() {
+            let mut staged_chance = chance.clone();
+            let event_index = chance.event_index();
+            let seed = staged_chance.next_event_seed();
+            let mut sampled_state = state.clone();
+            *sampled_state.rng_mut() = crate::DeterministicRng::new(seed);
+            let mut transition = self.apply_validated(&sampled_state, action)?;
+            let sampled_chance = transition.state.rng_state() != seed;
+            if sampled_chance {
+                *chance = staged_chance;
+            } else {
+                // A non-random transition must retain the exact live RNG, including
+                // the deterministic transition's full-state/fingerprint identity.
+                *transition.state.rng_mut() = crate::DeterministicRng::new(state.rng_state());
+            }
+            return Ok(SearchTransition {
+                transition,
+                sampled_chance,
+                chance_event_index: sampled_chance.then_some(event_index),
+            });
+        }
+
+        let probed = self.apply_validated(state, action.clone())?;
         if probed.state.rng_state() == state.rng_state() {
             return Ok(SearchTransition {
                 transition: probed,
@@ -2250,7 +2444,7 @@ impl Engine {
         let seed = chance.next_event_seed();
         let mut sampled_state = state.clone();
         *sampled_state.rng_mut() = crate::DeterministicRng::new(seed);
-        let transition = self.apply(&sampled_state, action)?;
+        let transition = self.apply_validated(&sampled_state, action)?;
         Ok(SearchTransition {
             transition,
             sampled_chance: true,
@@ -2581,6 +2775,7 @@ impl Engine {
             | ELEPHANT_ESCAPE
             | FAST_GROWTH
             | FIANCHETTO
+            | FIELD_PROMOTION
             | GUARD
             | HOLDOUT
             | HORDE
@@ -3321,8 +3516,16 @@ impl Engine {
         let actor = next.turn;
         let replay_before_board = next.board.clone();
         let replay_before_en_passant = next.en_passant;
-        let mut replay_before_runtime = next.card_runtime.clone();
-        replay_before_runtime.move_replays = [None, None];
+        // Only 0818 stores a replay snapshot with nested replays stripped.
+        // Other rulesets need the original runtime for after-move effects (e.g.
+        // locust charges), but the transactional input is already immutable.
+        let replay_before_runtime = if state.ruleset_id == "augment_chess_20260818" {
+            let mut snapshot = state.card_runtime.clone();
+            snapshot.move_replays = [None, None];
+            Cow::Owned(snapshot)
+        } else {
+            Cow::Borrowed(&state.card_runtime)
+        };
         let mut events = vec![Event::ActionApplied {
             actor,
             action: action.clone(),
@@ -4312,7 +4515,7 @@ impl Engine {
             && pawn.capture_count >= 2
         {
             let choice_id = next.allocate_choice_id();
-            next.phase = GamePhase::AwaitingChoice(PendingChoice {
+            let choice = PendingChoice {
                 id: choice_id,
                 owner: actor,
                 source_card_instance: 0,
@@ -4328,7 +4531,14 @@ impl Engine {
                     "knight".to_owned(),
                 ],
                 continuation: ChoiceContinuation::FinishTurn,
+            };
+            events.push(Event::ChoiceRequested {
+                choice_id,
+                owner: actor,
+                handler_id: choice.handler_id.clone(),
+                options: choice.options.clone(),
             });
+            next.phase = GamePhase::AwaitingChoice(choice);
         }
 
         let previous_en_passant = next.en_passant;
@@ -4678,15 +4888,28 @@ impl Engine {
                 ));
             }
             processed += 1;
-            let event = events[cursor].clone();
             cursor += 1;
+            if self.effects.is_empty() {
+                continue;
+            }
 
-            let mut cards = state.cards.clone();
-            cards.sort_by_key(|card| (card.owner.index(), card.instance_id));
-            for card in &cards {
-                let Some(handler) = self.effects.get(&card.definition_id) else {
-                    continue;
-                };
+            // Snapshot only cards with registered handlers. Unhandled cards cannot emit
+            // commands; handled cards still observe the same per-event snapshot and order.
+            let mut cards = state
+                .cards
+                .iter()
+                .filter_map(|card| {
+                    self.effects
+                        .get(&card.definition_id)
+                        .map(|handler| (card.clone(), handler))
+                })
+                .collect::<Vec<_>>();
+            if cards.is_empty() {
+                continue;
+            }
+            let event = events[cursor - 1].clone();
+            cards.sort_by_key(|(card, _)| (card.owner.index(), card.instance_id));
+            for (card, handler) in &cards {
                 let commands = handler.react(card, &event, state);
                 self.apply_effect_commands(state, events, card.instance_id, commands)?;
             }
@@ -6189,10 +6412,12 @@ impl Engine {
             return;
         }
 
-        let has_move = state.actions_remaining > 0 && !self.generate_move_actions(state).is_empty();
+        if state.actions_remaining > 0 && self.has_move_action(state) {
+            return;
+        }
         let mut card_actions = Vec::new();
         self.generate_card_actions(state, &mut card_actions);
-        if !has_move && card_actions.is_empty() {
+        if card_actions.is_empty() {
             state.status = GameStatus::Won {
                 winner: blocked_player.opponent(),
                 reason: WinReason::NoLegalActions,
@@ -6423,6 +6648,7 @@ impl Engine {
                 | ELEPHANT_ESCAPE
                 | FAST_GROWTH
                 | FIANCHETTO
+                | FIELD_PROMOTION
                 | GUARD
                 | HORDE
                 | IRON_MONARCH
@@ -6854,6 +7080,43 @@ impl Engine {
                 }
             }
         }
+    }
+
+    // Existential query: mandatory checker/scarecrow capture restrictions only choose
+    // a nonempty subset, so cannot change existence. Preserve the checker's separate
+    // pre-pass (including its legacy gate behavior) before normal piece generation.
+    fn has_move_action(&self, state: &GameState) -> bool {
+        let mut candidates = Vec::new();
+        for (from, piece) in state.board.iter().filter(|(_, piece)| {
+            piece.owner == state.turn
+                && matches!(piece.kind, PieceKind::Checker | PieceKind::CheckerKing)
+        }) {
+            candidates.clear();
+            self.generate_checker_moves(state, from, piece, &mut candidates);
+            if candidates.iter().any(|action| {
+                matches!(action, Action::Move(movement) if movement.from.file().abs_diff(movement.to.file()) == 2)
+            }) {
+                return true;
+            }
+        }
+        for (from, piece) in state
+            .board
+            .iter()
+            .filter(|(_, piece)| piece.owner == state.turn)
+        {
+            candidates.clear();
+            self.generate_moves_for_piece(state, from, piece, &mut candidates);
+            if !candidates.is_empty() {
+                return true;
+            }
+            if let Some(shadow) = state.card_runtime.quantum_positions.get(&piece.id) {
+                self.generate_moves_for_piece(state, *shadow, piece, &mut candidates);
+                if !candidates.is_empty() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn generate_move_actions(&self, state: &GameState) -> Vec<Action> {
@@ -9071,10 +9334,7 @@ impl Engine {
     ) {
         let home_rank = if king.owner == Player::White { 0 } else { 7 };
         let home = Square::new(4, home_rank).expect("standard king home is on board");
-        if from != home
-            || state.card_runtime.moved_piece_ids.contains(&king.id)
-            || self.is_square_attacked_by(state, from, king.owner.opponent())
-        {
+        if from != home || state.card_runtime.moved_piece_ids.contains(&king.id) {
             return;
         }
 
@@ -9086,6 +9346,7 @@ impl Engine {
             (7, 6, KING_SIDE_CLEAR, KING_SIDE_SAFE),
             (0, 2, QUEEN_SIDE_CLEAR, QUEEN_SIDE_SAFE),
         ];
+        let mut origin_attacked = None;
         for (rook_file, king_file, clear_files, safe_files) in sides {
             let rook_square = Square::new(rook_file, home_rank).expect("castling rook square");
             let Some(rook) = state.board.get(rook_square) else {
@@ -9101,14 +9362,21 @@ impl Engine {
                     )
                     .is_some()
                 })
-                || safe_files.iter().any(|file| {
-                    self.is_square_attacked_by(
-                        state,
-                        Square::new(*file, home_rank).expect("castling safe square"),
-                        king.owner.opponent(),
-                    )
-                })
             {
+                continue;
+            }
+            // Attack queries clone the state and enumerate opponent moves.
+            // Skip them unless a rook and an empty path make castling possible.
+            // If both sides are possible, test the origin only once.
+            if *origin_attacked.get_or_insert_with(|| {
+                self.is_square_attacked_by(state, from, king.owner.opponent())
+            }) || safe_files.iter().any(|file| {
+                self.is_square_attacked_by(
+                    state,
+                    Square::new(*file, home_rank).expect("castling safe square"),
+                    king.owner.opponent(),
+                )
+            }) {
                 continue;
             }
             actions.push(Action::Move(MoveAction::new(
@@ -10559,6 +10827,152 @@ mod tests {
     }
 
     #[test]
+    fn lazy_castling_checks_preserve_one_side_and_origin_safety_in_all_rulesets() {
+        for engine in [
+            Engine::bundled_20260807().unwrap(),
+            Engine::bundled_20260818().unwrap(),
+            Engine::bundled_20260915().unwrap(),
+        ] {
+            for actor in [Player::White, Player::Black] {
+                let rank = if actor == Player::White { 0 } else { 7 };
+                let opposite = 7 - rank;
+                let square = |file, rank| Square::new(file, rank).unwrap();
+                let mut board = Board::empty();
+                for (file, kind) in [
+                    (4, PieceKind::King),
+                    (0, PieceKind::Rook),
+                    (7, PieceKind::Rook),
+                    (5, PieceKind::Bishop),
+                ] {
+                    board.set(square(file, rank), Some(Piece::new(actor, kind)));
+                }
+                board.set(
+                    square(0, opposite),
+                    Some(Piece::new(actor.opponent(), PieceKind::King)),
+                );
+                let mut state = GameState::from_board(
+                    engine.ruleset.id.clone(),
+                    Mode::Standard,
+                    board,
+                    actor,
+                    901,
+                );
+                let from = square(4, rank);
+                let king = state.board.get(from).unwrap();
+                let generate = |state: &GameState| {
+                    let mut actions = Vec::new();
+                    engine.generate_castling_moves(state, from, king, &mut actions);
+                    actions
+                };
+                assert_eq!(
+                    generate(&state),
+                    vec![Action::Move(MoveAction::new(from, square(2, rank), None))]
+                );
+                state.board.set(
+                    square(4, opposite),
+                    Some(Piece::new(actor.opponent(), PieceKind::Rook)),
+                );
+                assert!(
+                    generate(&state).is_empty(),
+                    "origin under attack: {} {actor:?}",
+                    engine.ruleset.id
+                );
+                state.board.set(square(4, opposite), None);
+                state.board.set(
+                    square(3, opposite),
+                    Some(Piece::new(actor.opponent(), PieceKind::Rook)),
+                );
+                assert!(
+                    generate(&state).is_empty(),
+                    "queenside path under attack: {} {actor:?}",
+                    engine.ruleset.id
+                );
+                state.board.set(square(3, opposite), None);
+                let rook = state.board.get(square(0, rank)).unwrap();
+                state.card_runtime.moved_piece_ids.insert(rook.id);
+                assert!(generate(&state).is_empty());
+                state.card_runtime.moved_piece_ids.remove(&rook.id);
+                state.board.set(square(0, rank), None);
+                assert!(generate(&state).is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn no_action_short_circuit_matches_full_generation_reference() {
+        for mut engine in [
+            Engine::bundled_20260807().unwrap(),
+            Engine::bundled_20260818().unwrap(),
+            Engine::bundled_20260915().unwrap(),
+        ] {
+            engine.ruleset.base_rules.immobility_loses = true;
+            for actor in [Player::White, Player::Black] {
+                for actions_remaining in [0, 1] {
+                    for with_card in [false, true] {
+                        let mut state =
+                            GameState::standard(engine.ruleset.id.clone(), Mode::Standard, 902);
+                        state.turn = actor;
+                        state.actions_remaining = actions_remaining;
+                        if with_card {
+                            grant_test_card(&mut state, INITIATIVE, 903);
+                        }
+                        let has_move = actions_remaining > 0
+                            && !engine.generate_move_actions(&state).is_empty();
+                        let mut cards = Vec::new();
+                        engine.generate_card_actions(&state, &mut cards);
+                        let mut expected = state.clone();
+                        let mut expected_events = Vec::new();
+                        if !has_move && cards.is_empty() {
+                            expected.status = GameStatus::Won {
+                                winner: actor.opponent(),
+                                reason: WinReason::NoLegalActions,
+                            };
+                            engine.push_game_ended(&expected, &mut expected_events);
+                        }
+                        let mut actual = state;
+                        let mut actual_events = Vec::new();
+                        engine.resolve_no_action_loss(&mut actual, actor, &mut actual_events);
+                        assert_eq!(actual, expected);
+                        assert_eq!(actual_events, expected_events);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn borrowed_september_runtime_preserves_input_and_consumes_locust_charge() {
+        let engine = Engine::bundled_20260915().unwrap();
+        let mut state = september_state(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Knight),
+                ("c4", Player::White, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            904,
+        );
+        let knight = state.board.get("c3".parse().unwrap()).unwrap();
+        state.card_runtime.locust_swarm_piece_ids.insert(knight.id);
+        let before = state.clone();
+        let moved = engine.apply(&state, movement("c3", "c5")).unwrap();
+        assert_eq!(state, before);
+        assert!(
+            !moved
+                .state
+                .card_runtime
+                .locust_swarm_piece_ids
+                .contains(&knight.id)
+        );
+        assert_eq!(
+            moved.state.board.get("c5".parse().unwrap()).unwrap().id,
+            knight.id
+        );
+        assert_eq!(moved.state.card_runtime.move_replays, [None, None]);
+    }
+
+    #[test]
     fn en_passant_expires_after_the_opponents_next_move() {
         let engine = Engine::bundled_20260807().unwrap();
         let mut state = standard_play_state(29);
@@ -11573,6 +11987,93 @@ mod tests {
                 .triggered_piece_ids
                 .contains(&pawn_id)
         );
+    }
+
+    struct RngObserver;
+
+    impl EffectHandler for RngObserver {
+        fn definition_id(&self) -> &str {
+            "test.rng_observer"
+        }
+        fn react(
+            &self,
+            card: &CardInstance,
+            event: &Event,
+            state: &GameState,
+        ) -> Vec<EffectCommand> {
+            if matches!(event, Event::ActionApplied { .. }) {
+                vec![EffectCommand::AdjustHalfStars {
+                    player: card.owner,
+                    delta: ((state.rng_state() ^ u64::from(card.instance_id)) % 7) as i16,
+                }]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    #[test]
+    fn filtered_effect_snapshot_and_rng_observer_keep_legacy_semantics() {
+        let mut engine = Engine::bundled_20260818().unwrap();
+        engine.effects_mut().register(RngObserver).unwrap();
+        let mut state = GameState::standard(engine.ruleset().id.clone(), Mode::Standard, 71);
+        for (id, owner, definition) in [
+            (9, Player::Black, "test.rng_observer"),
+            (3, Player::White, "unhandled"),
+            (8, Player::White, "test.rng_observer"),
+            (2, Player::White, "test.rng_observer"),
+        ] {
+            state.cards.push(CardInstance {
+                instance_id: id,
+                definition_id: definition.to_owned(),
+                owner,
+                charges: 0,
+                half_stars: 0,
+                available_after_turn: None,
+            });
+        }
+        let event = Event::ActionApplied {
+            actor: Player::White,
+            action: movement("e2", "e4"),
+        };
+        let mut old_state = state.clone();
+        let mut new_state = state.clone();
+        let mut old_events = vec![event.clone()];
+        let mut new_events = vec![event];
+        let mut cursor = 0;
+        while cursor < old_events.len() {
+            let event = old_events[cursor].clone();
+            cursor += 1;
+            let mut cards = old_state.cards.clone();
+            cards.sort_by_key(|card| (card.owner.index(), card.instance_id));
+            for card in &cards {
+                if let Some(handler) = engine.effects.get(&card.definition_id) {
+                    let commands = handler.react(card, &event, &old_state);
+                    engine
+                        .apply_effect_commands(
+                            &mut old_state,
+                            &mut old_events,
+                            card.instance_id,
+                            commands,
+                        )
+                        .unwrap();
+                }
+            }
+        }
+        engine
+            .resolve_effect_queue_from(&mut new_state, &mut new_events, 0)
+            .unwrap();
+        assert_eq!(old_state, new_state);
+        assert_eq!(old_events, new_events);
+        let normal = engine.apply(&state, movement("e2", "e4")).unwrap();
+        let mut chance = SearchChanceContext::new(55);
+        let sampled = engine
+            .apply_for_search(&state, movement("e2", "e4"), &mut chance)
+            .unwrap();
+        assert_eq!(normal.state, sampled.transition.state);
+        assert_eq!(normal.events, sampled.transition.events);
+        assert!(!sampled.sampled_chance);
+        assert_eq!(chance.event_index(), 0);
     }
 
     struct CaptureTax;
@@ -16098,6 +16599,23 @@ mod tests {
             201,
         );
         grant_test_card(&mut cleanup, CLEANUP, 1);
+        let dynamic = Action::UseCard {
+            instance_id: 1,
+            target: ActionTarget::Squares(vec!["a2".parse().unwrap(), "b2".parse().unwrap()]),
+        };
+        let batch = engine.legal_action_batch(&cleanup).unwrap();
+        assert!(!batch.contains(&dynamic));
+        assert!(matches!(
+            batch.apply(&dynamic),
+            Err(EngineError::IllegalAction(_))
+        ));
+        let mut chance = SearchChanceContext::new(11);
+        let before_chance = chance.clone();
+        assert!(matches!(
+            batch.apply_for_search(&dynamic, &mut chance),
+            Err(EngineError::IllegalAction(_))
+        ));
+        assert_eq!(chance, before_chance);
         cleanup = engine
             .apply(
                 &cleanup,
@@ -16558,6 +17076,132 @@ mod tests {
                 .queens_gambit_protection
                 .contains(&pawn.id)
         );
+    }
+
+    #[test]
+    fn existential_move_query_matches_full_generation_with_gates_and_shadows() {
+        for engine in [
+            Engine::bundled_20260807().unwrap(),
+            Engine::bundled_20260818().unwrap(),
+            Engine::bundled_20260915().unwrap(),
+        ] {
+            for &kind in TRICKSTER_MOVEMENT_KINDS {
+                for actor in [Player::White, Player::Black] {
+                    let mut state = GameState::from_board(
+                        engine.ruleset().id.clone(),
+                        Mode::Standard,
+                        Board::empty(),
+                        actor,
+                        5,
+                    );
+                    state.board.set(
+                        "d4".parse().unwrap(),
+                        Some(Piece::new(actor, kind).with_id(1)),
+                    );
+                    state.board.set(
+                        "e5".parse().unwrap(),
+                        Some(Piece::new(actor.opponent(), PieceKind::Scarecrow).with_id(2)),
+                    );
+                    state.board.set(
+                        "a1".parse().unwrap(),
+                        Some(Piece::new(actor.opponent(), PieceKind::King).with_id(3)),
+                    );
+                    for gate in 0..5 {
+                        let mut variant = state.clone();
+                        match gate {
+                            1 => {
+                                variant.card_runtime.idol_rest_piece_ids.insert(1);
+                            }
+                            2 => {
+                                variant.card_runtime.zugzwang[actor.index()] = true;
+                            }
+                            3 => {
+                                variant
+                                    .card_runtime
+                                    .quantum_positions
+                                    .insert(1, "b6".parse().unwrap());
+                            }
+                            4 => {
+                                variant.card_runtime.socialism[actor.index()] = 1;
+                            }
+                            _ => {}
+                        }
+                        assert_eq!(
+                            engine.has_move_action(&variant),
+                            !engine.generate_move_actions(&variant).is_empty(),
+                            "{} {kind:?} {actor:?} gate={gate}",
+                            engine.ruleset().id
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn state_bound_batch_matches_checked_transitions_in_all_rulesets() {
+        for engine in [
+            Engine::bundled_20260807().unwrap(),
+            Engine::bundled_20260818().unwrap(),
+            Engine::bundled_20260915().unwrap(),
+        ] {
+            for seed in [1, 2, 3] {
+                let mut state = engine.new_game(Mode::Standard, seed).unwrap();
+                for step in 0..32 {
+                    let before = state.clone();
+                    assert_eq!(
+                        engine.has_move_action(&state),
+                        !engine.generate_move_actions(&state).is_empty()
+                    );
+                    let batch = engine.legal_action_batch(&state).unwrap();
+                    assert_eq!(&*batch, engine.legal_actions(&state).unwrap());
+                    assert!(
+                        batch
+                            .apply(&Action::DraftPick {
+                                offer_index: u16::MAX
+                            })
+                            .is_err()
+                    );
+                    for action in batch.iter() {
+                        let checked = engine.apply(&state, action.clone()).unwrap();
+                        let fast = batch.apply(action).unwrap();
+                        assert_eq!(checked.state, fast.state);
+                        assert_eq!(checked.events, fast.events);
+                        let mut checked_chance = SearchChanceContext::new(19);
+                        let mut batch_chance = checked_chance.clone();
+                        let checked = engine
+                            .apply_for_search(&state, action.clone(), &mut checked_chance)
+                            .unwrap();
+                        let fast = batch.apply_for_search(action, &mut batch_chance).unwrap();
+                        assert_eq!(checked.transition.state, fast.transition.state);
+                        assert_eq!(checked.transition.events, fast.transition.events);
+                        assert_eq!(checked.sampled_chance, fast.sampled_chance);
+                        assert_eq!(checked.chance_event_index, fast.chance_event_index);
+                        assert_eq!(checked_chance, batch_chance);
+                        // Independent reference: the former real-RNG probe + seeded reapply.
+                        let mut reference_chance = SearchChanceContext::new(19);
+                        let mut reference = engine.apply(&state, action.clone()).unwrap();
+                        let random = reference.state.rng_state() != state.rng_state();
+                        if random {
+                            let mut seeded = state.clone();
+                            *seeded.rng_mut() =
+                                crate::DeterministicRng::new(reference_chance.next_event_seed());
+                            reference = engine.apply(&seeded, action.clone()).unwrap();
+                        }
+                        assert_eq!(fast.transition.state, reference.state);
+                        assert_eq!(fast.transition.events, reference.events);
+                        assert_eq!(fast.sampled_chance, random);
+                        assert_eq!(batch_chance, reference_chance);
+                    }
+                    assert_eq!(state, before);
+                    if batch.is_empty() {
+                        break;
+                    }
+                    let index = (step * 17 + seed as usize) % batch.len();
+                    state = batch.apply(&batch[index]).unwrap().state;
+                }
+            }
+        }
     }
 
     #[test]

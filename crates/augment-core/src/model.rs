@@ -73,6 +73,19 @@ impl Square {
     }
 }
 
+// Persist only validated algebraic squares; never deserialize unchecked indices.
+impl serde::Serialize for Square {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+impl<'de> serde::Deserialize<'de> for Square {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = <String as serde::Deserialize>::deserialize(deserializer)?;
+        text.parse().map_err(serde::de::Error::custom)
+    }
+}
+
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let file = char::from(b'a' + self.file());
@@ -107,7 +120,9 @@ impl fmt::Display for SquareParseError {
 
 impl std::error::Error for SquareParseError {}
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
 pub enum PieceKind {
     Pawn,
     Knight,
@@ -258,7 +273,8 @@ impl PieceKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Piece {
     /// Stable per-game identity used by card statuses and replay-compatible quirks.
     pub id: u32,

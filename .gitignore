@@ -6,6 +6,8 @@
 /.venv/
 /train/.venv/
 **/__pycache__/
+.ruff_cache/
+.pytest_cache/
 *.py[cod]
 
 # Self-play and training outputs are reproducible artifacts, not source history.
@@ -19,6 +21,7 @@
 /dataset*.pt
 /train/dataset*.jsonl
 /train/dataset*.pt
+/train/runs/
 /train/holdout/*.jsonl
 *.log
 
