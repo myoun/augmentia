@@ -6680,10 +6680,6 @@
   ],
   "unsupported": [
     {
-      "id": "acceleration",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "alekhine-machine-gun",
       "reason": "changed_contract_not_ported"
     },
@@ -6717,10 +6713,6 @@
     },
     {
       "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "black-hole",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6768,18 +6760,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "chess-344200",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chess-960",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chess-n-pow-30",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "chimera",
       "reason": "changed_contract_not_ported"
     },
@@ -6800,16 +6780,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "conveyor",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "counterattack",
       "reason": "new_card_not_ported"
-    },
-    {
-      "id": "crown",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "d4",
@@ -6822,10 +6794,6 @@
     {
       "id": "democracy",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "diagonal-chess",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "dice",
@@ -6896,10 +6864,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "football",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "freeze",
       "reason": "changed_contract_not_ported"
     },
@@ -6921,14 +6885,6 @@
     },
     {
       "id": "herald",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "high-ground",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "highway",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7024,19 +6980,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "mistake",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "mistake-card",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "monochrome-chess",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "monster",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7061,14 +7005,6 @@
     },
     {
       "id": "pawn-conversion",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "periodic-collapse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "portal",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7116,10 +7052,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "revelation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "revolving-door",
       "reason": "new_card_not_ported"
     },
@@ -7137,10 +7069,6 @@
     },
     {
       "id": "royal-shield",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "rule-bombs",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7249,10 +7177,6 @@
     },
     {
       "id": "windmill",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "winter-kingdom",
       "reason": "changed_contract_not_ported"
     },
     {

@@ -226,3 +226,11 @@ input[type="range"], input[type="checkbox"] { accent-color: var(--blue); }
 @media (prefers-reduced-motion: no-preference) {
   .button, .tag, .card-button, .navigation-controls button { transition: background-color 100ms ease, border-color 100ms ease; }
 }
+
+.terrain-label { position:absolute; inset:2px 1px auto; font-size:9px; z-index:2; color:#202b30; background:#e6f4e7cc; border-radius:3px; pointer-events:none; }
+.square.terrain-blackHole { background:#252331; }
+.square.terrain-collapsed { background:#17191d; opacity:.55; }
+.square.terrain-portal { box-shadow:inset 0 0 0 3px #8a65cd; }
+.square.terrain-highGround { box-shadow:inset 0 0 0 2px #42996c; }
+.square.terrain-bomb { box-shadow:inset 0 0 0 3px #e5864d; }
+.square.terrain-highway { background-image:linear-gradient(90deg,transparent 44%,#80a5af55 44%,#80a5af55 56%,transparent 56%); }

@@ -194,6 +194,15 @@ pub enum PieceKind {
     BigBishop,
     Archbishop,
     Chancellor,
+    Grappler,
+    RevolvingDoor,
+    DonQuixote,
+    Medium,
+    BerolinaPawn,
+    Killer,
+    Beacon,
+    TransmissionTower,
+    Barrier,
 }
 
 impl PieceKind {
@@ -269,6 +278,15 @@ impl PieceKind {
             Self::BigBishop => 68,
             Self::Archbishop => 69,
             Self::Chancellor => 70,
+            Self::Grappler => 71,
+            Self::RevolvingDoor => 72,
+            Self::DonQuixote => 73,
+            Self::Medium => 74,
+            Self::BerolinaPawn => 75,
+            Self::Killer => 76,
+            Self::Beacon => 77,
+            Self::TransmissionTower => 78,
+            Self::Barrier => 79,
         }
     }
 

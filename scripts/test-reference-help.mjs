@@ -131,10 +131,13 @@ const setupList = read('crates/augment-app/src/web/setup.rs').match(/pub const P
 assert.ok(setupList, 'Core piece list not found');
 const coreKinds = [...setupList[1].matchAll(/PieceKind::([A-Za-z]+)/g)]
   .map(([, kind]) => kind.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase());
-assert.equal(coreKinds.length, 70);
-assert.equal(new Set(coreKinds).size, 70);
-// October compound help is pinned separately in test-compound-pieces.mjs.
-const historicalKinds = coreKinds.filter(kind => !['archbishop', 'chancellor'].includes(kind));
+const currentDependencies = ['grappler', 'revolving_door', 'don_quixote', 'medium', 'berolina_pawn', 'killer', 'beacon', 'transmission_tower', 'barrier'];
+assert.equal(coreKinds.length, 79);
+assert.equal(new Set(coreKinds).size, 79);
+for (const kind of currentDependencies) assert.ok(coreKinds.includes(kind), kind);
+// Keep the 68 historical descriptions byte-pinned. New dependency help is
+// exercised in app view tests; its source contracts live in test-rule-ports.
+const historicalKinds = coreKinds.filter(kind => !['archbishop', 'chancellor', ...currentDependencies].includes(kind));
 assert.deepEqual(Object.keys(pieceAliases), historicalKinds, 'Alias mapping must cover historical core kinds in order');
 
 const pieces = {};

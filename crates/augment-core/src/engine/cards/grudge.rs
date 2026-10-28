@@ -113,6 +113,7 @@ pub(crate) fn grudge_kind_allowed(kind: PieceKind) -> bool {
     !matches!(
         kind,
         PieceKind::Pawn
+            | PieceKind::BerolinaPawn
             | PieceKind::King
             | PieceKind::RoyalKnight
             | PieceKind::DarkWizard
@@ -135,10 +136,11 @@ pub(super) fn grudge_movement_mask(
     }
     use PieceKind::*;
     let mut mask = match piece.kind {
-        Rook | Herald | Cannon | BigRook | Campfire | SiegeRam | Slime | Hook | Brutus => 1,
+        Rook | Herald | Cannon | BigRook | Campfire | SiegeRam | Slime | Hook | Brutus
+        | RevolvingDoor => 1,
         Bishop | BigBishop | Ferz | Alfil | Knightmaster | Princess | Missionary | Protestant
-        | Cardinal => 2,
-        Knight | RoyalKnight | Assassin | Unicorn | Paladin | Dragon => 4,
+        | Cardinal | Killer => 2,
+        Knight | RoyalKnight | Assassin | Unicorn | Paladin | Dragon | DonQuixote => 4,
         Camel => 8,
         Alibaba => 3,
         Chancellor => 5,
@@ -165,7 +167,8 @@ pub(super) fn grudge_movement_mask(
             p.kind = memory.effective;
             grudge_movement_mask(p, board, rt, depth + 1)
         }),
-        BabyBear | Scarecrow | Football | Crown | Monster => 0,
+        BabyBear | Scarecrow | Football | Crown | Monster | Medium | TransmissionTower
+        | Barrier => 0,
         _ => 3,
     };
     if rt.reversal[piece.owner.index()] && matches!(piece.kind, Rook | Bishop) {

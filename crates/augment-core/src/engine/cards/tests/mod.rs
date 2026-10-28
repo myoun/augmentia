@@ -6,6 +6,7 @@ pub(super) mod compound;
 pub(super) mod delayed;
 pub(super) mod interactions;
 pub(super) mod objectives;
+mod rule_ports;
 pub(super) mod target_procedures;
 
 pub(super) mod board_objectives;

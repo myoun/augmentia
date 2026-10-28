@@ -43,6 +43,11 @@ pub(crate) fn latest_minor_kind(kind: crate::PieceKind) -> bool {
             | Thief
             | Idol
             | Brutus
+            | DonQuixote
+            | Medium
+            | Beacon
+            | TransmissionTower
+            | Barrier
     )
 }
 
@@ -75,6 +80,9 @@ pub(crate) fn latest_major_kind(kind: crate::PieceKind) -> bool {
             | Undead
             | Archbishop
             | Chancellor
+            | Grappler
+            | RevolvingDoor
+            | Killer
     )
 }
 
@@ -315,7 +323,7 @@ mod tests {
                 .grant_card(&state, 1, "merchant-guild", Player::White)
                 .is_err()
         );
-        state.applied_rules.push("acceleration".into());
+        state.applied_rules.push("garden".into());
         assert!(engine.legal_actions(&state).is_err());
     }
 
@@ -377,7 +385,7 @@ mod tests {
         let catalog = latest_catalog();
         assert_eq!(catalog.len(), 275);
         assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 271);
-        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 128);
+        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 147);
         for card in catalog {
             assert_eq!(
                 ruleset_card(LATEST_RULESET_ID, &card.id).is_some(),

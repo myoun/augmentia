@@ -247,6 +247,38 @@
       "mask": 5
     },
     {
+      "kind": "Grappler",
+      "mask": 3
+    },
+    {
+      "kind": "RevolvingDoor",
+      "mask": 1
+    },
+    {
+      "kind": "DonQuixote",
+      "mask": 4
+    },
+    {
+      "kind": "Medium",
+      "mask": 0
+    },
+    {
+      "kind": "Killer",
+      "mask": 2
+    },
+    {
+      "kind": "Beacon",
+      "mask": 3
+    },
+    {
+      "kind": "TransmissionTower",
+      "mask": 0
+    },
+    {
+      "kind": "Barrier",
+      "mask": 0
+    },
+    {
       "kind": "Rook",
       "flags": {
         "reversal": true

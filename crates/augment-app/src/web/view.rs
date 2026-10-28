@@ -118,6 +118,12 @@ fn status_view(status: &GameStatus) -> Value {
 
 pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
     let mut cells = BTreeMap::<Square, (Piece, bool, Square)>::new();
+    if let Some(square) = state.card_runtime.football_pos {
+        cells.insert(
+            square,
+            (Piece::new(Player::White, PieceKind::Football), true, square),
+        );
+    }
     for (square, piece) in state.board.iter() {
         cells.insert(square, (piece, true, square));
     }
@@ -149,6 +155,15 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
                 "rank": square.rank(),
                 "piece": piece,
                 "platform": state.card_runtime.platform.as_ref().and_then(|platform| platform.cell) == Some(square),
+                "terrain": {
+                    "blackHole":state.card_runtime.black_holes.contains(&square),
+                    "highGround":state.card_runtime.high_ground_squares.contains(&square),
+                    "highway":state.card_runtime.highways.contains(&square.file()),
+                    "bomb":state.card_runtime.rule_bombs.contains(&square),
+                    "portal":state.card_runtime.rule_portals.is_some_and(|pair|pair.contains(&square)),
+                    "crown":state.card_runtime.crown_pos==Some(square),
+                    "collapsed":square.file().min(7-square.file()).min(square.rank()).min(7-square.rank())<state.rule_runtime.collapse_depth,
+                },
             })
         })
         .collect()
@@ -332,11 +347,35 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
         statuses.push("예고장".to_owned());
     }
 
+    if state.rule_runtime.winter_frozen.contains(&piece.id) {
+        statuses.push("겨울 동결".into());
+    }
+    if state.rule_runtime.winter_preview.contains(&piece.id) {
+        statuses.push("겨울 동결 예고".into());
+    }
+    if state.rule_runtime.crown_id == Some(piece.id) {
+        statuses.push(format!("왕관 {}/10수", state.rule_runtime.crown_count));
+    }
+    if let Some(until) = state.rule_runtime.grappler_bound.get(&piece.id) {
+        statuses.push(format!("잡기 속박 · {} 턴 종료까지", player_name(*until)));
+    }
+    if let Some((_, due)) = state.rule_runtime.beacon_due.get(&piece.id) {
+        let now = state.turns_taken[1] * 2 + u32::from(state.turn == Player::Black);
+        statuses.push(format!("신호기 점화 · {}턴 뒤", due.saturating_sub(now)));
+    }
+    if piece.kind == PieceKind::Medium
+        && let Some(memory) = state.rule_runtime.medium_memory
+    {
+        statuses.push(format!(
+            "기억한 행마 · {}",
+            piece_meta(memory.effective, piece.owner).1
+        ));
+    }
     let (kind, name, code, unicode) = piece_meta(piece.kind, piece.owner);
     json!({
         "id": piece.id,
-        "owner": if state.ruleset_id == augment_core::LATEST_RULESET_ID && piece.kind == PieceKind::Monster { "neutral" } else { player_key(piece.owner) },
-        "ownerLabel": if state.ruleset_id == augment_core::LATEST_RULESET_ID && piece.kind == PieceKind::Monster { "중립" } else { player_name(piece.owner) },
+        "owner": if state.ruleset_id == augment_core::LATEST_RULESET_ID && matches!(piece.kind,PieceKind::Monster|PieceKind::Football) { "neutral" } else { player_key(piece.owner) },
+        "ownerLabel": if state.ruleset_id == augment_core::LATEST_RULESET_ID && matches!(piece.kind,PieceKind::Monster|PieceKind::Football) { "중립" } else { player_name(piece.owner) },
         "kind": kind,
         "name": name,
         "description": piece_description(kind),
@@ -525,6 +564,33 @@ pub(crate) fn piece_description(kind: &str) -> &'static str {
     match kind {
         "archbishop" => return "아치비숍: 나이트와 비숍의 이동을 모두 사용할 수 있습니다.",
         "chancellor" => return "챈슬러: 나이트와 룩의 이동을 모두 사용할 수 있습니다.",
+        "grappler" => {
+            return "그래플러: 퀸처럼 이동합니다. 같은 직선의 먼 상대를 인접 칸으로 당기며 두 기물은 상대 턴 종료까지 속박됩니다.";
+        }
+        "revolving_door" => {
+            return "회전문: 룩처럼 이동합니다. 자기 턴 종료에 주변 여덟 칸을 시계 방향으로 회전시킵니다.";
+        }
+        "don_quixote" => {
+            return "돈 키호테: 나이트처럼 이동합니다. 자기 턴 시작에 자동 이동하며, 풍차가 있으면 풍차를 모두 지나는 경로로 돌진합니다.";
+        }
+        "medium" => {
+            return "무덤: 마지막으로 잡힌 기물의 행마를 기억합니다. 기억한 행마가 없으면 움직일 수 없습니다.";
+        }
+        "berolina_pawn" => {
+            return "베롤리나 폰: 대각선으로 전진하고 바로 앞의 적을 잡습니다. 첫 두 칸 이동, 앙파상과 승진을 지원합니다.";
+        }
+        "killer" => {
+            return "킬러: 대각선으로 최대 두 칸 이동합니다. 자기 턴 종료에 공격할 수 있는 상대 왕실 기물을 자동으로 잡습니다.";
+        }
+        "beacon" => {
+            return "신호기: 주변 빈칸으로 한 칸 이동합니다. 자기 턴 종료에 주변 여섯 칸 이상이 차 있으면 비왕실 이웃을 제거하고 세 번째 자기 턴 시작에 승리합니다.";
+        }
+        "transmission_tower" => {
+            return "전송탑: 스스로 움직이지 않습니다. 다른 아군 기물이 이 전송탑 주변의 빈칸으로 이동할 수 있습니다.";
+        }
+        "barrier" => {
+            return "배리어: 스스로 움직이지 않습니다. 살아 있는 동안 아군 왕실 기물의 일반 포획을 막습니다.";
+        }
         _ => {}
     }
     reference_help()["pieces"][kind]
@@ -829,6 +895,15 @@ pub(crate) fn piece_meta(
 
 fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static str) {
     match kind {
+        PieceKind::Grappler => ("grappler", "그래플러", "GP"),
+        PieceKind::RevolvingDoor => ("revolving_door", "회전문", "RD"),
+        PieceKind::DonQuixote => ("don_quixote", "돈 키호테", "DQ"),
+        PieceKind::Medium => ("medium", "무덤", "MD"),
+        PieceKind::BerolinaPawn => ("berolina_pawn", "베롤리나 폰", "BP"),
+        PieceKind::Killer => ("killer", "킬러", "KI"),
+        PieceKind::Beacon => ("beacon", "신호기", "BC"),
+        PieceKind::TransmissionTower => ("transmission_tower", "전송탑", "TT"),
+        PieceKind::Barrier => ("barrier", "배리어", "BA"),
         PieceKind::Assassin => ("assassin", "암살자", "AS"),
         PieceKind::Grasshopper => ("grasshopper", "그래스호퍼", "G"),
         PieceKind::Amazon => ("amazon", "아마존", "Z"),
@@ -992,5 +1067,62 @@ mod tests {
         assert_eq!(card["activation"], "passive");
         assert_eq!(card["openingAutoPending"], false);
         assert!(card["actionIndices"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn rule_board_view_exposes_neutral_ball_terrain_and_runtime_status() {
+        let engine = augment_core::Engine::bundled_latest().unwrap();
+        let state = GameState::standard(
+            augment_core::LATEST_RULESET_ID,
+            augment_core::Mode::Standard,
+            31,
+        );
+        let state = engine
+            .apply_rule(&state, augment_core::FOOTBALL)
+            .unwrap()
+            .state;
+        let mut state = engine
+            .apply_rule(&state, augment_core::HIGHWAY)
+            .unwrap()
+            .state;
+        let ball = state.card_runtime.football_pos.unwrap();
+        let pawn = state.board.get("b2".parse().unwrap()).unwrap();
+        state.rule_runtime.winter_preview.push(pawn.id);
+        let cells = board_view(&state);
+        let ball_cell = cells
+            .iter()
+            .find(|c| c["square"] == ball.to_string())
+            .unwrap();
+        assert_eq!(ball_cell["piece"]["kind"], "football");
+        assert_eq!(ball_cell["piece"]["owner"], "neutral");
+        let pawn_cell = cells.iter().find(|c| c["square"] == "b2").unwrap();
+        assert_eq!(pawn_cell["terrain"]["highway"], true);
+        assert!(
+            pawn_cell["piece"]["statuses"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|s| s == "겨울 동결 예고")
+        );
+    }
+
+    #[test]
+    fn chaos_dependency_pieces_have_distinct_metadata_and_help() {
+        let mut codes = std::collections::BTreeSet::new();
+        for kind in [
+            PieceKind::Grappler,
+            PieceKind::RevolvingDoor,
+            PieceKind::DonQuixote,
+            PieceKind::Medium,
+            PieceKind::BerolinaPawn,
+            PieceKind::Killer,
+            PieceKind::Beacon,
+            PieceKind::TransmissionTower,
+            PieceKind::Barrier,
+        ] {
+            let (key, _, code, _) = piece_meta(kind, Player::White);
+            assert!(codes.insert(code));
+            assert!(!piece_description(key).starts_with("합법 이동은"));
+        }
     }
 }

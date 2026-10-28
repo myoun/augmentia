@@ -26,14 +26,18 @@ impl Engine {
         }
 
         // Black Hole check
-        if state.card_runtime.black_holes.contains(&movement.to) {
+        if !state.rule_runtime.enabled.contains(BLACK_HOLE)
+            && state.card_runtime.black_holes.contains(&movement.to)
+        {
             if let Some((sq, p)) = state.board.find_by_id(piece.id) {
                 self.remove_piece_for_card(state, sq, p, actor, BLACK_HOLE, events);
             }
         }
 
         // Bombs check
-        if state.card_runtime.rule_bombs.remove(&movement.to) {
+        if !state.rule_runtime.enabled.contains(RULE_BOMBS)
+            && state.card_runtime.rule_bombs.remove(&movement.to)
+        {
             let victims = state
                 .board
                 .iter()
@@ -61,25 +65,29 @@ impl Engine {
         }
 
         // Crown check
-        if let Some(crown_sq) = state.card_runtime.crown_pos {
+        if !state.rule_runtime.enabled.contains(CROWN)
+            && let Some(crown_sq) = state.card_runtime.crown_pos
+        {
             if movement.to == crown_sq {
                 state.card_runtime.crown_pos = None;
                 state.card_runtime.crown_holder = Some((actor, 1));
             }
-        } else if let Some((holder, count)) = state.card_runtime.crown_holder {
-            if holder == actor {
-                let new_count = count.saturating_add(1);
-                if new_count >= 10 {
-                    state.status = GameStatus::Won {
-                        winner: actor,
-                        reason: WinReason::CardEffect("crown".to_owned()),
-                    };
-                } else {
-                    state.card_runtime.crown_holder = Some((holder, new_count));
-                }
+        } else if !state.rule_runtime.enabled.contains(CROWN)
+            && let Some((holder, count)) = state.card_runtime.crown_holder
+            && holder == actor
+        {
+            let new_count = count.saturating_add(1);
+            if new_count >= 10 {
+                state.status = GameStatus::Won {
+                    winner: actor,
+                    reason: WinReason::CardEffect("crown".to_owned()),
+                };
+            } else {
+                state.card_runtime.crown_holder = Some((holder, new_count));
             }
         }
 
+        self.current_rule_move(state, movement, events);
         // Camouflage Color
         if state.card_runtime.camouflage_color {
             let is_light = (movement.to.file() + movement.to.rank()) % 2 != 0;

@@ -704,6 +704,7 @@ impl CardRuntimeState {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GameState {
+    pub rule_runtime: Box<crate::engine::cards::RuleRuntime>,
     pub ruleset_id: String,
     pub mode: Mode,
     pub board: Board,
@@ -761,6 +762,7 @@ impl GameState {
             completed_drafts: [false; 3],
             deathmatch: None,
             automatic_draw: None,
+            rule_runtime: Box::default(),
             en_passant: None,
             applied_rules: Vec::new(),
             card_runtime: CardRuntimeState::default(),
@@ -886,7 +888,9 @@ impl GameState {
         let progress = draw.pieces.iter().any(|(square, piece)| {
             match current.iter().find(|(_, now)| now.id == piece.id) {
                 None => piece.owner != actor,
-                Some((now, _)) => piece.kind == PieceKind::Pawn && now != square,
+                Some((now, _)) => {
+                    matches!(piece.kind, PieceKind::Pawn | PieceKind::BerolinaPawn) && now != square
+                }
             }
         }) || events.iter().any(|event| match event {
             crate::Event::PieceCaptured { piece, .. } => piece.owner != actor,
@@ -902,7 +906,8 @@ impl GameState {
             } => {
                 movement.from != movement.to
                     && draw.pieces.iter().any(|(square, piece)| {
-                        *square == movement.from && piece.kind == PieceKind::Pawn
+                        *square == movement.from
+                            && matches!(piece.kind, PieceKind::Pawn | PieceKind::BerolinaPawn)
                     })
             }
             _ => false,
@@ -956,6 +961,10 @@ impl GameState {
 
     pub fn position_key(&self) -> u64 {
         let mut hash = StableHasher::new();
+        if self.rule_runtime.as_ref() != &crate::engine::cards::RuleRuntime::default() {
+            hash.bytes(b"current-rule-runtime-v1");
+            hash.bytes(self.rule_runtime.position_data(self).as_bytes());
+        }
         if self.card_runtime.october != OctoberRuntimeState::default() {
             hash.bytes(b"october-runtime-v1");
             let mut october = self.card_runtime.october.clone();

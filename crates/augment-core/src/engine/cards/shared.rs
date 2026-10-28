@@ -199,6 +199,8 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
+        self.current_rule_move_filter(state, from, piece, actions);
+
         if state.ruleset_id != crate::LATEST_RULESET_ID {
             return;
         }

@@ -4,13 +4,35 @@
   "scope": {
     "catalog_entries": 275,
     "active_upstream": 271,
-    "implemented_cards": 128,
+    "implemented_cards": 147,
     "site_parity_verified_cards": 0,
     "profile": "partial-standard-with-scoped-ports",
     "inherited_unchanged_contract_cards": 88,
-    "scoped_ported_cards": 40
+    "scoped_ported_cards": 59
   },
   "cards": [
+    {
+      "id": "acceleration",
+      "name_ko": "가속",
+      "effect": "acceleration",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "accelerationStartAfterBlackTurns",
+        "applyV6CardAction"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
     {
       "activation": "active",
       "compatibility": [
@@ -239,6 +261,28 @@
       "turn_exclusive": false
     },
     {
+      "id": "black-hole",
+      "name_ko": "블랙홀",
+      "effect": "blackHole",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyBlackHoleV9",
+        "v9ResolveBlackHoles"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
@@ -386,6 +430,71 @@
       "turn_exclusive": false
     },
     {
+      "id": "chess-344200",
+      "name_ko": "체스 32432400",
+      "effect": "chess344200",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyChess344200V8"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "chess-960",
+      "name_ko": "960 체스",
+      "effect": "chess960",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyChess960V8",
+        "chess960BackRank"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "chess-n-pow-30",
+      "name_ko": "혼돈의 체스",
+      "effect": "chessNPow30",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyChessNPow30V19",
+        "generateChessNPow30Setup"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -464,6 +573,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "conveyor",
+      "name_ko": "컨베이어",
+      "effect": "conveyorRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v9ResolveConveyor"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -524,6 +654,28 @@
       "turn_exclusive": false
     },
     {
+      "id": "crown",
+      "name_ko": "왕관",
+      "effect": "crownRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyCrownV9",
+        "v9ResolveCrown"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -542,6 +694,27 @@
         "desperado"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "diagonal-chess",
+      "name_ko": "대각선 체스",
+      "effect": "diagonalChess",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyDiagonalChessV9"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -780,6 +953,28 @@
       "turn_exclusive": false
     },
     {
+      "id": "football",
+      "name_ko": "축구공",
+      "effect": "football",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyNeutralInstallationV9",
+        "footballMoveContractV9"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -961,6 +1156,28 @@
       "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
     },
     {
+      "id": "high-ground",
+      "name_ko": "고지대",
+      "effect": "highGround",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyHighGroundV9",
+        "highGroundBlocksCaptureCell"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
@@ -979,6 +1196,27 @@
         "highlander"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "highway",
+      "name_ko": "고속도로",
+      "effect": "highway",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "canUseHighwayMove"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -1471,6 +1709,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "mistake",
+      "name_ko": "실수",
+      "effect": "mistake",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyMistakeRuleV8"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1489,6 +1748,48 @@
         "mongolianGambit"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "monochrome-chess",
+      "name_ko": "단색 체스",
+      "effect": "monochromeChess",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyMonochromeChessV10"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "monster",
+      "name_ko": "괴물",
+      "effect": "monsterRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v9ResolveMonsters"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "passive",
@@ -1783,6 +2084,28 @@
       "turn_exclusive": false
     },
     {
+      "id": "periodic-collapse",
+      "name_ko": "주기적 붕괴",
+      "effect": "periodicCollapse",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v9ApplyCollapse",
+        "nextPeriodicCollapseTurn"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1821,6 +2144,28 @@
         "poisonedPawn"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "portal",
+      "name_ko": "포탈",
+      "effect": "portal",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyPortalRuleV9",
+        "resolvePortalMoveV2"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -2085,6 +2430,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "revelation",
+      "name_ko": "계시",
+      "effect": "revelation",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "revelationMaterialVictory"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
@@ -2141,6 +2507,28 @@
         "rookLift"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "rule-bombs",
+      "name_ko": "룰 폭탄",
+      "effect": "ruleBombs",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyRuleBombsV9",
+        "v9ResolveRuleBombs"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "rule",
@@ -2561,13 +2949,30 @@
         "whiteBox"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "winter-kingdom",
+      "name_ko": "겨울 왕국",
+      "effect": "winterKingdom",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v9ResolveWinter"
+      ],
+      "compatibility": [
+        "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
     }
   ],
   "pending": [
-    {
-      "id": "acceleration",
-      "reason": "changed_contract_not_ported"
-    },
     {
       "id": "alekhine-machine-gun",
       "reason": "changed_contract_not_ported"
@@ -2602,10 +3007,6 @@
     },
     {
       "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "black-hole",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -2653,18 +3054,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "chess-344200",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chess-960",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chess-n-pow-30",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "chimera",
       "reason": "changed_contract_not_ported"
     },
@@ -2685,16 +3074,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "conveyor",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "counterattack",
       "reason": "new_card_not_ported"
-    },
-    {
-      "id": "crown",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "d4",
@@ -2707,10 +3088,6 @@
     {
       "id": "democracy",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "diagonal-chess",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "dice",
@@ -2781,10 +3158,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "football",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "freeze",
       "reason": "changed_contract_not_ported"
     },
@@ -2806,14 +3179,6 @@
     },
     {
       "id": "herald",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "high-ground",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "highway",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -2909,19 +3274,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "mistake",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "mistake-card",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "monochrome-chess",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "monster",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -2946,14 +3299,6 @@
     },
     {
       "id": "pawn-conversion",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "periodic-collapse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "portal",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3001,10 +3346,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "revelation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "revolving-door",
       "reason": "new_card_not_ported"
     },
@@ -3022,10 +3363,6 @@
     },
     {
       "id": "royal-shield",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "rule-bombs",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3134,10 +3471,6 @@
     },
     {
       "id": "windmill",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "winter-kingdom",
       "reason": "changed_contract_not_ported"
     },
     {

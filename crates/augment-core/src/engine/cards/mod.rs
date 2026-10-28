@@ -41,6 +41,7 @@ mod brutus;
 mod camouflage_color;
 mod capture_the_flag;
 mod chancellor;
+mod chaos_pieces;
 mod checker;
 mod cleanup;
 mod clockwork;
@@ -131,6 +132,7 @@ mod retreat;
 mod reversal;
 mod reverse_pawns;
 mod rook_lift;
+mod rule_support;
 mod saturation;
 mod schrodinger_pawns;
 mod seal;
@@ -152,6 +154,27 @@ mod trojan_horse;
 mod undead;
 mod underpromotion;
 mod white_box;
+pub use rule_support::RuleRuntime;
+use rule_support::*;
+mod acceleration;
+mod black_hole;
+mod chess_344200;
+mod chess_960;
+pub(in crate::engine) mod chess_n_pow_30;
+mod conveyor;
+mod crown;
+mod diagonal_chess;
+mod football;
+mod high_ground;
+mod highway;
+mod mistake;
+mod monochrome_chess;
+mod monster;
+mod periodic_collapse;
+mod portal;
+mod revelation;
+mod rule_bombs;
+mod winter_kingdom;
 type Eligibility = fn(&GameState, Player, AcquisitionContext) -> CardEligibility;
 type Acquisition = fn(&Engine, &mut GameState, Player, &mut Vec<Event>) -> Result<(), EngineError>;
 type Play = fn(
@@ -216,6 +239,7 @@ impl CardBehavior {
     }
 }
 const CARDS: &[CardBehavior] = &[
+    acceleration::BEHAVIOR,
     amazon::BEHAVIOR,
     archbishop::BEHAVIOR,
     armistice::BEHAVIOR,
@@ -227,6 +251,7 @@ const CARDS: &[CardBehavior] = &[
     berserker::BEHAVIOR,
     big_bishop::BEHAVIOR,
     bina_mate::BEHAVIOR,
+    black_hole::BEHAVIOR,
     blue_jeans::BEHAVIOR,
     breakthrough_order::BEHAVIOR,
     brutus::BEHAVIOR,
@@ -234,14 +259,20 @@ const CARDS: &[CardBehavior] = &[
     capture_the_flag::BEHAVIOR,
     chancellor::BEHAVIOR,
     checker::BEHAVIOR,
+    chess_344200::BEHAVIOR,
+    chess_960::BEHAVIOR,
+    chess_n_pow_30::BEHAVIOR,
     cleanup::BEHAVIOR,
     clockwork::BEHAVIOR,
     clone::BEHAVIOR,
     conversion::BEHAVIOR,
+    conveyor::BEHAVIOR,
     cool_guy::BEHAVIOR,
     corner_kick::BEHAVIOR,
     coronation::BEHAVIOR,
+    crown::BEHAVIOR,
     desperado::BEHAVIOR,
+    diagonal_chess::BEHAVIOR,
     disassembly::BEHAVIOR,
     dragon::BEHAVIOR,
     early_promotion::BEHAVIOR,
@@ -254,6 +285,7 @@ const CARDS: &[CardBehavior] = &[
     field_promotion::BEHAVIOR,
     file_surge::BEHAVIOR,
     fleeting_dream::BEHAVIOR,
+    football::BEHAVIOR,
     frenzy::BEHAVIOR,
     geneva_convention::BEHAVIOR,
     ghost::BEHAVIOR,
@@ -263,7 +295,9 @@ const CARDS: &[CardBehavior] = &[
     grudge::BEHAVIOR,
     hallucination::BEHAVIOR,
     hedgehog::BEHAVIOR,
+    high_ground::BEHAVIOR,
     highlander::BEHAVIOR,
+    highway::BEHAVIOR,
     homecoming::BEHAVIOR,
     hook::BEHAVIOR,
     hope::BEHAVIOR,
@@ -289,7 +323,10 @@ const CARDS: &[CardBehavior] = &[
     man::BEHAVIOR,
     miracle::BEHAVIOR,
     missionary::BEHAVIOR,
+    mistake::BEHAVIOR,
     mongolian_gambit::BEHAVIOR,
+    monochrome_chess::BEHAVIOR,
+    monster::BEHAVIOR,
     moving::BEHAVIOR,
     nullification::BEHAVIOR,
     octopus::BEHAVIOR,
@@ -305,8 +342,10 @@ const CARDS: &[CardBehavior] = &[
     pawn_storm::BEHAVIOR,
     pegasus::BEHAVIOR,
     penta_check::BEHAVIOR,
+    periodic_collapse::BEHAVIOR,
     platform::BEHAVIOR,
     poisoned_pawn::BEHAVIOR,
+    portal::BEHAVIOR,
     portal_gun::BEHAVIOR,
     proficiency::BEHAVIOR,
     prophecy::BEHAVIOR,
@@ -320,9 +359,11 @@ const CARDS: &[CardBehavior] = &[
     religious_victory::BEHAVIOR,
     replay::BEHAVIOR,
     retreat::BEHAVIOR,
+    revelation::BEHAVIOR,
     reversal::BEHAVIOR,
     reverse_pawns::BEHAVIOR,
     rook_lift::BEHAVIOR,
+    rule_bombs::BEHAVIOR,
     saturation::BEHAVIOR,
     schrodinger_pawns::BEHAVIOR,
     seal::BEHAVIOR,
@@ -344,6 +385,7 @@ const CARDS: &[CardBehavior] = &[
     undead::BEHAVIOR,
     underpromotion::BEHAVIOR,
     white_box::BEHAVIOR,
+    winter_kingdom::BEHAVIOR,
 ];
 fn find(id: &str) -> Option<&'static CardBehavior> {
     CARDS

@@ -694,6 +694,298 @@
         ]
       ],
       "notes": "Royal-required active, six completed player turns; extra actions do not tick. Either king checked or any piece removal cancels both prophecies; final boundary check cancels before a timer win. Historical prophecy remains unchanged."
+    },
+    {
+      "id": "acceleration",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          193622,
+          193624
+        ],
+        [
+          204376,
+          204427
+        ]
+      ],
+      "notes": "Source delayed activation formula from completed Black turns; two actions per turn after activation; extra actions do not settle a turn boundary."
+    },
+    {
+      "id": "black-hole",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200805,
+          200817
+        ],
+        [
+          212556,
+          212560
+        ]
+      ],
+      "notes": "Central four holes remove initial occupants and arrivals, including forced placements through the common arrival hook."
+    },
+    {
+      "id": "chess-344200",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200057,
+          200083
+        ]
+      ],
+      "notes": "Shuffle within each army home two ranks; keep royal pieces on its back rank and preserve piece identities and moved flags."
+    },
+    {
+      "id": "chess-960",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200016,
+          200046
+        ],
+        [
+          191875,
+          191898
+        ]
+      ],
+      "notes": "All 960 source back ranks compared; symmetric armies preserve IDs. Source standard e-file/corner-rook castling checks are retained."
+    },
+    {
+      "id": "chess-n-pow-30",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          203503,
+          203592
+        ],
+        [
+          2454,
+          2467
+        ],
+        [
+          203460,
+          203502
+        ],
+        [
+          221607,
+          221756
+        ],
+        [
+          203838,
+          203973
+        ]
+      ],
+      "notes": "Source 65-type value pool, weighted equal-total army DP and seeded arrangement; 62-type Trickster pool; four completed-halfmove capture lock. Nine dependency piece kinds added; separate acquisition cards remain unsupported."
+    },
+    {
+      "id": "conveyor",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212608,
+          212797
+        ]
+      ],
+      "notes": "Clockwise simultaneous perimeter movement after completed Black turns; fixed-body/Slime blocking, walls/football, reservations and arrival settlement."
+    },
+    {
+      "id": "crown",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200999,
+          201023
+        ],
+        [
+          213022,
+          213087
+        ]
+      ],
+      "notes": "Central crown placement; immobile transformation preserves royal status; capture transfer/drop, color-reset counter and ten completed fullmoves to victory."
+    },
+    {
+      "id": "diagonal-chess",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200828,
+          200860
+        ]
+      ],
+      "notes": "Source fixed 30-piece layout (15 per army), with source coordinates rather than a reconstructed 32-piece arrangement."
+    },
+    {
+      "id": "football",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200939,
+          200948
+        ],
+        [
+          217609,
+          217638
+        ]
+      ],
+      "notes": "Neutral installation movement originates at ball square; behind-adjacent kicker, queen rays, corner escape, capture, shield and aggregate-HP contact."
+    },
+    {
+      "id": "high-ground",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          201058,
+          201076
+        ],
+        [
+          2012,
+          2018
+        ]
+      ],
+      "notes": "Fixed central 2x4 area and capture elevation checks; portal exit uses exit elevation. Existing aggregate large-body representation is retained."
+    },
+    {
+      "id": "highway",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          204335,
+          204346
+        ],
+        [
+          347635,
+          347639
+        ]
+      ],
+      "notes": "Additional vertical rook movement on b/g files, with ordinary movement/capture restrictions."
+    },
+    {
+      "id": "mistake",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          199964,
+          199976
+        ],
+        [
+          3308,
+          3317
+        ],
+        [
+          234062,
+          234125
+        ]
+      ],
+      "notes": "20-percent reversal with source immobile exclusions; direct/en-passant/checker/portal-first capture candidates, counter relocation and retained additional actions."
+    },
+    {
+      "id": "monochrome-chess",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          201111,
+          201139
+        ]
+      ],
+      "notes": "Persist original square shade per ID; Knight-to-Camel conversion; actual portal destination checked for shade preservation."
+    },
+    {
+      "id": "monster",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212903,
+          212944
+        ]
+      ],
+      "notes": "Neutral uncontrollable and normally uncapturable center spawn; adjacent movement every three completed halfmoves with protection, terrain and reserved-square exclusions."
+    },
+    {
+      "id": "periodic-collapse",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212393,
+          212432
+        ],
+        [
+          3990,
+          3994
+        ]
+      ],
+      "notes": "Next absolute multiple of twenty completed fullmoves; successive inner rings remove pieces, installations, pending spawns and quantum shadows."
+    },
+    {
+      "id": "portal",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200818,
+          200827
+        ],
+        [
+          193995,
+          194025
+        ]
+      ],
+      "notes": "Fixed c3/f6 pair; clicked entry resolves to exit, two captures, slider continuation, mandatory ray diversion and ally-blocked exit fallback. Large-body portal geometry remains outside this scoped port."
+    },
+    {
+      "id": "revelation",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          4839,
+          4852
+        ]
+      ],
+      "notes": "After sixty completed fullmoves compare source encyclopedia combat values, excluding neutral Monster; ties draw. No historical shortened deathmatch."
+    },
+    {
+      "id": "rule-bombs",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          201035,
+          201057
+        ],
+        [
+          212569,
+          212588
+        ]
+      ],
+      "notes": "Three distinct rank-4/5 cells excluding e-file; empty-first sampling, initial occupant ignore ID and rank/file blast on arrival or portal traversal."
+    },
+    {
+      "id": "winter-kingdom",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212956,
+          213021
+        ]
+      ],
+      "notes": "White-end preview, Black-end application every three fullmoves; up to three nonroyals per army; replace frozen set and permanently disable at army size four or less."
     }
   ]
 }

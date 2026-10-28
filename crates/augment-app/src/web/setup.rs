@@ -72,6 +72,15 @@ pub const PIECE_KINDS: &[PieceKind] = &[
     PieceKind::BigBishop,
     PieceKind::Archbishop,
     PieceKind::Chancellor,
+    PieceKind::Grappler,
+    PieceKind::RevolvingDoor,
+    PieceKind::DonQuixote,
+    PieceKind::Medium,
+    PieceKind::BerolinaPawn,
+    PieceKind::Killer,
+    PieceKind::Beacon,
+    PieceKind::TransmissionTower,
+    PieceKind::Barrier,
 ];
 
 pub fn piece_catalog() -> Value {

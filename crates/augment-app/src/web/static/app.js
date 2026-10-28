@@ -302,6 +302,16 @@ function renderBoard() {
       square.setAttribute("aria-label", squareAriaLabel(cell));
       if (cell?.piece) square.classList.add("has-piece");
       if (cell?.platform) square.classList.add("platform-cell");
+      for (const [kind, active] of Object.entries(cell?.terrain || {})) {
+        if (active) square.classList.add(`terrain-${kind}`);
+      }
+      const terrainLabels = Object.entries(cell?.terrain || {}).filter(([, active]) => active)
+        .map(([kind]) => ({blackHole:"블랙홀",highGround:"고지대",highway:"고속도로",bomb:"룰 폭탄",portal:"포탈",crown:"왕관",collapsed:"붕괴"})[kind]).filter(Boolean);
+      if (terrainLabels.length) {
+        const terrain = document.createElement("span"); terrain.className = "terrain-label";
+        terrain.textContent = terrainLabels.join(" · "); square.append(terrain);
+      }
+
       if (selectedSquare === squareName) square.classList.add("selected");
       if (legalDestinations.has(squareName)) square.classList.add("legal");
       if (targetSquares.has(squareName)) square.classList.add("target");

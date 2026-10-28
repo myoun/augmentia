@@ -1,8 +1,9 @@
 # 카드 구현 위치와 추가 방법
 
-최신 실행 프로필의 지원 카드 128장은 `crates/augment-core/src/engine/cards/`에 둔다.
+최신 실행 프로필의 지원 카드 147장은 `crates/augment-core/src/engine/cards/`에 둔다.
 파일명은 공식 ID의 `-`를 `_`로 바꾼 것이다. 예를 들어 `pawn-chain`은 `pawn_chain.rs`다.
 카탈로그·지원 목록·원본 계약은 계속 `rulesets/augment_chess_20261017/cards/`에서 관리한다.
+현재 미지원 128장의 최신 효과·변경 항목·이식 확인사항은 [남은 카드 목록](remaining-card-ports.md)을 참고한다.
 
 ## 파일의 책임
 
@@ -18,6 +19,7 @@
 | `engine/cards/shared.rs` | 공통 배치 가능 칸, 착지 처리, 실제 왕실 공격 검사와 이동 제약의 조합 |
 | `engine/cards/eligibility_support.rs` | 획득 조건의 공통 판정 도구 |
 | `engine/cards/runtime.rs` | 카드 상태의 집계 저장소 |
+| `engine/cards/rule_support.rs`, `chaos_pieces.rs` | 최신 RULE 예약·정산 순서와 카오스 기물 의존성 |
 | `engine/cards/tests/` | 여러 카드의 상호작용, 원본 fixture 대조와 공용 테스트 보드 |
 | `engine/compat/` | 과거 룰셋의 카드 분기와 설치 처리 |
 | `card_eligibility/compat.rs` | 과거 룰셋의 획득 조건 |
@@ -62,7 +64,7 @@
 
 ## 구조 변경의 회귀 기준
 
-`tests/card_contracts.rs`는 공개 Engine API로 128장 각각을 두 보드·두 색상에서 실행한다.
+`tests/card_contracts.rs`는 리팩터링 당시 128장 각각을 공개 Engine API로 두 보드·두 색상에서 실행한다.
 획득 조건, 획득 결과, 전체 합법 행동 목록, 이벤트, 상태 fingerprint와 대표 이동·카드 사용 전이를
 정리 전 커밋 `c63c68a`에서 수집한 `tests/fixtures/card-contracts.json`과 비교한다.
 일반 테스트 실행은 이 기준 파일을 수정하지 않는다. 의도적인 규칙 변경 때만 원본 계약에 근거해 갱신한다.
