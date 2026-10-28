@@ -35,8 +35,12 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     println!("증강체스 웹 UI");
     println!("주소: {url}");
+    let catalog = augment_core::latest_catalog();
     println!(
-        "규칙 스냅숏: augment_chess_20260915 | seed: {}",
+        "규칙 스냅숏: {} (카드 {}/{}장 지원) | seed: {}",
+        augment_core::LATEST_RULESET_ID,
+        catalog.iter().filter(|card| card.supported()).count(),
+        catalog.len(),
         options.seed
     );
     println!("종료하려면 Ctrl+C를 누르세요.");
@@ -174,9 +178,9 @@ fn handle_connection(
             stream,
             200,
             &json!(
-                augment_core::IMPLEMENTED_CARDS
+                augment_core::latest_catalog()
                     .iter()
-                    .map(|card| view::card_meta(card.id))
+                    .map(|card| view::card_meta(&card.id))
                     .collect::<Vec<_>>()
             ),
         ),

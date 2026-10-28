@@ -448,7 +448,13 @@ impl Engine {
             }
             JOKER => {
                 for card in &mut state.cards {
-                    if card.owner == actor && card.charges == 0 {
+                    if card.owner == actor
+                        && card.charges == 0
+                        && (self.ruleset.id != crate::LATEST_RULESET_ID
+                            || self
+                                .card_definition(&card.definition_id)
+                                .is_some_and(|d| d.activation == CardActivation::Active))
+                    {
                         card.charges = 1;
                         break;
                     }
@@ -863,6 +869,9 @@ impl Engine {
     ) {
         state.card_runtime.zugzwang[actor.index()] = false;
         state.card_runtime.reversal[actor.index()] = false;
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            state.card_runtime.horse_riding[actor.index()] = false;
+        }
 
         let mut remaining_bribes = Vec::new();
         for bribe in std::mem::take(&mut state.card_runtime.bribe_reverts) {

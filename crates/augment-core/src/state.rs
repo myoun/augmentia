@@ -108,9 +108,20 @@ pub enum WinReason {
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum DrawReason {
+    ThreefoldRepetition,
+    FiftyMoveRule,
     EqualStarsOnRepetition,
     EqualStarsAfterDeathmatch,
     CardEffect(String),
+}
+
+/// October's counter advances on completed turns, including turns containing
+/// several actions. The observation snapshot is replay state, not position identity.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AutomaticDrawState {
+    pub quiet_turns: u32,
+    pub progress_this_turn: bool,
+    pieces: Vec<(Square, Piece)>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -378,7 +389,17 @@ pub struct CaptureTheFlagState {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct OctoberRuntimeState {
+    pub assembly: [bool; 2],
+    pub hope: [bool; 2],
+    pub iqp_pending: [bool; 2],
+    /// Number of retained moves already granted in this rook-lift chain (max 3).
+    pub rook_lift_chain: Option<(u32, u8)>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
+    pub october: OctoberRuntimeState,
     pub capture_the_flag: Option<CaptureTheFlagState>,
     pub majesty: [bool; 2],
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
@@ -706,6 +727,7 @@ pub struct GameState {
     pub turns_taken: [u32; 2],
     pub completed_drafts: [bool; 3],
     pub deathmatch: Option<DeathmatchState>,
+    pub automatic_draw: Option<AutomaticDrawState>,
     pub en_passant: Option<EnPassantState>,
     pub applied_rules: Vec<String>,
     pub card_runtime: CardRuntimeState,
@@ -746,6 +768,7 @@ impl GameState {
             turns_taken: [0, 0],
             completed_drafts: [false; 3],
             deathmatch: None,
+            automatic_draw: None,
             en_passant: None,
             applied_rules: Vec::new(),
             card_runtime: CardRuntimeState::default(),
@@ -761,6 +784,12 @@ impl GameState {
             .iter()
             .map(|(square, piece)| (piece.id, square))
             .collect();
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            state.automatic_draw = Some(AutomaticDrawState {
+                pieces: state.board.iter().collect(),
+                ..Default::default()
+            });
+        }
         state.record_current_position();
         state
     }
@@ -832,14 +861,75 @@ impl GameState {
             return false;
         }
         self.reset_repetition_history();
+        self.reset_automatic_draw_for_setup();
         self.record_current_position();
         true
+    }
+
+    pub(crate) fn reset_automatic_draw_for_setup(&mut self) {
+        if let Some(draw) = &mut self.automatic_draw {
+            *draw = AutomaticDrawState {
+                pieces: self.board.iter().collect(),
+                ..Default::default()
+            };
+        }
     }
 
     pub(crate) fn mark_deathmatch_progress(&mut self) {
         if let Some(deathmatch) = &mut self.deathmatch {
             deathmatch.quiet_full_turns = 0;
             deathmatch.progress_this_round = true;
+        }
+    }
+
+    pub(crate) fn observe_automatic_draw_progress(
+        &mut self,
+        actor: Player,
+        events: &[crate::Event],
+    ) {
+        let Some(draw) = &mut self.automatic_draw else {
+            return;
+        };
+        let current: Vec<_> = self.board.iter().collect();
+        let progress = draw.pieces.iter().any(|(square, piece)| {
+            match current.iter().find(|(_, now)| now.id == piece.id) {
+                None => piece.owner != actor,
+                Some((now, _)) => piece.kind == PieceKind::Pawn && now != square,
+            }
+        }) || events.iter().any(|event| match event {
+            crate::Event::PieceCaptured { piece, .. } => piece.owner != actor,
+            crate::Event::PieceRemoved { piece, cause, .. } => {
+                piece.owner != actor
+                    && !["sacrifice", "reversal", "horse-riding"]
+                        .iter()
+                        .any(|excluded| cause.contains(excluded))
+            }
+            crate::Event::ActionApplied {
+                action: crate::Action::Move(movement),
+                ..
+            } => {
+                movement.from != movement.to
+                    && draw.pieces.iter().any(|(square, piece)| {
+                        *square == movement.from && piece.kind == PieceKind::Pawn
+                    })
+            }
+            _ => false,
+        });
+        if progress {
+            draw.quiet_turns = 0;
+            draw.progress_this_turn = true;
+        }
+        draw.pieces = current;
+    }
+
+    pub(crate) fn complete_automatic_draw_turn(&mut self) {
+        if let Some(draw) = &mut self.automatic_draw {
+            draw.quiet_turns = if draw.progress_this_turn {
+                0
+            } else {
+                draw.quiet_turns.saturating_add(1)
+            };
+            draw.progress_this_turn = false;
         }
     }
 
@@ -874,6 +964,10 @@ impl GameState {
 
     pub fn position_key(&self) -> u64 {
         let mut hash = StableHasher::new();
+        if self.card_runtime.october != OctoberRuntimeState::default() {
+            hash.bytes(b"october-runtime-v1");
+            hash.bytes(format!("{:?}", self.card_runtime.october).as_bytes());
+        }
         hash.bytes(self.ruleset_id.as_bytes());
         hash.bytes(self.mode.id().as_bytes());
         hash.u8(self.turn.index() as u8);
@@ -1568,6 +1662,17 @@ impl GameState {
         hash.u64(self.position_key());
         hash.u32(self.ply);
         hash.u32(self.quiet_ply);
+        if let Some(draw) = &self.automatic_draw {
+            hash.u8(1);
+            hash.u32(draw.quiet_turns);
+            hash.u8(u8::from(draw.progress_this_turn));
+            for (square, piece) in &draw.pieces {
+                hash.u8(square.index() as u8);
+                hash.u32(piece.id);
+                hash.u8(piece.owner.index() as u8);
+                hash.u8(piece.kind.stable_code());
+            }
+        }
         hash.u64(self.rng.state());
         hash.u32(self.turns_taken[0]);
         hash.u32(self.turns_taken[1]);

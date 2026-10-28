@@ -15,6 +15,12 @@ cargo run -p augment-app --bin play
 웹은 [로컬 분석기](http://127.0.0.1:7878)에서 열립니다. `--no-open`을 생략하면 브라우저가
 자동으로 열립니다. `--seed 1234`, `--port 9000`도 지원합니다. 모든 실행은 모델·Python·GPU 없이 동작합니다.
 
+기본 룰셋은 `augment_chess_20261017`입니다. 10-28에 수집한 최신 원본과 기본 무승부·드래프트
+변경을 반영했습니다. 현재 Standard에서 카드/RULE **118/275개**를 지원하며,
+88개 기존 handler와 원본 계약을 확인해 추가한 30개로 구성합니다. 나머지 157개는 실행을 차단합니다. 전체 최신 카드 동작의 이식은
+진행 중입니다. [지원 범위와 남은 작업](rulesets/augment_chess_20261017/README.md)을 확인하세요.
+`tactics`와 원본 포 helper 진단은 기존 0915 fixture를 계속 사용합니다.
+
 ## 남긴 코드
 
 | 경로 | 역할 |
@@ -75,4 +81,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify-search.ps1 -S
 원본 helper 3개 사례의 일치는 전체 사이트 parity나 기력 증거가 아닙니다.
 
 규칙 수집은 `cargo run -p augment-app --bin snapshot -- extract ...` 또는 `diff ...`를 사용합니다.
+10월 canonical 카탈로그는 UI용 정의와 달라 별도 고정 원본 추출기
+`scripts/extract-upstream-catalog.mjs`를 사용합니다. 검증 gate에서 재추출 결과와 보관본을 대조합니다.
 규칙 스냅숏의 불변성·revision 정책은 [버전 정책](docs/versioning.md)을 따릅니다.

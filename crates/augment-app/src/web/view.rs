@@ -1,6 +1,6 @@
 use augment_core::{
     Action, ActionTarget, CardActivation, Event, GamePhase, GameState, GameStatus, MoveAction,
-    Piece, PieceAbility, PieceKind, Player, Square, implemented_card,
+    Piece, PieceAbility, PieceKind, Player, Square,
 };
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -11,6 +11,8 @@ pub(crate) fn state_view(
     history: &[String],
     actions: &[Action],
 ) -> Value {
+    let catalog = augment_core::latest_catalog();
+    let supported = catalog.iter().filter(|card| card.supported()).count();
     let action_views = actions
         .iter()
         .enumerate()
@@ -28,6 +30,8 @@ pub(crate) fn state_view(
 
     json!({
         "ruleset": state.ruleset_id,
+        "coverage": { "supported": supported, "catalog": catalog.len(), "label": format!("카드 {supported}/{}장 지원 · Standard", catalog.len()) },
+        "automaticDraw": state.automatic_draw.as_ref().map(|draw| json!({ "quietTurns": draw.quiet_turns, "progressThisTurn": draw.progress_this_turn })),
         "seed": seed,
         "fingerprint": format!("{:016x}", state.fingerprint()),
         "turn": player_key(state.turn),
@@ -161,6 +165,17 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     if let Some(status) = state.card_runtime.frozen.get(&piece.id) {
         statuses.push(format!("빙결 {}턴", status.remaining_turns));
     }
+    if let Some(remaining) = state.card_runtime.poison_stun_turns.get(&piece.id) {
+        statuses.push(format!("독 마비 {remaining}턴"));
+    }
+    if state.card_runtime.horse_riding[piece.owner.index()]
+        && (matches!(
+            piece.kind,
+            PieceKind::King | PieceKind::RoyalKnight | PieceKind::Merchant | PieceKind::DarkWizard
+        ) || state.card_runtime.royal_piece_ids.contains(&piece.id))
+    {
+        statuses.push("승마 · 이번 턴".to_owned());
+    }
     if let Some(turn) = state.card_runtime.disarmed.get(&piece.id) {
         statuses.push(format!("무장해제 ~{turn}턴"));
     }
@@ -288,7 +303,7 @@ fn cards_view(
         .iter()
         .filter(|card| card.owner == owner)
         .map(|card| {
-            let definition = implemented_card(&card.definition_id);
+            let definition = augment_core::ruleset_card(&state.ruleset_id, &card.definition_id);
             let indices = action_indices
                 .get(&card.instance_id)
                 .cloned()
@@ -300,7 +315,6 @@ fn cards_view(
                 "instanceId": card.instance_id,
                 "id": card.definition_id,
                 "description": card_description(&card.definition_id),
-                "help": reference_help()["cards"][&card.definition_id].as_str().unwrap_or(""),
                 "name": definition.map_or(card.definition_id.as_str(), |definition| definition.name_ko),
                 "stars": format_half_stars(card.half_stars),
                 "charges": card.charges,
@@ -412,32 +426,26 @@ pub(crate) fn piece_description(kind: &str) -> &'static str {
 }
 
 pub(crate) fn card_description(id: &str) -> &'static str {
-    static CATALOG: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
-    let catalog = CATALOG.get_or_init(|| {
-        serde_json::from_str(include_str!(
-            "../../../../rulesets/augment_chess_20260915/cards/catalog.json"
-        ))
-        .expect("bundled card catalog")
-    });
-    catalog["cards"]
-        .as_array()
-        .and_then(|cards| cards.iter().find(|card| card["id"].as_str() == Some(id)))
-        .and_then(|card| card["text_ko"].as_str())
-        .unwrap_or("설명 없음")
+    augment_core::latest_catalog()
+        .iter()
+        .find(|card| card.id == id)
+        .map_or("설명 없음", |card| card.text_ko.as_str())
 }
 
 pub(crate) fn card_meta(id: &str) -> Value {
-    implemented_card(id).map_or_else(
+    augment_core::latest_catalog().iter().find(|card| card.id == id).map_or_else(
         || json!({ "id": id, "name": id, "stars": "?", "activation": "unknown" }),
         |definition| {
             json!({
                 "id": definition.id,
                 "name": definition.name_ko,
-                "description": card_description(definition.id),
-                "help": reference_help()["cards"][definition.id].as_str().unwrap_or(""),
+                "description": definition.text_ko,
                 "stars": format_half_stars(definition.half_stars),
-                "activation": activation_key(definition.activation),
-                "phase": format!("{:?}", definition.phase).to_ascii_lowercase(),
+                "activation": if definition.phase == "RULE" { "rule".into() } else { definition.activation.to_ascii_lowercase() },
+                "phase": definition.phase.to_ascii_lowercase(),
+                "rarity": definition.rarity,
+                "enabled": definition.enabled,
+                "supported": definition.supported(),
             })
         },
     )
@@ -625,7 +633,10 @@ fn target_label(target: &ActionTarget) -> String {
 }
 
 fn card_name(id: &str) -> &str {
-    implemented_card(id).map_or(id, |definition| definition.name_ko)
+    augment_core::latest_catalog()
+        .iter()
+        .find(|card| card.id == id)
+        .map_or(id, |card| &card.name_ko)
 }
 
 fn activation_key(activation: CardActivation) -> &'static str {
@@ -852,7 +863,7 @@ mod tests {
     }
 
     #[test]
-    fn opening_auto_card_is_shown_as_pending_and_not_clickable() {
+    fn latest_opening_cards_are_passive_without_legacy_auto_use() {
         let (mut session, offer_index) = (0..1_000)
             .find_map(|seed| {
                 let session = GameSession::new(seed).ok()?;
@@ -860,24 +871,17 @@ mod tests {
                     return None;
                 };
                 let index = draft.offers.iter().position(|id| {
-                    implemented_card(id).is_some_and(|card| {
-                        card.phase == augment_core::CardPhase::Opening
-                            && card.activation == CardActivation::Active
-                    })
+                    augment_core::ruleset_card(augment_core::LATEST_RULESET_ID, id)
+                        .is_some_and(|card| card.phase == augment_core::CardPhase::Opening)
                 })?;
                 Some((session, index))
             })
-            .expect("a bounded seed search must find an active OPENING offer");
-        session.apply_index(offer_index, None).unwrap();
-        let view = session.apply_index(0, None).unwrap();
-        let card = view["cards"]["white"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|card| card["openingAutoPending"] == true)
-            .unwrap();
-        assert_eq!(card["openingAutoPending"], true);
-        assert_eq!(card["available"], false);
+            .expect("an eligible passive OPENING offer");
+        let view = session.apply_index(offer_index, None).unwrap();
+        assert_eq!(view["ruleset"], augment_core::LATEST_RULESET_ID);
+        let card = &view["cards"]["white"][0];
+        assert_eq!(card["activation"], "passive");
+        assert_eq!(card["openingAutoPending"], false);
         assert!(card["actionIndices"].as_array().unwrap().is_empty());
     }
 }

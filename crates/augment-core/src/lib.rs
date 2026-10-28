@@ -10,6 +10,7 @@ mod cards;
 mod effect;
 mod engine;
 mod event;
+mod latest;
 mod model;
 mod notation;
 mod rng;
@@ -62,6 +63,7 @@ pub use effect::{
 };
 pub use engine::{Engine, EngineError, LegalActionBatch, SearchChanceContext, SearchTransition};
 pub use event::{Event, Transition};
+pub use latest::{ASSEMBLY, HOPE, IQP, LatestCard, MAN, latest_catalog, ruleset_card};
 pub use model::{Board, Piece, PieceKind, Player, Square, SquareParseError};
 pub use notation::{
     NotationCatalog, NotationEntry, NotationError, NotationParsing, NotationSource,
@@ -72,9 +74,9 @@ pub use ruleset::{
     RulesetManifest, SourceLinks,
 };
 pub use state::{
-    BribeRevert, CardInstance, CardRuntimeState, ChoiceContinuation, DeathmatchState,
-    DelayedHazard, DelayedHazardKind, DiceLockStatus, DraftPhase, DraftState, DrawReason,
-    EmptyLunchboxStatus, EnPassantState, FIELD_PROMOTION_CHOICE_PREFIX, FeudalContract,
+    AutomaticDrawState, BribeRevert, CardInstance, CardRuntimeState, ChoiceContinuation,
+    DeathmatchState, DelayedHazard, DelayedHazardKind, DiceLockStatus, DraftPhase, DraftState,
+    DrawReason, EmptyLunchboxStatus, EnPassantState, FIELD_PROMOTION_CHOICE_PREFIX, FeudalContract,
     ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GamePhase, GameState, GameStatus,
     InitiativeStatus, JudgmentExile, LargePieceStatus, LogStatus, MIDDLE_EXTRA_MOVE_SOURCE, Mode,
     MoveReplayState, NecromancyRevert, ParrotMemoryStatus, PendingChoice, PendingIcbm,
@@ -87,5 +89,7 @@ pub use state::{CaptureTheFlagState, FlagOccupation};
 
 /// Ruleset bundled into this build and used by the first engine milestone.
 pub const BUNDLED_RULESET_ID: &str = "augment_chess_20260818";
+/// Latest captured rules, with an explicitly limited executable card profile.
+pub const LATEST_RULESET_ID: &str = "augment_chess_20261017";
 pub const SUPPORTED_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_ENGINE_API_VERSION: u32 = 1;

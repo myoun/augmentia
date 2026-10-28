@@ -1,0 +1,61 @@
+{
+  "ruleset_id": "augment_chess_20261017",
+  "upstream_release_id": "2026-10-17",
+  "upstream_display_timestamp": "2026.10.17 08:40",
+  "captured_on": "2026-10-28",
+  "capture_timezone": "Asia/Seoul",
+  "historical_release_bytes_verified": false,
+  "source_catalog_hash": "i6t9UEbZXEOqgN8Tlj1dVKw_NccyKIvHZsGfInK5T_E",
+  "source_schema_version": 18,
+  "canonical_catalog_entries": 275,
+  "active_cards": 271,
+  "disabled_card_ids": [
+    "democracy",
+    "qxe1",
+    "summon-colossus",
+    "underground-bunker"
+  ],
+  "files": [
+    {
+      "path": "sources/raw/index.html",
+      "url": "https://augmentchess.org/",
+      "byte_length": 53558,
+      "sha256": "e85fbfad7b540cc4a6da33d9c52e16854de6072b2d64d30689b58f3ac1957813"
+    },
+    {
+      "path": "sources/raw/updates.html",
+      "url": "https://augmentchess.org/updates/",
+      "byte_length": 61463,
+      "sha256": "e5fdd6c8c6d140e77ffceef5874701f02d0f75e49cb57c42c95a14cf0cdfbfd2"
+    },
+    {
+      "path": "sources/raw/rules.html",
+      "url": "https://augmentchess.org/rules/",
+      "byte_length": 8294,
+      "sha256": "404d88b15372b668b818ce5d9464aad9fcc6d2fcae9cb3e3654adb109b4c76b5"
+    },
+    {
+      "path": "sources/raw/main-RjrZ5fFP.js",
+      "url": "https://augmentchess.org/assets/main-RjrZ5fFP.js",
+      "byte_length": 23705076,
+      "sha256": "2e932da7b9391effbeab3593ea5fdf855041fe5a74f611dfdfde678eee46beb8"
+    },
+    {
+      "path": "sources/raw/release-info.json",
+      "url": "https://augmentchess.org/release-info.json",
+      "byte_length": 61,
+      "sha256": "728a13d1f08810097f1d21ec1c99eec1f7019f92774f4ba61244935951f68ca3"
+    },
+    {
+      "path": "sources/raw/releaseTimestamp-CstP8IE_.js",
+      "url": "https://augmentchess.org/assets/releaseTimestamp-CstP8IE_.js",
+      "byte_length": 1604,
+      "sha256": "60028bb830be12a9b6d40548c7ea1353a84aebfe57ec0b924affe4c4e1cad618"
+    }
+  ],
+  "notes": [
+    "Current bytes observed on capture date; not an archived copy from publication time.",
+    "Canonical v19 catalog is authoritative for this snapshot; UI CARD_DEFS alone is insufficient.",
+    "Engine uses a conservative supported subset; metadata extraction does not establish behavior parity."
+  ]
+}

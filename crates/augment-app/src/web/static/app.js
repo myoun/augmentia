@@ -570,10 +570,12 @@ function renderStatus() {
   }
   elements.statusBadge.textContent = game.status.label;
   elements.statusBadge.className = `status-badge ${game.status.kind === "ongoing" ? "" : "finished"}`;
-  elements.rulesetValue.textContent = game.ruleset;
+  elements.rulesetValue.textContent = `${game.ruleset} · ${game.coverage?.label ?? ""}`;
   elements.fingerprintValue.textContent = game.fingerprint;
   elements.fingerprintValue.title = game.fingerprint;
-  elements.deathmatchValue.textContent = game.deathmatch
+  elements.deathmatchValue.textContent = game.automaticDraw
+    ? `${game.automaticDraw.quietTurns} / 100턴${game.automaticDraw.progressThisTurn ? " · 진행 있음" : ""}`
+    : game.deathmatch
     ? `${game.deathmatch.quietFullTurns} / ${game.deathmatch.interval}`
     : "대기";
   elements.platformValue.textContent = game.platform || "없음";

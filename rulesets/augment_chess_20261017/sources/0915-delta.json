@@ -1,0 +1,7311 @@
+{
+  "from": "augment_chess_20260915",
+  "to": "augment_chess_20261017",
+  "added": [
+    {
+      "id": "archbishop",
+      "name_ko": "아치비숍",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "effect": "archbishop",
+      "text_ko": "아군 나이트와 비숍을 하나씩 선택합니다. 이후 나이트를 희생하고 비숍을 아치비숍으로 변경합니다.",
+      "art": "archbishop",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "ascension",
+      "name_ko": "강림",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "ascension",
+      "text_ko": "아군 퀸 하나와 착지할 빈칸을 선택합니다. 퀸을 하늘로 올려보내고, 3수 뒤 지정한 칸에 착지시킵니다.",
+      "art": "ascension",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_QUEEN",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "assembly",
+      "name_ko": "조립",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "assembly",
+      "text_ko": "아군 룩이 상대방 비숍을 잡거나, 아군 비숍이 상대 룩을 잡을 경우 퀸으로 변경됩니다.",
+      "art": "assembly",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "barrier",
+      "name_ko": "배리어",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "barrier",
+      "text_ko": "아군 룩 하나를 선택해 배리어로 변경합니다.",
+      "art": "barrier",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_ROOK",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "beacon",
+      "name_ko": "신호기",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "effect": "beacon",
+      "text_ko": "아군 룩 하나를 선택해 신호기로 변경합니다.",
+      "art": "beacon",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "OWN_ROOK",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "bishop-infiltration",
+      "name_ko": "길리 슈트",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "effect": "bishopInfiltration",
+      "text_ko": "사용시 3수동안 비숍이 기물을 뛰어넘어 이동할 수 있지만, 뛰어넘으며 동시에 기물을 잡을 순 없습니다.",
+      "art": "bishop-infiltration",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "blockade",
+      "name_ko": "봉쇄",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "blockade",
+      "text_ko": "아군 킹 주변 8칸 중 모든 빈칸에 3수 동안 유지되는 엄폐물을 소환합니다.",
+      "art": "blockade",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "brainwash",
+      "name_ko": "마인드 컨트롤",
+      "phase": "END",
+      "half_stars": 8,
+      "effect": "brainwash",
+      "text_ko": "아군 기물 하나를 희생합니다. 그 기물보다 기물 점수가 낮은 상대 기물 하나를 선택해 아군으로 변경합니다.",
+      "art": "brainwash",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "END_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "chancellor",
+      "name_ko": "챈슬러",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "effect": "chancellor",
+      "text_ko": "아군 나이트와 룩을 하나씩 선택합니다. 이후 나이트를 희생하고 룩을 챈슬러로 변경합니다.",
+      "art": "chancellor",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "counterattack",
+      "name_ko": "반격",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "counterattack",
+      "text_ko": "아군 폰 하나를 선택해 반격을 부여합니다.",
+      "art": "counterattack",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_PAWN",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "d4",
+      "name_ko": "d4",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "effect": "d4",
+      "text_ko": "상대 기물과 아군 킹은 d4에 도착하거나 배치될 수 없습니다. 흑일 경우 d5.",
+      "art": "d4",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "don-quixote",
+      "name_ko": "돈 키호테",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "effect": "donQuixote",
+      "text_ko": "룩 하나를 돈키호테로 변경합니다.",
+      "art": "don-quixote",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "OWN_ROOK",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "e4",
+      "name_ko": "e4",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "effect": "e4",
+      "text_ko": "이번 턴 동안 아군 기물이 턴을 소모하여 e4로 이동할 수 있습니다. 흑일 경우 e5.",
+      "art": "e4",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "file-conveyor",
+      "name_ko": "컨베이어",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "effect": "fileConveyor",
+      "text_ko": "원하는 파일 하나에 상대 진영 방향으로 진행되는 컨베이어를 설치합니다. 컨베이어는 다음 내 턴 종료시부터 작동합니다.",
+      "art": "file-conveyor",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "grappler",
+      "name_ko": "그래플러",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "grappler",
+      "text_ko": "아군 퀸 하나와 마이너 피스 하나를 선택합니다. 마이너 피스를 희생하고 퀸을 그래플러로 변경합니다.",
+      "art": "grappler",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "greek-gift",
+      "name_ko": "그릭 기프트",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "greekGift",
+      "text_ko": "아군 비숍 하나를 선택해 희생합니다. 이번 턴 종료시 상대 킹 주변 8칸에 있는 상대 폰을 모두 제거합니다.",
+      "art": "greek-gift",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "grudge",
+      "name_ko": "원한",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "effect": "grudge",
+      "text_ko": "무작위 아군 비폰 기물 하나에게 원한을 부여합니다.",
+      "art": "grudge",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "hope",
+      "name_ko": "희망",
+      "phase": "END",
+      "half_stars": 8,
+      "effect": "hope",
+      "text_ko": "내 턴 시작 시 보드 위에 남은 아군 기물이 킹을 포함해 2개 이하라면, 승리합니다.",
+      "art": "hope",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "ice-king",
+      "name_ko": "블리자드",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "effect": "iceKing",
+      "text_ko": "사용 시 아군과 상대방 킹을 모두 3수 동안 얼립니다. 얼어붙은 기물은 움직이거나 공격받지 않습니다.",
+      "art": "ice-king",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "iqp",
+      "name_ko": "IQP",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "effect": "iqp",
+      "text_ko": "상대 e폰과 c폰을 제거합니다.",
+      "art": "iqp",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "killer",
+      "name_ko": "킬러",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "killer",
+      "text_ko": "아군 비숍 하나를 선택해 킬러로 변경합니다.",
+      "art": "killer",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_BISHOP",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "man",
+      "name_ko": "만",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "effect": "manConversion",
+      "text_ko": "아군 또는 상대방의 마이너 피스 하나를 선택해 즉시 만으로 변경합니다.",
+      "art": "man",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "medium",
+      "name_ko": "무덤",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "medium",
+      "text_ko": "아군 마이너 피스 하나를 선택해 무덤으로 변경합니다.",
+      "art": "medium",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "pawn-chain",
+      "name_ko": "폰 체인",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "effect": "pawnChain",
+      "text_ko": "획득 시 모든 상대방 폰을 사슬로 묶습니다.",
+      "art": "pawn-chain",
+      "enabled": true,
+      "rarity": "legendary",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 44,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "penta-check",
+      "name_ko": "펜타 체크",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "effect": "pentaCheck",
+      "text_ko": "내 턴 시작 시, 상대 킹을 총 다섯 번 이상 체크했다면 승리합니다.",
+      "art": "penta-check",
+      "enabled": true,
+      "rarity": "legendary",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 44,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "revolving-door",
+      "name_ko": "회전문",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "revolvingDoor",
+      "text_ko": "아군 룩 하나를 회전문으로 변경합니다. 룩처럼 이동하고 잡거나 잡힐 수 있으며, 턴 종료 시 주변 8칸의 기물을 시계방향으로 한 칸 회전시킵니다.",
+      "art": "revolving-door",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_ROOK",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "rocket",
+      "name_ko": "로켓",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "effect": "rocket",
+      "text_ko": "아군 룩이 각각 첫 이동에 한해 아마존처럼 행마할 수 있습니다.",
+      "art": "rocket",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "roller",
+      "name_ko": "롤러",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "effect": "roller",
+      "text_ko": "이번 턴에 룩을 움직인다면, 해당 이동경로에 고속도로를 설치합니다.",
+      "art": "roller",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "seal",
+      "name_ko": "봉인",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "effect": "seal",
+      "text_ko": "킹을 제외한 상대 기물 하나를 선택합니다. 다음 내 턴 시작시 해당 기물에게 속박을 부여합니다.",
+      "art": "seal",
+      "enabled": true,
+      "rarity": "epic",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 58,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "solidarity",
+      "name_ko": "연대",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "solidarity",
+      "text_ko": "이번 턴 동안 아군 마이너피스가 턴을 소모해 서로 위치를 변경할 수 있습니다.",
+      "art": "solidarity",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "synchronization",
+      "name_ko": "동기화",
+      "phase": "END",
+      "half_stars": 7,
+      "effect": "synchronization",
+      "text_ko": "아군 기물이 모두 같은 색 칸에 있다면, 상대 기물은 반대 색 칸에 도착할 수 없습니다.",
+      "art": "synchronization",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "taboo",
+      "name_ko": "뒤틀린 소환",
+      "phase": "END",
+      "half_stars": 5,
+      "effect": "taboo",
+      "text_ko": "아군 퀸 하나와 원하는 빈 칸을 지정합니다. 턴 종료시 해당 퀸을 희생하고, 지정된 칸과 퀸이 희생된 칸에 괴물을 소환합니다.",
+      "art": "taboo",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 2,
+        "maxSquares": 2,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "transmission-tower",
+      "name_ko": "전송탑",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "effect": "transmissionTower",
+      "text_ko": "아군 룩 하나를 선택해 전송탑으로 변경합니다.",
+      "art": "transmission-tower",
+      "enabled": true,
+      "rarity": "rare",
+      "activation": "ACTIVE",
+      "play_timing": "OWN_TURN",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 70,
+      "draw_requirement": "OWN_ROOK",
+      "selection": {
+        "kind": "squares",
+        "minSquares": 1,
+        "maxSquares": 1,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "vigilance",
+      "name_ko": "경계",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "effect": "vigilance",
+      "text_ko": "아군 기물이 잡힐 경우 킹이 다음 상대 턴 종료까지 보호를 얻습니다.",
+      "art": "vigilance",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "PRESERVE_TURN",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    },
+    {
+      "id": "wanted",
+      "name_ko": "수배",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "effect": "wanted",
+      "text_ko": "무작위 상대방 원거리기물에게 잠복과 수배를 부여합니다.",
+      "art": "wanted",
+      "enabled": true,
+      "rarity": "common",
+      "activation": "PASSIVE",
+      "play_timing": "ON_ACQUIRE",
+      "turn_policy": "NOT_APPLICABLE",
+      "draft_weight_units": 85,
+      "draw_requirement": "ANY",
+      "selection": {
+        "kind": "none",
+        "minSquares": 0,
+        "maxSquares": 0,
+        "choiceRequired": false
+      }
+    }
+  ],
+  "changed": [
+    {
+      "id": "acceleration",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "acceleration",
+        "name_ko": "가속",
+        "phase": "RULE",
+        "half_stars": 2,
+        "effect": "acceleration",
+        "text_ko": "세번째 흑 차례부터 모든 플레이어가 한 턴에 2번 행동합니다.",
+        "art": "time"
+      },
+      "after": {
+        "id": "acceleration",
+        "name_ko": "가속",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "acceleration",
+        "text_ko": "사용한 플레이어의 다음 차례부터 모든 플레이어가 한 턴에 2번 행동합니다.",
+        "art": "acceleration",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "alekhine-machine-gun",
+        "name_ko": "알레킨의 머신건",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "alekhineMachineGun",
+        "text_ko": "아군 기물이 알레킨의 총을 이루는 상태에서 사용한다면 세 기물이 모두 가호를 받습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "alekhine-machine-gun",
+        "name_ko": "알레킨의 머신건",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "alekhineMachineGun",
+        "text_ko": "알레킨의 총을 이룬 퀸과 룩 두 개 모두 영구 보호를 받습니다.",
+        "art": "alekhine-machine-gun",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "apprentice-knights",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "apprentice-knights",
+        "name_ko": "견습 기사단",
+        "phase": "OPENING",
+        "half_stars": 3,
+        "effect": "apprenticeKnights",
+        "text_ko": "아군 양쪽 두 번째 파일의 폰을 종자로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "apprentice-knights",
+        "name_ko": "견습 기사단",
+        "phase": "OPENING",
+        "half_stars": 3,
+        "effect": "apprenticeKnights",
+        "text_ko": "원래 b·g파일 폰을 종자로 바꿉니다.",
+        "art": "apprentice-knights",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "assassin",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "assassin",
+        "name_ko": "암살자",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "assassin",
+        "target": "own-knight",
+        "text_ko": "나이트 하나를 선택해 암살자로 변경시킵니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "assassin",
+        "name_ko": "암살자",
+        "phase": "PIECE",
+        "half_stars": 6,
+        "effect": "assassin",
+        "text_ko": "아군 나이트 하나를 암살자로 바꿉니다.",
+        "art": "assassin",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "backward-knight",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "backward-knight",
+        "name_ko": "뒤로 가는 나이트",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "backwardKnight",
+        "text_ko": "나이트가 뒤로 가며 기물을 잡으면 자신의 턴을 유지합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "backward-knight",
+        "name_ko": "뒤로 가는 나이트",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "backwardKnight",
+        "text_ko": "나이트가 뒤로 가며 기물을 잡으면 자신의 턴을 유지합니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_KNIGHT",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "barricade",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "barricade",
+        "name_ko": "엄폐물 설치",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "barricade",
+        "target": "empty",
+        "text_ko": "빈 칸을 골라 가로 또는 세로 3칸짜리 엄폐물을 설치합니다.",
+        "art": "walls"
+      },
+      "after": {
+        "id": "barricade",
+        "name_ko": "바리케이드",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "barricade",
+        "text_ko": "빈 세 칸에 가로 또는 세로 벽을 설치합니다.",
+        "art": "barricade",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": true
+        }
+      }
+    },
+    {
+      "id": "basic-training",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "basic-training",
+        "name_ko": "기초 교습",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "basicTraining",
+        "target": "own-basic-training-piece",
+        "text_ko": "아군 기물 하나를 지정해 폰의 행마법을 추가적으로 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "basic-training",
+        "name_ko": "기초 훈련",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "basicTraining",
+        "text_ko": "아군 기물 하나가 폰의 행마법을 추가로 배웁니다.",
+        "art": "basic-training",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_BASIC_TRAINING_PIECE",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "big-rook",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "big-rook",
+        "name_ko": "ROOK",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "bigRook",
+        "text_ko": "조금 큰 룩을 가지고 게임을 시작합니다.",
+        "art": "big-rook"
+      },
+      "after": {
+        "id": "big-rook",
+        "name_ko": "ROOK",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "bigRook",
+        "text_ko": "지정된 진영 배치에 HP 2의 2x2 빅룩을 배치합니다.",
+        "art": "big-rook",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "black-box",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "black-box",
+        "name_ko": "검은 상자",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "blackBox",
+        "text_ko": "사용시 무작위 액티브 증강 카드 하나를 발동시킵니다. 선택이 필요한 카드일 경우 완전히 무작위로 선택됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "black-box",
+        "name_ko": "검은 상자",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "blackBox",
+        "text_ko": "무작위 액티브 증강 카드 하나를 발동합니다.",
+        "art": "black-box",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "black-hole",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "black-hole",
+        "name_ko": "블랙홀",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "blackHole",
+        "text_ko": "중앙 2x2 구역에 블랙홀이 생성됩니다. 블랙홀 위치에 도착한 기물은 즉시 사망합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "black-hole",
+        "name_ko": "블랙홀",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "blackHole",
+        "text_ko": "중앙 2x2에 들어간 기물이 즉시 사라집니다.",
+        "art": "black-hole",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "black-magic",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "black-magic",
+        "name_ko": "흑마법",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "blackMagic",
+        "text_ko": "사용시 내 킹 옆에 아군 측 괴물을 소환합니다.",
+        "art": "wizard"
+      },
+      "after": {
+        "id": "black-magic",
+        "name_ko": "흑마법",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "blackMagic",
+        "text_ko": "사용시 내 킹 옆에 아군 측 괴물을 소환합니다.\n(소환된 괴물: 아군 기물입니다. 무작위적으로 행마하며 일반 기물에게 죽지 않습니다.)",
+        "art": "wizard",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "bribe",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "bribe",
+        "name_ko": "삼일천하",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "bribe",
+        "target": "own-knight",
+        "text_ko": "나이트 하나를 3턴 동안 아마존으로 변경합니다. 시간이 지나면 다시 나이트가 됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "bribe",
+        "name_ko": "삼일천하",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "bribe",
+        "text_ko": "아군 나이트 하나를 세 번의 자기 수 동안 아마존으로 바꿉니다.",
+        "art": "three-day-coup",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_KNIGHT",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "brutus",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "brutus",
+        "name_ko": "브루투스",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "brutus",
+        "text_ko": "획득시 무작위 아군 룩 하나를 브루투스로 변경합니다.",
+        "art": "brutus"
+      },
+      "after": {
+        "id": "brutus",
+        "name_ko": "브루투스",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "brutus",
+        "text_ko": "획득시 무작위 아군 룩 하나를 브루투스로 변경합니다.",
+        "art": "brutus",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "calling-card",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "calling-card",
+        "name_ko": "예고장",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "callingCard",
+        "text_ko": "상대 무작위 비폰 기물 하나에 예고장을 보냅니다. 해당 기물이 잡힐 경우, 다른 기물 하나를 추가로 제거합니다.",
+        "art": "calling-card"
+      },
+      "after": {
+        "id": "calling-card",
+        "name_ko": "예고장",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "callingCard",
+        "text_ko": "무작위 상대 비폰 기물에 예고장을 보내고, 그 기물이 잡히면 다른 상대 기물을 제거합니다.",
+        "art": "calling-card",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "camouflage-color",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "camouflage-color",
+        "name_ko": "위장색",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "camouflageRule",
+        "text_ko": "킹을 제외한 모든 기물이 자기 색과 같은 색 타일에 섰을때 은신합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "camouflage-color",
+        "name_ko": "위장색",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "camouflageRule",
+        "text_ko": "킹을 제외한 모든 기물이 자기 색과 같은 색 타일에 섰을때 은신합니다.",
+        "art": "camouflage-color",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "campfire",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "campfire",
+        "name_ko": "캠프파이어",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "campfire",
+        "text_ko": "아군 룩 하나를 지정해 캠프파이어로 변화시킵니다.",
+        "art": "campfire",
+        "target": "own-rook"
+      },
+      "after": {
+        "id": "campfire",
+        "name_ko": "캠프파이어",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "campfire",
+        "text_ko": "아군 마이너 피스 하나를 선택해 캠프파이어로 변경합니다.",
+        "art": "campfire",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "canceling",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "canceling",
+        "name_ko": "캔슬링",
+        "phase": "END",
+        "half_stars": 10,
+        "effect": "canceling",
+        "text_ko": "모든 상황을 무시하고 상대 킹을 즉시 시작위치로 돌려보냅니다. 단, 상대가 캐슬링하지 않았다면 사용할 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "canceling",
+        "name_ko": "캔슬링",
+        "phase": "END",
+        "half_stars": 10,
+        "effect": "canceling",
+        "text_ko": "캐슬링한 상대 킹을 원래 자리로 되돌립니다.",
+        "art": "canceling",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "OPPONENT_CASTLED",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "capture-the-flag",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "capture-the-flag",
+        "name_ko": "깃발 뽑기",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "captureTheFlag",
+        "text_ko": "양측 아군 홈 랭크에 랜덤으로 깃발 칸이 생깁니다. 적 기물이 깃발 칸에 들어온 뒤 1턴이 지나면 패배합니다.",
+        "art": "capture-the-flag"
+      },
+      "after": {
+        "id": "capture-the-flag",
+        "name_ko": "깃발 뽑기",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "captureTheFlag",
+        "text_ko": "양측 아군 홈 랭크에 랜덤으로 깃발 칸이 생깁니다. 적 기물이 깃발 칸에 들어온 뒤 1턴이 지나면 패배합니다.",
+        "art": "capture-the-flag",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "castling",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "castling",
+        "name_ko": "캐슬링",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "freeCastling",
+        "target": "own-castling-rook",
+        "text_ko": "킹과 같은 직선 혹은 대각선에 있는 룩 하나를 선택합니다. 해당 룩과 킹은 캐슬링하며, 도착 위치에 기물이 있을 경우 자동으로 잡습니다.",
+        "art": "castle"
+      },
+      "after": {
+        "id": "castling",
+        "name_ko": "캐슬링",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "freeCastling",
+        "text_ko": "킹과 직선 또는 대각선으로 마주보는 아군 룩과 즉시 캐슬링합니다.",
+        "art": "castling",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_CASTLING_ROOK",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chain",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "chain",
+        "name_ko": "사슬",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "chain",
+        "target": "enemy-chain-pair",
+        "text_ko": "서로 2칸 안에 있는 상대 기물 둘을 지정합니다. 두 기물이 모두 살아있을 경우 서로 2칸보다 멀어질 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "chain",
+        "name_ko": "사슬",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "chain",
+        "text_ko": "서로 2칸 안에 있는 상대 기물 둘을 묶어 2칸보다 멀어지지 못하게 합니다.",
+        "art": "chain",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ENEMY_CHAIN_PAIR",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chameleon-mutation",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "chameleon-mutation",
+        "name_ko": "카멜레온 변이",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "chameleonMutation",
+        "target": "own-piece",
+        "text_ko": "아군 기물 최대 3개에게 잡은 기물로 변신하는 특성을 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "chameleon-mutation",
+        "name_ko": "카멜레온 변이",
+        "phase": "MIDDLE",
+        "half_stars": 3,
+        "effect": "chameleonMutation",
+        "text_ko": "아군 기물 1~3개가 잡은 기물의 종류로 변합니다.",
+        "art": "chameleon-mutation",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 3,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "charge",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "charge",
+        "name_ko": "마지막 질주",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "charge",
+        "target": "own-pawn",
+        "text_ko": "아군 폰을 하나 선택합니다. 해당 폰은 이번 턴에 최대 3칸 전진할 수 있으며, 프로모션하지 못할 경우 사망합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "charge",
+        "name_ko": "마지막 질주",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "charge",
+        "text_ko": "아군 폰 하나가 이번 턴 최대 3칸 전진합니다. 승진하지 못하면 이동 후 사망합니다.",
+        "art": "charge",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_CHARGE_PAWN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "checker",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "checker",
+        "name_ko": "체커",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "checker",
+        "text_ko": "적군 양 끝 파일의 폰을 체커로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "checker",
+        "name_ko": "체커",
+        "phase": "OPENING",
+        "half_stars": 5,
+        "effect": "checker",
+        "text_ko": "체커 4개를 소환합니다.",
+        "art": "checker",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chess-344200",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "chess-344200",
+        "name_ko": "344200 체스",
+        "phase": "RULE",
+        "half_stars": 4,
+        "effect": "chess344200",
+        "text_ko": "폰을 포함한 모든 양쪽 기물을 무작위로 재배치합니다. 킹은 항상 홈 랭크에 배치됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "chess-344200",
+        "name_ko": "체스 32432400",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "chess344200",
+        "text_ko": "양쪽의 홈 2개 랭크 기물을 각 진영 안에서 무작위로 재배열합니다.",
+        "art": "chess-344200",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chess-960",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "chess-960",
+        "name_ko": "960 체스",
+        "phase": "RULE",
+        "half_stars": 4,
+        "effect": "chess960",
+        "text_ko": "폰을 제외한 양쪽 기물을 무작위로 재배치합니다.",
+        "art": "960"
+      },
+      "after": {
+        "id": "chess-960",
+        "name_ko": "960 체스",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "chess960",
+        "text_ko": "양쪽 홈 랭크를 같은 960 체스 배치로 재배열합니다.",
+        "art": "chess-960",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chess-n-pow-30",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "chess-n-pow-30",
+        "name_ko": "혼돈의 체스",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "chessNPow30",
+        "text_ko": "킹을 제외한 모든 기물을 랜덤하게 바꾼 뒤 시작합니다. 첫 2수동안은 기물을 잡을 수 없습니다.",
+        "art": "chess-n-pow-30"
+      },
+      "after": {
+        "id": "chess-n-pow-30",
+        "name_ko": "혼돈의 체스",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "chessNPow30",
+        "text_ko": "양측이 킹과 15개의 무작위 기물로 시작합니다. 양측의 총 기물 가치는 같으며, 첫 2수 동안 기물을 잡을 수 없습니다.",
+        "art": "chess-n-pow-30",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "chimera",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "chimera",
+        "name_ko": "키메라",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "chimera",
+        "target": "own-minor",
+        "text_ko": "마이너 피스 하나에게 키메라 효과를 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "chimera",
+        "name_ko": "키메라",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "chimera",
+        "text_ko": "아군 메이저 피스 하나에 키메라를 부여합니다. 움직일 때마다 트릭스터가 될 수 있는 무작위 메이저 피스로 변합니다.",
+        "art": "chimera",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_MAJOR_PIECE",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "cleanup-sacrifice",
+        "name_ko": "강제 교환",
+        "phase": "END",
+        "half_stars": 3,
+        "effect": "cleanupSacrifice",
+        "target": "own-cleanup-sacrifice",
+        "text_ko": "아군 기물 하나를 지정해 희생합니다. 해당 기물과 같은 종류의 무작위 상대 기물이 즉시 사망합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "cleanup-sacrifice",
+        "name_ko": "강제 교환",
+        "phase": "END",
+        "half_stars": 3,
+        "effect": "cleanupSacrifice",
+        "text_ko": "선택한 아군 기물과 같은 종류의 무작위 상대 기물을 함께 제거합니다.",
+        "art": "cleanup-sacrifice",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "collapse",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "collapse",
+        "name_ko": "붕괴",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "collapse",
+        "text_ko": "다음 턴에 양 끝쪽 파일과 랭크가 붕괴합니다. 프로모션 랭크는 각 진영의 끝에서 두 번째 랭크가 됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "collapse",
+        "name_ko": "붕괴",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "collapse",
+        "text_ko": "다음 자기 수가 끝난 뒤 현재 바깥 테두리가 붕괴합니다.",
+        "art": "collapse",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "conscription",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "conscription",
+        "name_ko": "징집",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "conscription",
+        "text_ko": "아군 두 번째 랭크의 빈 중앙 4개 파일에 폰을 즉시 소환합니다.",
+        "art": "baby"
+      },
+      "after": {
+        "id": "conscription",
+        "name_ko": "징집",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "conscription",
+        "text_ko": "두 번째 랭크의 중앙 네 파일 빈칸에 아군 폰을 소환합니다.",
+        "art": "conscription",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OPEN_CENTRAL_SECOND_RANK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "constitutional-monarchy",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "constitutional-monarchy",
+        "name_ko": "입헌군주제",
+        "phase": "PIECE",
+        "half_stars": 3,
+        "effect": "constitutionalMonarchy",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 국무총리로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "constitutional-monarchy",
+        "name_ko": "입헌군주제",
+        "phase": "PIECE",
+        "half_stars": 4,
+        "effect": "constitutionalMonarchy",
+        "text_ko": "아군 퀸 하나를 국무총리로 바꿉니다.",
+        "art": "constitutional-monarchy",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "conveyor",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "conveyor",
+        "name_ko": "컨베이어",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "conveyorRule",
+        "text_ko": "체스판 가장자리에 컨베이어를 설치합니다. 컨베이어 위에 있는 기물은 매 수마다 시계방향으로 한 칸씩 이동합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "conveyor",
+        "name_ko": "컨베이어",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "conveyorRule",
+        "text_ko": "매 수 뒤 보드 테두리의 기물이 시계 방향으로 이동합니다.",
+        "art": "conveyor",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "cool-guy",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "cool-guy",
+        "name_ko": "매너",
+        "phase": "RULE",
+        "half_stars": 4,
+        "effect": "coolGuy",
+        "text_ko": "한번 말을 잡은 기물은 다시 평범한 이동을 하기 전까진 더이상 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "cool-guy",
+        "name_ko": "매너",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "coolGuy",
+        "text_ko": "한번 말을 잡은 기물은 다시 평범한 이동을 하기 전까진 더이상 기물을 잡을 수 없습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ALWAYS",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "crown",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "crown",
+        "name_ko": "왕관",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "crownRule",
+        "text_ko": "중앙 4칸 중 한 칸에 왕관을 추가합니다. 한쪽이 왕관을 10수 이상 들고 있다면 승리합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "crown",
+        "name_ko": "왕관",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "crownRule",
+        "text_ko": "중앙 한 칸에 왕관을 놓습니다. 왕관을 차지한 기물은 움직일 수 없으며, 10수 동안 지키면 승리합니다.",
+        "art": "crown",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "death-squad",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "death-squad",
+        "name_ko": "결사대",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "deathSquad",
+        "target": "own-pawn-file",
+        "text_ko": "선택한 파일에 존재하는 아군 폰들을 전부 광신도로 변환합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "death-squad",
+        "name_ko": "결사대",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "deathSquad",
+        "text_ko": "선택한 파일의 모든 아군 폰을 광신도로 바꿉니다.",
+        "art": "death-squad",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_PAWN_FILE",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "diagonal-chess",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "diagonal-chess",
+        "name_ko": "대각선 체스",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "diagonalChess",
+        "text_ko": "대각선 배치로 시작합니다. 프로모션이 조금 더 쉬워지겠네요.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "diagonal-chess",
+        "name_ko": "대각선 체스",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "diagonalChess",
+        "text_ko": "양측을 대각선 체스의 고정 초기 배치로 재배치합니다.",
+        "art": "diagonal-chess",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "dice",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "dice",
+        "name_ko": "주사위",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "dice",
+        "text_ko": "주사위를 굴려 나온 눈에 따라 상대 기물을 2턴간 봉인합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "dice",
+        "name_ko": "주사위",
+        "phase": "MIDDLE",
+        "half_stars": 4,
+        "effect": "dice",
+        "text_ko": "주사위 결과에 해당하는 상대 기물 종류를 2턴 동안 봉인합니다.",
+        "art": "dice",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "disarm",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "disarm",
+        "name_ko": "무장해제",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "disarm",
+        "target": "enemy-piece",
+        "text_ko": "킹을 제외한 상대 기물 하나를 선택합니다. 해당 기물은 이번 턴에 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "disarm",
+        "name_ko": "무장해제",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "disarm",
+        "text_ko": "상대 비왕족 기물 하나는 다음 자기 수에 기물을 잡을 수 없습니다.",
+        "art": "disarm",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OPPONENT_NONROYAL",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "dragon",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "dragon",
+        "name_ko": "드래곤",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "dragon",
+        "target": "own-rook",
+        "text_ko": "룩 하나를 선택하여 드래곤으로 변화시킵니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "dragon",
+        "name_ko": "드래곤",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "dragon",
+        "text_ko": "아군 룩 하나를 드래곤으로 바꿉니다.",
+        "art": "dragon",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "dutch",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "dutch",
+        "name_ko": "네덜란드",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "dutch",
+        "text_ko": "모든 아군 룩과 마이너 피스를 풍차로 바꾸고 시작합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "dutch",
+        "name_ko": "네덜란드",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "dutch",
+        "text_ko": "아군 룩과 마이너 기물을 풍차로 바꿉니다.",
+        "art": "dutch",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "eagle",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "eagle",
+        "name_ko": "알리바바",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "eagle",
+        "text_ko": "모든 아군 나이트를 개당 알리바바 2개로 교환합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "eagle",
+        "name_ko": "알리바바",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "eagle",
+        "text_ko": "모든 아군 나이트를 각각 알리바바 2개로 교환합니다.",
+        "art": "eagle",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "eastern-policy",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "eastern-policy",
+        "name_ko": "동방견문록",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "easternPolicy",
+        "target": "own-minor",
+        "text_ko": "아군 마이너 피스 하나를 장기의 포로 변화시킵니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "eastern-policy",
+        "name_ko": "동방견문록",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "easternPolicy",
+        "text_ko": "아군 마이너 기물 하나를 포로 변경합니다.",
+        "art": "eastern-policy",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "elephant-escape",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "elephant-escape",
+        "name_ko": "코끼리 탈출",
+        "phase": "OPENING",
+        "half_stars": 5,
+        "effect": "elephantEscape",
+        "text_ko": "알필 두 마리를 추가합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "elephant-escape",
+        "name_ko": "코끼리 탈출",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "elephantEscape",
+        "text_ko": "아군 진영 세 번째 랭크 양 끝에 알필 둘을 소환합니다.",
+        "art": "elephant-escape",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "emergency-evacuation",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "emergency-evacuation",
+        "name_ko": "긴급 피난",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "emergencyEvacuation",
+        "target": "own-evacuation-piece",
+        "text_ko": "아군 기물 최대 3개를 선택해 자기 진영 방향으로 1칸 후퇴시킵니다. 피난한 기물은 이번 턴에 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "emergency-evacuation",
+        "name_ko": "긴급 피난",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "emergencyEvacuation",
+        "text_ko": "아군 기물을 최대 3개 선택해 자기 진영 방향으로 1칸 후퇴시킵니다. 피난한 기물은 이번 턴에 기물을 잡을 수 없습니다.",
+        "art": "emergency-evacuation",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 3,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "en-passant-bang",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "en-passant-bang",
+        "name_ko": "앙파상",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "enPassantBang",
+        "text_ko": "이번 턴 동안 아군 폰이 옆에있는 모든 기물을 상대로 앙파상할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "en-passant-bang",
+        "name_ko": "앙파상",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "enPassantBang",
+        "text_ko": "이번 턴 동안 아군 폰이 옆 기물을 상대로 앙파상할 수 있습니다.",
+        "art": "en-passant-bang",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "encouragement",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "encouragement",
+        "name_ko": "독려",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "encouragement",
+        "text_ko": "킹 주변 아군에게 보호를 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "encouragement",
+        "name_ko": "독려",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "encouragement",
+        "text_ko": "킹 주변 아군에게 매 턴 보호를 부여합니다.",
+        "art": "encouragement",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_KING",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "evasion",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "evasion",
+        "name_ko": "회피",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "evasion",
+        "text_ko": "무작위 아군 기물 하나에게 회피를 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "evasion",
+        "name_ko": "회피",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "evasion",
+        "text_ko": "무작위 아군 기물 하나가 포획을 한 번 회피합니다.",
+        "art": "evasion",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "exile",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "exile",
+        "name_ko": "유배",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "exile",
+        "target": "enemy-exile",
+        "text_ko": "상대 기물 하나를 시작 위치로 되돌립니다. 킹에게는 사용할 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "exile",
+        "name_ko": "추방",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "exile",
+        "text_ko": "상대 기물 하나를 시작 위치로 되돌립니다. 해당 기물은 내 턴 종료 시까지 보호를 얻습니다.",
+        "art": "exile",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ENEMY_EXILE_TARGET",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "fanatical-ritual",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "fanatical-ritual",
+        "name_ko": "광신적 의식",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "fanaticalRitual",
+        "text_ko": "킹을 제외한 상대 무작위 기물 하나를 광신도로 변환합니다.",
+        "art": "ritual"
+      },
+      "after": {
+        "id": "fanatical-ritual",
+        "name_ko": "광신의 의식",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "fanaticalRitual",
+        "text_ko": "왕실 기물을 제외한 무작위 상대 기물 하나를 광신도로 바꿉니다.",
+        "art": "fanatical-ritual",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "feudal-contract",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "feudal-contract",
+        "name_ko": "봉건 계약",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "feudalContract",
+        "target": "feudal-contract",
+        "text_ko": "아군 폰 혹은 광신도와 비폰 기물 하나를 계약합니다. 폰이 잡히면 계약 기물이 반격합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "feudal-contract",
+        "name_ko": "봉건 계약",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "feudalContract",
+        "text_ko": "아군 폰과 수호자를 묶어 폰이 잡히면 수호자가 즉시 반격하게 합니다.",
+        "art": "feudal-contract",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_FEUDAL_PAIR",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "fianchetto",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "fianchetto",
+        "name_ko": "피앙케토",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "fianchetto",
+        "text_ko": "아군 비숍이 피앙케토 대각선 안에 들어갈 경우, 상대 폰이 그 안에 진입할수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "fianchetto",
+        "name_ko": "피앙케토",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "fianchetto",
+        "text_ko": "아군 비숍이 피앙케토 대각선 안에 들어갈 경우, 상대 폰이 그 안에 진입할수 없습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_BISHOP_AND_NOT_APPLIED",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "final-weapon",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "final-weapon",
+        "name_ko": "최종병기",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "finalWeapon",
+        "text_ko": "아군의 프로모션 랭크가 마지막 랭크로 최종 확정됩니다. 폰이 끝까지 도달할 경우 아마존으로 승진할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "final-weapon",
+        "name_ko": "최종병기",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "finalWeapon",
+        "text_ko": "폰이 아마존으로 승진할 수 있습니다. 아군의 프로모션 랭크가 마지막 랭크로 최종 확정됩니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "football",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "football",
+        "name_ko": "축구공",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "football",
+        "text_ko": "게임 중앙 4칸 중 한 칸에 축구공을 추가합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "football",
+        "name_ko": "축구공",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "football",
+        "text_ko": "중앙 근처의 결정론적 무작위 빈 칸에 중립 축구공을 둡니다.",
+        "art": "football",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "freeze",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "freeze",
+        "name_ko": "빙결",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "freeze",
+        "text_ko": "무작위 상대 기물 3개를 3턴 동안 얼립니다. 얼어붙은 기물은 움직이거나 공격받지 않습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "freeze",
+        "name_ko": "빙결",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "freeze",
+        "text_ko": "무작위 상대 기물 3개를 얼립니다. 내 차례가 3번 돌아오면 해제됩니다. 얼어붙은 기물은 움직이거나 공격받지 않습니다.",
+        "art": "freeze",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "frontline-response",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "frontline-response",
+        "name_ko": "불가침",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "frontlineResponse",
+        "text_ko": "아군 룩이 가로세로로 잡히지 않습니다.",
+        "art": "frontline-response"
+      },
+      "after": {
+        "id": "frontline-response",
+        "name_ko": "철벽",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "frontlineResponse",
+        "text_ko": "획득 시 모든 아군 룩에게 철벽을 부여합니다.",
+        "art": "frontline-response",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "gale",
+      "fields": [
+        "text_ko",
+        "phase",
+        "half_stars"
+      ],
+      "before": {
+        "id": "gale",
+        "name_ko": "강풍",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "gale",
+        "text_ko": "사용 3턴 뒤, 아군과 인접하지 않은 모든 기물은 강풍에 날아가 제거됩니다.",
+        "art": "gale"
+      },
+      "after": {
+        "id": "gale",
+        "name_ko": "강풍",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "gale",
+        "text_ko": "3수 뒤, 주변 8칸에 다른 메이저 피스가 없는 모든 메이저 피스를 제거합니다.",
+        "art": "gale",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "guard",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "guard",
+        "name_ko": "근위병",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "guard",
+        "text_ko": "아군 킹 파일의 폰을 근위병으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "guard",
+        "name_ko": "근위병",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "guard",
+        "text_ko": "킹 파일의 아군 폰을 근위병으로 바꿉니다.",
+        "art": "guard",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "herald",
+      "fields": [
+        "text_ko",
+        "phase"
+      ],
+      "before": {
+        "id": "herald",
+        "name_ko": "전령",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "herald",
+        "target": "own-rook",
+        "text_ko": "룩 하나를 선택해 전령으로 교체합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "herald",
+        "name_ko": "전령",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "herald",
+        "text_ko": "무작위 아군 룩 하나를 전령으로 바꿉니다.",
+        "art": "herald",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "high-ground",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "high-ground",
+        "name_ko": "고지전",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "highGround",
+        "text_ko": "보드 중앙부 중 무작위 8칸이 고지로 선정됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "high-ground",
+        "name_ko": "고지대",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "highGround",
+        "text_ko": "중앙 8칸을 고지대로 지정합니다.",
+        "art": "high-ground",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "highlander",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "highlander",
+        "name_ko": "하이랜더",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "highlander",
+        "text_ko": "폰을 포함해 아군 진영에 중복되는 기물이 하나도 없을 경우 즉시 승리합니다.",
+        "art": "highlander"
+      },
+      "after": {
+        "id": "highlander",
+        "name_ko": "하이랜더",
+        "phase": "END",
+        "half_stars": 10,
+        "effect": "highlander",
+        "text_ko": "킹을 포함해 아군 기물이 4종류 이상이며, 같은 종류의 기물이 하나도 없다면 즉시 승리합니다.",
+        "art": "highlander",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "highway",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "highway",
+        "name_ko": "고속도로",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "highway",
+        "text_ko": "체스판 양쪽 두 번째 파일에 고속도로를 설치합니다.",
+        "art": "highway"
+      },
+      "after": {
+        "id": "highway",
+        "name_ko": "고속도로",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "highway",
+        "text_ko": "b열과 g열의 기물이 세로로 룩처럼 이동할 수 있습니다.",
+        "art": "highway",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "holdout",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "holdout",
+        "name_ko": "존버",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "holdout",
+        "target": "own-pawn",
+        "text_ko": "폰 하나를 지정합니다. 해당 폰은 14수 이후 퀸으로 프로모션합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "holdout",
+        "name_ko": "존버",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "holdout",
+        "text_ko": "무작위 아군 폰 하나가 28수 뒤 살아 있다면 퀸으로 승진합니다.",
+        "art": "holdout",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "hook",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "hook",
+        "name_ko": "구행",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "hook",
+        "target": "own-queen",
+        "text_ko": "룩 하나를 희생해 퀸을 구행으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "hook",
+        "name_ko": "구행",
+        "phase": "PIECE",
+        "half_stars": 9,
+        "effect": "hook",
+        "text_ko": "룩 하나를 희생해 퀸을 구행으로 변경합니다.",
+        "art": "hook",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "OWN_QUEEN_AND_ROOK",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "horde",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "horde",
+        "name_ko": "호드",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "horde",
+        "text_ko": "킹을 제외한 모든 기물을 제거하고 호드 배치로 전환합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "horde",
+        "name_ko": "호드",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "horde",
+        "text_ko": "획득 시 킹을 제외한 모든 기물을 제거하고 호드 배치로 전환합니다.",
+        "art": "horde",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "horse-riding",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "horse-riding",
+        "name_ko": "승마",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "horseRiding",
+        "text_ko": "획득 시 모든 아군 나이트를 삭제하며, 아군 킹이 킹과 나이트를 합친 행마법을 가지게 됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "horse-riding",
+        "name_ko": "승마",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "horseRiding",
+        "text_ko": "사용시 이번 턴 동안 킹이 나이트처럼도 움직일 수 있습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_KING",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "icbm",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "icbm",
+        "name_ko": "ICBM",
+        "phase": "END",
+        "half_stars": 4,
+        "effect": "icbm",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 하나 지정합니다. 다음 내 턴이 시작될 때 상대 퀸에게 날아가 주위 3x3 구역을 폭발시킵니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "icbm",
+        "name_ko": "ICBM",
+        "phase": "END",
+        "half_stars": 4,
+        "effect": "icbm",
+        "text_ko": "선택한 아군 퀸이 다음 자기 턴 시작에 희생되어 지정된 상대 퀸 주변 3x3을 폭발시킵니다.",
+        "art": "icbm",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "BOTH_QUEENS",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "ice-sheet",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "ice-sheet",
+        "name_ko": "빙판",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "iceSheet",
+        "text_ko": "상대방의 모든 원거리기물이 다음 3수동안 최대 사거리로만 이동할 수 있습니다.",
+        "art": "ice-sheet"
+      },
+      "after": {
+        "id": "ice-sheet",
+        "name_ko": "빙판",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "iceSheet",
+        "text_ko": "상대 장거리 기물이 3턴 동안 각 방향의 최대 거리로만 이동합니다.",
+        "art": "ice-sheet",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "idol",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "idol",
+        "name_ko": "아이돌",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "idol",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 아이돌로 변경합니다.",
+        "art": "idol"
+      },
+      "after": {
+        "id": "idol",
+        "name_ko": "아이돌",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "idol",
+        "text_ko": "아군 퀸을 주변 기물의 첫 이동에 앙코르를 주는 아이돌로 바꿉니다.",
+        "art": "idol",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_QUEEN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "inertia",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "inertia",
+        "name_ko": "관성",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "inertia",
+        "target": "enemy-ranged",
+        "text_ko": "상대방 원거리 기물 중 하나를 지정합니다. 해당 기물은 이제 한 칸씩 움직일 수 없습니다.",
+        "art": "inertia"
+      },
+      "after": {
+        "id": "inertia",
+        "name_ko": "관성",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "inertia",
+        "text_ko": "상대 원거리 기물 하나는 영구적으로 정확히 한 칸 이동할 수 없습니다.",
+        "art": "inertia",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OPPONENT_RANGED",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "initiative",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "initiative",
+        "name_ko": "선공권",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "initiative",
+        "text_ko": "상대방이 첫 10수 동안 기물을 잡을 수 없게 됩니다. 단, 기물이 잡힐 경우 즉시 제한이 해제됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "initiative",
+        "name_ko": "선공권",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "initiative",
+        "text_ko": "상대는 첫 8수 동안 기물을 잡을 수 없습니다. 상대 기물이 잡히면 즉시 해제됩니다.",
+        "art": "initiative",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OPPONENT_PIECE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "iron-monarch",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "iron-monarch",
+        "name_ko": "친정",
+        "phase": "OPENING",
+        "half_stars": 9,
+        "effect": "ironMonarch",
+        "text_ko": "아군 킹이 상대방 폰 혹은 광신도를 잡을 경우 한 번 더 움직일 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "iron-monarch",
+        "name_ko": "친정",
+        "phase": "OPENING",
+        "half_stars": 9,
+        "effect": "ironMonarch",
+        "text_ko": "아군 킹이 직접 기물을 잡을 때마다 한 번 더 움직일 수 있습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_ROYAL",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "jester",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "jester",
+        "name_ko": "광대",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "jester",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 광대로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "jester",
+        "name_ko": "광대",
+        "phase": "PIECE",
+        "half_stars": 4,
+        "effect": "jester",
+        "text_ko": "아군 퀸 하나를 광대로 바꿉니다.",
+        "art": "jester",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "judgment",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "judgment",
+        "name_ko": "레드카드",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "judgment",
+        "target": "judgment-piece",
+        "text_ko": "진영을 불문하고 게임에서 가장 많은 기물을 잡은 비킹 기물 중 하나를 선택해 다음 드래프트까지 추방합니다.",
+        "art": "judgment"
+      },
+      "after": {
+        "id": "judgment",
+        "name_ko": "레드카드",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "judgment",
+        "text_ko": "가장 많은 기물을 잡은 말 중 하나를 게임에서 제거합니다.",
+        "art": "judgment",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "MAX_CAPTURE_PIECE",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "knightmaster",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "knightmaster",
+        "name_ko": "기사단장",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "knightmaster",
+        "target": "own-knight",
+        "text_ko": "아군 나이트 하나를 기사단장으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "knightmaster",
+        "name_ko": "기사단장",
+        "phase": "PIECE",
+        "half_stars": 5,
+        "effect": "knightmaster",
+        "text_ko": "아군 나이트 하나를 기사단장으로 바꿉니다.",
+        "art": "knightmaster",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "knightmate",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "knightmate",
+        "name_ko": "나이트메이트",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "knightmate",
+        "text_ko": "킹을 로얄 나이트로, 모든 나이트를 만으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "knightmate",
+        "name_ko": "나이트메이트",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "knightmate",
+        "text_ko": "킹은 로얄 나이트, 아군 나이트는 만으로 변합니다.",
+        "art": "knightmate",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "last-resistance",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "last-resistance",
+        "name_ko": "마지막 저항",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "lastResistance",
+        "text_ko": "아군 킹이 3턴동안 보호를 얻습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "last-resistance",
+        "name_ko": "마지막 저항",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "lastResistance",
+        "text_ko": "아군 킹이 세 번의 자기 수 동안 보호받습니다.",
+        "art": "last-resistance",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_KING",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "last-stand",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "last-stand",
+        "name_ko": "집단 광기",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "lastStand",
+        "text_ko": "모든 아군 폰을 광신도로 변이시킵니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "last-stand",
+        "name_ko": "집단 광기",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "lastStand",
+        "text_ko": "모든 아군 폰을 광신도로 바꿉니다.",
+        "art": "last-stand",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "leap",
+      "fields": [
+        "text_ko",
+        "phase",
+        "half_stars"
+      ],
+      "before": {
+        "id": "leap",
+        "name_ko": "도약",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "pawnLeap",
+        "text_ko": "아군 폰이 상대 폰과 마주보았을 때 한 칸 뛰어넘어 전진할 수 있습니다. 해당 이동으로는 기물을 잡지 못합니다.",
+        "art": "leap"
+      },
+      "after": {
+        "id": "leap",
+        "name_ko": "도약",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "pawnLeap",
+        "text_ko": "아군 폰이 상대 기물을 뛰어넘어 전진할 수 있습니다. 해당 이동으로는 기물을 잡지 못합니다.",
+        "art": "leap",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "lobster",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "lobster",
+        "name_ko": "랍스터",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "lobster",
+        "target": "empty-lobster-square",
+        "text_ko": "원하는 빈 공간에 한 수 뒤 랍스터를 소환합니다.",
+        "art": "lobster"
+      },
+      "after": {
+        "id": "lobster",
+        "name_ko": "랍스터",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "lobster",
+        "text_ko": "선택한 빈 칸에 랍스터를 소환합니다.",
+        "art": "lobster",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "local-conscription",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "local-conscription",
+        "name_ko": "현지군 징병",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "localConscription",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 징집관으로 교체합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "local-conscription",
+        "name_ko": "현지군 징병",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "localConscription",
+        "text_ko": "아군 퀸 하나를 징집관으로 바꿉니다.",
+        "art": "local-conscription",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "locust-swarm",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "locust-swarm",
+        "name_ko": "메뚜기떼",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "locustSwarm",
+        "text_ko": "모든 아군 비폰 기물이 시작 위치에서 움직이지 않았을 경우 1회에 한해 그래스호퍼처럼 이동할 수 있습니다.",
+        "art": "locust-swarm"
+      },
+      "after": {
+        "id": "locust-swarm",
+        "name_ko": "메뚜기 창궐",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "locustSwarm",
+        "text_ko": "아군 마이너 피스와 룩이 시작 위치에서 움직이지 않았다면 그래스호퍼처럼 한 번 이동할 수 있습니다.",
+        "art": "locust-swarm",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "log",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "log",
+        "name_ko": "통나무",
+        "phase": "PIECE",
+        "half_stars": 5,
+        "effect": "log",
+        "target": "own-pawn",
+        "text_ko": "폰 하나를 선택해 통나무로 교체합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "log",
+        "name_ko": "통나무",
+        "phase": "PIECE",
+        "half_stars": 4,
+        "effect": "log",
+        "text_ko": "아군 폰 하나를 통나무로 바꿉니다.",
+        "art": "log",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "london-system",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "london-system",
+        "name_ko": "런던 시스템",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "londonSystem",
+        "text_ko": "런던 시스템의 첫 7수가 진행된 상태로 내 진영을 배치합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "london-system",
+        "name_ko": "런던 시스템",
+        "phase": "OPENING",
+        "half_stars": 5,
+        "effect": "londonSystem",
+        "text_ko": "런던 시스템의 첫 7수가 진행된 상태로 내 진영을 배치합니다.",
+        "art": "london-system",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "STANDARD_BOARD",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "loyalist",
+      "fields": [
+        "phase"
+      ],
+      "before": {
+        "id": "loyalist",
+        "name_ko": "충신",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "loyalist",
+        "target": "own-loyalist-piece",
+        "text_ko": "아군 기물 하나를 지정합니다. 해당 기물은 위치에 관계없이 턴을 소모해 킹 주변 칸으로 이동할 수 있습니다.",
+        "art": "royal-command"
+      },
+      "after": {
+        "id": "loyalist",
+        "name_ko": "충신",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "loyalist",
+        "text_ko": "아군 기물 하나를 지정합니다. 해당 기물은 위치에 관계없이 턴을 소모해 킹 주변 칸으로 이동할 수 있습니다.",
+        "art": "royal-command",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "macho-chess",
+      "fields": [
+        "name_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "macho-chess",
+        "name_ko": "상남자 모드",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "machoChess",
+        "text_ko": "기물들이 뒤로 갈 수 없으며, 옆으로는 잡으면서만 이동할 수 있습니다. 킹이 보드 반대편에 도달하면 승리하고 앙파상이 강제입니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "macho-chess",
+        "name_ko": "상남자 체스",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "machoChess",
+        "text_ko": "기물들이 뒤로 갈 수 없으며, 옆으로는 잡으면서만 이동할 수 있습니다. 킹이 보드 반대편에 도달하면 승리하고 앙파상이 강제입니다.",
+        "art": "macho-chess",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "mad-horse",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "mad-horse",
+        "name_ko": "광마",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "madHorse",
+        "text_ko": "나이트가 아군 기물을 잡을 수 있습니다. 아군을 잡으면 나이트가 한 번 더 움직입니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "mad-horse",
+        "name_ko": "광마",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "madHorse",
+        "text_ko": "나이트가 아군 기물을 잡고 한 번 더 움직일 수 있습니다.",
+        "art": "mad-horse",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "martyrdom",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "martyrdom",
+        "name_ko": "순교",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "martyrdom",
+        "text_ko": "비숍을 전부 희생하여 모든 아군 폰에 가호를 부여합니다.",
+        "art": "martyrdom"
+      },
+      "after": {
+        "id": "martyrdom",
+        "name_ko": "순교",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "martyrdom",
+        "text_ko": "모든 아군 비숍을 희생하여 모든 아군 폰에 가호를 부여합니다.",
+        "art": "martyrdom",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_BISHOP_AND_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "merchant-guild",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "merchant-guild",
+        "name_ko": "상인 조합",
+        "phase": "OPENING",
+        "half_stars": 10,
+        "effect": "merchantGuild",
+        "text_ko": "킹을 2칸 전진시킨 뒤 상인으로 변경합니다. 상인은 골드로 상대 기물을 매수합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "merchant-guild",
+        "name_ko": "상인 조합",
+        "phase": "OPENING",
+        "half_stars": 10,
+        "effect": "merchantGuild",
+        "text_ko": "킹을 상인으로 바꾸며 상인은 매 턴 골드로 상대 기물을 매수합니다.",
+        "art": "merchant-guild",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "metal",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "metal",
+        "name_ko": "메탈",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "metal",
+        "text_ko": "아군 원거리기물 하나를 선택해 금속화 효과를 부여합니다.",
+        "art": "metal",
+        "target": "own-metal"
+      },
+      "after": {
+        "id": "metal",
+        "name_ko": "메탈",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "metal",
+        "text_ko": "아군 원거리기물 하나를 선택해 금속화시킵니다.",
+        "art": "metal",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "mistake",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "mistake",
+        "name_ko": "실수",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "mistake",
+        "text_ko": "기물이 상대 말을 잡을때 20% 확률로 실수합니다. 실수할 경우 반대로 아군 기물이 잡히게 됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "mistake",
+        "name_ko": "실수",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "mistake",
+        "text_ko": "모든 포획은 20% 확률로 공격자와 피공격자가 뒤바뀝니다.",
+        "art": "mistake",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "mistake-card",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "mistake-card",
+        "name_ko": "실수",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "mistakeCard",
+        "text_ko": "이번 턴에 상대방이 기물을 잡을 경우 50% 확률로 실수합니다. 실수할 경우 반대로 상대 기물이 잡히게 됩니다.",
+        "art": "mistake-card"
+      },
+      "after": {
+        "id": "mistake-card",
+        "name_ko": "실수",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "mistakeCard",
+        "text_ko": "상대의 다음 포획은 50% 확률로 공격자와 피공격자가 뒤바뀝니다.",
+        "art": "mistake-card",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "monochrome-chess",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "monochrome-chess",
+        "name_ko": "단색 체스",
+        "phase": "RULE",
+        "half_stars": 4,
+        "effect": "monochromeChess",
+        "text_ko": "기물이 다른 색 칸으로 이동할 수 없습니다. 나이트가 낙타로 변경됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "monochrome-chess",
+        "name_ko": "단색 체스",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "monochromeChess",
+        "text_ko": "기물은 현재 칸과 같은 색의 칸으로만 이동하며 나이트는 낙타가 됩니다.",
+        "art": "monochrome-chess",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "monster",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "monster",
+        "name_ko": "괴물",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "monsterRule",
+        "text_ko": "중앙 4칸 중 무작위 위치에 괴물을 소환합니다. 괴물은 매 수 무작위 방향으로 한 칸 움직입니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "monster",
+        "name_ko": "괴물",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "monsterRule",
+        "text_ko": "중앙 근처에 중립 괴물을 소환합니다. 괴물은 백·흑 구분 없이 3반수마다 움직이며, 이동 직전에 붉게 빛납니다.",
+        "art": "monster",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "mutation",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "mutation",
+        "name_ko": "변이",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "mutation",
+        "text_ko": "아군 폰들이 마지막 랭크에 도달할 경우 괴물로 프로모션할 수 있습니다. 해당 괴물은 아군으로 취급됩니다.",
+        "art": "mutation"
+      },
+      "after": {
+        "id": "mutation",
+        "name_ko": "변이",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "mutation",
+        "text_ko": "아군 폰들이 마지막 랭크에 도달할 경우 한번에 괴물 2개로 프로모션할 수 있습니다. 해당 괴물은 아군으로 취급됩니다.",
+        "art": "mutation",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "necromancy",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "necromancy",
+        "name_ko": "빙의",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "necromancy",
+        "target": "own-necromancy-pawn",
+        "text_ko": "아군 폰 하나를 선택해 4수동안 이미 제거된 무작위 아군 기물 중 하나로 변경합니다. 시간이 지나면 다시 폰이 됩니다.",
+        "art": "necromancy"
+      },
+      "after": {
+        "id": "necromancy",
+        "name_ko": "빙의",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "necromancy",
+        "text_ko": "선택한 아군 폰을 포획된 아군 기물 하나로 4턴 동안 되살립니다.",
+        "art": "necromancy",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "ordination",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "ordination",
+        "name_ko": "서품",
+        "phase": "PIECE",
+        "half_stars": 4,
+        "effect": "ordination",
+        "target": "own-plain-bishop",
+        "text_ko": "비숍 하나를 선택합니다. 남은 비숍을 희생하고 선택한 비숍을 추기경으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "ordination",
+        "name_ko": "서품",
+        "phase": "PIECE",
+        "half_stars": 4,
+        "effect": "ordination",
+        "text_ko": "아군 비숍 하나를 추기경으로 바꿉니다.",
+        "art": "ordination",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "TWO_OWN_BISHOPS",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "othello",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "othello",
+        "name_ko": "오델로",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "othello",
+        "target": "enemy-othello",
+        "text_ko": "연속한 아군 기물 2개 사이에 끼인 상대 기물을 하나 지정해 아군 기물로 전향시킵니다.",
+        "art": "othello"
+      },
+      "after": {
+        "id": "othello",
+        "name_ko": "오셀로",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "othello",
+        "text_ko": "턴 종료 시 연속한 아군 기물 2개 사이에 끼인 상대 기물을 모두 전향시킵니다.",
+        "art": "othello",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ENEMY_OTHELLO_TARGET",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "overwhelm",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "overwhelm",
+        "name_ko": "압도",
+        "phase": "MIDDLE",
+        "half_stars": 9,
+        "effect": "overwhelm",
+        "text_ko": "상대방 킹이 아군 킹과 퀸을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "overwhelm",
+        "name_ko": "압도",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "overwhelm",
+        "text_ko": "상대 킹은 아군 퀸을 잡을 수 없습니다.",
+        "art": "overwhelm-october7",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_NOT_OVERWHELMED",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "palace",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "palace",
+        "name_ko": "궁성",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "palace",
+        "text_ko": "상대 킹을 중심으로 3x3 크기의 궁성을 짓습니다. 상대 킹은 직접 움직여 궁성을 나갈 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "palace",
+        "name_ko": "궁성",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "palace",
+        "text_ko": "상대 킹 주위 3x3을 궁성으로 지정합니다.",
+        "art": "palace",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "panic",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "panic",
+        "name_ko": "패닉",
+        "phase": "MIDDLE",
+        "half_stars": 4,
+        "effect": "panic",
+        "target": "enemy-panic",
+        "text_ko": "적군 기물 2개를 선택합니다. 다음 상대방 턴에 해당 기물들이 이동범위 내 무작위 칸 중 하나로 이동한 채 시작합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "panic",
+        "name_ko": "패닉",
+        "phase": "MIDDLE",
+        "half_stars": 4,
+        "effect": "panic",
+        "text_ko": "선택한 상대 기물 2개가 다음 상대 턴 시작 전에 무작위 합법 빈칸으로 이동합니다.",
+        "art": "panic",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "pawn-conversion",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "pawn-conversion",
+        "name_ko": "전환",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "pawnConversion",
+        "text_ko": "모든 아군 폰의 전진 및 대각선 행마가 뒤바뀝니다.",
+        "art": "pawn-conversion"
+      },
+      "after": {
+        "id": "pawn-conversion",
+        "name_ko": "전환",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "pawnConversion",
+        "text_ko": "모든 아군 폰을 베롤리나 폰으로 변경합니다.",
+        "art": "pawn-conversion",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "pegasus",
+      "fields": [
+        "text_ko",
+        "phase",
+        "half_stars"
+      ],
+      "before": {
+        "id": "pegasus",
+        "name_ko": "유니콘",
+        "phase": "PIECE",
+        "half_stars": 8,
+        "effect": "pegasus",
+        "target": "own-knight",
+        "text_ko": "나이트 하나를 유니콘으로 교환합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "pegasus",
+        "name_ko": "유니콘",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "pegasus",
+        "text_ko": "아군 룩 하나를 유니콘으로 바꿉니다.",
+        "art": "pegasus",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "periodic-collapse",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "periodic-collapse",
+        "name_ko": "붕괴",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "periodicCollapse",
+        "text_ko": "20수마다 보드의 가장 바깥쪽 한 겹이 붕괴합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "periodic-collapse",
+        "name_ko": "주기적 붕괴",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "periodicCollapse",
+        "text_ko": "20번째 완전 수마다 바깥 테두리가 붕괴합니다.",
+        "art": "periodic-collapse",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "platform",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "platform",
+        "name_ko": "발판",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "platformRule",
+        "text_ko": "5턴마다 무작위 빈칸 하나가 발판으로 지정됩니다. 발판을 밟은 기물은 한 번 더 움직일 수 있습니다.",
+        "art": "highway"
+      },
+      "after": {
+        "id": "platform",
+        "name_ko": "발판",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "platformRule",
+        "text_ko": "5턴마다 무작위 빈칸 하나가 발판으로 지정됩니다. 발판을 밟은 기물은 한 번 더 움직일 수 있습니다.",
+        "art": "highway",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "poisoned-pawn",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "poisoned-pawn",
+        "name_ko": "독이 든 폰",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "poisonedPawn",
+        "target": "own-unpoisoned-pawn",
+        "text_ko": "아군 폰 하나를 선택해 독을 부여합니다. 해당 폰을 먹은 적 기물은 2수동안 움직이지 못합니다.",
+        "art": "poisoned-pawn"
+      },
+      "after": {
+        "id": "poisoned-pawn",
+        "name_ko": "독이 든 폰",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "poisonedPawn",
+        "text_ko": "무작위 아군 폰 최대 3개에 독을 부여합니다. 해당 폰을 잡은 적 기물은 2수 동안 움직이지 못합니다.",
+        "art": "poisoned-pawn",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_UNPOISONED_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "portal",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "portal",
+        "name_ko": "포탈",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "portal",
+        "text_ko": "보드에 서로 연결된 포탈을 설치합니다. 포탈은 타고 이동하거나 한번에 통과할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "portal",
+        "name_ko": "포탈",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "portal",
+        "text_ko": "c3과 f6을 연결하는 포탈을 설치합니다.",
+        "art": "portal",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "premove",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "premove",
+        "name_ko": "프리 무브",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "freeMove",
+        "target": "own-premove-piece",
+        "text_ko": "아군 기물을 최대 3개 지정해 '순서대로' 이동을 선언합니다. 선언은 상대의 다음 수 뒤에 반영되며, 그후 해당 턴에는 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "premove",
+        "name_ko": "프리 무브",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "freeMove",
+        "text_ko": "아군 기물을 최대 3개 지정해 '순서대로' 이동을 선언합니다. 선언은 상대의 다음 수 뒤에 반영되며, 해당 턴에는 기물을 잡을 수 없습니다.",
+        "art": "premove",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 6,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "princess",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "princess",
+        "name_ko": "프린세스",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "princess",
+        "text_ko": "룩 하나를 선택해 프린세스로 변경합니다.",
+        "art": "princess",
+        "target": "own-rook"
+      },
+      "after": {
+        "id": "princess",
+        "name_ko": "프린세스",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "princess",
+        "text_ko": "무작위 아군 룩 하나를 프린세스로 변경합니다.",
+        "art": "princess",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "promotion-rush",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "promotion-rush",
+        "name_ko": "승진 체험",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "promotionRush",
+        "target": "own-promotion-rush-piece",
+        "text_ko": "아군 비폰 기물 하나를 지정합니다. 해당 기물은 이번 턴에 퀸처럼도 이동할 수 있지만 기물을 잡을 수 없습니다.",
+        "art": "promotion-rush"
+      },
+      "after": {
+        "id": "promotion-rush",
+        "name_ko": "승진 체험",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "promotionRush",
+        "text_ko": "아군 비폰 기물 하나가 이번 턴 퀸처럼도 이동하지만 잡을 수 없습니다.",
+        "art": "promotion-rush",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_NONPAWN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "prophecy",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "prophecy",
+        "name_ko": "종전",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "prophecy",
+        "text_ko": "다음 3수동안 체스보드 안의 그 어떤 기물도 잡히지 않으면 게임에서 즉시 승리합니다.",
+        "art": "armistice"
+      },
+      "after": {
+        "id": "prophecy",
+        "name_ko": "종전",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "prophecy",
+        "text_ko": "다음 3수 동안 체크 또는 기물 포획이 한 번도 발생하지 않으면 즉시 승리합니다.",
+        "art": "prophecy",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "queen-afterimage",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "queen-afterimage",
+        "name_ko": "잔상",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "queenAfterimage",
+        "text_ko": "아군 퀸으로 상대방 퀸을 잡을 경우 이동 전 위치에 퀸을 하나 더 소환합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "queen-afterimage",
+        "name_ko": "잔상",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "queenAfterimage",
+        "text_ko": "아군 퀸으로 상대방 퀸을 잡을 경우 이동 전 위치에 퀸을 하나 더 소환합니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_QUEEN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "queen-cavalry",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "queen-cavalry",
+        "name_ko": "퀸의 기병대",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "queenCavalry",
+        "text_ko": "아군 퀸 파일의 폰을 나이트로 바꿉니다.",
+        "art": "cavalry"
+      },
+      "after": {
+        "id": "queen-cavalry",
+        "name_ko": "퀸의 기병대",
+        "phase": "OPENING",
+        "half_stars": 4,
+        "effect": "queenCavalry",
+        "text_ko": "퀸 파일의 아군 폰을 나이트로 바꿉니다.",
+        "art": "queen-cavalry",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "queens-gambit",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "queens-gambit",
+        "name_ko": "퀸즈 갬빗",
+        "phase": "OPENING",
+        "half_stars": 8,
+        "effect": "queensGambit",
+        "target": "own-queen",
+        "text_ko": "퀸을 갬빗합니다. 이후 d파일 및 무작위 파일의 아군 폰에 영구적인 보호를 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "queens-gambit",
+        "name_ko": "퀸즈 갬빗",
+        "phase": "OPENING",
+        "half_stars": 7,
+        "effect": "queensGambit",
+        "text_ko": "무작위 아군 퀸 하나를 갬빗합니다. 이후 해당 퀸의 파일 및 무작위 파일의 아군 폰에 반영구적인 보호를 부여합니다.",
+        "art": "queens-gambit",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_QUEEN_AND_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "racing-king",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "racing-king",
+        "name_ko": "레이싱 킹",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "racingKing",
+        "text_ko": "아군 킹이 반대편 끝 랭크에 도달하면 즉시 승리합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "racing-king",
+        "name_ko": "레이싱 킹",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "racingKing",
+        "text_ko": "아군 킹이 반대편 끝 랭크에 도달하면 즉시 승리합니다.",
+        "art": "racing-king",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_KING",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "radical-charge",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "radical-charge",
+        "name_ko": "난폭한 돌진",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "radicalCharge",
+        "text_ko": "아군 나이트가 상하좌우의 적 기물을 뛰어넘으면 그 기물을 자동으로 잡습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "radical-charge",
+        "name_ko": "난폭한 돌진",
+        "phase": "MIDDLE",
+        "half_stars": 9,
+        "effect": "radicalCharge",
+        "text_ko": "아군 나이트가 상하좌우의 적 기물을 뛰어넘으면 그 기물을 자동으로 잡습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_KNIGHT",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "random-roulette",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "random-roulette",
+        "name_ko": "랜덤룰렛",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "randomRoulette",
+        "target": "any-major-piece",
+        "text_ko": "아군 혹은 상대방 메이저 피스를 하나 지정합니다. 해당 기물을 변형 기물을 포함한 모든 기물 중 하나로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "random-roulette",
+        "name_ko": "랜덤룰렛",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "randomRoulette",
+        "text_ko": "선택한 비왕실 메이저 기물을 무작위 변형 기물로 바꿉니다.",
+        "art": "random-roulette",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "reaper",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "reaper",
+        "name_ko": "사신",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "reaper",
+        "target": "own-queen",
+        "text_ko": "아군 퀸을 사신으로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "reaper",
+        "name_ko": "사신",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "reaper",
+        "text_ko": "아군 퀸 하나를 사신으로 변경합니다. 킹과 알필을 합친것처럼 행마합니다. 주변 8칸에서 아군 기물이 적에게 총 2번 잡힐경우 승리합니다.",
+        "art": "reaper",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "recycling",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "recycling",
+        "name_ko": "재활용",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "recycling",
+        "text_ko": "모든 폰은 이미 잡힌 아군 기물로만 프로모션할 수 있습니다. 이는 변형 기물을 포함합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "recycling",
+        "name_ko": "재활용",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "recycling",
+        "text_ko": "모든 폰은 이미 잡힌 아군 기물로만 프로모션할 수 있습니다. 이는 변형 기물을 포함합니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ALWAYS",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "reformation",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "reformation",
+        "name_ko": "종교 개혁",
+        "phase": "PIECE",
+        "half_stars": 6,
+        "effect": "reformation",
+        "text_ko": "모든 아군 비숍을 프로테스탄트로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "reformation",
+        "name_ko": "몬시뇰",
+        "phase": "PIECE",
+        "half_stars": 6,
+        "effect": "reformation",
+        "text_ko": "모든 아군 비숍을 몬시뇰로 변경합니다.",
+        "art": "reformation",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "reposition",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "reposition",
+        "name_ko": "재배치",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "reposition",
+        "target": "own-nonking-piece",
+        "text_ko": "킹을 제외한 아군 기물이 이번 턴에 두번 이동합니다. 단, 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "reposition",
+        "name_ko": "재배치",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "reposition",
+        "text_ko": "이번 턴 아군은 기물을 잡을 수 없습니다. 처음 움직인 기물이 한 번 더 이동해야 합니다.",
+        "art": "reposition",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "resolve",
+      "fields": [
+        "phase"
+      ],
+      "before": {
+        "id": "resolve",
+        "name_ko": "결의",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "resolve",
+        "text_ko": "아군 폰이 잡힌 턴에 가장 먼저 움직인 폰은 첫번째 이동에 한해 턴을 소모하지 않습니다.",
+        "art": "resolve"
+      },
+      "after": {
+        "id": "resolve",
+        "name_ko": "결의",
+        "phase": "END",
+        "half_stars": 7,
+        "effect": "resolve",
+        "text_ko": "아군 폰이 잡힌 턴에 가장 먼저 움직인 폰은 첫번째 이동에 한해 턴을 소모하지 않습니다.",
+        "art": "resolve",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "revelation",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "revelation",
+        "name_ko": "계시",
+        "phase": "RULE",
+        "half_stars": 3,
+        "effect": "revelation",
+        "text_ko": "연장전 시에 적용되는 판정 주기를 10수에서 5수로 줄입니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "revelation",
+        "name_ko": "계시",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "revelation",
+        "text_ko": "게임 시작 후 60수까지 승패가 결정되지 않으면 기물 점수가 더 높은 진영이 승리합니다.",
+        "art": "revelation",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "reversal",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "reversal",
+        "name_ko": "반전",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "reversal",
+        "text_ko": "사용한 턴에 아군 룩과 비숍의 행마가 뒤바뀝니다.",
+        "art": "reversal"
+      },
+      "after": {
+        "id": "reversal",
+        "name_ko": "반전",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "reversal",
+        "text_ko": "아군 마이너 피스 하나를 희생합니다. 이번 턴 아군 룩과 비숍의 행마가 뒤바뀝니다.",
+        "art": "reversal",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "reverse-pawns",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "reverse-pawns",
+        "name_ko": "폰 방향 반전",
+        "phase": "END",
+        "half_stars": 4,
+        "effect": "reversePawns",
+        "text_ko": "상대 폰의 전진 방향을 세 번의 이동 동안 반대로 바꿉니다.",
+        "art": "reverse"
+      },
+      "after": {
+        "id": "reverse-pawns",
+        "name_ko": "폰 방향 반전",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "reversePawns",
+        "text_ko": "상대 폰의 전진 방향을 세 번의 이동 동안 반대로 바꿉니다.",
+        "art": "reverse-pawns",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OPPONENT_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "rook-lift",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "rook-lift",
+        "name_ko": "룩 리프트",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "rookLift",
+        "text_ko": "룩이 체스판 맨 구석 4칸에 도착하면 한번 더 이동할 수 있습니다.",
+        "art": "rook-lift"
+      },
+      "after": {
+        "id": "rook-lift",
+        "name_ko": "룩 리프트",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "rookLift",
+        "text_ko": "룩이 기물을 잡지 않고 체스판 맨 구석 칸에 도착하면 한번 더 이동할 수 있습니다.",
+        "art": "rook-lift",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK_AND_NOT_APPLIED",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "royal-command",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "royal-command",
+        "name_ko": "왕명",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "royalCommand",
+        "text_ko": "다음 자기 턴부터 2수동안 모든 아군 기물이 킹처럼 이동할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "royal-command",
+        "name_ko": "왕명",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "royalCommand",
+        "text_ko": "다음 자기 턴부터 두 번의 자기 수 동안 모든 아군 기물이 킹처럼도 움직입니다.",
+        "art": "royal-command",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_NONROYAL",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "royal-shield",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "royal-shield",
+        "name_ko": "가호",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "royalShield",
+        "text_ko": "무작위 아군 기물 하나에게 가호를 부여합니다.",
+        "art": "shield"
+      },
+      "after": {
+        "id": "royal-shield",
+        "name_ko": "가호",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "royalShield",
+        "text_ko": "무작위 아군 기물 하나에 가호를 부여합니다.",
+        "art": "royal-shield",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "rule-bombs",
+      "fields": [
+        "name_ko",
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "rule-bombs",
+        "name_ko": "폭탄",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "ruleBombs",
+        "text_ko": "무작위 중앙 3칸에 폭탄을 설치합니다. 밟으면 해당 랭크와 파일의 모든 기물이 사라집니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "rule-bombs",
+        "name_ko": "룰 폭탄",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "ruleBombs",
+        "text_ko": "중앙 후보 칸 세 곳에 십자 폭발 폭탄을 설치합니다.",
+        "art": "rule-bombs",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "rule-ticket",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "rule-ticket",
+        "name_ko": "규칙 티켓",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "ruleTicket",
+        "text_ko": "활성화 시 원하는 규칙 하나를 추가할 수 있습니다. 규칙은 다음 내 턴부터 반영됩니다.",
+        "art": "rule-ticket"
+      },
+      "after": {
+        "id": "rule-ticket",
+        "name_ko": "규칙 티켓",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "ruleTicket",
+        "text_ko": "원하는 규칙 하나를 추가합니다. 규칙은 다음 내 턴부터 반영됩니다.",
+        "art": "rule-ticket",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "choice",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": true
+        }
+      }
+    },
+    {
+      "id": "sacrifice",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "sacrifice",
+        "name_ko": "희생",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "sacrifice",
+        "target": "own-sacrifice-piece",
+        "text_ko": "아군 기물 하나를 처형하고, 그보다 가치가 낮은 기물 하나를 선택해 3턴동안 보호를 부여합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "sacrifice",
+        "name_ko": "희생",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "sacrifice",
+        "text_ko": "첫 번째 아군 기물을 희생하고 더 약한 두 번째 아군 기물을 3턴 보호합니다.",
+        "art": "sacrifice",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "saturation",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "saturation",
+        "name_ko": "포화",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "saturation",
+        "text_ko": "기물을 3개 이상 잡은 기물은 더 이상 기물을 잡을 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "saturation",
+        "name_ko": "포화",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "saturation",
+        "text_ko": "기물을 3개 이상 잡은 기물은 더 이상 기물을 잡을 수 없습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ALWAYS",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "scarecrow",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "scarecrow",
+        "name_ko": "허수아비",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "scarecrow",
+        "target": "scarecrow-square",
+        "text_ko": "원하는 칸에 3수 뒤 허수아비를 설치합니다.",
+        "art": "scarecrow"
+      },
+      "after": {
+        "id": "scarecrow",
+        "name_ko": "허수아비",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "scarecrow",
+        "text_ko": "아군 기물 하나를 희생하고 그 자리에 허수아비를 예약합니다. 허수아비는 3수 뒤에 설치되며, 기다리는 동안 무적입니다.",
+        "art": "scarecrow",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "severance",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "severance",
+        "name_ko": "절단",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "severance",
+        "target": "enemy-ranged",
+        "text_ko": "상대 원거리 기물 중 하나를 선택합니다. 해당 기물은 다음 2수 동안 한 칸씩만 이동할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "severance",
+        "name_ko": "절단",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "severance",
+        "text_ko": "상대 원거리 기물 하나는 다음 두 번의 자기 수 동안 한 칸씩만 이동합니다.",
+        "art": "severance",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OPPONENT_RANGED",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "snipe",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "snipe",
+        "name_ko": "저격",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "bishopSnipe",
+        "text_ko": "이번 턴 동안 비숍이 기물 하나를 뛰어넘어 공격할 수 있습니다.",
+        "art": "snipe"
+      },
+      "after": {
+        "id": "snipe",
+        "name_ko": "저격",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "bishopSnipe",
+        "text_ko": "이번 턴 동안 비숍이 폰 하나를 뛰어넘어 공격할 수 있습니다.",
+        "art": "snipe",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OWN_BISHOP",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "socialism",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "socialism",
+        "name_ko": "사회주의",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "socialism",
+        "text_ko": "다음 턴에 킹을 제외한 상대의 모든 기물은 원래 행마를 잃고 폰처럼 움직입니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "socialism",
+        "name_ko": "사회주의",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "socialism",
+        "text_ko": "다음 상대 턴에 왕족을 제외한 모든 상대 기물은 폰처럼만 움직입니다.",
+        "art": "socialism",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "OPPONENT_NONROYAL",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "stake",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "stake",
+        "name_ko": "말뚝",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "stake",
+        "target": "own-piece",
+        "text_ko": "아군 기물 하나를 지정합니다. 해당 기물은 4수 동안 움직일 수 없으며, 4수 뒤 가호를 얻습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "stake",
+        "name_ko": "말뚝",
+        "phase": "END",
+        "half_stars": 5,
+        "effect": "stake",
+        "text_ko": "아군 기물 하나는 네 번의 자기 수 동안 움직일 수 없고 이후 가호를 얻습니다.",
+        "art": "stake",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_STAKE_PIECE",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "standard-bearer",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "standard-bearer",
+        "name_ko": "기수",
+        "phase": "PIECE",
+        "half_stars": 5,
+        "effect": "standardBearer",
+        "target": "own-pawn",
+        "text_ko": "아군 폰 하나를 기수로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "standard-bearer",
+        "name_ko": "기수",
+        "phase": "PIECE",
+        "half_stars": 5,
+        "effect": "standardBearer",
+        "text_ko": "아군 폰 하나를 기수로 바꿉니다.",
+        "art": "standard-bearer",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "suicide-bomber",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "suicide-bomber",
+        "name_ko": "자폭병",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "suicideBomber",
+        "target": "own-pawn-or-fanatic",
+        "text_ko": "폰 혹은 광신도 하나에게 잡힐 경우 3x3 반경으로 폭발하는 특성을 부여합니다. 폭발은 아군도 제거합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "suicide-bomber",
+        "name_ko": "자폭병",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "suicideBomber",
+        "text_ko": "아군 폰 또는 광신도가 잡히면 주변 3x3을 폭발시킵니다.",
+        "art": "suicide-bomber",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "summon-colossus",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "id": "summon-colossus",
+        "name_ko": "메가체스트론",
+        "phase": "OPENING",
+        "half_stars": 10,
+        "effect": "summonColossus",
+        "text_ko": "아군 폰 6개를 희생해 체크메이트의 거신병을 소환합니다.",
+        "art": "summon"
+      },
+      "after": {
+        "id": "summon-colossus",
+        "name_ko": "거신병 소환",
+        "phase": "OPENING",
+        "half_stars": 10,
+        "effect": "summonColossus",
+        "text_ko": "모든 아군 폰을 제거하고 체크메이트의 거신병을 소환합니다.",
+        "art": "summon-colossus",
+        "enabled": false,
+        "rarity": "legendary",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "switcheroo",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "switcheroo",
+        "name_ko": "바꿔치기",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "switcheroo",
+        "text_ko": "이번 턴 동안 킹이 턴을 소모하여 아군 폰의 위치로 순간이동할 수 있으며, 해당 폰은 제거됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "switcheroo",
+        "name_ko": "바꿔치기",
+        "phase": "MIDDLE",
+        "half_stars": 4,
+        "effect": "switcheroo",
+        "text_ko": "이번 턴 동안 킹이 턴을 소모하여 아군 폰과 위치를 바꿀 수 있습니다.",
+        "art": "switcheroo",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_KING_AND_PAWN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "taunt",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "taunt",
+        "name_ko": "도발",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "taunt",
+        "text_ko": "모든 상대방 기물이 이번 턴에 뒤로 갈 수 없습니다.",
+        "art": "taunt"
+      },
+      "after": {
+        "id": "taunt",
+        "name_ko": "도발",
+        "phase": "MIDDLE",
+        "half_stars": 5,
+        "effect": "taunt",
+        "text_ko": "모든 상대 기물이 다음 상대 수에 뒤로 이동할 수 없습니다.",
+        "art": "taunt",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OPPONENT_MOBILE_PIECE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "thief",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "thief",
+        "name_ko": "도적",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "thief",
+        "text_ko": "퀸을 도적으로 변경하고 잠복을 부여합니다. 도적은 내 턴이 끝날때 잠복이 없다면 체포되어 사라집니다.",
+        "art": "thief"
+      },
+      "after": {
+        "id": "thief",
+        "name_ko": "도적",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "thief",
+        "text_ko": "아군 퀸을 도적으로 변경한 뒤 잠복과 수배를 부여합니다.",
+        "art": "thief",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_QUEEN",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "traitor",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "traitor",
+        "name_ko": "변절자",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "traitor",
+        "text_ko": "상대의 가장 약한 기물 하나를 내 편으로 전향시킵니다. 폰이 우선 선택되며, 폰이 없다면 점수가 가장 낮은 기물이 선택됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "traitor",
+        "name_ko": "변절자",
+        "phase": "END",
+        "half_stars": 8,
+        "effect": "traitor",
+        "text_ko": "한 번 이상 움직인 상대 기물 중 가장 약한 기물 하나를 내 편으로 전향시킵니다.",
+        "art": "traitor",
+        "enabled": true,
+        "rarity": "epic",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "transcendence",
+      "fields": [
+        "half_stars"
+      ],
+      "before": {
+        "id": "transcendence",
+        "name_ko": "초월",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "transcendence",
+        "text_ko": "아군 기물이 기물을 직접 잡을 경우 다음 단계로 초월합니다. 퀸이나 변형 기물은 초월할 수 없습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "transcendence",
+        "name_ko": "초월",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "transcendence",
+        "text_ko": "아군 기물이 기물을 직접 잡을 경우 다음 단계로 초월합니다. 퀸이나 변형 기물은 초월할 수 없습니다.",
+        "art": "blank",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ALWAYS",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "trolley",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "trolley",
+        "name_ko": "트롤리",
+        "phase": "MIDDLE",
+        "half_stars": 10,
+        "effect": "trolley",
+        "text_ko": "사용 시 다음 턴에 상대방에게 트롤리를 보냅니다. 상대는 큰 딜레마에 빠질 겁니다...",
+        "art": "blank"
+      },
+      "after": {
+        "id": "trolley",
+        "name_ko": "트롤리",
+        "phase": "MIDDLE",
+        "half_stars": 10,
+        "effect": "trolley",
+        "text_ko": "다음 턴에 상대에게 트롤리 딜레마를 보냅니다. 한쪽에는 상대 기물 3~4점, 다른 쪽에는 상대 기물 8~11점과 내 기물 5~7점이 묶입니다. 가능한 경우 두 선로의 순손실을 같게 맞춥니다.",
+        "art": "trolley",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "twins",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "twins",
+        "name_ko": "환상의 콤비",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "twins",
+        "target": "own-twin-pair",
+        "text_ko": "아군 기물 둘을 연결하고, 둘 중 하나가 이동할 때마다 서로 위치를 변경합니다.",
+        "art": "twins"
+      },
+      "after": {
+        "id": "twins",
+        "name_ko": "환상의 콤비",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "twins",
+        "text_ko": "아군 기물 둘을 연결해 어느 한쪽이 이동할 때마다 서로 위치를 바꿉니다.",
+        "art": "twins",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_TWIN_PAIR",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "ultimatum",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "ultimatum",
+        "name_ko": "최후 통첩",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "ultimatum",
+        "text_ko": "4수 뒤, 킹을 제외하고 마지막 4수 동안 한 번도 움직이지 않은 모든 기물이 제거됩니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "ultimatum",
+        "name_ko": "최후 통첩",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "ultimatum",
+        "text_ko": "4수 뒤 그동안 움직이지 않은 모든 비킹 기물을 제거합니다.",
+        "art": "ultimatum",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "NONKING_PIECE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "vanguard",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "vanguard",
+        "name_ko": "선봉",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "vanguard",
+        "text_ko": "제일 선두에 있는 아군 폰이 하나라면, 해당 폰은 대각선으로도 이동할 수 있습니다. 앞으로 기물을 잡지 못하며, 맨 앞의 폰이 1개일 때만 발동됩니다.",
+        "art": "vanguard"
+      },
+      "after": {
+        "id": "vanguard",
+        "name_ko": "선봉",
+        "phase": "OPENING",
+        "half_stars": 6,
+        "effect": "vanguard",
+        "text_ko": "제일 선두에 있는 아군 폰이 하나라면, 해당 폰은 대각선으로도 이동할 수 있습니다.",
+        "art": "vanguard",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "vanish",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "vanish",
+        "name_ko": "소멸",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "vanish",
+        "text_ko": "사용한 뒤 턴이 돌아올때마다 해당 플레이어의 기물이 무작위로 하나씩 사라집니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "vanish",
+        "name_ko": "소멸",
+        "phase": "END",
+        "half_stars": 9,
+        "effect": "vanish",
+        "text_ko": "이후 매 수가 끝날 때 양쪽에서 무작위 기물이 하나씩 사라집니다.",
+        "art": "vanish",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "vip",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "vip",
+        "name_ko": "귀빈",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "vip",
+        "target": "any-vip-pawn",
+        "text_ko": "아군 혹은 상대방 폰 하나를 지정합니다. 3수 뒤 해당 폰이 살아있다면 해당 플레이어의 턴에 귀빈으로 변화합니다.",
+        "art": "vip"
+      },
+      "after": {
+        "id": "vip",
+        "name_ko": "귀빈",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "vip",
+        "text_ko": "선택한 아군 또는 상대 폰이 살아 있다면 세 번의 자기 수 뒤 귀빈으로 변합니다.",
+        "art": "vip",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY_PAWN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "vortex",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "vortex",
+        "name_ko": "소용돌이",
+        "phase": "MIDDLE",
+        "half_stars": 4,
+        "effect": "vortex",
+        "text_ko": "킹과 폰을 제외한 모든 적 기물의 위치를 서로 뒤섞습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "vortex",
+        "name_ko": "소용돌이",
+        "phase": "MIDDLE",
+        "half_stars": 6,
+        "effect": "vortex",
+        "text_ko": "상대의 폰과 왕실 기물을 제외한 모든 기물 위치를 서로 섞습니다.",
+        "art": "vortex",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "windmill",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "windmill",
+        "name_ko": "풍차",
+        "phase": "PIECE",
+        "half_stars": 5,
+        "effect": "windmill",
+        "target": "windmill-pair",
+        "text_ko": "비숍과 룩 하나를 선택해 풍차 2개로 변경합니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "windmill",
+        "name_ko": "풍차",
+        "phase": "PIECE",
+        "half_stars": 3,
+        "effect": "windmill",
+        "text_ko": "아군 비숍과 룩을 풍차로 바꿉니다.",
+        "art": "windmill",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "winter-kingdom",
+      "fields": [
+        "text_ko",
+        "half_stars"
+      ],
+      "before": {
+        "id": "winter-kingdom",
+        "name_ko": "겨울 왕국",
+        "phase": "RULE",
+        "half_stars": null,
+        "effect": "winterKingdom",
+        "text_ko": "3턴마다 흑과 백의 기물이 3개씩 얼어붙습니다. 얼어붙은 기물은 3턴간 움직일 수 없고 공격 대상이 되지 않습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "winter-kingdom",
+        "name_ko": "겨울 왕국",
+        "phase": "RULE",
+        "half_stars": 0,
+        "effect": "winterKingdom",
+        "text_ko": "3완전 수마다 양측 기물 세 개를 3턴 동안 동결합니다.",
+        "art": "winter-kingdom",
+        "enabled": true,
+        "rarity": null,
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "witch-trial",
+      "fields": [
+        "text_ko",
+        "phase",
+        "half_stars"
+      ],
+      "before": {
+        "id": "witch-trial",
+        "name_ko": "마녀재판",
+        "phase": "MIDDLE",
+        "half_stars": 8,
+        "effect": "witchTrial",
+        "target": "enemy-piece",
+        "text_ko": "킹을 제외한 상대 기물 하나를 의심합니다. 3턴 안에 아군 기물을 잡지 못하면 제거되지만, 잡으면 가호를 얻습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "witch-trial",
+        "name_ko": "마녀재판",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "witchTrial",
+        "text_ko": "킹을 제외한 상대 기물 하나를 의심합니다.",
+        "art": "witch-trial",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OPPONENT_NONROYAL",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "wizard",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "wizard",
+        "name_ko": "마법사",
+        "phase": "PIECE",
+        "half_stars": 10,
+        "effect": "wizard",
+        "target": "own-queen",
+        "text_ko": "퀸을 마법사로 대체합니다. 마법사는 마법을 사용할 수 있습니다.",
+        "art": "blank"
+      },
+      "after": {
+        "id": "wizard",
+        "name_ko": "마법사",
+        "phase": "PIECE",
+        "half_stars": 10,
+        "effect": "wizard",
+        "text_ko": "아군 퀸을 마나와 네 가지 주문을 쓰는 마법사로 바꿉니다.",
+        "art": "wizard",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "zugzwang",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "id": "zugzwang",
+        "name_ko": "추크츠방",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "zugzwang",
+        "text_ko": "이번 턴에 상대방은 반드시 자신의 킹을 움직여야 합니다. 상대 킹이 물리적으로 갇혀있다면 사용할 수 없습니다.",
+        "art": "zugzwang"
+      },
+      "after": {
+        "id": "zugzwang",
+        "name_ko": "추크츠방",
+        "phase": "END",
+        "half_stars": 6,
+        "effect": "zugzwang",
+        "text_ko": "다음 상대 수에는 반드시 상대 킹이 움직여야 합니다.",
+        "art": "zugzwang",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "END_TURN",
+        "draft_weight_units": 85,
+        "draw_requirement": "OPPONENT_KING_MOVE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    }
+  ],
+  "disabled": [
+    "democracy",
+    "qxe1",
+    "summon-colossus",
+    "underground-bunker"
+  ],
+  "unsupported": [
+    {
+      "id": "acceleration",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "apprentice-knights",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "archbishop",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "ascension",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "barricade",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "barrier",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "basic-training",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "beacon",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "big-rook",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "bishop-infiltration",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "black-box",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "black-hole",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "black-magic",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "blockade",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "brainwash",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "bribe",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "calling-card",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "campfire",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "canceling",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "castling",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chain",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chameleon-mutation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chancellor",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "charge",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-344200",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-960",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-n-pow-30",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chimera",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "collapse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "conscription",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "constitutional-monarchy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "conveyor",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "counterattack",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "crown",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "d4",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "death-squad",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "democracy",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "diagonal-chess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "dice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "disarm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "don-quixote",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "dutch",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "e4",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "eagle",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "eastern-policy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "elephant-escape",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "emergency-evacuation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "en-passant-bang",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "encouragement",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "evasion",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "exile",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "fanatical-ritual",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "feudal-contract",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "file-conveyor",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "final-weapon",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "football",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "freeze",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "frontline-response",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "gale",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "grappler",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "greek-gift",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "grudge",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "guard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "herald",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "high-ground",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "highway",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "holdout",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "horde",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "icbm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "ice-king",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "ice-sheet",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "idol",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "inertia",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "iron-monarch",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "jester",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "judgment",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "killer",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "knightmate",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "last-resistance",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "last-stand",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "leap",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "lobster",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "locust-swarm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "loyalist",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mad-horse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "martyrdom",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "medium",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "merchant-guild",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "metal",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mistake",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mistake-card",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "monochrome-chess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "monster",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mutation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "necromancy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "othello",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "palace",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "panic",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "pawn-chain",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "pawn-conversion",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "penta-check",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "periodic-collapse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "portal",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "premove",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "princess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "promotion-rush",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "prophecy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "queen-cavalry",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "queens-gambit",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "qxe1",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "random-roulette",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reaper",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reformation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reposition",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "resolve",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "revelation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "revolving-door",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "rocket",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "roller",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "royal-command",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "royal-shield",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "rule-bombs",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "rule-ticket",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "sacrifice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "scarecrow",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "seal",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "severance",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "snipe",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "socialism",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "solidarity",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "stake",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "suicide-bomber",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "summon-colossus",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "switcheroo",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "synchronization",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "taboo",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "taunt",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "thief",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "traitor",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "transmission-tower",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "trolley",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "twins",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "ultimatum",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "underground-bunker",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "vanguard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vanish",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vigilance",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "vip",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vortex",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "wanted",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "windmill",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "winter-kingdom",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "witch-trial",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "wizard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "zugzwang",
+      "reason": "changed_contract_not_ported"
+    }
+  ]
+}

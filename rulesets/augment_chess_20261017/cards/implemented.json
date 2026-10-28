@@ -1,0 +1,2978 @@
+{
+  "ruleset_id": "augment_chess_20261017",
+  "source_bundle_sha256": "2e932da7b9391effbeab3593ea5fdf855041fe5a74f611dfdfde678eee46beb8",
+  "scope": {
+    "catalog_entries": 275,
+    "active_upstream": 271,
+    "implemented_cards": 118,
+    "site_parity_verified_cards": 0,
+    "profile": "partial-standard-with-scoped-ports",
+    "inherited_unchanged_contract_cards": 88,
+    "scoped_ported_cards": 30
+  },
+  "cards": [
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "amazon",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "amazon",
+      "name_ko": "아마존",
+      "phase": "PIECE",
+      "source_symbols": [
+        "amazon"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "armistice",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "armistice",
+      "name_ko": "휴전",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "armistice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "assassin",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "assassin",
+      "name_ko": "암살자",
+      "phase": "PIECE",
+      "source_symbols": [
+        "assassin"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "assembly",
+      "name_ko": "조립",
+      "effect": "assembly",
+      "half_stars": 7,
+      "phase": "MIDDLE",
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "assembly"
+      ]
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "babyBear",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "baby-bear",
+      "name_ko": "아기곰",
+      "phase": "END",
+      "source_symbols": [
+        "babyBear"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "backwardKnight",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "backward-knight",
+      "name_ko": "뒤로 가는 나이트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "backwardKnight"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "berserker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "berserker",
+      "name_ko": "버서커",
+      "phase": "PIECE",
+      "source_symbols": [
+        "berserker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "bigBishop",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "large_piece",
+        "move_generation"
+      ],
+      "half_stars": 8,
+      "id": "big-bishop",
+      "name_ko": "BISHOP",
+      "phase": "OPENING",
+      "source_symbols": [
+        "applyBigRookOpening",
+        "septemberBigBishopOpening",
+        "bigRookMoves"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "binaMate",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "bina-mate",
+      "name_ko": "더블 체크",
+      "phase": "END",
+      "source_symbols": [
+        "binaMate"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "blueJeans",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "blue-jeans",
+      "name_ko": "청바지",
+      "phase": "END",
+      "source_symbols": [
+        "blueJeans"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "breakthroughOrder",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "breakthrough-order",
+      "name_ko": "돌파",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "breakthroughOrder"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "brutus",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_transform",
+        "move_generation",
+        "capture_rule",
+        "rng_cursor"
+      ],
+      "half_stars": 7,
+      "id": "brutus",
+      "name_ko": "브루투스",
+      "phase": "END",
+      "source_symbols": [
+        "applyFiveLocalCard",
+        "resolveLocalBrutus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "camouflageRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "camouflage-color",
+      "name_ko": "위장색",
+      "phase": "RULE",
+      "source_symbols": [
+        "camouflageRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "captureTheFlag",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "capture-the-flag",
+      "name_ko": "깃발 뽑기",
+      "phase": "RULE",
+      "source_symbols": [
+        "septemberAdvanceFlags",
+        "captureTheFlag"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "checker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "checker",
+      "name_ko": "체커",
+      "phase": "OPENING",
+      "source_symbols": [
+        "checker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "cleanupPieces",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "cleanup",
+      "name_ko": "클린업",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "cleanupPieces"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "clockwork",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_transformation",
+        "neighbor_conditioned_movement"
+      ],
+      "half_stars": 8,
+      "id": "clockwork",
+      "name_ko": "태엽인형",
+      "phase": "PIECE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "clonePassive",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "clone",
+      "name_ko": "복제",
+      "phase": "END",
+      "source_symbols": [
+        "clonePassive"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "conversion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "conversion",
+      "name_ko": "기도",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "conversion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "coolGuy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "cool-guy",
+      "name_ko": "매너",
+      "phase": "RULE",
+      "source_symbols": [
+        "coolGuy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "cornerKick",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "corner-kick",
+      "name_ko": "코너킥",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "cornerKick"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "coronation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "coronation",
+      "name_ko": "대관식",
+      "phase": "END",
+      "source_symbols": [
+        "coronation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "desperado",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "desperado",
+      "name_ko": "데스페라도",
+      "phase": "END",
+      "source_symbols": [
+        "desperado"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "disassembly",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_post_effect",
+        "piece_spawn"
+      ],
+      "half_stars": 4,
+      "id": "disassembly",
+      "name_ko": "분해",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "dragon",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "dragon",
+      "name_ko": "드래곤",
+      "phase": "PIECE",
+      "source_symbols": [
+        "dragon"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "earlyPromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "early-promotion",
+      "name_ko": "조기 진급",
+      "phase": "OPENING",
+      "source_symbols": [
+        "earlyPromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "emptyLunchbox",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "empty-lunchbox",
+      "name_ko": "빈 찬합",
+      "phase": "END",
+      "source_symbols": [
+        "emptyLunchbox"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "exhaustion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "exhaustion",
+      "name_ko": "탈진",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "exhaustion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "extinction",
+      "ends_turn": false,
+      "engine_primitives": [
+        "mass_removal",
+        "royal_resolution"
+      ],
+      "half_stars": 8,
+      "id": "extinction",
+      "name_ko": "멸종",
+      "phase": "END",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "falseStart",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "opening_card"
+      ],
+      "half_stars": 6,
+      "id": "false-start",
+      "name_ko": "부정출발",
+      "phase": "OPENING",
+      "source_symbols": [
+        "falseStartMoves"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "fastGrowth",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "fast-growth",
+      "name_ko": "성급한 승진",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fastGrowth"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "fianchetto",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "fianchetto",
+      "name_ko": "피앙케토",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fianchetto"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "fieldPromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "field-promotion",
+      "name_ko": "특진",
+      "phase": "OPENING",
+      "source_symbols": [
+        "fieldPromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "fileSurge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "file-surge",
+      "name_ko": "급수",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "fileSurge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "fleetingDream",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "fleeting-dream",
+      "name_ko": "일장춘몽",
+      "phase": "END",
+      "source_symbols": [
+        "fleetingDream"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "frenzy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "frenzy",
+      "name_ko": "광란",
+      "phase": "END",
+      "source_symbols": [
+        "frenzy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "genevaConvention",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "geneva-convention",
+      "name_ko": "제네바 협약",
+      "phase": "OPENING",
+      "source_symbols": [
+        "genevaConvention"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "ghost",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "ghost",
+      "name_ko": "고스트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "ghost"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "gomoku",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "gomoku",
+      "name_ko": "오목",
+      "phase": "END",
+      "source_symbols": [
+        "gomoku"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "grasshopper",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "grasshopper",
+      "name_ko": "그래스호퍼",
+      "phase": "PIECE",
+      "source_symbols": [
+        "grasshopper"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "hallucination",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "hallucination",
+      "name_ko": "환각",
+      "phase": "END",
+      "source_symbols": [
+        "hallucination"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "hedgehog",
+      "name_ko": "고슴도치",
+      "effect": "hedgehog",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "highlander",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "highlander",
+      "name_ko": "하이랜더",
+      "phase": "END",
+      "source_symbols": [
+        "highlander"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "homecoming",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "homecoming",
+      "name_ko": "귀환",
+      "phase": "END",
+      "source_symbols": [
+        "homecoming"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "hook",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "hook",
+      "name_ko": "구행",
+      "phase": "PIECE",
+      "source_symbols": [
+        "hook"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "hope",
+      "name_ko": "희망",
+      "effect": "hope",
+      "half_stars": 8,
+      "phase": "END",
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "hope"
+      ]
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "horseRiding",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "horse-riding",
+      "name_ko": "승마",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "horseRiding"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "hypocrisy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "hypocrisy",
+      "name_ko": "위선",
+      "phase": "END",
+      "source_symbols": [
+        "hypocrisy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "imperialStudies",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "imperial-studies",
+      "name_ko": "제왕학",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "imperialStudies"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "infiltration",
+      "name_ko": "잠입",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "effect": "infiltration",
+      "text_ko": "아군 기물이 상대 홈 랭크까지 침투할 경우, 주변에 기물이 없다면 잠복을 얻습니다.",
+      "art": "infiltration",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "move_post_effect",
+        "piece_status"
+      ],
+      "source_symbols": null
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "initiative",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "initiative",
+      "name_ko": "선공권",
+      "phase": "OPENING",
+      "source_symbols": [
+        "initiative"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "injury",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "injury",
+      "name_ko": "부상",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "injury"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "insight",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "insight",
+      "name_ko": "통찰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "insight"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "iqp",
+      "name_ko": "IQP",
+      "effect": "iqp",
+      "half_stars": 8,
+      "phase": "OPENING",
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "iqp"
+      ]
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "joker",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "joker",
+      "name_ko": "조커",
+      "phase": "END",
+      "source_symbols": [
+        "joker"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "killerKing",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter",
+        "capture_extension"
+      ],
+      "half_stars": 8,
+      "id": "killer-king",
+      "name_ko": "킬러 킹",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "kingOfTheHill",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "king-of-the-hill",
+      "name_ko": "언덕의 왕",
+      "phase": "OPENING",
+      "source_symbols": [
+        "kingOfTheHill"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "knightmaster",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "knightmaster",
+      "name_ko": "기사단장",
+      "phase": "PIECE",
+      "source_symbols": [
+        "knightmaster"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "localConscription",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "local-conscription",
+      "name_ko": "현지군 징병",
+      "phase": "PIECE",
+      "source_symbols": [
+        "localConscription"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "log",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "log",
+      "name_ko": "통나무",
+      "phase": "PIECE",
+      "source_symbols": [
+        "log"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "londonSystem",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "london-system",
+      "name_ko": "런던 시스템",
+      "phase": "OPENING",
+      "source_symbols": [
+        "londonSystem"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "longEnPassant",
+      "ends_turn": false,
+      "engine_primitives": [
+        "en_passant_extension"
+      ],
+      "half_stars": 4,
+      "id": "long-en-passant",
+      "name_ko": "롱파상",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "machoChess",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "macho-chess",
+      "name_ko": "상남자 체스",
+      "phase": "RULE",
+      "source_symbols": [
+        "machoChess"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "magicGirl",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "magic-girl",
+      "name_ko": "마법소녀",
+      "phase": "PIECE",
+      "source_symbols": [
+        "magicGirl"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "majesty",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter"
+      ],
+      "half_stars": 6,
+      "id": "majesty",
+      "name_ko": "위엄",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "id": "man",
+      "name_ko": "만",
+      "effect": "manConversion",
+      "half_stars": 8,
+      "phase": "MIDDLE",
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "manConversion"
+      ]
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "miracle",
+      "ends_turn": true,
+      "engine_primitives": [
+        "owner_conversion",
+        "mass_removal"
+      ],
+      "half_stars": 7,
+      "id": "miracle",
+      "name_ko": "기적",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "missionary",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "missionary",
+      "name_ko": "선교사",
+      "phase": "PIECE",
+      "source_symbols": [
+        "missionary"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "mongolianGambit",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 10,
+      "id": "mongolian-gambit",
+      "name_ko": "몽골리안 갬빗",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "mongolianGambit"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "moving",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "moving",
+      "name_ko": "무빙",
+      "phase": "END",
+      "source_symbols": [
+        "moving"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "nullification",
+      "name_ko": "상쇄",
+      "effect": "nullification",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "piece_status",
+        "capture_filter"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "octopus",
+      "name_ko": "문어",
+      "effect": "octopus",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "ordination",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "ordination",
+      "name_ko": "서품",
+      "phase": "PIECE",
+      "source_symbols": [
+        "ordination"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "otherworld",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "otherworld",
+      "name_ko": "이세계",
+      "phase": "OPENING",
+      "source_symbols": [
+        "otherworld"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "outpost",
+      "ends_turn": false,
+      "engine_primitives": [
+        "protection_set",
+        "move_generation"
+      ],
+      "half_stars": 7,
+      "id": "outpost",
+      "name_ko": "전초기지",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "overtake",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 8,
+      "id": "overtake",
+      "name_ko": "추월",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "overwhelm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "overwhelm",
+      "name_ko": "압도",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "overwhelm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "id": "paladin",
+      "name_ko": "팔라딘",
+      "effect": "paladin",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "parrot",
+      "name_ko": "앵무새",
+      "effect": "parrot",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "engine_primitives": [
+        "piece_transformation",
+        "move_generation"
+      ],
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "parry",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "parry",
+      "name_ko": "패링",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "parry"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "pawnStorm",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "pawn-storm",
+      "name_ko": "폰 스톰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "pawnStorm"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "pegasus",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "pegasus",
+      "name_ko": "유니콘",
+      "phase": "END",
+      "source_symbols": [
+        "pegasus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "platformRule",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "platform",
+      "name_ko": "발판",
+      "phase": "RULE",
+      "source_symbols": [
+        "platformRule"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "poisonedPawn",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "poisoned-pawn",
+      "name_ko": "독이 든 폰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "poisonedPawn"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "portalGun",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "portal-gun",
+      "name_ko": "포탈 건",
+      "phase": "END",
+      "source_symbols": [
+        "portalGun"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "proficiency",
+      "ends_turn": false,
+      "engine_primitives": [
+        "legality_filter",
+        "capture_extension"
+      ],
+      "half_stars": 5,
+      "id": "proficiency",
+      "name_ko": "숙련",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "quantumMechanics",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "quantum-mechanics",
+      "name_ko": "양자 역학",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "quantumMechanics"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "queenAfterimage",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "queen-afterimage",
+      "name_ko": "잔상",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "queenAfterimage"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "racingKing",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "racing-king",
+      "name_ko": "레이싱 킹",
+      "phase": "END",
+      "source_symbols": [
+        "racingKing"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "radicalCharge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 9,
+      "id": "radical-charge",
+      "name_ko": "난폭한 돌진",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "radicalCharge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "recurrence",
+      "ends_turn": false,
+      "engine_primitives": [
+        "piece_status",
+        "capture_reaction",
+        "rng_cursor"
+      ],
+      "half_stars": 7,
+      "id": "recurrence",
+      "name_ko": "회귀",
+      "phase": "END",
+      "source_symbols": [
+        "septemberQueueRecurrence",
+        "septemberResolveBoardRecurrences"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "recycling",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "recycling",
+      "name_ko": "재활용",
+      "phase": "RULE",
+      "source_symbols": [
+        "recycling"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "relay",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "relay",
+      "name_ko": "교대",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "relay"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "religiousVictory",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "religious-victory",
+      "name_ko": "종교 승리",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "religiousVictory"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "replayMove",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "replay",
+      "name_ko": "리플레이",
+      "phase": "END",
+      "source_symbols": [
+        "replayMove"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "retreat",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "retreat",
+      "name_ko": "퇴각",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "retreat"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
+      ],
+      "effect": "reversal",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 6,
+      "id": "reversal",
+      "name_ko": "반전",
+      "phase": "END",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "reversePawns",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "reverse-pawns",
+      "name_ko": "폰 방향 반전",
+      "phase": "END",
+      "source_symbols": [
+        "reversePawns"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "rookLift",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "rook-lift",
+      "name_ko": "룩 리프트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "rookLift"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "saturation",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "saturation",
+      "name_ko": "포화",
+      "phase": "RULE",
+      "source_symbols": [
+        "saturation"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "schrodingerPawns",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "schrodinger-pawns",
+      "name_ko": "슈뢰딩거의 폰",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "schrodingerPawns"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "siegeRam",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "siege-ram",
+      "name_ko": "공성추",
+      "phase": "PIECE",
+      "source_symbols": [
+        "siegeRam"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "siren",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "siren",
+      "name_ko": "세이렌",
+      "phase": "PIECE",
+      "source_symbols": [
+        "siren"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "slime",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "slime",
+      "name_ko": "슬라임",
+      "phase": "PIECE",
+      "source_symbols": [
+        "slime"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "pawnSprint",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "sprint",
+      "name_ko": "질주",
+      "phase": "OPENING",
+      "source_symbols": [
+        "pawnSprint"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "spy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "spy",
+      "name_ko": "스파이",
+      "phase": "END",
+      "source_symbols": [
+        "spy"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
+      ],
+      "effect": "standardBearer",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 5,
+      "id": "standard-bearer",
+      "name_ko": "기수",
+      "phase": "PIECE",
+      "source_symbols": [
+        "standardBearer"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "stealth",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "stealth",
+      "name_ko": "은신",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "stealth"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "submerge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 4,
+      "id": "submerge",
+      "name_ko": "잠복",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "submerge"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "substitution",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "substitution",
+      "name_ko": "치환",
+      "phase": "END",
+      "source_symbols": [
+        "substitution"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "suspiciousPotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "suspicious-potion",
+      "name_ko": "수상한 물약",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "suspiciousPotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "symmetry",
+      "ends_turn": false,
+      "engine_primitives": [
+        "move_generation",
+        "turn_status"
+      ],
+      "half_stars": 7,
+      "id": "symmetry",
+      "name_ko": "대칭",
+      "phase": "MIDDLE",
+      "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "rule",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "transcendence",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 0,
+      "id": "transcendence",
+      "name_ko": "초월",
+      "phase": "RULE",
+      "source_symbols": [
+        "transcendence"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "trickster",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "trickster",
+      "name_ko": "트릭스터",
+      "phase": "PIECE",
+      "source_symbols": [
+        "trickster"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "trojanHorse",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 7,
+      "id": "trojan-horse",
+      "name_ko": "트로이 목마",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "trojanHorse"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "undead",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 8,
+      "id": "undead",
+      "name_ko": "언데드",
+      "phase": "PIECE",
+      "source_symbols": [
+        "undead"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "underpromotion",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "underpromotion",
+      "name_ko": "언더프로모션",
+      "phase": "END",
+      "source_symbols": [
+        "underpromotion"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
+      ],
+      "effect": "whiteBox",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "half_stars": 6,
+      "id": "white-box",
+      "name_ko": "하얀 상자",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "whiteBox"
+      ],
+      "turn_exclusive": false
+    }
+  ],
+  "pending": [
+    {
+      "id": "acceleration",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "apprentice-knights",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "archbishop",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "ascension",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "barricade",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "barrier",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "basic-training",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "beacon",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "big-rook",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "bishop-infiltration",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "black-box",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "black-hole",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "black-magic",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "blockade",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "brainwash",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "bribe",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "calling-card",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "campfire",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "canceling",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "castling",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chain",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chameleon-mutation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chancellor",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "charge",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-344200",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-960",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chess-n-pow-30",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "chimera",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "collapse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "conscription",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "constitutional-monarchy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "conveyor",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "counterattack",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "crown",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "d4",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "death-squad",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "democracy",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "diagonal-chess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "dice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "disarm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "don-quixote",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "dutch",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "e4",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "eagle",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "eastern-policy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "elephant-escape",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "emergency-evacuation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "en-passant-bang",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "encouragement",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "evasion",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "exile",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "fanatical-ritual",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "feudal-contract",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "file-conveyor",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "final-weapon",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "football",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "freeze",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "frontline-response",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "gale",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "grappler",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "greek-gift",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "grudge",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "guard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "herald",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "high-ground",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "highway",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "holdout",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "horde",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "icbm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "ice-king",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "ice-sheet",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "idol",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "inertia",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "iron-monarch",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "jester",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "judgment",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "killer",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "knightmate",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "last-resistance",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "last-stand",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "leap",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "lobster",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "locust-swarm",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "loyalist",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mad-horse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "martyrdom",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "medium",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "merchant-guild",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "metal",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mistake",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mistake-card",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "monochrome-chess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "monster",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "mutation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "necromancy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "othello",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "palace",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "panic",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "pawn-chain",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "pawn-conversion",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "penta-check",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "periodic-collapse",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "portal",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "premove",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "princess",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "promotion-rush",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "prophecy",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "queen-cavalry",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "queens-gambit",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "qxe1",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "random-roulette",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reaper",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reformation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "reposition",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "resolve",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "revelation",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "revolving-door",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "rocket",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "roller",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "royal-command",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "royal-shield",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "rule-bombs",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "rule-ticket",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "sacrifice",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "scarecrow",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "seal",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "severance",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "snipe",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "socialism",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "solidarity",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "stake",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "suicide-bomber",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "summon-colossus",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "switcheroo",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "synchronization",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "taboo",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "taunt",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "thief",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "traitor",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "transmission-tower",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "trolley",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "twins",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "ultimatum",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "underground-bunker",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "vanguard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vanish",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vigilance",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "vip",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "vortex",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "wanted",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "windmill",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "winter-kingdom",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "witch-trial",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "wizard",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "zugzwang",
+      "reason": "changed_contract_not_ported"
+    }
+  ]
+}

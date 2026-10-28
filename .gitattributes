@@ -4,3 +4,5 @@
 *.json text eol=lf
 *.md text eol=lf
 *.html text eol=lf
+# Preserve captured upstream bytes for provenance hash verification.
+rulesets/augment_chess_20261017/sources/raw/** -text

@@ -2450,6 +2450,7 @@ impl Engine {
 
         if let Some(context) = context {
             if context.poisoned
+                && state.ruleset_id != crate::LATEST_RULESET_ID
                 && let Some(attacker) = state.board.get(movement.to)
             {
                 state.card_runtime.frozen.insert(
@@ -2557,16 +2558,28 @@ impl Engine {
                 movement.to.rank() > movement.from.rank()
             };
         let captured_friend = captured_piece.is_some_and(|piece| piece.owner == owner);
+        let mut rook_lift = original_piece.kind == PieceKind::Rook
+            && state.card_runtime.rook_lift[owner.index()]
+            && matches!(
+                (movement.to.file(), movement.to.rank()),
+                (0, 0) | (0, 7) | (7, 0) | (7, 7)
+            );
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            let count = state
+                .card_runtime
+                .october
+                .rook_lift_chain
+                .filter(|(id, _)| *id == original_piece.id)
+                .map_or(0, |(_, count)| count);
+            rook_lift &= captured_piece.is_none() && count < 3;
+            state.card_runtime.october.rook_lift_chain =
+                rook_lift.then_some((original_piece.id, count.saturating_add(1)));
+        }
         let extra_move = captured_backward
             || (original_piece.kind == PieceKind::Knight
                 && state.card_runtime.file_surge[owner.index()]
                 && matches!(movement.to.file(), 0 | 7))
-            || (original_piece.kind == PieceKind::Rook
-                && state.card_runtime.rook_lift[owner.index()]
-                && matches!(
-                    (movement.to.file(), movement.to.rank()),
-                    (0, 0) | (0, 7) | (7, 0) | (7, 7)
-                ))
+            || rook_lift
             || (original_piece.kind == PieceKind::Knight
                 && state.card_runtime.mad_horse[owner.index()]
                 && captured_friend);

@@ -31,7 +31,7 @@ pub struct GameSession {
 
 impl GameSession {
     pub fn new(seed: u64) -> Result<Self, String> {
-        let engine = Engine::bundled_20260915()
+        let engine = Engine::bundled_latest()
             .map_err(|e| e.to_string())?
             .with_checked_draft_eligibility();
         let mut session = Self {
@@ -137,8 +137,8 @@ impl GameSession {
             }
             let cards = |owner: augment_core::Player| state.cards.iter().filter(|c| c.owner == owner).map(|c| json!({
                 "id": c.definition_id, "instanceId": format!("c{}", c.instance_id), "color": format!("{:?}", owner).to_ascii_lowercase(),
-                "used": c.charges == 0 && augment_core::implemented_card(&c.definition_id).is_some_and(|d| d.activation == augment_core::CardActivation::Active),
-                "usesRemaining": c.charges, "passiveApplied": augment_core::implemented_card(&c.definition_id).is_some_and(|d| d.activation == augment_core::CardActivation::Passive),
+                "used": c.charges == 0 && self.engine.card_definition(&c.definition_id).is_some_and(|d| d.activation == augment_core::CardActivation::Active),
+                "usesRemaining": c.charges, "passiveApplied": self.engine.card_definition(&c.definition_id).is_some_and(|d| d.activation == augment_core::CardActivation::Passive),
                 "nextTurnPending": c.available_after_turn.is_some_and(|turn| state.turns_taken[owner.index()] < turn),
             })).collect::<Vec<_>>();
             let kind = match node.action.as_ref() { Some(Action::Move(_)) => "move", Some(Action::UseCard {..}) => "card", Some(Action::DraftPick{..}) => "gain", Some(Action::ResolveChoice{..}) => "effect", _ => "special" };
@@ -157,9 +157,9 @@ impl GameSession {
         let phase_ready = matches!(state.phase, augment_core::GamePhase::Playing)
             && state.status == GameStatus::Ongoing;
         json!({"fingerprint": format!("{:016x}", state.fingerprint()), "node": self.cursor,
-            "cards": augment_core::IMPLEMENTED_CARDS.iter().map(|definition| {
-                let eligibility = augment_core::check_card_eligibility(state, definition.id, owner, augment_core::AcquisitionContext::Setup);
-                let mut card = super::view::card_meta(definition.id);
+            "cards": augment_core::latest_catalog().iter().map(|definition| {
+                let eligibility = augment_core::check_card_eligibility(state, &definition.id, owner, augment_core::AcquisitionContext::Setup);
+                let mut card = super::view::card_meta(&definition.id);
                 card["eligible"] = json!(phase_ready && eligibility.is_eligible());
                 card["reason"] = json!(if !phase_ready { "드래프트/선택을 완료하거나 보드 편집으로 새 국면을 만드세요." } else { eligibility.reason().map_or("", |r| r.message_ko.as_str()) });
                 card["reasonCode"] = json!(eligibility.reason().map(|r| format!("{:?}", r.code)));
@@ -183,7 +183,9 @@ impl GameSession {
             .legal_actions(&transition.state)
             .map_err(|e| e.to_string())?;
         self.stop_analysis();
-        let name = augment_core::implemented_card(augment_core::canonical_card_id(id))
+        let name = self
+            .engine
+            .card_definition(augment_core::canonical_card_id(id))
             .map_or(id, |d| d.name_ko);
         self.nodes.push(PositionNode {
             state: transition.state,
@@ -413,25 +415,23 @@ mod tests {
         );
         assert!(
             session
-                .acquire_setup(
-                    &json!({"cardId":"acceleration","owner":"white","fingerprint":"stale"})
-                )
+                .acquire_setup(&json!({"cardId":"platform","owner":"white","fingerprint":"stale"}))
                 .is_err()
         );
         assert_eq!(session.view().unwrap(), before);
         let rule = session
-            .acquire_setup(&json!({"cardId":"acceleration","owner":"white"}))
+            .acquire_setup(&json!({"cardId":"platform","owner":"white"}))
             .unwrap();
         assert!(
             session
                 .state()
                 .applied_rules
                 .iter()
-                .any(|r| r == "acceleration")
+                .any(|r| r == "platform")
         );
         assert!(
             session
-                .acquire_setup(&json!({"cardId":"acceleration","owner":"black"}))
+                .acquire_setup(&json!({"cardId":"platform","owner":"black"}))
                 .is_err()
         );
         assert_eq!(rule["notation"]["nodes"].as_array().unwrap().len(), 4);

@@ -8,6 +8,8 @@ const BUNDLED_20260818: &str =
     include_str!("../../../rulesets/augment_chess_20260818/manifest.json");
 const BUNDLED_20260915: &str =
     include_str!("../../../rulesets/augment_chess_20260915/manifest.json");
+const BUNDLED_20261017: &str =
+    include_str!("../../../rulesets/augment_chess_20261017/manifest.json");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct RulesetManifest {
@@ -24,6 +26,10 @@ pub struct RulesetManifest {
 }
 
 impl RulesetManifest {
+    pub fn bundled_latest() -> Result<Self, RulesetError> {
+        Self::from_json(BUNDLED_20261017)
+    }
+
     pub fn bundled_20260807() -> Result<Self, RulesetError> {
         Self::bundled_20260818()
     }
@@ -81,8 +87,9 @@ impl RulesetManifest {
                 "repetition_count must be at least two".to_owned(),
             ));
         }
-        if self.base_rules.deathmatch_starts_at_move_count == 0
-            || self.base_rules.deathmatch_quiet_move_count == 0
+        if self.base_rules.deathmatch_enabled
+            && (self.base_rules.deathmatch_starts_at_move_count == 0
+                || self.base_rules.deathmatch_quiet_move_count == 0)
         {
             return Err(RulesetError::InvalidManifest(
                 "deathmatch thresholds must be positive".to_owned(),
@@ -95,11 +102,19 @@ impl RulesetManifest {
                 "opening RULE chance must be a valid fraction".to_owned(),
             ));
         }
-        if self.base_rules.repetition_tiebreak != "lower_half_star_total" {
+        if !matches!(
+            self.base_rules.repetition_tiebreak.as_str(),
+            "lower_half_star_total" | "draw"
+        ) {
             return Err(RulesetError::InvalidManifest(format!(
                 "unsupported repetition_tiebreak {:?}",
                 self.base_rules.repetition_tiebreak
             )));
+        }
+        if self.base_rules.fifty_move_completed_turns == Some(0) {
+            return Err(RulesetError::InvalidManifest(
+                "fifty-move threshold must be positive".into(),
+            ));
         }
 
         let mut mode_ids = BTreeSet::new();
@@ -165,8 +180,16 @@ pub struct BaseRules {
     pub immobility_loses: bool,
     pub repetition_count: u8,
     pub repetition_tiebreak: String,
+    #[serde(default = "legacy_deathmatch_enabled")]
+    pub deathmatch_enabled: bool,
+    #[serde(default)]
+    pub fifty_move_completed_turns: Option<u32>,
     pub deathmatch_starts_at_move_count: u32,
     pub deathmatch_quiet_move_count: u32,
+}
+
+fn legacy_deathmatch_enabled() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -230,6 +253,21 @@ impl From<serde_json::Error> for RulesetError {
 mod tests {
     use super::*;
     use crate::BUNDLED_RULESET_ID;
+
+    #[test]
+    fn latest_rules_remove_star_tiebreak_and_deathmatch_without_rewriting_history() {
+        let latest = RulesetManifest::bundled_latest().unwrap();
+        assert_eq!(latest.id, crate::LATEST_RULESET_ID);
+        assert_eq!(latest.base_rules.repetition_tiebreak, "draw");
+        assert!(!latest.base_rules.deathmatch_enabled);
+        assert_eq!(latest.base_rules.fifty_move_completed_turns, Some(100));
+        assert_eq!(latest.opening_rule.chance_numerator, 1);
+        assert_eq!(latest.opening_rule.chance_denominator, 5);
+        let old = RulesetManifest::bundled_20260915().unwrap();
+        assert!(old.base_rules.deathmatch_enabled);
+        assert_eq!(old.base_rules.fifty_move_completed_turns, None);
+        assert_eq!(old.base_rules.repetition_tiebreak, "lower_half_star_total");
+    }
 
     #[test]
     fn bundled_manifest_is_valid_and_explicitly_incomplete() {

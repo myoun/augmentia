@@ -6,7 +6,7 @@ const DEFAULT_SEED: u64 = 20_260_807;
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args().skip(1);
-    let engine = Engine::bundled_20260915()?;
+    let engine = Engine::bundled_latest()?;
     let seed = match args.next().as_deref() {
         Some("--seed") => args.next().ok_or("--seed requires value")?.parse()?,
         Some("--help") | Some("-h") => {
@@ -32,6 +32,13 @@ fn play_hotseat<R: BufRead, W: Write>(
     let mut state = transition.state;
 
     writeln!(output, "=== 증강체스 Hotseat 대국 (seed: {seed}) ===")?;
+    writeln!(
+        output,
+        "{} · 카드 {}/{}장 지원 · Standard",
+        engine.ruleset().id,
+        engine.ruleset().coverage.implemented_card_count,
+        engine.ruleset().coverage.target_card_count
+    )?;
     for event in &transition.events {
         writeln!(output, "  * {event:?}")?;
     }

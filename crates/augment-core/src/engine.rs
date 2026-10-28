@@ -24,6 +24,9 @@ use std::fmt;
 
 mod end;
 mod middle;
+mod october;
+mod october_acquisition;
+mod october_effects;
 mod rule;
 mod september;
 
@@ -212,6 +215,27 @@ struct DraftAverageGap {
 }
 
 impl Engine {
+    pub fn bundled_latest() -> Result<Self, crate::RulesetError> {
+        RulesetManifest::bundled_latest()
+            .map(|rules| Self::new(rules).with_checked_draft_eligibility())
+    }
+
+    pub fn card_definition(&self, id: &str) -> Option<crate::ImplementedCardDefinition> {
+        crate::ruleset_card(&self.ruleset.id, id)
+    }
+
+    pub fn card_definitions(&self) -> Vec<crate::ImplementedCardDefinition> {
+        if self.ruleset.id == crate::LATEST_RULESET_ID {
+            return crate::latest_catalog()
+                .iter()
+                .filter_map(|card| self.card_definition(&card.id))
+                .collect();
+        }
+        IMPLEMENTED_CARDS
+            .iter()
+            .filter_map(|card| self.card_definition(card.id))
+            .collect()
+    }
     pub fn new(ruleset: RulesetManifest) -> Self {
         Self {
             ruleset,
@@ -303,12 +327,15 @@ impl Engine {
         });
 
         let definition_id = if triggered {
-            let mut executable_rules: Vec<_> = IMPLEMENTED_CARDS
-                .iter()
+            let mut executable_rules: Vec<_> = self
+                .card_definitions()
+                .into_iter()
                 .filter(|card| card.activation == CardActivation::Rule)
                 .filter(|card| {
-                    self.ruleset.id == "augment_chess_20260915"
-                        || card.id != crate::CAPTURE_THE_FLAG
+                    matches!(
+                        self.ruleset.id.as_str(),
+                        "augment_chess_20260915" | crate::LATEST_RULESET_ID
+                    ) || card.id != crate::CAPTURE_THE_FLAG
                 })
                 .collect();
             executable_rules.sort_by_key(|card| card.name_ko);
@@ -355,7 +382,8 @@ impl Engine {
         {
             return Err(EngineError::Invariant(reason.message_ko.clone()));
         }
-        let definition = implemented_card(definition_id)
+        let definition = self
+            .card_definition(definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.into()))?;
         let mut transition = if definition.activation == CardActivation::Rule {
             self.apply_rule(state, definition_id)?
@@ -378,7 +406,8 @@ impl Engine {
         owner: Player,
     ) -> Result<Transition, EngineError> {
         self.ensure_ruleset(state)?;
-        let definition = implemented_card(definition_id)
+        let definition = self
+            .card_definition(definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.to_owned()))?;
         if definition.activation == CardActivation::Rule {
             return Err(EngineError::CardIsRule(definition_id.to_owned()));
@@ -405,8 +434,26 @@ impl Engine {
             instance_id,
             definition_id: definition_id.to_owned(),
         }];
-        self.apply_card_definition(&mut next, definition_id, owner, &mut events);
+        if self.ruleset.id != crate::LATEST_RULESET_ID
+            || definition.activation == CardActivation::Passive
+        {
+            self.apply_acquired_card_definition(&mut next, definition_id, owner, &mut events)?;
+        }
+        self.resolve_october_acquisitions(&mut next, &mut events);
+        self.resolve_october_initiative_checks(&mut next);
         self.resolve_effect_queue_from(&mut next, &mut events, 0)?;
+        if self.ruleset.id == crate::LATEST_RULESET_ID {
+            if next.ply == 0 && next.turns_taken == [0; 2] {
+                next.reset_automatic_draw_for_setup();
+            } else {
+                next.observe_automatic_draw_progress(owner, &events);
+            }
+            self.resolve_missing_king(&mut next, &mut events);
+            self.resolve_gomoku_victory(&mut next);
+            if next.status != GameStatus::Ongoing {
+                self.push_game_ended(&next, &mut events);
+            }
+        }
         Ok(Transition {
             state: next,
             events,
@@ -1554,7 +1601,8 @@ impl Engine {
         definition_id: &str,
         events: &mut Vec<Event>,
     ) -> Result<(), EngineError> {
-        let definition = implemented_card(definition_id)
+        let definition = self
+            .card_definition(definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.to_owned()))?;
         if definition.activation != CardActivation::Rule {
             return Err(EngineError::CardIsNotRule(definition_id.to_owned()));
@@ -1615,8 +1663,8 @@ impl Engine {
             .map(|card| card.definition_id.as_str())
             .collect();
 
-        IMPLEMENTED_CARDS
-            .iter()
+        self.card_definitions()
+            .into_iter()
             .filter(|card| card.activation != CardActivation::Rule)
             .filter(|card| !owned.contains(card.id))
             .filter(|card| !excluded.contains(card.id))
@@ -1635,6 +1683,13 @@ impl Engine {
         excluded: &mut BTreeSet<String>,
     ) -> Vec<String> {
         let mut candidates = self.draft_candidates_for_categories(state, categories, excluded);
+        if self.ruleset.id == crate::LATEST_RULESET_ID && phase == DraftPhase::End {
+            candidates.retain(|id| {
+                crate::latest_catalog()
+                    .iter()
+                    .any(|card| card.id == *id && card.rarity.as_deref() != Some("common"))
+            });
+        }
         if self.checked_draft_eligibility {
             candidates.retain(|id| {
                 crate::check_card_eligibility(state, id, owner, crate::AcquisitionContext::Draft)
@@ -1645,7 +1700,16 @@ impl Engine {
         while picked.len() < count && !candidates.is_empty() {
             let weights: Vec<_> = candidates
                 .iter()
-                .map(|candidate| draft_card_weight_units(candidate, phase))
+                .map(|candidate| {
+                    if self.ruleset.id == crate::LATEST_RULESET_ID {
+                        crate::latest_catalog()
+                            .iter()
+                            .find(|card| card.id == *candidate)
+                            .map_or(0, |card| card.draft_weight_units)
+                    } else {
+                        draft_card_weight_units(candidate, phase)
+                    }
+                })
                 .collect();
             let total_weight: u64 = weights.iter().sum();
             let roll = state.rng_mut().next_unit_53();
@@ -1735,8 +1799,8 @@ impl Engine {
         if best.len() < 2 {
             return best;
         }
-        let Some(mut best_gap) =
-            draft_offer_average(&best).map(|average| draft_average_gap(average, target))
+        let Some(mut best_gap) = draft_offer_average(&self.ruleset.id, &best)
+            .map(|average| draft_average_gap(average, target))
         else {
             return best;
         };
@@ -1746,8 +1810,8 @@ impl Engine {
 
         for _ in 0..DRAFT_BALANCE_EXTRA_ATTEMPTS {
             let candidate = self.draw_draft_offers_once(state, player, phase);
-            let Some(candidate_gap) =
-                draft_offer_average(&candidate).map(|average| draft_average_gap(average, target))
+            let Some(candidate_gap) = draft_offer_average(&self.ruleset.id, &candidate)
+                .map(|average| draft_average_gap(average, target))
             else {
                 continue;
             };
@@ -1950,6 +2014,9 @@ impl Engine {
         events: &mut Vec<Event>,
     ) {
         match definition_id {
+            crate::IQP => state.card_runtime.october.iqp_pending[owner.index()] = true,
+            crate::HOPE => state.card_runtime.october.hope[owner.index()] = true,
+            crate::ASSEMBLY => state.card_runtime.october.assembly[owner.index()] = true,
             crate::HIGHLANDER => self.resolve_highlander_victory(state),
             BRUTUS => {
                 let candidates = web_ordered_pieces(state)
@@ -2012,7 +2079,11 @@ impl Engine {
                 state.card_runtime.initiative[target.index()] = Some(InitiativeStatus {
                     by: owner,
                     start_turn: state.turns_taken[target.index()],
-                    limit: 10,
+                    limit: if state.ruleset_id == crate::LATEST_RULESET_ID {
+                        8
+                    } else {
+                        10
+                    },
                 });
             }
             BACKWARD_KNIGHT => state.card_runtime.backward_knight[owner.index()] = true,
@@ -2091,7 +2162,7 @@ impl Engine {
         state: &mut GameState,
         player: Player,
         events: &mut Vec<Event>,
-    ) {
+    ) -> Result<(), EngineError> {
         let ready: Vec<_> = state
             .cards
             .iter()
@@ -2106,10 +2177,11 @@ impl Engine {
 
         for (index, instance_id, definition_id) in ready {
             state.cards[index].available_after_turn = None;
-            if implemented_card(&definition_id)
+            if self
+                .card_definition(&definition_id)
                 .is_some_and(|definition| definition.activation == CardActivation::Passive)
             {
-                self.apply_card_definition(state, &definition_id, player, events);
+                self.apply_acquired_card_definition(state, &definition_id, player, events)?;
             }
             events.push(Event::CardActivated {
                 owner: player,
@@ -2117,6 +2189,7 @@ impl Engine {
                 definition_id,
             });
         }
+        Ok(())
     }
 
     fn apply_draft_pick(
@@ -2140,7 +2213,8 @@ impl Engine {
             .get(usize::from(offer_index))
             .cloned()
             .ok_or_else(|| EngineError::Invariant("legal draft index is missing".to_owned()))?;
-        let definition = implemented_card(&definition_id)
+        let definition = self
+            .card_definition(&definition_id)
             .ok_or_else(|| EngineError::UnknownCard(definition_id.clone()))?;
         if self.checked_draft_eligibility {
             let eligibility = crate::check_card_eligibility(
@@ -2186,7 +2260,7 @@ impl Engine {
             },
         ];
         if !delayed && definition.activation == CardActivation::Passive {
-            self.apply_card_definition(&mut next, &definition_id, actor, &mut events);
+            self.apply_acquired_card_definition(&mut next, &definition_id, actor, &mut events)?;
         }
 
         if actor == Player::White {
@@ -2195,7 +2269,7 @@ impl Engine {
                 draft.phase,
                 Player::Black,
                 Some(draft.resume_turn),
-                draft_offer_average(&draft.offers),
+                draft_offer_average(&self.ruleset.id, &draft.offers),
             );
             let GamePhase::Draft(next_draft) = &next.phase else {
                 unreachable!("start_draft always installs a draft")
@@ -2236,7 +2310,8 @@ impl Engine {
         state.actions_remaining = 1;
         state.cards_used_this_turn[resume_turn.index()] = 0;
         state.take_turn_end_request();
-        self.activate_cards_for_turn(state, resume_turn, events);
+        self.activate_cards_for_turn(state, resume_turn, events)?;
+        self.resolve_october_acquisitions(state, events);
         events.push(Event::DraftCompleted { phase, resume_turn });
         events.push(Event::TurnChanged {
             player: resume_turn,
@@ -2247,6 +2322,13 @@ impl Engine {
         });
         self.resolve_effect_queue_from(state, events, 0)?;
         self.resolve_missing_king(state, events);
+        if self.ruleset.id == crate::LATEST_RULESET_ID {
+            self.resolve_gomoku_victory(state);
+            if state.ply == 0 && state.turns_taken == [0; 2] {
+                state.reset_automatic_draw_for_setup();
+            }
+        }
+        self.resolve_october_turn_start(state, resume_turn);
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
         } else if matches!(state.phase, GamePhase::Playing) {
@@ -2357,6 +2439,7 @@ impl Engine {
         state: &GameState,
         action: Action,
     ) -> Result<Transition, EngineError> {
+        let is_draft_pick = matches!(action, Action::DraftPick { .. });
         let mut transition = match action.clone() {
             Action::Move(movement) => self.apply_move(state, action, movement),
             Action::UsePieceAbility {
@@ -2378,6 +2461,17 @@ impl Engine {
         self.resolve_empty_forced_move(&mut transition.state, &mut transition.events)?;
         self.advance_capture_flags(&mut transition.state, state.turn, false);
         self.refresh_submerged_pieces(&mut transition.state);
+        if !is_draft_pick
+            && !transition
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::TurnEnded { .. }))
+        {
+            let actor = transition.state.turn;
+            transition
+                .state
+                .observe_automatic_draw_progress(actor, &transition.events);
+        }
         if transition.state.status != GameStatus::Ongoing {
             self.push_game_ended(&transition.state, &mut transition.events);
         }
@@ -2612,6 +2706,12 @@ impl Engine {
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = 0;
             next.mark_deathmatch_progress();
+            self.apply_latest_poison_from_events(
+                &mut next,
+                piece_id,
+                &state.card_runtime.poisoned_piece_ids,
+                &events,
+            );
             self.resolve_after_counted_move(&mut next, &mut events);
             self.resolve_missing_king(&mut next, &mut events);
             if next.status == GameStatus::Ongoing {
@@ -2750,7 +2850,7 @@ impl Engine {
             .position(|card| card.instance_id == instance_id)
             .ok_or_else(|| EngineError::Invariant("legal card action has no card".to_owned()))?;
         let definition_id = next.cards[card_index].definition_id.clone();
-        let definition = *implemented_card(&definition_id).ok_or_else(|| {
+        let definition = self.card_definition(&definition_id).ok_or_else(|| {
             EngineError::Invariant(format!("legal card {definition_id:?} is not implemented"))
         })?;
         next.cards[card_index].charges = next.cards[card_index].charges.saturating_sub(1);
@@ -2765,6 +2865,29 @@ impl Engine {
             },
         ];
         match definition_id.as_str() {
+            HORSE_RIDING | crate::REVERSAL | crate::POISONED_PAWN | ORDINATION | PEGASUS
+                if self.ruleset.id == crate::LATEST_RULESET_ID =>
+            {
+                self.apply_latest_changed_effect(
+                    &mut next,
+                    actor,
+                    &definition_id,
+                    &target,
+                    &mut events,
+                )?;
+            }
+            crate::RECURRENCE if self.ruleset.id == crate::LATEST_RULESET_ID => {
+                self.apply_latest_recurrence(&mut next, actor, &mut events)?;
+            }
+            crate::MAN => {
+                let (square, mut piece) = piece_target(&next, &target)?;
+                self.clear_piece_kind_runtime(&mut next, piece.id);
+                next.card_runtime.trickster_move_kinds.remove(&piece.id);
+                self.clear_queens_gambit_protection(&mut next, piece.id);
+                piece.kind = PieceKind::Man;
+                next.board.set(square, Some(piece));
+                self.mark_transformed_piece(&mut next, piece);
+            }
             APPRENTICE_KNIGHTS
             | BIG_BISHOP
             | BIG_ROOK
@@ -2958,6 +3081,10 @@ impl Engine {
                 next.card_runtime.moved_piece_ids.insert(target_piece.id);
                 self.mark_fresh_no_capture(&mut next, target_piece);
                 match target_piece.kind {
+                    PieceKind::Recruiter if next.ruleset_id == crate::LATEST_RULESET_ID => {
+                        target_piece.capture_count = 0;
+                        next.board.set(target_square, Some(target_piece));
+                    }
                     PieceKind::Hedgehog => {
                         next.card_runtime
                             .bear_retaliations
@@ -3269,12 +3396,16 @@ impl Engine {
             .and_then(|value| value.parse::<u32>().ok())
         {
             next.phase = GamePhase::Playing;
-            let kind = match option_index {
-                0 => PieceKind::Queen,
-                1 => PieceKind::Rook,
-                2 => PieceKind::Bishop,
-                3 => PieceKind::Knight,
-                _ => unreachable!("field promotion exposes four choices"),
+            let kind = match choice.options[usize::from(option_index)].as_str() {
+                "queen" => PieceKind::Queen,
+                "rook" => PieceKind::Rook,
+                "bishop" => PieceKind::Bishop,
+                "knight" => PieceKind::Knight,
+                _ => {
+                    return Err(EngineError::Invariant(
+                        "unknown field-promotion option".into(),
+                    ));
+                }
             };
             if let Some((square, mut pawn)) = next.board.find_by_id(piece_id) {
                 pawn.kind = kind;
@@ -4211,7 +4342,13 @@ impl Engine {
             self.resolve_missing_king(&mut next, &mut events);
             if next.status != GameStatus::Ongoing {
                 self.push_game_ended(&next, &mut events);
-            } else if jumped_attack {
+            } else if jumped_attack
+                && (next.ruleset_id != crate::LATEST_RULESET_ID
+                    || !next
+                        .card_runtime
+                        .poison_stun_turns
+                        .contains_key(&checker.id))
+            {
                 let mut followups = Vec::new();
                 self.generate_checker_moves(&next, movement.to, checker, &mut followups);
                 let has_capture = followups.iter().any(|action| {
@@ -4524,12 +4661,18 @@ impl Engine {
                     crate::FIELD_PROMOTION_CHOICE_PREFIX,
                     moving_piece.id
                 ),
-                options: vec![
-                    "queen".to_owned(),
-                    "rook".to_owned(),
-                    "bishop".to_owned(),
-                    "knight".to_owned(),
-                ],
+                options: if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && next.card_runtime.fast_growth[actor.index()]
+                {
+                    vec!["bishop".to_owned(), "knight".to_owned()]
+                } else {
+                    vec![
+                        "queen".to_owned(),
+                        "rook".to_owned(),
+                        "bishop".to_owned(),
+                        "knight".to_owned(),
+                    ]
+                },
                 continuation: ChoiceContinuation::FinishTurn,
             };
             events.push(Event::ChoiceRequested {
@@ -4570,6 +4713,7 @@ impl Engine {
             next.mark_deathmatch_progress();
         }
 
+        self.resolve_october_assembly(&mut next, moving_piece, &events);
         self.resolve_after_counted_move(&mut next, &mut events);
         self.record_completed_piece_move(
             &mut next,
@@ -4714,6 +4858,12 @@ impl Engine {
         runtime_before: &CardRuntimeState,
         events: &mut Vec<Event>,
     ) {
+        self.apply_latest_poison_from_events(
+            state,
+            moving_piece.id,
+            &runtime_before.poisoned_piece_ids,
+            events,
+        );
         let moving_survives = state.board.find_by_id(moving_piece.id).is_some();
         let relocated = |piece_id| {
             before
@@ -4851,6 +5001,33 @@ impl Engine {
                 state: state.ruleset_id.clone(),
             })
         } else {
+            if self.ruleset.id == crate::LATEST_RULESET_ID {
+                if !state.card_runtime.opening_auto_card_ids.is_empty() {
+                    return Err(EngineError::Invariant(
+                        "최신 룰셋에는 첫 이동 후 오프닝 자동 사용 대기가 없습니다.".into(),
+                    ));
+                }
+                for id in state
+                    .cards
+                    .iter()
+                    .map(|card| &card.definition_id)
+                    .chain(state.applied_rules.iter())
+                {
+                    if self.card_definition(id).is_none() {
+                        return Err(EngineError::UnknownCard(id.clone()));
+                    }
+                }
+                if state.deathmatch.is_some() {
+                    return Err(EngineError::Invariant(
+                        "최신 룰셋에는 데스매치가 없습니다.".into(),
+                    ));
+                }
+                if state.automatic_draw.is_none() {
+                    return Err(EngineError::Invariant(
+                        "최신 룰셋의 무승부 카운터가 없습니다.".into(),
+                    ));
+                }
+            }
             Ok(())
         }
     }
@@ -5657,6 +5834,10 @@ impl Engine {
         if state.status != GameStatus::Ongoing {
             return;
         }
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            self.resolve_latest_gomoku(state);
+            return;
+        }
         for player in [Player::White, Player::Black] {
             if !state.card_runtime.gomoku[player.index()] {
                 continue;
@@ -5769,6 +5950,7 @@ impl Engine {
 
     fn resolve_missing_king(&self, state: &mut GameState, events: &mut Vec<Event>) {
         self.resolve_pending_recurrences(state, events);
+        self.resolve_october_initiative_checks(state);
         if state.status != GameStatus::Ongoing || !self.ruleset.base_rules.king_capture_wins {
             return;
         }
@@ -5859,6 +6041,9 @@ impl Engine {
     }
 
     fn start_deathmatch_if_due(&self, state: &mut GameState, events: &mut Vec<Event>) {
+        if !self.ruleset.base_rules.deathmatch_enabled {
+            return;
+        }
         if state.deathmatch.is_some()
             || state.shared_turn_count() < self.ruleset.base_rules.deathmatch_starts_at_move_count
         {
@@ -6117,6 +6302,7 @@ impl Engine {
             ));
         }
         state.take_turn_end_request();
+        state.card_runtime.october.rook_lift_chain = None;
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
             return Ok(());
@@ -6174,6 +6360,10 @@ impl Engine {
             return Ok(());
         }
         self.start_deathmatch_if_due(state, events);
+        let after_turn = events
+            .iter()
+            .rposition(|event| matches!(event, Event::TurnEnded { .. }))
+            .map_or(0, |index| index + 1);
         events.push(Event::TurnEnded { player: actor });
 
         let defender = actor.opponent();
@@ -6205,7 +6395,7 @@ impl Engine {
         events.push(Event::TurnChanged {
             player: next_player,
         });
-        self.activate_cards_for_turn(state, next_player, events);
+        self.activate_cards_for_turn(state, next_player, events)?;
         events.push(Event::TurnStarted {
             player: next_player,
             actions_remaining: state.actions_remaining,
@@ -6214,6 +6404,9 @@ impl Engine {
         self.resolve_middle_turn_start(state, next_player, events);
         self.resolve_effect_queue_from(state, events, next_turn_event_start)?;
         self.resolve_missing_king(state, events);
+        self.resolve_october_turn_start(state, next_player);
+        state.observe_automatic_draw_progress(actor, &events[after_turn..]);
+        state.complete_automatic_draw_turn();
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
             return Ok(());
@@ -6233,20 +6426,42 @@ impl Engine {
             let repetition_count = state.record_current_position();
             if repetition_count >= self.ruleset.base_rules.repetition_count {
                 let [white, black] = state.half_star_totals;
-                state.status = match white.cmp(&black) {
-                    std::cmp::Ordering::Less => GameStatus::Won {
-                        winner: Player::White,
-                        reason: WinReason::LowerStarsOnRepetition,
-                    },
-                    std::cmp::Ordering::Greater => GameStatus::Won {
-                        winner: Player::Black,
-                        reason: WinReason::LowerStarsOnRepetition,
-                    },
-                    std::cmp::Ordering::Equal => GameStatus::Draw {
-                        reason: DrawReason::EqualStarsOnRepetition,
-                    },
+                state.status = if self.ruleset.base_rules.repetition_tiebreak == "draw" {
+                    GameStatus::Draw {
+                        reason: DrawReason::ThreefoldRepetition,
+                    }
+                } else {
+                    match white.cmp(&black) {
+                        std::cmp::Ordering::Less => GameStatus::Won {
+                            winner: Player::White,
+                            reason: WinReason::LowerStarsOnRepetition,
+                        },
+                        std::cmp::Ordering::Greater => GameStatus::Won {
+                            winner: Player::Black,
+                            reason: WinReason::LowerStarsOnRepetition,
+                        },
+                        std::cmp::Ordering::Equal => GameStatus::Draw {
+                            reason: DrawReason::EqualStarsOnRepetition,
+                        },
+                    }
                 };
             }
+        }
+        if state.status == GameStatus::Ongoing
+            && self
+                .ruleset
+                .base_rules
+                .fifty_move_completed_turns
+                .is_some_and(|limit| {
+                    state
+                        .automatic_draw
+                        .as_ref()
+                        .is_some_and(|draw| draw.quiet_turns >= limit)
+                })
+        {
+            state.status = GameStatus::Draw {
+                reason: DrawReason::FiftyMoveRule,
+            };
         }
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
@@ -6620,9 +6835,11 @@ impl Engine {
         include_opening_auto: bool,
     ) {
         for card in &state.cards {
-            let definition = implemented_card(&card.definition_id);
+            let definition = self.card_definition(&card.definition_id);
             if card.owner != state.turn
                 || card.charges == 0
+                || (state.ruleset_id == crate::LATEST_RULESET_ID
+                    && definition.is_none_or(|d| d.activation != CardActivation::Active))
                 || (!include_opening_auto
                     && state
                         .card_runtime
@@ -6637,7 +6854,32 @@ impl Engine {
             {
                 continue;
             }
+            if state.ruleset_id == crate::LATEST_RULESET_ID
+                && self.generate_latest_changed_effect_actions(state, card, actions)
+            {
+                continue;
+            }
             match card.definition_id.as_str() {
+                crate::RECURRENCE if state.ruleset_id == crate::LATEST_RULESET_ID => {
+                    if !self.latest_recurrence_targets(state, state.turn).is_empty() {
+                        actions.push(Action::UseCard {
+                            instance_id: card.instance_id,
+                            target: ActionTarget::None,
+                        });
+                    }
+                }
+                crate::MAN => {
+                    for (square, piece) in state.board.iter() {
+                        if crate::latest::latest_minor_kind(piece.kind)
+                            && !self.is_royal_piece(state, piece)
+                        {
+                            actions.push(Action::UseCard {
+                                instance_id: card.instance_id,
+                                target: ActionTarget::PieceAt(square),
+                            });
+                        }
+                    }
+                }
                 APPRENTICE_KNIGHTS
                 | BIG_BISHOP
                 | BIG_ROOK
@@ -9168,6 +9410,11 @@ impl Engine {
             if piece.owner != state.turn {
                 continue;
             }
+            if state.ruleset_id == crate::LATEST_RULESET_ID
+                && state.card_runtime.poison_stun_turns.contains_key(&piece.id)
+            {
+                continue;
+            }
             if piece.kind == PieceKind::Colossus {
                 let Some(status) = state.card_runtime.large_pieces.get(&piece.id) else {
                     continue;
@@ -9514,7 +9761,9 @@ impl Engine {
             && !self.middle_submerged_protects(state, target)
             && !(state.card_runtime.overwhelm[target.owner.index()]
                 && self.is_royal_piece(state, attacker)
-                && (target.kind == PieceKind::Queen || self.is_royal_piece(state, target)))
+                && (target.kind == PieceKind::Queen
+                    || (state.ruleset_id != crate::LATEST_RULESET_ID
+                        && self.is_royal_piece(state, target))))
             && !self.middle_encouragement_protects(state, target)
             && !self.campfire_protects(state, target)
             && !(state
@@ -9765,10 +10014,10 @@ fn draft_card_weight_units(definition_id: &str, draft_phase: DraftPhase) -> u64 
     base_eighths * phase_multiplier
 }
 
-fn draft_offer_average(offers: &[String]) -> Option<DraftOfferAverage> {
+fn draft_offer_average(ruleset_id: &str, offers: &[String]) -> Option<DraftOfferAverage> {
     let scores: Vec<_> = offers
         .iter()
-        .filter_map(|definition_id| implemented_card(definition_id))
+        .filter_map(|definition_id| crate::ruleset_card(ruleset_id, definition_id))
         .map(|card| u32::from(card.half_stars))
         .collect();
     (!scores.is_empty()).then(|| DraftOfferAverage {

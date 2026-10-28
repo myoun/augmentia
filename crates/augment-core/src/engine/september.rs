@@ -154,7 +154,9 @@ impl Engine {
                 .iter()
                 .filter(|(_, piece)| piece.owner == owner)
                 .all(|(_, piece)| types.insert(piece.kind));
-            if eligible && !types.is_empty() {
+            let latest_eligible = state.ruleset_id != crate::LATEST_RULESET_ID
+                || (types.len() >= 4 && types.contains(&PieceKind::King));
+            if eligible && !types.is_empty() && latest_eligible {
                 state.status = GameStatus::Won {
                     winner: owner,
                     reason: WinReason::CardEffect(crate::HIGHLANDER.to_owned()),

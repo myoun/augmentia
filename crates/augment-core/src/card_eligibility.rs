@@ -7,7 +7,7 @@
 //! rule fields: callers must enforce external bans; global uniqueness here is
 //! the normal (not completeRandom) policy. Unsupported predicates fail closed.
 
-use crate::{CardActivation, CardPhase, GameState, Piece, PieceKind, Player, implemented_card};
+use crate::{CardActivation, CardPhase, GameState, Piece, PieceKind, Player};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AcquisitionContext {
@@ -169,11 +169,17 @@ pub fn check_card_eligibility(
     context: AcquisitionContext,
 ) -> CardEligibility {
     let id = canonical_card_id(card_id);
-    let Some(definition) = implemented_card(id) else {
+    let Some(definition) = crate::ruleset_card(&state.ruleset_id, id) else {
         return denied(
-            EligibilityReasonCode::UnknownCard,
+            if state.ruleset_id == crate::LATEST_RULESET_ID
+                && crate::latest_catalog().iter().any(|card| card.id == id)
+            {
+                EligibilityReasonCode::UnsupportedPredicate
+            } else {
+                EligibilityReasonCode::UnknownCard
+            },
             id,
-            "코어에서 구현되지 않은 카드입니다.",
+            "이 룰셋에서 지원하지 않거나 비활성화된 카드입니다.",
         );
     };
     let is_rule =
@@ -302,6 +308,8 @@ pub fn check_card_eligibility(
     let own_queen = has_own(&|p| queen(state, p));
     let own_royal = has_own(&|p| royal(state, p));
     let status = match id {
+        crate::ASSEMBLY => rt.october.assembly[i],
+        crate::HOPE => rt.october.hope[i],
         "king-of-the-hill" => rt.hill_king[i],
         "democracy" => rt.democracy[i],
         "fianchetto" => rt.fianchetto[i],
@@ -325,7 +333,56 @@ pub fn check_card_eligibility(
         return result;
     }
     use PieceKind::*;
+    if state.ruleset_id == crate::LATEST_RULESET_ID {
+        match id {
+            "checker" => return CardEligibility::Eligible,
+            "ordination" => return require(own(Bishop) > 0, "아군 비숍 하나가 필요합니다."),
+            "reversal" => {
+                return require(
+                    !rt.reversal[i]
+                        && has_own(&|p| {
+                            crate::latest::latest_minor_kind(p.kind) && !royal(state, p)
+                        }),
+                    "희생할 비왕실 아군 마이너 기물이 필요합니다.",
+                );
+            }
+            "false-start" | "london-system" => {
+                return require(own_royal, "배치할 아군 왕실 기물이 필요합니다.");
+            }
+            "gomoku" => return require(!rt.gomoku[i], "이미 오목이 적용 중입니다."),
+            "blue-jeans" => {
+                return require(
+                    context == AcquisitionContext::Draft
+                        || state
+                            .board
+                            .iter()
+                            .any(|(_, p)| crate::latest::latest_major_kind(p.kind)),
+                    "추방할 메이저 피스가 필요합니다.",
+                );
+            }
+            "recurrence" => {
+                return require(
+                    context == AcquisitionContext::Draft
+                        || has_own(&|p| {
+                            !matches!(p.kind, Pawn | Monster | Crown | Football)
+                                && !royal(state, p)
+                                && !rt.recurrence_piece_ids.contains(&p.id)
+                        }),
+                    "회귀를 부여할 비왕실 비폰 기물이 필요합니다.",
+                );
+            }
+            _ => {}
+        }
+    }
     match id {
+        crate::MAN => require(
+            context == AcquisitionContext::Draft
+                || state.board.iter().any(|(_, piece)| {
+                    crate::latest::latest_minor_kind(piece.kind) && !royal(state, piece)
+                }),
+            "변환 가능한 비왕실 마이너 기물이 필요합니다.",
+        ),
+        crate::ASSEMBLY | crate::HOPE | crate::IQP | "highlander" => CardEligibility::Eligible,
         "frenzy" | "last-stand" | "early-promotion" | "fast-growth" | "otherworld" | "sprint"
         | "leap" | "retreat" | "underpromotion" | "final-weapon" | "en-passant-bang"
         | "pawn-conversion" | "ghost" | "breakthrough-order" | "death-squad" | "log"

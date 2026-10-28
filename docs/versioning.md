@@ -88,6 +88,11 @@ test: add 20260807 democracy simultaneous-loss fixture
 카드 정의는 번들에서 수작업으로 옮기지 않고 `augment-app`의 `snapshot` 도구로 정규화한다. 새
 번들은 기존 스냅숏을 덮어쓰기 전에 임시 출력으로 추출하고 diff를 검토한다.
 
+10월 v19는 UI용 정의와 엔진 canonical 정의가 다르다. 이 버전은 검토한 원본 SHA에 한해
+`scripts/extract-upstream-catalog.mjs`로 canonical 선언을 추출하고 의존 선언의 digest를 보존한다.
+일반 `snapshot extract`의 성공만으로 v19 canonical 추출을 대신하지 않는다.
+발표 날짜·release metadata 시각·실제 수집일을 구분하고, 과거 release 바이트 검증 여부를 명시한다.
+
 ```powershell
 cargo run -p augment-app --bin snapshot -- extract --bundle C:\path\to\main.js `
   --ruleset-id augment_chess_YYYYMMDD --output C:\temp\new-catalog.json

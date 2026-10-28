@@ -204,7 +204,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
-    let engine = Engine::bundled_20260915()?;
+    let engine = if command == "cannon-fixtures" {
+        Engine::bundled_20260915()?
+    } else {
+        Engine::bundled_latest()?
+    };
     if command == "cannon-fixtures" {
         println!(
             "{}",

@@ -1,0 +1,463 @@
+{
+  "ruleset_id": "augment_chess_20261017",
+  "source_bundle_sha256": "2e932da7b9391effbeab3593ea5fdf855041fe5a74f611dfdfde678eee46beb8",
+  "whole_card_site_parity_verified": false,
+  "cards": [
+    {
+      "id": "assassin",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "dragon",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "knightmaster",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "local-conscription",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Local Conscription resets capturesMade; regression verifies capture counter reset."
+    },
+    {
+      "id": "log",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "standard-bearer",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "highlander",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          182804,
+          182807
+        ]
+      ],
+      "notes": "Unique types, at least four, including a literal king."
+    },
+    {
+      "id": "initiative",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          496,
+          503
+        ],
+        [
+          196679,
+          196686
+        ],
+        [
+          203988,
+          203992
+        ]
+      ],
+      "notes": "Eight owner turns; check/capture releases restriction."
+    },
+    {
+      "id": "overwhelm",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          4222,
+          4231
+        ]
+      ],
+      "notes": "Enemy royal attackers are blocked against queens only."
+    },
+    {
+      "id": "rook-lift",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          208927,
+          208945
+        ]
+      ],
+      "notes": "Non-capture corner arrival; at most three retained moves per chain."
+    },
+    {
+      "id": "assembly",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          196595,
+          196596
+        ],
+        [
+          213320,
+          213324
+        ]
+      ],
+      "notes": "Passive; actual enemy bishop/rook captures promote surviving rook/bishop respectively."
+    },
+    {
+      "id": "hope",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          203874,
+          203880
+        ]
+      ],
+      "notes": "At own turn start, win with at most two allied pieces; no acquisition-time win."
+    },
+    {
+      "id": "iqp",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          203631,
+          203632
+        ],
+        [
+          203868,
+          203871
+        ]
+      ],
+      "notes": "Removal of enemy pawns currently in c/e files; defer until draft completes."
+    },
+    {
+      "id": "man",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          1030,
+          1087
+        ],
+        [
+          203638,
+          203672
+        ]
+      ],
+      "notes": "Either side native non-royal minor transforms to Man; retained identity."
+    },
+    {
+      "id": "big-bishop",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          1598,
+          1600
+        ],
+        [
+          196031,
+          196081
+        ]
+      ],
+      "notes": "Immediate passive layout; HP2 and footprint, unmoved anchor, no fresh-capture delay; existing large-body movement remains a partial inherited handler."
+    },
+    {
+      "id": "blue-jeans",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196009,
+          196030
+        ],
+        [
+          199669,
+          199729
+        ]
+      ],
+      "notes": "END passive; removes representable current-major family at acquisition/unlock without capture credit. Core-linked colossus entities remain outside the local model."
+    },
+    {
+      "id": "false-start",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          182855,
+          182878
+        ],
+        [
+          221237,
+          221268
+        ]
+      ],
+      "notes": "Immediate passive two-step file-group displacement; connected large footprints, occupied/reserved-square blockers; preserve piece identity and moved flags."
+    },
+    {
+      "id": "fast-growth",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive promotion rank/major exclusion, including field-promotion choices."
+    },
+    {
+      "id": "fianchetto",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          4780,
+          4782
+        ],
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive flag; existing pawn-only entry restriction applies before first move."
+    },
+    {
+      "id": "field-promotion",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive flag; second actual pawn capture requests promotion, no manual card action."
+    },
+    {
+      "id": "gomoku",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          216507,
+          216520
+        ]
+      ],
+      "notes": "END passive; check victory at acquisition/unlock and after moves; simultaneous five-in-file is a draw."
+    },
+    {
+      "id": "london-system",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          195880,
+          196008
+        ],
+        [
+          196616,
+          196617
+        ]
+      ],
+      "notes": "Immediate passive fixed layout; replaces identities, preserves unmoved home pawns/king/rooks, no fresh-capture window."
+    },
+    {
+      "id": "otherworld",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196418,
+          196477
+        ],
+        [
+          201631,
+          201660
+        ]
+      ],
+      "notes": "Immediate acquisition; deterministic web-order targets, zero/one candidate uses no RNG; disappear now, wizard returns after 28 counted moves."
+    },
+    {
+      "id": "recurrence",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          204116,
+          204128
+        ],
+        [
+          204249,
+          204252
+        ],
+        [
+          205940,
+          205959
+        ]
+      ],
+      "notes": "Reverse conversion: END active; grant/draft gives a charge without applying effect; explicit use rolls once and excludes royal/pawn/neutral targets."
+    },
+    {
+      "id": "checker",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          172332,
+          172337
+        ],
+        [
+          200675,
+          200680
+        ],
+        [
+          200737,
+          200741
+        ],
+        [
+          221993,
+          222013
+        ]
+      ],
+      "notes": "Passive acquisition summons four allied checkers at a/b/g/h third rank; all-or-nothing if prescribed cells occupied/reserved; original pawns remain. Inherits existing checker movement and capture chain."
+    },
+    {
+      "id": "horse-riding",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          470,
+          477
+        ],
+        [
+          204009,
+          204016
+        ],
+        [
+          207332,
+          207335
+        ],
+        [
+          211156,
+          211169
+        ]
+      ],
+      "notes": "Active temporary king knight-move augmentation; keeps king identity and allied knights; expires at own turn end."
+    },
+    {
+      "id": "ordination",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          199197,
+          199205
+        ],
+        [
+          199237,
+          199269
+        ]
+      ],
+      "notes": "One own bishop transforms to cardinal; no second-bishop requirement or sacrifice. Cardinal movement remains inherited pending wider parity audit."
+    },
+    {
+      "id": "pegasus",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          199225,
+          199237
+        ],
+        [
+          199245,
+          199269
+        ]
+      ],
+      "notes": "END active transforms an own rook (not knight) to Unicorn/Pegasus with same identity; inherits existing Unicorn movement."
+    },
+    {
+      "id": "poisoned-pawn",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          197376,
+          197398
+        ],
+        [
+          204823,
+          204863
+        ],
+        [
+          205950,
+          205955
+        ]
+      ],
+      "notes": "Untargeted random sample without replacement, max three unpoisoned own pawns; one draw per selected pawn, including singleton. Actual enemy capture stuns movement/abilities for two future own turns without granting immunity."
+    },
+    {
+      "id": "reversal",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          204104,
+          204114
+        ],
+        [
+          204150,
+          204160
+        ]
+      ],
+      "notes": "Select and sacrifice one own non-royal native minor without capture credit; rook/bishop movement swap lasts through own turn."
+    }
+  ]
+}
