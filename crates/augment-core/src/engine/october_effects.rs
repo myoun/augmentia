@@ -144,7 +144,7 @@ impl Engine {
         }
     }
 
-    fn latest_checker_square_open(&self, state: &GameState, square: Square) -> bool {
+    pub(super) fn latest_checker_square_open(&self, state: &GameState, square: Square) -> bool {
         self.board_piece_at(state, square).is_none()
             && !state.card_runtime.barricades.contains(&square)
             && !state.card_runtime.black_holes.contains(&square)

@@ -11,6 +11,15 @@ pub const MAN: &str = "man";
 pub const IQP: &str = "iqp";
 pub const HOPE: &str = "hope";
 pub const ASSEMBLY: &str = "assembly";
+pub const ARCHBISHOP: &str = "archbishop";
+pub const CHANCELLOR: &str = "chancellor";
+pub const SEAL: &str = "seal";
+pub const GREEK_GIFT: &str = "greek-gift";
+pub const ASCENSION: &str = "ascension";
+pub const TABOO: &str = "taboo";
+pub const GRUDGE: &str = "grudge";
+pub const PAWN_CHAIN: &str = "pawn-chain";
+pub const PENTA_CHECK: &str = "penta-check";
 
 /// Native minor family from the captured v19 catalog, expressed in core names.
 pub(crate) fn latest_minor_kind(kind: crate::PieceKind) -> bool {
@@ -80,6 +89,8 @@ pub(crate) fn latest_major_kind(kind: crate::PieceKind) -> bool {
             | Siren
             | Reaper
             | Undead
+            | Archbishop
+            | Chancellor
     )
 }
 
@@ -357,7 +368,7 @@ mod tests {
         let catalog = latest_catalog();
         assert_eq!(catalog.len(), 275);
         assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 271);
-        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 118);
+        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 128);
         for card in catalog {
             assert_eq!(
                 ruleset_card(LATEST_RULESET_ID, &card.id).is_some(),

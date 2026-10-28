@@ -70,6 +70,8 @@ pub const PIECE_KINDS: &[PieceKind] = &[
     PieceKind::Thief,
     PieceKind::Brutus,
     PieceKind::BigBishop,
+    PieceKind::Archbishop,
+    PieceKind::Chancellor,
 ];
 
 pub fn piece_catalog() -> Value {

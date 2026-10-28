@@ -3184,6 +3184,8 @@ fn is_ranged_piece(kind: PieceKind) -> bool {
             | PieceKind::Queen
             | PieceKind::Bear
             | PieceKind::Amazon
+            | PieceKind::Archbishop
+            | PieceKind::Chancellor
             | PieceKind::Cardinal
             | PieceKind::Cannon
             | PieceKind::Herald
@@ -3275,6 +3277,8 @@ fn has_piece_protection_source(state: &GameState, piece_id: u32) -> bool {
 
 fn middle_piece_value(kind: PieceKind) -> u8 {
     match kind {
+        PieceKind::Archbishop => 7,
+        PieceKind::Chancellor => 8,
         PieceKind::Pawn
         | PieceKind::Squire
         | PieceKind::Fanatic

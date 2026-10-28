@@ -326,7 +326,11 @@ pub fn check_card_eligibility(
         "relay" => rt.relay[i],
         "field-promotion" => rt.field_promotion[i],
         "geneva-convention" => rt.geneva_convention[i],
-        "prophecy" => rt.prophecy[i].is_some(),
+        "prophecy" => {
+            rt.prophecy[i].is_some()
+                || (state.ruleset_id == crate::LATEST_RULESET_ID
+                    && rt.october.prophecy_remaining[i].is_some())
+        }
         _ => false,
     };
     if let Some(result) = enabled(status) {
@@ -335,6 +339,54 @@ pub fn check_card_eligibility(
     use PieceKind::*;
     if state.ruleset_id == crate::LATEST_RULESET_ID {
         match id {
+            crate::PAWN_CHAIN | crate::PENTA_CHECK => return CardEligibility::Eligible,
+            crate::GRUDGE => {
+                return require(
+                    has_own(&|p| {
+                        crate::engine::grudge_kind_allowed(p.kind)
+                            && !royal(state, p)
+                            && !rt.october.grudged_piece_ids.contains(&p.id)
+                    }),
+                    "원한을 부여할 비왕실 아군 비폰 기물이 필요합니다.",
+                );
+            }
+            crate::SEAL | crate::GREEK_GIFT | crate::ASCENSION | crate::TABOO
+                if context == AcquisitionContext::Draft =>
+            {
+                return CardEligibility::Eligible;
+            }
+            crate::SEAL => {
+                return require(
+                    has_enemy(&|p| {
+                        !royal(state, p) && !matches!(p.kind, King | Monster | Football | Crown)
+                    }),
+                    "속박할 상대 비왕실 기물이 필요합니다.",
+                );
+            }
+            crate::GREEK_GIFT => {
+                return require(
+                    has_own(&|p| p.kind == Bishop && !royal(state, p)),
+                    "희생할 비왕실 아군 비숍이 필요합니다.",
+                );
+            }
+            crate::ASCENSION | crate::TABOO => {
+                return require(
+                    has_own(&|p| p.kind == Queen && !royal(state, p)),
+                    "비왕실 아군 퀸이 필요합니다.",
+                );
+            }
+            crate::ARCHBISHOP | crate::CHANCELLOR => {
+                let base = if id == crate::ARCHBISHOP {
+                    Bishop
+                } else {
+                    Rook
+                };
+                return require(
+                    has_own(&|p| p.kind == Knight && !royal(state, p))
+                        && has_own(&|p| p.kind == base && !royal(state, p)),
+                    "비왕실 아군 나이트와 변환할 비숍/룩이 필요합니다.",
+                );
+            }
             "checker" => return CardEligibility::Eligible,
             "ordination" => return require(own(Bishop) > 0, "아군 비숍 하나가 필요합니다."),
             "reversal" => {

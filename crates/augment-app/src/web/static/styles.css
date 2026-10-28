@@ -118,6 +118,7 @@ summary { cursor: pointer; font-size: 12px; font-weight: 600; }
 .piece.unicode { font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(8px, var(--piece-scale, 9cqw), 85px); }
 .piece.white { color: #fff; text-shadow: 0 1px 2px #172b4d; -webkit-text-stroke: 1px #344c66; }
 .piece.black { color: #172638; text-shadow: 0 1px 1px #ffffff70; }
+.piece.neutral { color: #594b29; text-shadow: 0 1px 1px #ffffffb0; }
 .piece.neutral { color: #675c98; }
 .piece.code { font-size: clamp(7px, var(--code-scale, 4cqw), 30px); font-weight: 750; background: #fff; color: #172b4d; border: 1px solid #365675; border-radius: 5px; padding: 4px; -webkit-text-stroke: 0; text-shadow: none; }
 .piece.code.black { background: #20334f; color: #f4f7fc; }

@@ -152,7 +152,11 @@ impl Engine {
             let eligible = state
                 .board
                 .iter()
-                .filter(|(_, piece)| piece.owner == owner)
+                .filter(|(_, piece)| {
+                    piece.owner == owner
+                        && (state.ruleset_id != crate::LATEST_RULESET_ID
+                            || piece.kind != PieceKind::Monster)
+                })
                 .all(|(_, piece)| types.insert(piece.kind));
             let latest_eligible = state.ruleset_id != crate::LATEST_RULESET_ID
                 || (types.len() >= 4 && types.contains(&PieceKind::King));

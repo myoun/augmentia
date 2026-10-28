@@ -1,0 +1,470 @@
+{
+  "source_bundle_sha256": "2e932da7b9391effbeab3593ea5fdf855041fe5a74f611dfdfde678eee46beb8",
+  "scope": "Native compound rays and leaps without unrelated effects; generated from pinned parrotBaseMoves.",
+  "fixtures": [
+    {
+      "kind": "archbishop",
+      "owner": "white",
+      "from": "a1",
+      "blockers": [],
+      "expected": [
+        "b2",
+        "b3",
+        "c2",
+        "c3",
+        "d4",
+        "e5",
+        "f6",
+        "g7",
+        "h8"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "white",
+      "from": "d4",
+      "blockers": [],
+      "expected": [
+        "a1",
+        "a7",
+        "b2",
+        "b3",
+        "b5",
+        "b6",
+        "c2",
+        "c3",
+        "c5",
+        "c6",
+        "e2",
+        "e3",
+        "e5",
+        "e6",
+        "f2",
+        "f3",
+        "f5",
+        "f6",
+        "g1",
+        "g7",
+        "h8"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "white",
+      "from": "d4",
+      "blockers": [
+        {
+          "square": "e4",
+          "owner": "white"
+        },
+        {
+          "square": "e5",
+          "owner": "white"
+        },
+        {
+          "square": "b4",
+          "owner": "black"
+        },
+        {
+          "square": "b6",
+          "owner": "black"
+        },
+        {
+          "square": "f5",
+          "owner": "black"
+        }
+      ],
+      "expected": [
+        "a1",
+        "b2",
+        "b3",
+        "b5",
+        "b6",
+        "c2",
+        "c3",
+        "c5",
+        "c6",
+        "e2",
+        "e3",
+        "e6",
+        "f2",
+        "f3",
+        "f5",
+        "g1"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "white",
+      "from": "h8",
+      "blockers": [],
+      "expected": [
+        "a1",
+        "b2",
+        "c3",
+        "d4",
+        "e5",
+        "f6",
+        "f7",
+        "g6",
+        "g7"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "black",
+      "from": "a1",
+      "blockers": [],
+      "expected": [
+        "b2",
+        "b3",
+        "c2",
+        "c3",
+        "d4",
+        "e5",
+        "f6",
+        "g7",
+        "h8"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "black",
+      "from": "d4",
+      "blockers": [],
+      "expected": [
+        "a1",
+        "a7",
+        "b2",
+        "b3",
+        "b5",
+        "b6",
+        "c2",
+        "c3",
+        "c5",
+        "c6",
+        "e2",
+        "e3",
+        "e5",
+        "e6",
+        "f2",
+        "f3",
+        "f5",
+        "f6",
+        "g1",
+        "g7",
+        "h8"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "black",
+      "from": "d4",
+      "blockers": [
+        {
+          "square": "e4",
+          "owner": "black"
+        },
+        {
+          "square": "e5",
+          "owner": "black"
+        },
+        {
+          "square": "b4",
+          "owner": "white"
+        },
+        {
+          "square": "b6",
+          "owner": "white"
+        },
+        {
+          "square": "f5",
+          "owner": "white"
+        }
+      ],
+      "expected": [
+        "a1",
+        "b2",
+        "b3",
+        "b5",
+        "b6",
+        "c2",
+        "c3",
+        "c5",
+        "c6",
+        "e2",
+        "e3",
+        "e6",
+        "f2",
+        "f3",
+        "f5",
+        "g1"
+      ]
+    },
+    {
+      "kind": "archbishop",
+      "owner": "black",
+      "from": "h8",
+      "blockers": [],
+      "expected": [
+        "a1",
+        "b2",
+        "c3",
+        "d4",
+        "e5",
+        "f6",
+        "f7",
+        "g6",
+        "g7"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "white",
+      "from": "a1",
+      "blockers": [],
+      "expected": [
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+        "a8",
+        "b1",
+        "b3",
+        "c1",
+        "c2",
+        "d1",
+        "e1",
+        "f1",
+        "g1",
+        "h1"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "white",
+      "from": "d4",
+      "blockers": [],
+      "expected": [
+        "a4",
+        "b3",
+        "b4",
+        "b5",
+        "c2",
+        "c4",
+        "c6",
+        "d1",
+        "d2",
+        "d3",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "e2",
+        "e4",
+        "e6",
+        "f3",
+        "f4",
+        "f5",
+        "g4",
+        "h4"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "white",
+      "from": "d4",
+      "blockers": [
+        {
+          "square": "e4",
+          "owner": "white"
+        },
+        {
+          "square": "e5",
+          "owner": "white"
+        },
+        {
+          "square": "b4",
+          "owner": "black"
+        },
+        {
+          "square": "b6",
+          "owner": "black"
+        },
+        {
+          "square": "f5",
+          "owner": "black"
+        }
+      ],
+      "expected": [
+        "b3",
+        "b4",
+        "b5",
+        "c2",
+        "c4",
+        "c6",
+        "d1",
+        "d2",
+        "d3",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "e2",
+        "e6",
+        "f3",
+        "f5"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "white",
+      "from": "h8",
+      "blockers": [],
+      "expected": [
+        "a8",
+        "b8",
+        "c8",
+        "d8",
+        "e8",
+        "f7",
+        "f8",
+        "g6",
+        "g8",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "h7"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "black",
+      "from": "a1",
+      "blockers": [],
+      "expected": [
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+        "a8",
+        "b1",
+        "b3",
+        "c1",
+        "c2",
+        "d1",
+        "e1",
+        "f1",
+        "g1",
+        "h1"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "black",
+      "from": "d4",
+      "blockers": [],
+      "expected": [
+        "a4",
+        "b3",
+        "b4",
+        "b5",
+        "c2",
+        "c4",
+        "c6",
+        "d1",
+        "d2",
+        "d3",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "e2",
+        "e4",
+        "e6",
+        "f3",
+        "f4",
+        "f5",
+        "g4",
+        "h4"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "black",
+      "from": "d4",
+      "blockers": [
+        {
+          "square": "e4",
+          "owner": "black"
+        },
+        {
+          "square": "e5",
+          "owner": "black"
+        },
+        {
+          "square": "b4",
+          "owner": "white"
+        },
+        {
+          "square": "b6",
+          "owner": "white"
+        },
+        {
+          "square": "f5",
+          "owner": "white"
+        }
+      ],
+      "expected": [
+        "b3",
+        "b4",
+        "b5",
+        "c2",
+        "c4",
+        "c6",
+        "d1",
+        "d2",
+        "d3",
+        "d5",
+        "d6",
+        "d7",
+        "d8",
+        "e2",
+        "e6",
+        "f3",
+        "f5"
+      ]
+    },
+    {
+      "kind": "chancellor",
+      "owner": "black",
+      "from": "h8",
+      "blockers": [],
+      "expected": [
+        "a8",
+        "b8",
+        "c8",
+        "d8",
+        "e8",
+        "f7",
+        "f8",
+        "g6",
+        "g8",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "h7"
+      ]
+    }
+  ]
+}

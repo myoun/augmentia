@@ -823,7 +823,9 @@ impl Engine {
         }
 
         for player in [Player::White, Player::Black] {
-            if let Some(due_ply) = state.card_runtime.prophecy[player.index()] {
+            if state.ruleset_id != crate::LATEST_RULESET_ID
+                && let Some(due_ply) = state.card_runtime.prophecy[player.index()]
+            {
                 if captured.is_some() {
                     state.card_runtime.prophecy[player.index()] = None;
                 } else if state.ply >= due_ply {
@@ -1026,6 +1028,17 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
         };
     }
     for id in replay_piece_ids(replay) {
+        if current.october.grudged_piece_ids.contains(&id)
+            != after.october.grudged_piece_ids.contains(&id)
+            || current.october.grudge_losses.get(&id) != after.october.grudge_losses.get(&id)
+        {
+            return false;
+        }
+        if current.october.bound_piece_ids.contains(&id)
+            != after.october.bound_piece_ids.contains(&id)
+        {
+            return false;
+        }
         sets_match!(id;
             moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
@@ -1035,7 +1048,8 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
             stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
-            field_promoted_piece_ids
+            field_promoted_piece_ids, locust_swarm_piece_ids, metalized_piece_ids,
+            recurrence_piece_ids, nullification_piece_ids
         );
         maps_match!(id;
             fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
@@ -1045,14 +1059,21 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             sacrifice_protection, last_resistance, coronation_protection,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
-            trickster_move_kinds, stake_statuses, bunkers, spies
+            trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns
         );
     }
     true
 }
 
 fn restore_replay_piece_runtime(current: &mut CardRuntimeState, replay: &MoveReplayState) {
-    let before = &*replay.runtime_before;
+    restore_piece_runtime(current, &replay.runtime_before, &replay_piece_ids(replay));
+}
+
+pub(super) fn restore_piece_runtime(
+    current: &mut CardRuntimeState,
+    before: &CardRuntimeState,
+    ids: &[u32],
+) {
     macro_rules! restore_sets {
         ($id:expr; $($field:ident),+ $(,)?) => {
             $(if before.$field.contains(&$id) {
@@ -1071,7 +1092,22 @@ fn restore_replay_piece_runtime(current: &mut CardRuntimeState, replay: &MoveRep
             })+
         };
     }
-    for id in replay_piece_ids(replay) {
+    for id in ids.iter().copied() {
+        if before.october.grudged_piece_ids.contains(&id) {
+            current.october.grudged_piece_ids.insert(id);
+        } else {
+            current.october.grudged_piece_ids.remove(&id);
+        }
+        if let Some(loss) = before.october.grudge_losses.get(&id) {
+            current.october.grudge_losses.insert(id, *loss);
+        } else {
+            current.october.grudge_losses.remove(&id);
+        }
+        if before.october.bound_piece_ids.contains(&id) {
+            current.october.bound_piece_ids.insert(id);
+        } else {
+            current.october.bound_piece_ids.remove(&id);
+        }
         restore_sets!(id;
             moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
@@ -1081,7 +1117,8 @@ fn restore_replay_piece_runtime(current: &mut CardRuntimeState, replay: &MoveRep
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
             stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
-            field_promoted_piece_ids
+            field_promoted_piece_ids, locust_swarm_piece_ids, metalized_piece_ids,
+            recurrence_piece_ids, nullification_piece_ids
         );
         restore_maps!(id;
             fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
@@ -1091,11 +1128,10 @@ fn restore_replay_piece_runtime(current: &mut CardRuntimeState, replay: &MoveRep
             sacrifice_protection, last_resistance, coronation_protection,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
-            trickster_move_kinds, stake_statuses, bunkers, spies
+            trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns
         );
     }
 
-    let ids = replay_piece_ids(replay);
     let touches = |id: u32| ids.binary_search(&id).is_ok();
     current
         .siren_exposure

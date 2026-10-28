@@ -61,5 +61,5 @@ UI 카탈로그와 달리 canonical `BETA_PUBLIC_CARD_CATALOG_V19`의 누적 ove
 카탈로그 275개 중 활성 271개이고, 위 공지의 3개 외에 `summon-colossus`도 비활성이다.
 카탈로그 hash는 `i6t9UEbZXEOqgN8Tlj1dVKw_NccyKIvHZsGfInK5T_E`다.
 
-기본 종료·추첨 규칙, 88개 기존 handler, 원본 계약을 확인해 추가한 30개를 반영했다. 미지원 157개와
+기본 종료·추첨 규칙, 88개 기존 handler, 원본 계약을 확인해 추가한 40개를 반영했다. 미지원 147개와
 최신 동작 parity 미검증 범위는 [스냅숏 문서](../rulesets/augment_chess_20261017/README.md)에 있다.

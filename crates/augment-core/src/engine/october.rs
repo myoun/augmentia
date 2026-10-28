@@ -36,11 +36,20 @@ impl Engine {
     pub(super) fn resolve_october_turn_start(&self, state: &mut GameState, owner: Player) {
         if state.ruleset_id == crate::LATEST_RULESET_ID
             && state.status == GameStatus::Ongoing
+            && state.card_runtime.october.penta_check[owner.index()].is_some_and(|p| p.count >= 5)
+        {
+            state.status = GameStatus::Won {
+                winner: owner,
+                reason: WinReason::CardEffect(crate::PENTA_CHECK.into()),
+            };
+        }
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && state.status == GameStatus::Ongoing
             && state.card_runtime.october.hope[owner.index()]
             && state
                 .board
                 .iter()
-                .filter(|(_, piece)| piece.owner == owner)
+                .filter(|(_, piece)| piece.owner == owner && piece.kind != PieceKind::Monster)
                 .count()
                 <= 2
         {

@@ -131,12 +131,14 @@ const setupList = read('crates/augment-app/src/web/setup.rs').match(/pub const P
 assert.ok(setupList, 'Core piece list not found');
 const coreKinds = [...setupList[1].matchAll(/PieceKind::([A-Za-z]+)/g)]
   .map(([, kind]) => kind.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase());
-assert.equal(coreKinds.length, 68);
-assert.equal(new Set(coreKinds).size, 68);
-assert.deepEqual(Object.keys(pieceAliases), coreKinds, 'Alias mapping must cover core kinds in order');
+assert.equal(coreKinds.length, 70);
+assert.equal(new Set(coreKinds).size, 70);
+// October compound help is pinned separately in test-compound-pieces.mjs.
+const historicalKinds = coreKinds.filter(kind => !['archbishop', 'chancellor'].includes(kind));
+assert.deepEqual(Object.keys(pieceAliases), historicalKinds, 'Alias mapping must cover historical core kinds in order');
 
 const pieces = {};
-for (const kind of coreKinds) {
+for (const kind of historicalKinds) {
   const [table, key] = pieceAliases[kind];
   const text = tables[table][key];
   // Never synthesize missing descriptions.
@@ -167,7 +169,7 @@ const expected = {
   pieces,
   cards,
 };
-const unmappedCoreKinds = coreKinds.filter((kind) => !Object.hasOwn(pieces, kind));
+const unmappedCoreKinds = historicalKinds.filter((kind) => !Object.hasOwn(pieces, kind));
 const usedOfficialTypes = new Set(Object.values(pieceAliases)
   .filter(([table]) => table === 'RANDOM_ROULETTE_PIECE_HELP').map(([, key]) => key));
 const nonCoreOfficialTypes = Object.keys(tables.RANDOM_ROULETTE_PIECE_HELP)
@@ -202,7 +204,7 @@ assert.equal(actual.pieces.alibaba, tables.CARD_HELP.eagle);
 assert.ok(actual.pieces.squire.endsWith('프로모션이 가능합니다.'));
 assert.equal(actual.cards.knightmate, `${actual.pieces.royal_knight} ${actual.pieces.man}`);
 assert.equal(actual.cards['baby-bear'], `${actual.pieces.baby_bear} ${actual.pieces.bear}`);
-console.log(`PASS: ${Object.keys(pieces).length}/${coreKinds.length} core pieces; ${Object.keys(cards).length}/${cardIds.size} cards with optional detailed help.`);
+console.log(`PASS: ${Object.keys(pieces).length}/${historicalKinds.length} historical pieces; ${Object.keys(cards).length}/${cardIds.size} cards with optional detailed help. October compound help is checked separately.`);
 console.log(`Unmapped core kinds: ${unmappedCoreKinds.length ? unmappedCoreKinds.join(', ') : '(none)'}`);
 console.log(`Official roulette types without a core kind: ${nonCoreOfficialTypes.join(', ')}`);
 console.log(`Source bundle SHA-256: ${sha}`);

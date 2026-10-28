@@ -37,6 +37,18 @@ const context = vm.createContext({
 }, {codeGeneration:{strings:false,wasm:false}});
 const helpers = js.slice(js.indexOf('function registerInfo('), js.indexOf('\nasync function request('));
 vm.runInContext(helpers, context, {timeout:250});
+vm.runInContext(js.slice(js.indexOf('function targetingSquares('), js.indexOf('function pieceTitle(')), context, {timeout:250});
+const pairActions = [{index:1,targetSquares:['b1','d4']},{index:2,targetSquares:['b1','f4']},{index:3,targetSquares:['g1','d4']}];
+const selection = {actions:pairActions,steps:['knight','base'],step:0};
+assert.deepEqual(Array.from(context.targetingSquares(selection)),['b1','b1','g1']);
+assert.equal(context.chooseTargetingSquare(selection,'d4').next,selection, 'cannot pick base first');
+const first = context.chooseTargetingSquare(selection,'b1');
+assert.equal(first.actions.length,0, 'first click must not consume the card');
+assert.deepEqual(Array.from(context.targetingSquares(first.next)),['d4','f4']);
+const second = context.chooseTargetingSquare(first.next,'f4');
+assert.equal(second.next,null);
+assert.equal(second.actions[0].index,2, 'chosen sacrifice and base determine the action');
+assert.equal(context.chooseTargetingSquare({actions:[pairActions[0]],steps:[],step:0},'d4').actions[0].index,1, 'historical target interaction preserved');
 const nodes = [{id:0,parent:null},{id:5,parent:0},{id:10,parent:5},{id:11,parent:5},{id:12,parent:11},{id:20,parent:10}];
 context.game = {notation:{nodes,cursor:12}};
 context.rememberBranch(nodes,12);

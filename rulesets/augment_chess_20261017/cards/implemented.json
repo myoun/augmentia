@@ -4,11 +4,11 @@
   "scope": {
     "catalog_entries": 275,
     "active_upstream": 271,
-    "implemented_cards": 118,
+    "implemented_cards": 128,
     "site_parity_verified_cards": 0,
     "profile": "partial-standard-with-scoped-ports",
     "inherited_unchanged_contract_cards": 88,
-    "scoped_ported_cards": 30
+    "scoped_ported_cards": 40
   },
   "cards": [
     {
@@ -34,6 +34,29 @@
     {
       "activation": "active",
       "compatibility": [
+        "Pinned compound selection and movement contracts; not full interaction parity."
+      ],
+      "effect": "archbishop",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "compound_movement"
+      ],
+      "half_stars": 8,
+      "id": "archbishop",
+      "name_ko": "아치비숍",
+      "phase": "PIECE",
+      "source_symbols": [
+        "COMPOUND_CARD_SPECS",
+        "compoundCardTargets",
+        "amazonSelectionContract",
+        "applyAmazonV7"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
       ],
       "effect": "armistice",
@@ -48,6 +71,27 @@
       "phase": "MIDDLE",
       "source_symbols": [
         "armistice"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Nonroyal queen and open landing; suspend identity/statuses; return on third owner start, crush landing occupancy, restore original metadata with no new fresh delay. Core large-body HP abstraction retained; cell-fracture parity unverified.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "ascension",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "half_stars": 7,
+      "id": "ascension",
+      "name_ko": "강림",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "ascension"
       ],
       "turn_exclusive": false
     },
@@ -295,6 +339,29 @@
       "source_symbols": [
         "septemberAdvanceFlags",
         "captureTheFlag"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Pinned compound selection and movement contracts; not full interaction parity."
+      ],
+      "effect": "chancellor",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "compound_movement"
+      ],
+      "half_stars": 8,
+      "id": "chancellor",
+      "name_ko": "챈슬러",
+      "phase": "PIECE",
+      "source_symbols": [
+        "COMPOUND_CARD_SPECS",
+        "compoundCardTargets",
+        "amazonSelectionContract",
+        "applyAmazonV7"
       ],
       "turn_exclusive": false
     },
@@ -809,6 +876,49 @@
       "phase": "PIECE",
       "source_symbols": [
         "grasshopper"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Nonroyal bishop sacrifice without capture; current enemy royal neighborhoods are evaluated at the end of the actor turn.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "greekGift",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "half_stars": 7,
+      "id": "greek-gift",
+      "name_ko": "그릭 기프트",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "greekGift"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Acquisition chooses one eligible own nonpawn nonroyal (singleton consumes no RNG); actual enemy capture loses victim movement components permanently, preserving losses through transformations. Scoped native geometry and captured metadata, not all copied/portal/large-cell interactions.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "grudge",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "check_objective"
+      ],
+      "half_stars": 7,
+      "id": "grudge",
+      "name_ko": "원한",
+      "phase": "OPENING",
+      "source_symbols": [
+        "grudge"
       ],
       "turn_exclusive": false
     },
@@ -1589,6 +1699,28 @@
       "turn_exclusive": false
     },
     {
+      "activation": "passive",
+      "compatibility": [
+        "Spatial degree-two minimum-cost forest, horde row snake layout; links constrain living identities to Chebyshev distance <=2. Removal or relocation beyond range breaks links. Simultaneous friendly swaps use both destinations.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "pawnChain",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "check_objective"
+      ],
+      "half_stars": 10,
+      "id": "pawn-chain",
+      "name_ko": "폰 체인",
+      "phase": "OPENING",
+      "source_symbols": [
+        "pawnChain"
+      ],
+      "turn_exclusive": false
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1625,6 +1757,28 @@
       "phase": "END",
       "source_symbols": [
         "pegasus"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "passive",
+      "compatibility": [
+        "Counts unchecked-to-checked transitions from direct current board attacks (no unused active threats); sustained check adds no count. Initial check grants no retroactive count. Victory at next owner turn start after five checks. Full exotic royal-footprint and automatic sequence parity unverified.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "pentaCheck",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "check_objective"
+      ],
+      "half_stars": 10,
+      "id": "penta-check",
+      "name_ko": "펜타 체크",
+      "phase": "OPENING",
+      "source_symbols": [
+        "pentaCheck"
       ],
       "turn_exclusive": false
     },
@@ -1704,6 +1858,28 @@
       "name_ko": "숙련",
       "phase": "MIDDLE",
       "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
+        "Royal-required active, six completed player turns; extra actions do not tick. Either king checked or any piece removal cancels both prophecies; final boundary check cancels before a timer win. Historical prophecy remains unchanged.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "prophecy",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "check_objective"
+      ],
+      "half_stars": 9,
+      "id": "prophecy",
+      "name_ko": "종전",
+      "phase": "END",
+      "source_symbols": [
+        "prophecy"
+      ],
       "turn_exclusive": false
     },
     {
@@ -2009,6 +2185,27 @@
     {
       "activation": "active",
       "compatibility": [
+        "Nonroyal enemy identity; next owner start applies bound; another surviving ally relocation releases bound.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "seal",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "half_stars": 8,
+      "id": "seal",
+      "name_ko": "봉인",
+      "phase": "MIDDLE",
+      "source_symbols": [
+        "seal"
+      ],
+      "turn_exclusive": false
+    },
+    {
+      "activation": "active",
+      "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
       ],
       "effect": "siegeRam",
@@ -2225,6 +2422,27 @@
       "turn_exclusive": false
     },
     {
+      "activation": "active",
+      "compatibility": [
+        "Reserve queen identity and open destination; sacrifice current owned identity at turn end; crush each distinct landing and spawn neutral monsters. Movable walls cleared, pending spawns and portals retained. Full large-cell fracture parity unverified.",
+        "Scoped source contract; not full interaction parity."
+      ],
+      "effect": "taboo",
+      "ends_turn": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "half_stars": 5,
+      "id": "taboo",
+      "name_ko": "뒤틀린 소환",
+      "phase": "END",
+      "source_symbols": [
+        "taboo"
+      ],
+      "turn_exclusive": false
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2359,14 +2577,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "archbishop",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "ascension",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "barricade",
       "reason": "changed_contract_not_ported"
     },
@@ -2437,10 +2647,6 @@
     {
       "id": "chameleon-mutation",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chancellor",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "charge",
@@ -2595,14 +2801,6 @@
       "reason": "new_card_not_ported"
     },
     {
-      "id": "greek-gift",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "grudge",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "guard",
       "reason": "changed_contract_not_ported"
     },
@@ -2747,16 +2945,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "pawn-chain",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "pawn-conversion",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "penta-check",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "periodic-collapse",
@@ -2776,10 +2966,6 @@
     },
     {
       "id": "promotion-rush",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "prophecy",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -2855,10 +3041,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "seal",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "severance",
       "reason": "changed_contract_not_ported"
     },
@@ -2892,10 +3074,6 @@
     },
     {
       "id": "synchronization",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "taboo",
       "reason": "new_card_not_ported"
     },
     {

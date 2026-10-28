@@ -26,7 +26,11 @@ mod end;
 mod middle;
 mod october;
 mod october_acquisition;
+mod october_delayed;
+mod october_objectives;
+pub(crate) use october_objectives::grudge_kind_allowed;
 mod october_effects;
+mod october_pieces;
 mod rule;
 mod september;
 
@@ -923,6 +927,8 @@ impl Engine {
                 | PieceKind::Queen
                 | PieceKind::Bear
                 | PieceKind::Amazon
+                | PieceKind::Archbishop
+                | PieceKind::Chancellor
                 | PieceKind::Cardinal
                 | PieceKind::Cannon
                 | PieceKind::Herald
@@ -2321,6 +2327,7 @@ impl Engine {
             actions_remaining: state.actions_remaining,
         });
         self.resolve_effect_queue_from(state, events, 0)?;
+        self.resolve_october_delayed_start(state, resume_turn, events);
         self.resolve_missing_king(state, events);
         if self.ruleset.id == crate::LATEST_RULESET_ID {
             self.resolve_gomoku_victory(state);
@@ -2458,6 +2465,8 @@ impl Engine {
             } => self.apply_choice(state, action, choice_id, option_index),
         }?;
         self.refresh_submerged_pieces(&mut transition.state);
+        self.clean_october_chains(&mut transition.state, &state.board);
+        self.settle_october_checks(&mut transition.state);
         self.resolve_empty_forced_move(&mut transition.state, &mut transition.events)?;
         self.advance_capture_flags(&mut transition.state, state.turn, false);
         self.refresh_submerged_pieces(&mut transition.state);
@@ -2712,6 +2721,13 @@ impl Engine {
                 &state.card_runtime.poisoned_piece_ids,
                 &events,
             );
+            self.apply_october_grudge_captures(
+                &mut next,
+                source_piece,
+                &state.board,
+                &state.card_runtime,
+                &events,
+            );
             self.resolve_after_counted_move(&mut next, &mut events);
             self.resolve_missing_king(&mut next, &mut events);
             if next.status == GameStatus::Ongoing {
@@ -2865,6 +2881,21 @@ impl Engine {
             },
         ];
         match definition_id.as_str() {
+            crate::PROPHECY if self.ruleset.id == crate::LATEST_RULESET_ID => {
+                next.card_runtime.october.prophecy_remaining[actor.index()] = Some(6);
+            }
+            crate::SEAL | crate::GREEK_GIFT | crate::ASCENSION | crate::TABOO => {
+                self.apply_october_delayed_card(
+                    &mut next,
+                    actor,
+                    &definition_id,
+                    &target,
+                    &mut events,
+                )?;
+            }
+            crate::ARCHBISHOP | crate::CHANCELLOR => {
+                self.apply_compound_card(&mut next, actor, &definition_id, &target, &mut events)?;
+            }
             HORSE_RIDING | crate::REVERSAL | crate::POISONED_PAWN | ORDINATION | PEGASUS
                 if self.ruleset.id == crate::LATEST_RULESET_ID =>
             {
@@ -4858,6 +4889,10 @@ impl Engine {
         runtime_before: &CardRuntimeState,
         events: &mut Vec<Event>,
     ) {
+        self.apply_october_grudge_captures(state, moving_piece, before, runtime_before, events);
+        self.clean_october_chains(state, before);
+        self.settle_october_checks(state);
+        self.release_october_bounds_after_move(state, moving_piece, before);
         self.apply_latest_poison_from_events(
             state,
             moving_piece.id,
@@ -5466,6 +5501,19 @@ impl Engine {
     }
 
     fn clear_removed_piece_statuses(&self, state: &mut GameState, piece_id: u32) {
+        state
+            .card_runtime
+            .october
+            .grudged_piece_ids
+            .remove(&piece_id);
+        state.card_runtime.october.grudge_losses.remove(&piece_id);
+        state
+            .card_runtime
+            .october
+            .pawn_chain_links
+            .retain(|pair| !pair.contains(&piece_id));
+        self.cancel_october_prophecies(state);
+        state.card_runtime.october.bound_piece_ids.remove(&piece_id);
         if let Some(flags) = &mut state.card_runtime.capture_the_flag {
             for occupation in &mut flags.occupations {
                 if occupation.is_some_and(|entry| entry.piece_id == piece_id) {
@@ -5950,6 +5998,7 @@ impl Engine {
 
     fn resolve_missing_king(&self, state: &mut GameState, events: &mut Vec<Event>) {
         self.resolve_pending_recurrences(state, events);
+        self.settle_october_checks(state);
         self.resolve_october_initiative_checks(state);
         if state.status != GameStatus::Ongoing || !self.ruleset.base_rules.king_capture_wins {
             return;
@@ -6244,10 +6293,25 @@ impl Engine {
             let Some(status) = state.card_runtime.log_statuses.get(&piece_id).copied() else {
                 continue;
             };
+            if state
+                .card_runtime
+                .october
+                .bound_piece_ids
+                .contains(&piece_id)
+            {
+                continue;
+            }
             let Some(to) = from.offset(status.file_delta, status.rank_delta) else {
                 state.card_runtime.log_statuses.remove(&piece_id);
                 continue;
             };
+            let progress = (!state.card_runtime.october.grudged_piece_ids.is_empty()).then(|| {
+                (
+                    state.board.clone(),
+                    state.card_runtime.clone(),
+                    events.len(),
+                )
+            });
             match state.board.get(to) {
                 None => {
                     state.board.set(from, None);
@@ -6285,6 +6349,15 @@ impl Engine {
                     }
                     state.card_runtime.log_statuses.remove(&piece_id);
                 }
+            }
+            if let Some((board, runtime, event_start)) = progress {
+                self.apply_october_grudge_captures(
+                    state,
+                    log_piece,
+                    &board,
+                    &runtime,
+                    &events[event_start..],
+                );
             }
         }
     }
@@ -6328,6 +6401,11 @@ impl Engine {
         // An EndTurn command raised while TurnEnding is already being handled is satisfied by
         // this same transition and must not leak into the opponent's turn.
         state.take_turn_end_request();
+        self.resolve_october_delayed_end(state, actor, events);
+        if state.status != GameStatus::Ongoing {
+            self.push_game_ended(state, events);
+            return Ok(());
+        }
 
         state.turns_taken[actor.index()] = state.turns_taken[actor.index()].saturating_add(1);
         self.advance_capture_flags(state, actor, true);
@@ -6402,9 +6480,11 @@ impl Engine {
         });
         self.resolve_pending_portals_for_turn(state, next_player, events);
         self.resolve_middle_turn_start(state, next_player, events);
+        self.resolve_october_delayed_start(state, next_player, events);
         self.resolve_effect_queue_from(state, events, next_turn_event_start)?;
         self.resolve_missing_king(state, events);
         self.resolve_october_turn_start(state, next_player);
+        self.complete_october_objective_turn(state, next_player);
         state.observe_automatic_draw_progress(actor, &events[after_turn..]);
         state.complete_automatic_draw_turn();
         if state.status != GameStatus::Ongoing {
@@ -6860,6 +6940,25 @@ impl Engine {
                 continue;
             }
             match card.definition_id.as_str() {
+                crate::PROPHECY if self.ruleset.id == crate::LATEST_RULESET_ID => {
+                    if state.card_runtime.october.prophecy_remaining[state.turn.index()].is_none()
+                        && state
+                            .board
+                            .iter()
+                            .any(|(_, p)| p.owner == state.turn && self.is_royal_piece(state, p))
+                    {
+                        actions.push(Action::UseCard {
+                            instance_id: card.instance_id,
+                            target: ActionTarget::None,
+                        });
+                    }
+                }
+                crate::SEAL | crate::GREEK_GIFT | crate::ASCENSION | crate::TABOO => {
+                    self.generate_october_delayed_actions(state, card, actions);
+                }
+                crate::ARCHBISHOP | crate::CHANCELLOR => {
+                    self.generate_compound_card_actions(state, card, actions);
+                }
                 crate::RECURRENCE if state.ruleset_id == crate::LATEST_RULESET_ID => {
                     if !self.latest_recurrence_targets(state, state.turn).is_empty() {
                         actions.push(Action::UseCard {
@@ -7335,6 +7434,7 @@ impl Engine {
         }) {
             candidates.clear();
             self.generate_checker_moves(state, from, piece, &mut candidates);
+            self.filter_october_state_moves(state, from, piece, &mut candidates);
             if candidates.iter().any(|action| {
                 matches!(action, Action::Move(movement) if movement.from.file().abs_diff(movement.to.file()) == 2)
             }) {
@@ -7427,6 +7527,16 @@ impl Engine {
         piece: Piece,
         all_actions: &mut Vec<Action>,
     ) {
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && (piece.kind == PieceKind::Monster
+                || state
+                    .card_runtime
+                    .october
+                    .bound_piece_ids
+                    .contains(&piece.id))
+        {
+            return;
+        }
         if state.card_runtime.zugzwang[piece.owner.index()] && !self.is_royal_piece(state, piece) {
             return;
         }
@@ -7482,6 +7592,7 @@ impl Engine {
             self.generate_socialism_moves(state, from, piece, actions);
             self.filter_middle_moves(state, from, piece, actions);
             self.filter_metal_moves(state, piece, from, actions);
+            self.filter_october_state_moves(state, from, piece, actions);
             all_actions.extend(generated);
             return;
         }
@@ -7637,6 +7748,15 @@ impl Engine {
                 );
                 self.generate_knight_moves(state, from, piece, actions);
             }
+            PieceKind::Archbishop | PieceKind::Chancellor => {
+                let directions: &[(i8, i8)] = if piece.kind == PieceKind::Archbishop {
+                    &[(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                } else {
+                    &[(-1, 0), (1, 0), (0, -1), (0, 1)]
+                };
+                self.generate_slider_moves(state, from, piece, directions, actions);
+                self.generate_knight_moves(state, from, piece, actions);
+            }
             PieceKind::PrimeMinister => {
                 self.generate_prime_minister_moves(state, from, piece, actions);
             }
@@ -7645,6 +7765,11 @@ impl Engine {
                 for (target, target_piece) in state.board.iter() {
                     if target != from
                         && target_piece.owner == piece.owner
+                        && !state
+                            .card_runtime
+                            .october
+                            .bound_piece_ids
+                            .contains(&target_piece.id)
                         && !self.piece_has_ability(state, target_piece, PieceKind::Slime)
                     {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -8109,6 +8234,11 @@ impl Engine {
         {
             for (square, ally) in state.board.iter() {
                 if ally.owner == piece.owner
+                    && !state
+                        .card_runtime
+                        .october
+                        .bound_piece_ids
+                        .contains(&ally.id)
                     && ally.id != piece.id
                     && !self.piece_has_ability(state, ally, PieceKind::Slime)
                     && (square.file() == from.file() || square.rank() == from.rank())
@@ -8153,6 +8283,7 @@ impl Engine {
             }
         }
         self.filter_metal_moves(state, piece, from, &mut generated);
+        self.filter_october_state_moves(state, from, piece, &mut generated);
         all_actions.extend(generated);
     }
 
@@ -8611,6 +8742,14 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
+        if state
+            .card_runtime
+            .october
+            .bound_piece_ids
+            .contains(&piece.id)
+        {
+            return;
+        }
         let directions: &[(i8, i8)] = if piece.kind == PieceKind::CheckerKing {
             &[(-1, -1), (-1, 1), (1, -1), (1, 1)]
         } else if piece.owner == Player::White {
@@ -9601,6 +9740,11 @@ impl Engine {
             };
             if rook.owner != king.owner
                 || rook.kind != PieceKind::Rook
+                || state
+                    .card_runtime
+                    .october
+                    .bound_piece_ids
+                    .contains(&rook.id)
                 || state.card_runtime.moved_piece_ids.contains(&rook.id)
                 || clear_files.iter().any(|file| {
                     self.board_piece_at(
@@ -9896,6 +10040,8 @@ fn colossus_attack_sectors(anchor: Square, player: Player) -> [Vec<Square>; 2] {
 
 fn merchant_cost(kind: PieceKind) -> u16 {
     match kind {
+        PieceKind::Archbishop => 7,
+        PieceKind::Chancellor => 8,
         PieceKind::Pawn | PieceKind::Fanatic => 2,
         PieceKind::Knight
         | PieceKind::Bishop

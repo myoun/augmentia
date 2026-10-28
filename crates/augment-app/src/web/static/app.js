@@ -273,7 +273,7 @@ function renderBoard() {
     : [];
   const legalDestinations = new Set(legalMoves.map((action) => action.to));
   const targetSquares = new Set(
-    targeting ? targeting.actions.flatMap((action) => action.targetSquares || []) : [],
+    targeting ? targetingSquares(targeting) : [],
   );
   const fragment = document.createDocumentFragment();
 
@@ -348,6 +348,22 @@ function squareAriaLabel(cell) {
   return `${cell.square} ${cell.piece.ownerLabel} ${cell.piece.name}`;
 }
 
+function targetingSquares(selection) {
+  return selection.actions.flatMap(action => selection.steps.length
+    ? [action.targetSquares[selection.step]] : action.targetSquares || []);
+}
+
+function chooseTargetingSquare(selection, square) {
+  const matching = selection.actions.filter(action => selection.steps.length
+    ? action.targetSquares[selection.step] === square
+    : (action.targetSquares || []).includes(square));
+  if (!matching.length) return {next: selection, actions: []};
+  if (selection.steps.length && selection.step + 1 < selection.steps.length) {
+    return {next: {...selection, actions: matching, step: selection.step + 1}, actions: []};
+  }
+  return {next: null, actions: matching};
+}
+
 function pieceTitle(piece) {
   const details = [`${piece.ownerLabel} ${piece.name}`, `ID #${piece.id}`];
   if (piece.captureCount > 0) details.push(`포획 ${piece.captureCount}`);
@@ -375,9 +391,14 @@ function handleSquareClick(square) {
   if (game.status.kind !== "ongoing") return;
 
   if (targeting) {
-    const matching = targeting.actions.filter((action) =>
-      (action.targetSquares || []).includes(square),
-    );
+    const result = chooseTargetingSquare(targeting, square);
+    if (result.next) {
+      targeting = result.next;
+      renderBoard();
+      renderInteractionHint();
+      return;
+    }
+    const matching = result.actions;
     if (matching.length === 1) {
       applyAction(matching[0].index);
     } else if (matching.length > 1) {
@@ -445,7 +466,7 @@ function renderCards(owner, container) {
     `;
     button.querySelector(".card-name").textContent = card.name;
     button.querySelector(".card-stars").textContent = card.openingAutoPending || card.locked ? "대기" : card.activation === "passive" ? "∞" : card.charges === 0 ? "✓" : String(card.charges);
-    button.querySelector(".card-meta").textContent = stateLabel;
+    button.querySelector(".card-meta").textContent = card.pending || stateLabel;
     button.classList.toggle("spent", card.charges === 0 && card.activation !== "passive" && !card.openingAutoPending && !card.locked);
     button.setAttribute("aria-label", `${card.name} · ${stateLabel}`);
     registerInfo(button, card.name, `${card.description}${card.help ? `\n${card.help}` : ""}\n${stateLabel} · ${card.stars}★`);
@@ -610,7 +631,7 @@ function activateActionGroup(actions, label) {
   }
   if (actions.every((action) => (action.targetSquares || []).length > 0)) {
     selectedSquare = null;
-    targeting = { actions, label };
+    targeting = { actions, label, steps: actions[0].selectionSteps || [], step: 0 };
     renderBoard();
     renderInteractionHint();
     return;
@@ -638,8 +659,11 @@ function showActionDialog(title, actions) {
 
 function renderInteractionHint() {
   if (targeting) {
-    const count = new Set(targeting.actions.flatMap((action) => action.targetSquares || [])).size;
-    elements.selectedHint.textContent = `${targeting.label} · 강조된 ${count}개 칸 중 하나를 선택하세요.`;
+    const count = new Set(targetingSquares(targeting)).size;
+    const step = targeting.steps[targeting.step];
+    elements.selectedHint.textContent = step
+      ? `${targeting.label} · ${step}을 선택하세요. (${targeting.step + 1}/${targeting.steps.length})`
+      : `${targeting.label} · 강조된 ${count}개 칸 중 하나를 선택하세요.`;
     elements.cancelSelection.classList.remove("hidden");
   } else if (selectedSquare) {
     const count = game.actions.filter(

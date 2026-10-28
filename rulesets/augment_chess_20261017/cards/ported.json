@@ -458,6 +458,242 @@
         ]
       ],
       "notes": "Select and sacrifice one own non-royal native minor without capture credit; rook/bishop movement swap lasts through own turn."
+    },
+    {
+      "id": "archbishop",
+      "stage": 6,
+      "scope": "Nonroyal own knight + native bishop/rook; stable-identity transformation and compound ray/leap movement. Canonical actions follow the knight-first UI prefix; not full interaction parity.",
+      "source_ranges": [
+        [
+          161453,
+          161458
+        ],
+        [
+          199329,
+          199369
+        ],
+        [
+          203739,
+          203755
+        ],
+        [
+          207340,
+          207349
+        ],
+        [
+          231692,
+          231695
+        ]
+      ],
+      "notes": "Knight sacrifice is noncapture; base identity, capture count and statuses survive, moved is set without a fresh-capture delay. Native major and ranged classifications; historical random pools unchanged."
+    },
+    {
+      "id": "chancellor",
+      "stage": 6,
+      "scope": "Nonroyal own knight + native bishop/rook; stable-identity transformation and compound ray/leap movement. Canonical actions follow the knight-first UI prefix; not full interaction parity.",
+      "source_ranges": [
+        [
+          161453,
+          161458
+        ],
+        [
+          199329,
+          199369
+        ],
+        [
+          203739,
+          203755
+        ],
+        [
+          207340,
+          207349
+        ],
+        [
+          231692,
+          231695
+        ]
+      ],
+      "notes": "Knight sacrifice is noncapture; base identity, capture count and statuses survive, moved is set without a fresh-capture delay. Native major and ranged classifications; historical random pools unchanged."
+    },
+    {
+      "id": "seal",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          203639,
+          203646
+        ],
+        [
+          203700,
+          203707
+        ],
+        [
+          203862,
+          203867
+        ],
+        [
+          208519,
+          208525
+        ]
+      ],
+      "notes": "Nonroyal enemy identity; next owner start applies bound; another surviving ally relocation releases bound."
+    },
+    {
+      "id": "greek-gift",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          1383,
+          1405
+        ],
+        [
+          203593,
+          203599
+        ],
+        [
+          204076,
+          204082
+        ],
+        [
+          221576,
+          221581
+        ]
+      ],
+      "notes": "Nonroyal bishop sacrifice without capture; current enemy royal neighborhoods are evaluated at the end of the actor turn."
+    },
+    {
+      "id": "ascension",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          203645,
+          203654
+        ],
+        [
+          203708,
+          203724
+        ],
+        [
+          214904,
+          215024
+        ]
+      ],
+      "notes": "Nonroyal queen and open landing; suspend identity/statuses; return on third owner start, crush landing occupancy, restore original metadata with no new fresh delay. Core large-body HP abstraction retained; cell-fracture parity unverified."
+    },
+    {
+      "id": "taboo",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          221818,
+          221846
+        ],
+        [
+          221864,
+          221890
+        ]
+      ],
+      "notes": "Reserve queen identity and open destination; sacrifice current owned identity at turn end; crush each distinct landing and spawn neutral monsters. Movable walls cleared, pending spawns and portals retained. Full large-cell fracture parity unverified."
+    },
+    {
+      "id": "grudge",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          516,
+          569
+        ],
+        [
+          203611,
+          203618
+        ],
+        [
+          206844,
+          206848
+        ],
+        [
+          208478,
+          208490
+        ]
+      ],
+      "notes": "Acquisition chooses one eligible own nonpawn nonroyal (singleton consumes no RNG); actual enemy capture loses victim movement components permanently, preserving losses through transformations. Scoped native geometry and captured metadata, not all copied/portal/large-cell interactions."
+    },
+    {
+      "id": "pawn-chain",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          191699,
+          191765
+        ],
+        [
+          203619,
+          203631
+        ],
+        [
+          207122,
+          207131
+        ],
+        [
+          216265,
+          216289
+        ]
+      ],
+      "notes": "Spatial degree-two minimum-cost forest, horde row snake layout; links constrain living identities to Chebyshev distance <=2. Removal or relocation beyond range breaks links. Simultaneous friendly swaps use both destinations."
+    },
+    {
+      "id": "penta-check",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          203633,
+          203635
+        ],
+        [
+          203823,
+          203837
+        ],
+        [
+          203875,
+          203885
+        ],
+        [
+          213928,
+          214018
+        ],
+        [
+          216492,
+          216505
+        ]
+      ],
+      "notes": "Counts unchecked-to-checked transitions from direct current board attacks (no unused active threats); sustained check adds no count. Initial check grants no retroactive count. Victory at next owner turn start after five checks. Full exotic royal-footprint and automatic sequence parity unverified."
+    },
+    {
+      "id": "prophecy",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          201670,
+          201683
+        ],
+        [
+          203803,
+          203837
+        ],
+        [
+          215382,
+          215436
+        ]
+      ],
+      "notes": "Royal-required active, six completed player turns; extra actions do not tick. Either king checked or any piece removal cancels both prophecies; final boundary check cancels before a timer win. Historical prophecy remains unchanged."
     }
   ]
 }

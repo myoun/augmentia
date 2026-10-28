@@ -413,10 +413,15 @@ pub fn material_score(state: &GameState, root: Player) -> f64 {
             .iter()
             .map(|(_, piece)| {
                 let value = match piece.kind {
+                    PieceKind::Monster if state.ruleset_id == augment_core::LATEST_RULESET_ID => {
+                        0.0
+                    }
                     PieceKind::Pawn => 1.0,
                     PieceKind::Knight | PieceKind::Bishop => 3.0,
                     PieceKind::Rook => 5.0,
                     PieceKind::Queen => 9.0,
+                    PieceKind::Archbishop => 7.5,
+                    PieceKind::Chancellor => 8.5,
                     PieceKind::King => 100.0,
                     _ => 3.0, // Unknown strategic value is not unknown legality.
                 };
@@ -453,6 +458,50 @@ mod tests {
             1,
         );
         (engine, state)
+    }
+    #[test]
+    fn search_finds_compound_transform_then_knight_capture_without_mutating_root() {
+        let engine = Engine::bundled_latest().unwrap();
+        for (id, base) in [
+            (augment_core::ARCHBISHOP, PieceKind::Bishop),
+            (augment_core::CHANCELLOR, PieceKind::Rook),
+        ] {
+            let mut board = Board::empty();
+            for (square, owner, kind) in [
+                ("a1", Player::White, PieceKind::King),
+                ("f5", Player::Black, PieceKind::King),
+                ("b1", Player::White, PieceKind::Knight),
+                ("d4", Player::White, base),
+            ] {
+                board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
+            }
+            let mut state = GameState::from_board(
+                augment_core::LATEST_RULESET_ID,
+                Mode::Standard,
+                board,
+                Player::White,
+                1,
+            );
+            state.completed_drafts = [true; 3];
+            let state = engine
+                .grant_card(&state, 1, id, Player::White)
+                .unwrap()
+                .state;
+            let fingerprint = state.fingerprint();
+            let result = search(&engine, &state, config(2)).unwrap();
+            assert_eq!(
+                result.selected_action,
+                Some(Action::UseCard {
+                    instance_id: 1,
+                    target: augment_core::ActionTarget::Squares(vec![
+                        "b1".parse().unwrap(),
+                        "d4".parse().unwrap()
+                    ])
+                })
+            );
+            assert_eq!(result.score, WIN);
+            assert_eq!(state.fingerprint(), fingerprint);
+        }
     }
     fn config(depth: u8) -> SearchConfig {
         SearchConfig {

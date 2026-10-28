@@ -6692,14 +6692,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "archbishop",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "ascension",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "barricade",
       "reason": "changed_contract_not_ported"
     },
@@ -6770,10 +6762,6 @@
     {
       "id": "chameleon-mutation",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chancellor",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "charge",
@@ -6928,14 +6916,6 @@
       "reason": "new_card_not_ported"
     },
     {
-      "id": "greek-gift",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "grudge",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "guard",
       "reason": "changed_contract_not_ported"
     },
@@ -7080,16 +7060,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "pawn-chain",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "pawn-conversion",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "penta-check",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "periodic-collapse",
@@ -7109,10 +7081,6 @@
     },
     {
       "id": "promotion-rush",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "prophecy",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7188,10 +7156,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "seal",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "severance",
       "reason": "changed_contract_not_ported"
     },
@@ -7225,10 +7189,6 @@
     },
     {
       "id": "synchronization",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "taboo",
       "reason": "new_card_not_ported"
     },
     {

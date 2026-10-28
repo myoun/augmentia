@@ -156,6 +156,63 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
 
 fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Square) -> Value {
     let mut statuses = Vec::new();
+    let october = &state.card_runtime.october;
+    if october.grudged_piece_ids.contains(&piece.id) {
+        statuses.push("원한".into());
+    }
+    if let Some(mask) = october.grudge_losses.get(&piece.id) {
+        let lost = [(1, "직선"), (2, "대각선"), (4, "나이트"), (8, "낙타")]
+            .into_iter()
+            .filter(|(bit, _)| mask & bit != 0)
+            .map(|(_, label)| label)
+            .collect::<Vec<_>>()
+            .join("·");
+        statuses.push(format!("행마 상실: {lost}"));
+    }
+    let partners = october
+        .pawn_chain_links
+        .iter()
+        .filter(|pair| pair.contains(&piece.id))
+        .filter_map(|pair| {
+            state
+                .board
+                .find_by_id(if pair[0] == piece.id {
+                    pair[1]
+                } else {
+                    pair[0]
+                })
+                .map(|(square, _)| square.to_string())
+        })
+        .collect::<Vec<_>>();
+    if !partners.is_empty() {
+        statuses.push(format!("사슬 · {}", partners.join("·")));
+    }
+    if state
+        .card_runtime
+        .october
+        .bound_piece_ids
+        .contains(&piece.id)
+    {
+        statuses.push("속박 · 다른 아군 이동 시 해제".into());
+    }
+    if state
+        .card_runtime
+        .october
+        .pending_seals
+        .iter()
+        .any(|p| p.piece_id == piece.id)
+    {
+        statuses.push("봉인 대기".into());
+    }
+    if state
+        .card_runtime
+        .october
+        .pending_taboo
+        .iter()
+        .any(|p| p.piece_id == piece.id)
+    {
+        statuses.push("뒤틀린 소환 · 턴 종료 시 희생".into());
+    }
     if state.card_runtime.shielded_piece_ids.contains(&piece.id) {
         statuses.push("보호막".to_owned());
     }
@@ -278,8 +335,8 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     let (kind, name, code, unicode) = piece_meta(piece.kind, piece.owner);
     json!({
         "id": piece.id,
-        "owner": player_key(piece.owner),
-        "ownerLabel": player_name(piece.owner),
+        "owner": if state.ruleset_id == augment_core::LATEST_RULESET_ID && piece.kind == PieceKind::Monster { "neutral" } else { player_key(piece.owner) },
+        "ownerLabel": if state.ruleset_id == augment_core::LATEST_RULESET_ID && piece.kind == PieceKind::Monster { "중립" } else { player_name(piece.owner) },
         "kind": kind,
         "name": name,
         "description": piece_description(kind),
@@ -291,6 +348,42 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
         "captureCount": piece.capture_count,
         "statuses": statuses,
     })
+}
+
+fn pending_card_label(state: &GameState, id: &str, owner: Player) -> String {
+    let rt = &state.card_runtime.october;
+    match id {
+        augment_core::PENTA_CHECK => rt.penta_check[owner.index()]
+            .map_or_else(String::new, |p| format!("체크 {}/5", p.count)),
+        augment_core::PAWN_CHAIN if !rt.pawn_chain_links.is_empty() => {
+            format!("사슬 {}개", rt.pawn_chain_links.len())
+        }
+        augment_core::PROPHECY => rt.prophecy_remaining[owner.index()]
+            .map_or_else(String::new, |remaining| format!("양측 {remaining}턴 남음")),
+        augment_core::ASCENSION => rt
+            .pending_ascensions
+            .iter()
+            .filter(|p| p.piece.owner == owner)
+            .map(|p| {
+                format!(
+                    "{} · 내 턴 시작 {}회 후 착지",
+                    p.square,
+                    p.due_turn.saturating_sub(state.turns_taken[owner.index()])
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" / "),
+        augment_core::SEAL if rt.pending_seals.iter().any(|p| p.by == owner) => {
+            "다음 내 턴에 속박".into()
+        }
+        augment_core::GREEK_GIFT if rt.greek_gift_pending[owner.index()] => {
+            "턴 종료에 폰 제거".into()
+        }
+        augment_core::TABOO if rt.pending_taboo.iter().any(|p| p.owner == owner) => {
+            "턴 종료에 소환".into()
+        }
+        _ => String::new(),
+    }
 }
 
 fn cards_view(
@@ -322,6 +415,7 @@ fn cards_view(
                 "available": !indices.is_empty(),
                 "actionIndices": indices,
                 "locked": locked,
+                "pending": pending_card_label(state, &card.definition_id, owner),
                 "openingAutoPending": state.card_runtime.opening_auto_card_ids.contains(&card.instance_id),
                 "availableAfterTurn": card.available_after_turn,
             })
@@ -356,6 +450,13 @@ pub(crate) fn action_view(state: &GameState, index: usize, action: &Action) -> V
                 "label": format!("{} · {}", card_name(definition_id), target_label(target)),
                 "instanceId": instance_id,
                 "cardId": definition_id,
+                "selectionSteps": match definition_id {
+                    augment_core::ARCHBISHOP => vec!["희생할 아군 나이트", "변환할 아군 비숍"],
+                    augment_core::CHANCELLOR => vec!["희생할 아군 나이트", "변환할 아군 룩"],
+                    augment_core::ASCENSION => vec!["하늘로 올릴 아군 퀸", "착지할 빈 칸"],
+                    augment_core::TABOO => vec!["희생을 예약할 아군 퀸", "괴물을 소환할 빈 칸"],
+                    _ => Vec::new(),
+                },
                 "targetKind": target_kind(target),
                 "targetSquares": target_squares(target),
             })
@@ -420,6 +521,12 @@ fn reference_help() -> &'static Value {
 }
 
 pub(crate) fn piece_description(kind: &str) -> &'static str {
+    // Captured October COMPOUND_CARD_HELP; historical help remains source-pinned.
+    match kind {
+        "archbishop" => return "아치비숍: 나이트와 비숍의 이동을 모두 사용할 수 있습니다.",
+        "chancellor" => return "챈슬러: 나이트와 룩의 이동을 모두 사용할 수 있습니다.",
+        _ => {}
+    }
     reference_help()["pieces"][kind]
         .as_str()
         .unwrap_or("합법 이동은 현재 국면의 코어 엔진 판정에 따릅니다.")
@@ -784,6 +891,8 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::Thief => ("thief", "도적", "TH"),
         PieceKind::Brutus => ("brutus", "브루투스", "BT"),
         PieceKind::BigBishop => ("big_bishop", "빅비숍", "BB"),
+        PieceKind::Archbishop => ("archbishop", "아치비숍", "AC"),
+        PieceKind::Chancellor => ("chancellor", "챈슬러", "CC"),
         PieceKind::Pawn
         | PieceKind::Knight
         | PieceKind::Bishop

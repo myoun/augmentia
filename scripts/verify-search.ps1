@@ -17,7 +17,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Workspace tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Workspace clippy failed' }
 & node --check (Join-Path $root 'crates/augment-app/src/web/static/app.js')
 if ($LASTEXITCODE -ne 0) { throw 'Web JavaScript syntax failed' }
-foreach ($testScript in @('test-acg-codec.mjs', 'test-acg-export.mjs', 'test-reference-help.mjs', 'test-workspace-ui.mjs', 'test-latest-ruleset.mjs', 'test-october-ports.mjs', 'test-opening-acquisition.mjs', 'test-target-procedure-ports.mjs')) {
+foreach ($testScript in @('test-acg-codec.mjs', 'test-acg-export.mjs', 'test-reference-help.mjs', 'test-workspace-ui.mjs', 'test-latest-ruleset.mjs', 'test-october-ports.mjs', 'test-opening-acquisition.mjs', 'test-target-procedure-ports.mjs', 'test-compound-pieces.mjs', 'test-delayed-ports.mjs', 'test-check-objectives.mjs')) {
     & node (Join-Path $PSScriptRoot $testScript)
     if ($LASTEXITCODE -ne 0) { throw ('Offline web check failed: ' + $testScript) }
 }

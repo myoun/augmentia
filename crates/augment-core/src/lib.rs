@@ -63,7 +63,10 @@ pub use effect::{
 };
 pub use engine::{Engine, EngineError, LegalActionBatch, SearchChanceContext, SearchTransition};
 pub use event::{Event, Transition};
-pub use latest::{ASSEMBLY, HOPE, IQP, LatestCard, MAN, latest_catalog, ruleset_card};
+pub use latest::{
+    ARCHBISHOP, ASCENSION, ASSEMBLY, CHANCELLOR, GREEK_GIFT, GRUDGE, HOPE, IQP, LatestCard, MAN,
+    PAWN_CHAIN, PENTA_CHECK, SEAL, TABOO, latest_catalog, ruleset_card,
+};
 pub use model::{Board, Piece, PieceKind, Player, Square, SquareParseError};
 pub use notation::{
     NotationCatalog, NotationEntry, NotationError, NotationParsing, NotationSource,

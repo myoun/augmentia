@@ -14,6 +14,9 @@ impl Engine {
             return Ok(());
         }
         match id {
+            crate::GRUDGE | crate::PAWN_CHAIN | crate::PENTA_CHECK => {
+                self.acquire_october_objective(state, id, owner, events)
+            }
             FAST_GROWTH | FIANCHETTO | FIELD_PROMOTION => {
                 self.apply_opening_card(state, owner, id, &ActionTarget::None, events)?;
             }

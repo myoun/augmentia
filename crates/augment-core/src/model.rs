@@ -192,6 +192,8 @@ pub enum PieceKind {
     Thief,
     Brutus,
     BigBishop,
+    Archbishop,
+    Chancellor,
 }
 
 impl PieceKind {
@@ -265,6 +267,8 @@ impl PieceKind {
             Self::Thief => 66,
             Self::Brutus => 67,
             Self::BigBishop => 68,
+            Self::Archbishop => 69,
+            Self::Chancellor => 70,
         }
     }
 
