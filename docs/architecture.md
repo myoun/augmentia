@@ -1,6 +1,6 @@
 # 탐색 교사 전환 후 구조
 
-2026-10-28 기준. 목표는 학습 없이 강한 탐색 교사를 구축한 뒤 그 결정을 학습하는 것이다.
+2026-10-29 기준. 목표는 학습 없이 강한 탐색 교사를 구축한 뒤 그 결정을 학습하는 것이다.
 
 ## 실행 경로
 
@@ -14,6 +14,12 @@
 앱 진입점은 `augment-app/src/bin/{web,play,snapshot}.rs`이며 각 모듈의 `run`만 호출한다.
 웹의 HTTP·세션·설정·view·정적 파일은 `src/web/`, 수집기는 `src/snapshot/`에 모은다.
 규칙과 탐색을 앱 안으로 복제하거나 실행 파일끼리 서로 호출하지 않는다.
+
+최신 카드 128장의 획득 조건·효과·행동 열거는 `augment-core/src/engine/cards/<card_id>.rs`와
+단일 등록부에 모은다. 과거 룰셋 분기는 `engine/compat/`에 분리한다.
+공통 정의 타입은 `card.rs`, Rust ID는 `card_ids.rs`, 과거 메타데이터는
+`compat/card_definitions.rs`가 소유한다. 최신 정의는 자체 카탈로그와 실행 프로필에서 구성한다.
+공통 기물·턴·보드 처리와 카드별 처리의 경계는 [카드 구현 안내](card-implementation.md)를 따른다.
 
 ## 규칙과 탐색의 interface
 

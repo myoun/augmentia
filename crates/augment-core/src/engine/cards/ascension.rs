@@ -1,0 +1,194 @@
+use super::*;
+pub(super) const ID: &str = crate::ASCENSION;
+pub(super) fn play(
+    engine: &Engine,
+    state: &mut GameState,
+    actor: Player,
+    _instance_id: u32,
+    target: &ActionTarget,
+    events: &mut Vec<Event>,
+) -> Result<(), EngineError> {
+    let id = ID;
+    let [square, landing] = two_square_target(target)?;
+    let piece = state
+        .board
+        .get(square)
+        .ok_or_else(|| EngineError::Invariant("missing ascension queen".into()))?;
+    let mut saved = CardRuntimeState::default();
+    turn_effects::restore_piece_runtime(&mut saved, &state.card_runtime, &[piece.id]);
+    engine.delete_piece_for_card(state, square, piece, actor, id, events);
+    state
+        .card_runtime
+        .october
+        .pending_ascensions
+        .push(PendingAscension {
+            piece,
+            square: landing,
+            due_turn: state.turns_taken[actor.index()].saturating_add(3),
+            runtime: Box::new(saved),
+        });
+    engine.resolve_gomoku_victory(state);
+    Ok(())
+}
+
+pub(super) fn actions(
+    engine: &Engine,
+    state: &GameState,
+    card: &CardInstance,
+    actions: &mut Vec<Action>,
+) {
+    for (square, piece) in state.board.iter() {
+        if !engine.is_royal_piece(state, piece)
+            && (piece.owner == state.turn && piece.kind == PieceKind::Queen)
+        {
+            for index in 0..64 {
+                let landing = Square::from_index(index).unwrap();
+                if engine.card_landing_open(state, landing) {
+                    actions.push(Action::UseCard {
+                        instance_id: card.instance_id,
+                        target: ActionTarget::Squares(vec![square, landing]),
+                    });
+                }
+            }
+        }
+    }
+}
+
+pub(super) fn eligibility(
+    state: &GameState,
+    player: Player,
+    context: AcquisitionContext,
+) -> CardEligibility {
+    use PieceKind::*;
+    let has_own = |predicate: &dyn Fn(Piece) -> bool| {
+        state
+            .board
+            .iter()
+            .any(|(_, p)| p.owner == player && predicate(p))
+    };
+    if context == AcquisitionContext::Draft {
+        return CardEligibility::Eligible;
+    }
+    require(
+        has_own(&|p| p.kind == Queen && !royal(state, p)),
+        "비왕실 아군 퀸이 필요합니다.",
+    )
+}
+
+pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
+
+impl Engine {
+    pub(in crate::engine) fn settle_ascension(
+        &self,
+        state: &mut GameState,
+        owner: Player,
+        events: &mut Vec<Event>,
+    ) {
+        let pending = std::mem::take(&mut state.card_runtime.october.pending_ascensions);
+        for entry in pending {
+            if entry.piece.owner != owner || state.turns_taken[owner.index()] < entry.due_turn {
+                state.card_runtime.october.pending_ascensions.push(entry);
+                continue;
+            }
+            // Landing clears alternate quantum occupancy without killing its real piece.
+            state
+                .card_runtime
+                .quantum_positions
+                .retain(|_, s| *s != entry.square);
+            self.crush_card_landing(state, entry.square, owner, crate::ASCENSION, events);
+            state.card_runtime.barricades.remove(&entry.square);
+            if !self.collapsed_card_landing(state, entry.square)
+                && self.board_piece_at(state, entry.square).is_none()
+            {
+                state.board.set(entry.square, Some(entry.piece));
+                turn_effects::restore_piece_runtime(
+                    &mut state.card_runtime,
+                    &entry.runtime,
+                    &[entry.piece.id],
+                );
+                events.push(Event::EffectApplied {
+                    source_card_instance: 0,
+                    command: format!("ascension-return:{}:{}", entry.piece.id, entry.square),
+                });
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingAscension {
+    pub piece: Piece,
+    pub square: Square,
+    pub due_turn: u32,
+    /// Only the suspended identity's runtime; no nested replays or triggers.
+    pub runtime: Box<CardRuntimeState>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::delayed::*;
+    use super::*;
+    #[test]
+    fn ascension_returns_on_third_owner_start_with_frozen_metadata_and_original_identity() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[("d1", Player::White, PieceKind::Queen)]);
+        let mut queen = at(&s, "d1");
+        queen.capture_count = 4;
+        s.board.set("d1".parse().unwrap(), Some(queen));
+        s.card_runtime.shielded_piece_ids.insert(queen.id);
+        s.card_runtime.frozen.insert(
+            queen.id,
+            FrozenStatus {
+                source: Player::Black,
+                remaining_turns: 2,
+            },
+        );
+        s.card_runtime.recurrence_piece_ids.insert(queen.id);
+        use_at(&mut s, &engine, crate::ASCENSION, pair("d1", "e5"));
+        assert!(s.board.find_by_id(queen.id).is_none());
+        assert!(!s.card_runtime.shielded_piece_ids.contains(&queen.id));
+        let pending = &s.card_runtime.october.pending_ascensions[0];
+        assert!(pending.runtime.october.pending_ascensions.is_empty());
+        assert_eq!(pending.due_turn, 3);
+        for _ in 0..4 {
+            handoff(&engine, &mut s);
+            assert!(s.board.find_by_id(queen.id).is_none());
+        }
+        s.board.set(
+            "e5".parse().unwrap(),
+            Some(Piece::new(Player::Black, PieceKind::Pawn).with_id(100)),
+        );
+        s.card_runtime.shielded_piece_ids.insert(100);
+        handoff(&engine, &mut s);
+        handoff(&engine, &mut s);
+        assert_eq!(at(&s, "e5"), queen);
+        assert!(s.card_runtime.recurrence_piece_ids.contains(&queen.id));
+        assert!(s.card_runtime.october.pending_ascensions.is_empty());
+        assert!(s.card_runtime.shielded_piece_ids.contains(&queen.id));
+        assert_eq!(s.card_runtime.frozen[&queen.id].remaining_turns, 2);
+        assert!(!s.card_runtime.moved_piece_ids.contains(&queen.id));
+        assert!(
+            !s.card_runtime
+                .fresh_no_capture_until
+                .contains_key(&queen.id)
+        );
+    }
+    #[test]
+    fn ascension_extra_actions_do_not_advance_return_and_collapsed_landing_consumes_reservation() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[("d1", Player::White, PieceKind::Queen)]);
+        use_at(&mut s, &engine, crate::ASCENSION, pair("d1", "a5"));
+        s.actions_remaining = 2;
+        s = engine.apply(&s, movement("a1", "b2")).unwrap().state;
+        assert_eq!(s.turn, Player::White);
+        assert_eq!(s.turns_taken[0], 0);
+        assert_eq!(s.card_runtime.october.pending_ascensions[0].due_turn, 3);
+        let black = at(&s, "h8");
+        s.board.set("h8".parse().unwrap(), None);
+        s.board.set("g7".parse().unwrap(), Some(black));
+        s.card_runtime.collapsed_files_ranks = true;
+        three_owner_starts(&engine, &mut s);
+        assert!(s.card_runtime.october.pending_ascensions.is_empty());
+        assert!(s.board.get("a5".parse().unwrap()).is_none());
+    }
+}

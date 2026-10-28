@@ -1,25 +1,9 @@
-//! Canonical October metadata and a fail-closed inherited-handler profile.
-use std::collections::BTreeSet;
+//! Current card metadata, composed only from its own catalog and execution profile.
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
-use crate::{
-    CardActivation, CardPhase, ImplementedCardDefinition, LATEST_RULESET_ID, implemented_card,
-};
+use crate::{CardActivation, CardPhase, ImplementedCardDefinition};
 use serde::Deserialize;
-
-pub const MAN: &str = "man";
-pub const IQP: &str = "iqp";
-pub const HOPE: &str = "hope";
-pub const ASSEMBLY: &str = "assembly";
-pub const ARCHBISHOP: &str = "archbishop";
-pub const CHANCELLOR: &str = "chancellor";
-pub const SEAL: &str = "seal";
-pub const GREEK_GIFT: &str = "greek-gift";
-pub const ASCENSION: &str = "ascension";
-pub const TABOO: &str = "taboo";
-pub const GRUDGE: &str = "grudge";
-pub const PAWN_CHAIN: &str = "pawn-chain";
-pub const PENTA_CHECK: &str = "penta-check";
 
 /// Native minor family from the captured v19 catalog, expressed in core names.
 pub(crate) fn latest_minor_kind(kind: crate::PieceKind) -> bool {
@@ -125,36 +109,45 @@ pub fn latest_catalog() -> &'static [LatestCard] {
         .cards
 }
 
+#[derive(Deserialize)]
+struct ExecutionPolicy {
+    id: String,
+    // Required: a missing policy must never silently inherit another version's value.
+    turn_exclusive: bool,
+}
+
+#[derive(Deserialize)]
+struct ExecutionProfile {
+    cards: Vec<ExecutionPolicy>,
+}
+
+fn execution_profile() -> &'static BTreeMap<String, bool> {
+    static PROFILE: OnceLock<BTreeMap<String, bool>> = OnceLock::new();
+    PROFILE.get_or_init(|| {
+        let profile: ExecutionProfile = serde_json::from_str(include_str!(
+            "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+        ))
+        .expect("bundled executable card profile with explicit turn policies");
+        let mut policies = BTreeMap::new();
+        for card in profile.cards {
+            assert!(
+                policies.insert(card.id, card.turn_exclusive).is_none(),
+                "duplicate card policy"
+            );
+        }
+        policies
+    })
+}
+
 impl LatestCard {
     pub fn supported(&self) -> bool {
-        #[derive(Deserialize)]
-        struct Profile {
-            cards: Vec<Id>,
-        }
-        #[derive(Deserialize)]
-        struct Id {
-            id: String,
-        }
-        static IDS: OnceLock<BTreeSet<String>> = OnceLock::new();
-        self.enabled
-            && IDS
-                .get_or_init(|| {
-                    let profile: Profile = serde_json::from_str(include_str!(
-                        "../../../rulesets/augment_chess_20261017/cards/implemented.json"
-                    ))
-                    .expect("bundled inherited-handler profile");
-                    profile.cards.into_iter().map(|card| card.id).collect()
-                })
-                .contains(&self.id)
+        self.enabled && execution_profile().contains_key(&self.id)
     }
 }
 
-/// Old snapshots retain their historical definitions. October never falls back
-/// to an old handler for a new, disabled, or changed-contract card.
-pub fn ruleset_card(ruleset_id: &str, id: &str) -> Option<ImplementedCardDefinition> {
-    if ruleset_id != LATEST_RULESET_ID {
-        return implemented_card(id).copied();
-    }
+/// Construct a supported current card from its catalog and execution profile.
+pub(crate) fn card_definition(id: &str) -> Option<ImplementedCardDefinition> {
+    let turn_exclusive = *execution_profile().get(id)?;
     let card = latest_catalog()
         .iter()
         .find(|card| card.id == id && card.supported())?;
@@ -181,7 +174,7 @@ pub fn ruleset_card(ruleset_id: &str, id: &str) -> Option<ImplementedCardDefinit
             }
         },
         ends_turn: card.turn_policy == "END_TURN",
-        turn_exclusive: implemented_card(id).is_some_and(|old| old.turn_exclusive),
+        turn_exclusive,
     })
 }
 
@@ -189,9 +182,25 @@ pub fn ruleset_card(ruleset_id: &str, id: &str) -> Option<ImplementedCardDefinit
 mod tests {
     use super::*;
     use crate::{
-        Action, Board, DrawReason, Engine, GameState, GameStatus, Mode, MoveAction, Piece,
-        PieceKind, Player,
+        Action, Board, DrawReason, Engine, GameState, GameStatus, LATEST_RULESET_ID, Mode,
+        MoveAction, Piece, PieceKind, Player, ruleset_card,
     };
+
+    #[test]
+    fn execution_profile_requires_an_explicit_turn_policy_for_every_card() {
+        let mut profile: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+        ))
+        .unwrap();
+        profile["cards"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("turn_exclusive");
+        let error = serde_json::from_value::<ExecutionProfile>(profile)
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains("turn_exclusive"));
+    }
 
     fn state() -> GameState {
         let mut state = GameState::standard(LATEST_RULESET_ID, Mode::Standard, 1);

@@ -1,3 +1,4 @@
+pub use crate::engine::cards::OctoberRuntimeState;
 use crate::{Board, DeterministicRng, MoveAction, Piece, PieceKind, Player, Square};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -386,55 +387,6 @@ pub struct FlagOccupation {
 pub struct CaptureTheFlagState {
     pub flags: [Square; 2],
     pub occupations: [Option<FlagOccupation>; 2],
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PendingSeal {
-    pub by: Player,
-    pub piece_id: u32,
-    pub due_turn: u32,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PendingTaboo {
-    pub owner: Player,
-    pub piece_id: u32,
-    pub square: Square,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PendingAscension {
-    pub piece: Piece,
-    pub square: Square,
-    pub due_turn: u32,
-    /// Only the suspended identity's runtime; no nested replays or triggers.
-    pub runtime: Box<CardRuntimeState>,
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct OctoberRuntimeState {
-    pub assembly: [bool; 2],
-    pub hope: [bool; 2],
-    pub iqp_pending: [bool; 2],
-    /// Number of retained moves already granted in this rook-lift chain (max 3).
-    pub rook_lift_chain: Option<(u32, u8)>,
-    pub pending_seals: Vec<PendingSeal>,
-    pub bound_piece_ids: BTreeSet<u32>,
-    pub greek_gift_pending: [bool; 2],
-    pub pending_taboo: Vec<PendingTaboo>,
-    pub pending_ascensions: Vec<PendingAscension>,
-    pub grudged_piece_ids: BTreeSet<u32>,
-    /// Rook=1, bishop=2, knight=4, camel=8. Loss survives transformations.
-    pub grudge_losses: BTreeMap<u32, u8>,
-    pub pawn_chain_links: Vec<[u32; 2]>,
-    pub penta_check: [Option<PentaCheckProgress>; 2],
-    pub prophecy_remaining: [Option<u8>; 2],
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PentaCheckProgress {
-    pub count: u8,
-    pub opponent_checked: bool,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

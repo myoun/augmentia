@@ -34,6 +34,9 @@ cargo run -p augment-app --bin play
 앱의 세 진입점은 `augment-app/src/bin/`에 있고, 각 구현은 `src/web/`, `src/play.rs`,
 `src/snapshot/`에 둡니다. `cargo run -p augment-app`의 기본 실행은 `web`입니다.
 
+최신 지원 카드의 구현은 `augment-core/src/engine/cards/<card_id>.rs`에 모았습니다.
+[카드 구현 안내](docs/card-implementation.md)에서 등록부·공통 처리·테스트 위치를 확인할 수 있습니다.
+
 기존 V2/V3/V4 신경망 실행·학습·승격·데이터 포맷·ONNX 의존성과 별도 MCTS V5 실험 구현은
 삭제했습니다. 기존 AND-OR 알고리즘은 `augment-search::tactics`로 옮기고 엔진의
 `Action`을 직접 사용하도록 줄였습니다. 새 학습 파이프라인은 교사의 기력이 검증된 후 설계합니다.
