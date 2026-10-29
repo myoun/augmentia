@@ -40,11 +40,10 @@ impl Engine {
             .iter()
             .filter(|(_, p)| p.owner == owner)
             .map(|(square, piece)| {
-                let cells = state
-                    .card_runtime
-                    .large_pieces
-                    .get(&piece.id)
-                    .map_or_else(|| vec![square], |large| large_piece_cells(large.anchor));
+                let cells = state.card_runtime.large_pieces.get(&piece.id).map_or_else(
+                    || vec![square],
+                    |large| large_piece_occupied_cells(state, piece.id, large.anchor),
+                );
                 (square, piece, cells)
             })
             .collect();
@@ -59,8 +58,15 @@ impl Engine {
         let mut shifts = [0_i8; 8];
         let mut blocked = [false; 8];
         for step in 1..=2 {
+            let mut denied = [false; 8];
             for (square, _, cells) in &own {
                 let group = root(&parent, usize::from(square.file()));
+                if cells.iter().any(|cell| {
+                    cell.offset(0, direction * step)
+                        .is_some_and(|to| self.d4_restricts(state, owner, false, to))
+                }) {
+                    denied[group] = true;
+                }
                 if cells.iter().any(|cell| {
                     cell.offset(0, direction * step).is_none_or(|to| {
                         self.board_piece_at(state, to)
@@ -92,7 +98,7 @@ impl Engine {
             }
             for (square, _, _) in &own {
                 let group = root(&parent, usize::from(square.file()));
-                if !blocked[group] {
+                if !blocked[group] && !denied[group] {
                     shifts[group] = step;
                 }
             }
@@ -107,7 +113,10 @@ impl Engine {
                 .expect("checked false-start destination");
             state.board.set(to, Some(piece));
             if let Some(large) = state.card_runtime.large_pieces.get_mut(&piece.id) {
-                large.anchor = to;
+                large.anchor = large
+                    .anchor
+                    .offset(0, direction * shifts[group])
+                    .expect("checked large-body shift");
             }
         }
         state.en_passant = None;

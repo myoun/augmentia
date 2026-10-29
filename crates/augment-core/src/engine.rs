@@ -619,7 +619,19 @@ impl Engine {
             cause: cause.to_owned(),
         });
         self.grant_wizard_mana_for_loss(state, piece.owner);
-        self.resolve_reaper_deaths(state, &[(square, piece)], remover, events);
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            || [
+                "football",
+                "don-quixote",
+                "colossus-sector",
+                "log-roll",
+                "siege-ram",
+                "large-piece-landing",
+            ]
+            .contains(&cause)
+        {
+            self.resolve_reaper_deaths(state, &[(square, piece)], remover, events);
+        }
     }
 
     fn record_new_capture_reactions(&self, state: &mut GameState, captured: Piece) {
@@ -1825,8 +1837,15 @@ impl Engine {
                 actions.dedup();
                 Ok(actions)
             }
-            GamePhase::ForcedMove { piece_id, .. } => {
-                Ok(self.generate_piece_move_actions(state, *piece_id))
+            GamePhase::ForcedMove {
+                piece_id, source, ..
+            } => {
+                let mut actions = self.generate_piece_move_actions(state, *piece_id);
+                if matches!(source, ForcedMoveSource::Effect(id) if id == crate::IRON_MONARCH || id == crate::THIEF)
+                {
+                    actions.push(Action::SkipOptionalMove);
+                }
+                Ok(actions)
             }
             GamePhase::Draft(draft) => Ok((0..draft.offers.len())
                 .filter(|index| {
@@ -1903,6 +1922,26 @@ impl Engine {
         let is_draft_pick = matches!(action, Action::DraftPick { .. });
         let mut transition = match action.clone() {
             Action::Move(movement) => self.apply_move(state, action, movement),
+            Action::SkipOptionalMove => {
+                let mut next = state.clone();
+                let actor = next.turn;
+                let mut events = vec![Event::ActionApplied { actor, action }];
+                let continuation = match next.phase {
+                    GamePhase::ForcedMove { continuation, .. } => continuation,
+                    _ => unreachable!("validated optional move"),
+                };
+                next.phase = GamePhase::Playing;
+                if continuation == ForcedMoveContinuation::FinishTurn || next.actions_remaining == 0
+                {
+                    self.finish_turn(&mut next, actor, &mut events)?;
+                } else {
+                    self.resolve_no_action_loss(&mut next, actor, &mut events);
+                }
+                Ok(Transition {
+                    state: next,
+                    events,
+                })
+            }
             Action::UsePieceAbility {
                 piece_id,
                 ability,
@@ -2123,7 +2162,7 @@ impl Engine {
             };
             let mut events = vec![Event::ActionApplied { actor, action }];
             let mut seen = BTreeSet::new();
-            for square in squares {
+            for square in squares.iter().copied() {
                 let Some((anchor, target_piece)) = self.board_piece_entry_at(&next, square) else {
                     continue;
                 };
@@ -2142,6 +2181,47 @@ impl Engine {
                         .protected_piece_ids
                         .contains(&target_piece.id)
                 {
+                    continue;
+                }
+                if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && matches!(target_piece.kind, PieceKind::BigRook | PieceKind::BigBishop)
+                {
+                    let impacts: Vec<_> = squares
+                        .iter()
+                        .copied()
+                        .filter(|cell| {
+                            self.board_piece_at(&next, *cell)
+                                .is_some_and(|p| p.id == target_piece.id)
+                        })
+                        .collect();
+                    let mut defeated = false;
+                    for cell in impacts {
+                        if self.fracture_large_cell(&mut next, target_piece, cell) == Some(true) {
+                            defeated = true;
+                            break;
+                        }
+                    }
+                    if !defeated {
+                        continue;
+                    }
+                    let storage = next
+                        .board
+                        .find_by_id(target_piece.id)
+                        .map_or(anchor, |(storage, _)| storage);
+                    self.remove_piece_for_card(
+                        &mut next,
+                        storage,
+                        target_piece,
+                        actor,
+                        "colossus-sector",
+                        &mut events,
+                    );
+                    self.resolve_calling_card_capture(
+                        &mut next,
+                        target_piece,
+                        Some(source_piece),
+                        &mut events,
+                    );
                     continue;
                 }
                 if let Some(status) = next.card_runtime.large_pieces.get_mut(&target_piece.id) {
@@ -2196,27 +2276,54 @@ impl Engine {
         }
         if ability == PieceAbility::MerchantBuy {
             let (square, mut purchased) = piece_target(&next, &target)?;
-            let cost = merchant_cost(purchased.kind);
+            let cost = if state.ruleset_id == crate::LATEST_RULESET_ID {
+                self.current_merchant_price(&next, purchased)
+            } else {
+                merchant_cost(purchased.kind)
+            };
             let gold = next.card_runtime.merchant_gold.entry(piece_id).or_default();
             *gold = gold.saturating_sub(cost);
-            let royal_purchase = self.is_royal_piece(&next, purchased)
-                && !next.card_runtime.democracy[purchased.owner.index()];
+            let royal_purchase = (self.is_royal_piece(&next, purchased)
+                || state.ruleset_id == crate::LATEST_RULESET_ID
+                    && purchased.kind == PieceKind::Vip)
+                && (state.ruleset_id == crate::LATEST_RULESET_ID
+                    || !next.card_runtime.democracy[purchased.owner.index()]);
+            let mut events = vec![Event::ActionApplied { actor, action }];
             if royal_purchase {
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.delete_piece_for_card(
+                        &mut next,
+                        square,
+                        purchased,
+                        actor,
+                        MERCHANT_GUILD,
+                        &mut events,
+                    );
+                }
                 next.status = GameStatus::Won {
                     winner: actor,
                     reason: WinReason::CardEffect("merchant-purchase".to_owned()),
                 };
             } else {
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.clear_queens_gambit_protection(&mut next, purchased.id);
+                }
                 purchased.owner = actor;
                 next.board.set(square, Some(purchased));
                 next.card_runtime.moved_piece_ids.insert(purchased.id);
             }
-            let mut events = vec![Event::ActionApplied { actor, action }];
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
                 command: format!("merchant-buy:{piece_id}:{}:{cost}", purchased.id),
             });
             next.actions_remaining = next.actions_remaining.saturating_sub(1);
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                next.ply = next.ply.saturating_add(1);
+                next.quiet_ply = 0;
+                next.en_passant = None;
+                next.mark_deathmatch_progress();
+                self.resolve_after_counted_move(&mut next, &mut events);
+            }
             if next.status == GameStatus::Ongoing {
                 self.finish_turn(&mut next, actor, &mut events)?;
             } else {
@@ -2266,7 +2373,11 @@ impl Engine {
             PieceAbility::WizardMeteor => {
                 let square = square_target(&target)?;
                 let base_file = square.file().min(6);
-                let base_rank = square.rank().min(6);
+                let base_rank = if next.ruleset_id == crate::LATEST_RULESET_ID {
+                    square.rank().saturating_sub(1)
+                } else {
+                    square.rank().min(6)
+                };
                 let mut squares = Vec::with_capacity(4);
                 for file_delta in 0..=1 {
                     for rank_delta in 0..=1 {
@@ -2642,6 +2753,20 @@ impl Engine {
         action: Action,
         mut movement: MoveAction,
     ) -> Result<Transition, EngineError> {
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && let Some(merchant) = state.board.get(movement.from)
+            && merchant.kind == PieceKind::Merchant
+            && let Some(target) = state.board.get(movement.to)
+            && target.owner != merchant.owner
+        {
+            return self.apply_piece_ability(
+                state,
+                action,
+                merchant.id,
+                PieceAbility::MerchantBuy,
+                ActionTarget::PieceAt(movement.to),
+            );
+        }
         if let Some((to, target)) = self.rule_grappler_pull(state, movement) {
             return self.apply_rule_grappler(state, action, movement, to, target);
         }
@@ -2704,6 +2829,21 @@ impl Engine {
         let mut moving_piece = next
             .move_source_piece(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
+        let thief_extra = state.ruleset_id == crate::LATEST_RULESET_ID
+            && self.piece_ability_kind(state, moving_piece) == PieceKind::Thief
+            && state.board.get(movement.to).is_none()
+            && {
+                let df = movement.to.file() as i8 - movement.from.file() as i8;
+                let dr = movement.to.rank() as i8 - movement.from.rank() as i8;
+                let steps = df.unsigned_abs().max(dr.unsigned_abs());
+                (1..steps).any(|n| {
+                    movement
+                        .from
+                        .offset(df.signum() * n as i8, dr.signum() * n as i8)
+                        .is_some_and(|s| self.board_piece_at(state, s).is_some())
+                })
+            };
+        let mut iron_extra = false;
         let portal_route = self.rule_portal_route(state, movement.from, moving_piece, movement.to);
         let portal_capture = portal_route
             .filter(|r| r.entry != r.landing)
@@ -2722,11 +2862,12 @@ impl Engine {
                     .offset(file_delta.signum(), rank_delta.signum())
                     .expect("siege ram midpoint");
                 if let Some(victim) = next.board.get(middle) {
-                    let remover = if victim.owner == actor {
-                        actor.opponent()
-                    } else {
-                        actor
-                    };
+                    let remover =
+                        if victim.owner == actor && next.ruleset_id != crate::LATEST_RULESET_ID {
+                            actor.opponent()
+                        } else {
+                            actor
+                        };
                     self.remove_piece_for_card(
                         &mut next,
                         middle,
@@ -2747,7 +2888,13 @@ impl Engine {
         } else {
             self.available_adjacent_idol(&next, movement.from, moving_piece.owner)
         };
-        let destination_entry = self.board_piece_entry_at(&next, movement.to);
+        let destination_entry =
+            self.board_piece_entry_at(&next, movement.to)
+                .filter(|(_, target)| {
+                    !castling_rook.is_some_and(|(_, _, rook)| {
+                        rook.kind == PieceKind::BigRook && rook.id == target.id
+                    })
+                });
         let mut destination_piece = destination_entry.map(|(_, piece)| piece);
         let mut en_passant_capture = (moved_ability_kind == PieceKind::Pawn
             && destination_piece.is_none()
@@ -2981,6 +3128,14 @@ impl Engine {
                     source_card_instance: 0,
                     command: format!("mistake-reverse:{}:{}", counter.id, moving_piece.id),
                 });
+                if next.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.resolve_reaper_deaths(
+                        &mut next,
+                        &[(movement.from, moving_piece)],
+                        counter.owner,
+                        &mut events,
+                    );
+                }
                 next.ply = next.ply.saturating_add(1);
                 next.quiet_ply = 0;
                 next.mark_deathmatch_progress();
@@ -3054,6 +3209,14 @@ impl Engine {
                 source_card_instance: 0,
                 command: format!("bear-retaliation:{}:{}", bear.id, moving_piece.id),
             });
+            if next.ruleset_id == crate::LATEST_RULESET_ID {
+                self.resolve_reaper_deaths(
+                    &mut next,
+                    &[(movement.from, moving_piece)],
+                    bear.owner,
+                    &mut events,
+                );
+            }
             next.ply = next.ply.saturating_add(1);
             next.quiet_ply = 0;
             next.mark_deathmatch_progress();
@@ -3080,17 +3243,48 @@ impl Engine {
         }
         let middle_capture = target_piece.map(|target| self.middle_capture_context(&next, target));
 
-        if matches!(moving_piece.kind, PieceKind::BigRook | PieceKind::Colossus) {
+        if matches!(moving_piece.kind, PieceKind::BigRook | PieceKind::Colossus)
+            || state.ruleset_id == crate::LATEST_RULESET_ID
+                && moving_piece.kind == PieceKind::BigBishop
+        {
             let targets = self.large_landing_targets(&next, moving_piece, movement.to);
+            let landing_cells = large_piece_occupied_cells(&next, moving_piece.id, movement.to);
             for (square, target) in targets {
-                let remover = if target.owner == actor {
-                    actor.opponent()
-                } else {
-                    actor
-                };
+                if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && matches!(target.kind, PieceKind::BigRook | PieceKind::BigBishop)
+                {
+                    let impacts: Vec<_> = landing_cells
+                        .iter()
+                        .copied()
+                        .filter(|cell| {
+                            self.board_piece_at(&next, *cell)
+                                .is_some_and(|p| p.id == target.id)
+                        })
+                        .collect();
+                    let mut defeated = false;
+                    for cell in impacts {
+                        if self.fracture_large_cell(&mut next, target, cell) == Some(true) {
+                            defeated = true;
+                            break;
+                        }
+                    }
+                    if !defeated {
+                        continue;
+                    }
+                }
+                let remover =
+                    if target.owner == actor && next.ruleset_id != crate::LATEST_RULESET_ID {
+                        actor.opponent()
+                    } else {
+                        actor
+                    };
+                let target_storage = next
+                    .board
+                    .find_by_id(target.id)
+                    .map_or(square, |(storage, _)| storage);
                 self.remove_piece_for_card(
                     &mut next,
-                    square,
+                    target_storage,
                     target,
                     remover,
                     "large-piece-landing",
@@ -3098,7 +3292,8 @@ impl Engine {
                 );
             }
             next.board.set(movement.from, None);
-            next.board.set(movement.to, Some(moving_piece));
+            let storage = large_piece_occupied_cells(&next, moving_piece.id, movement.to)[0];
+            next.board.set(storage, Some(moving_piece));
             if let Some(status) = next.card_runtime.large_pieces.get_mut(&moving_piece.id) {
                 status.anchor = movement.to;
             }
@@ -3173,7 +3368,8 @@ impl Engine {
             });
         }
 
-        if moved_ability_kind == PieceKind::Dragon
+        if (moved_ability_kind == PieceKind::Dragon
+            || self.medium_borrows_movement(&next, moving_piece, PieceKind::Dragon))
             && destination_piece.is_some_and(|piece| piece.owner == actor)
         {
             let swapped = destination_piece.expect("checked friendly destination");
@@ -3241,6 +3437,19 @@ impl Engine {
         }
 
         if let Some(target) = target_piece
+            && self.fracture_large_cell(&mut next, target, movement.to) == Some(false)
+        {
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("large-fracture:{}:{}", target.id, movement.to),
+            });
+            target_piece = None;
+            capture_square = movement.to;
+        }
+
+        if let Some(target) = target_piece
+            && !(next.ruleset_id == crate::LATEST_RULESET_ID
+                && matches!(target.kind, PieceKind::BigRook | PieceKind::BigBishop))
             && let Some(status) = next.card_runtime.large_pieces.get_mut(&target.id)
         {
             status.hp = status.hp.saturating_sub(1);
@@ -3344,12 +3553,16 @@ impl Engine {
             });
         }
 
-        let checker_jump = if matches!(
-            moved_ability_kind,
-            PieceKind::Checker | PieceKind::CheckerKing
-        ) {
+        let checker_kind = if moved_ability_kind == PieceKind::Medium {
+            next.rule_runtime
+                .medium_memory
+                .map_or(PieceKind::Medium, |m| m.source)
+        } else {
+            moved_ability_kind
+        };
+        let checker_jump = if matches!(checker_kind, PieceKind::Checker | PieceKind::CheckerKing) {
             let mut checker = moving_piece;
-            checker.kind = moved_ability_kind;
+            checker.kind = checker_kind;
             self.checker_jump_capture(&next, movement.from, movement.to, checker)
         } else {
             None
@@ -3372,7 +3585,9 @@ impl Engine {
                 });
             } else if !next.card_runtime.protected_piece_ids.contains(&captured.id) {
                 jumped_attack = true;
-                if let Some(status) = next.card_runtime.large_pieces.get_mut(&captured.id) {
+                if let Some(result) = self.fracture_large_cell(&mut next, captured, mid) {
+                    defeated = result;
+                } else if let Some(status) = next.card_runtime.large_pieces.get_mut(&captured.id) {
                     status.hp = status.hp.saturating_sub(1);
                     defeated = status.hp == 0;
                     events.push(Event::EffectApplied {
@@ -3398,6 +3613,14 @@ impl Engine {
                         piece: captured,
                         at: captured_square,
                     });
+                    if next.ruleset_id == crate::LATEST_RULESET_ID {
+                        self.resolve_reaper_deaths(
+                            &mut next,
+                            &[(captured_square, captured)],
+                            actor,
+                            &mut events,
+                        );
+                    }
                     self.resolve_calling_card_capture(
                         &mut next,
                         captured,
@@ -3557,10 +3780,21 @@ impl Engine {
                     &mut events,
                 );
                 if self.is_royal_piece(&next, moving_piece)
-                    && matches!(captured.kind, PieceKind::Pawn | PieceKind::Fanatic)
+                    && (matches!(captured.kind, PieceKind::Pawn | PieceKind::Fanatic)
+                        || state.ruleset_id == crate::LATEST_RULESET_ID
+                            && matches!(
+                                captured.kind,
+                                PieceKind::BerolinaPawn
+                                    | PieceKind::Squire
+                                    | PieceKind::StandardBearer
+                            ))
                     && next.card_runtime.iron_monarch[actor.index()]
                 {
-                    next.actions_remaining = next.actions_remaining.saturating_add(1);
+                    if state.ruleset_id == crate::LATEST_RULESET_ID {
+                        iron_extra = true;
+                    } else {
+                        next.actions_remaining = next.actions_remaining.saturating_add(1);
+                    }
                 }
                 // Disassembly (live disassembleMovedQueen, guard order preserved): moved queen converts
                 // to a bishop on the destination; a fresh rook spawns on the origin only when that square
@@ -3648,10 +3882,47 @@ impl Engine {
             next.card_runtime
                 .submerged_piece_ids
                 .insert(moving_piece.id);
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                let entry = portal_route.map_or(movement.to, |route| route.entry);
+                let path = next
+                    .card_runtime
+                    .thief_turn_paths
+                    .entry(moving_piece.id)
+                    .or_default();
+                path.0.extend([movement.from, entry, movement.to]);
+                path.1 = (entry.file() as i8 - movement.from.file() as i8).signum();
+                path.2 = (entry.rank() as i8 - movement.from.rank() as i8).signum();
+            }
         }
         if let Some((rook_from, rook_to, rook)) = castling_rook {
-            next.board.set(rook_from, None);
-            next.board.set(rook_to, Some(rook));
+            if rook.kind == PieceKind::BigRook && state.ruleset_id == crate::LATEST_RULESET_ID {
+                if rook_from != movement.to {
+                    next.board.set(rook_from, None);
+                }
+                let landing = large_piece_occupied_cells(&next, rook.id, rook_to);
+                let removed: Vec<_> = landing
+                    .iter()
+                    .filter_map(|square| next.board.get(*square).map(|piece| (*square, piece)))
+                    .filter(|(_, piece)| piece.id != moving_piece.id && piece.id != rook.id)
+                    .collect();
+                for (square, piece) in removed {
+                    self.delete_piece_for_card(
+                        &mut next,
+                        square,
+                        piece,
+                        actor,
+                        "big-rook-castle",
+                        &mut events,
+                    );
+                }
+                next.board.set(landing[0], Some(rook));
+                if let Some(body) = next.card_runtime.large_pieces.get_mut(&rook.id) {
+                    body.anchor = rook_to;
+                }
+            } else {
+                next.board.set(rook_from, None);
+                next.board.set(rook_to, Some(rook));
+            }
             next.card_runtime.moved_piece_ids.insert(rook.id);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
@@ -3678,11 +3949,17 @@ impl Engine {
             checker.kind = PieceKind::CheckerKing;
             next.board.set(movement.to, Some(checker));
         }
-        if moving_survived && moved_ability_kind == PieceKind::Recruiter {
+        if moving_survived
+            && moved_ability_kind == PieceKind::Recruiter
+            && !self.d4_restricts(&next, actor, false, movement.from)
+        {
             let pawn = Piece::new(actor, PieceKind::Pawn).with_id(next.allocate_piece_id());
             next.board.set(movement.from, Some(pawn));
         }
-        if moving_survived && moved_ability_kind == PieceKind::Slime {
+        if moving_survived
+            && moved_ability_kind == PieceKind::Slime
+            && !self.d4_restricts(&next, actor, false, movement.from)
+        {
             let slime = Piece::new(actor, PieceKind::Slime).with_id(next.allocate_piece_id());
             next.board.set(movement.from, Some(slime));
             self.register_spawned_piece(&mut next, movement.from, slime, true);
@@ -3909,6 +4186,22 @@ impl Engine {
         }
         if next.status == GameStatus::Ongoing
             && moving_survived
+            && thief_extra
+            && self.start_opening_optional_move(
+                &mut next,
+                moving_piece.id,
+                crate::THIEF,
+                &mut events,
+            )
+        {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if next.status == GameStatus::Ongoing
+            && moving_survived
+            && state.ruleset_id != crate::LATEST_RULESET_ID
             && self.try_start_platform_extra_move(
                 &mut next,
                 movement.to,
@@ -3924,6 +4217,36 @@ impl Engine {
         if next.status == GameStatus::Ongoing
             && moving_survived
             && self.try_start_reposition_extra_move(&mut next, moving_piece.id, &mut events)
+        {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if next.status == GameStatus::Ongoing
+            && moving_survived
+            && iron_extra
+            && self.start_opening_optional_move(
+                &mut next,
+                moving_piece.id,
+                crate::IRON_MONARCH,
+                &mut events,
+            )
+        {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if next.status == GameStatus::Ongoing
+            && moving_survived
+            && state.ruleset_id == crate::LATEST_RULESET_ID
+            && self.try_start_platform_extra_move(
+                &mut next,
+                movement.to,
+                moving_piece.id,
+                &mut events,
+            )
         {
             return Ok(Transition {
                 state: next,
@@ -4416,6 +4739,10 @@ impl Engine {
         captured_by: Player,
         events: &mut Vec<Event>,
     ) {
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            self.resolve_current_reaper_deaths(state, deaths, captured_by, events);
+            return;
+        }
         if state.status != GameStatus::Ongoing {
             return;
         }
@@ -4610,7 +4937,15 @@ impl Engine {
     }
 
     fn clear_removed_piece_statuses(&self, state: &mut GameState, piece_id: u32) {
+        state.card_runtime.wanted_piece_ids.remove(&piece_id);
+        state.card_runtime.thief_turn_paths.remove(&piece_id);
+        state.card_runtime.large_missing_cells.remove(&piece_id);
+        state
+            .card_runtime
+            .queens_gambit_previous_protection
+            .remove(&piece_id);
         state.rule_runtime.grappler_bound.remove(&piece_id);
+        state.rule_runtime.piece_fresh_until.remove(&piece_id);
         state.rule_runtime.berolina_rights.remove(&piece_id);
         state.rule_runtime.beacon_due.remove(&piece_id);
         state.rule_runtime.mono_shades.remove(&piece_id);
@@ -4680,6 +5015,7 @@ impl Engine {
         state.card_runtime.holdout_promotions.remove(&piece_id);
         state.card_runtime.merchant_gold.remove(&piece_id);
         state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.large_missing_cells.remove(&piece_id);
         state.card_runtime.piece_origins.remove(&piece_id);
         state
             .card_runtime
@@ -4749,6 +5085,7 @@ impl Engine {
             .card_runtime
             .queens_gambit_protection
             .remove(&piece_id)
+            && !piece_effects::has_piece_protection_source(state, piece_id)
         {
             state.card_runtime.protected_piece_ids.remove(&piece_id);
         }
@@ -4766,6 +5103,7 @@ impl Engine {
         state.card_runtime.reaper_souls.remove(&piece_id);
         state.card_runtime.merchant_gold.remove(&piece_id);
         state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.large_missing_cells.remove(&piece_id);
         state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
         state.card_runtime.bear_retaliations.remove(&piece_id);
     }
@@ -4791,9 +5129,18 @@ impl Engine {
                 attacker.is_none_or(|attacker| piece.id != attacker.id)
                     && !self.is_royal_piece(state, *piece)
                     && !matches!(piece.kind, PieceKind::Guard | PieceKind::Jester)
+                    && (state.ruleset_id != crate::LATEST_RULESET_ID
+                        || !matches!(
+                            piece.kind,
+                            PieceKind::RevolvingDoor
+                                | PieceKind::Monster
+                                | PieceKind::Football
+                                | PieceKind::Scarecrow
+                        ))
             })
             .collect::<Vec<_>>();
-        let candidates = if nonroyal.is_empty()
+        let candidates = if state.ruleset_id != crate::LATEST_RULESET_ID
+            && nonroyal.is_empty()
             && !remaining.is_empty()
             && remaining
                 .iter()
@@ -4806,7 +5153,15 @@ impl Engine {
         } else {
             nonroyal
         };
-        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+        let (roll, index) = if state.ruleset_id == crate::LATEST_RULESET_ID {
+            let (roll, raw) = state.rng_mut().web_choice_index(64);
+            (
+                roll,
+                (!candidates.is_empty()).then(|| raw.unwrap() % candidates.len()),
+            )
+        } else {
+            state.rng_mut().web_choice_index(candidates.len())
+        };
         events.push(Event::RandomSample {
             purpose: "calling-card-followup".to_owned(),
             roll_53: roll,
@@ -4825,6 +5180,9 @@ impl Engine {
         for entry in pending.drain(..) {
             if state.ply < entry.due_ply {
                 remaining.push(entry);
+                continue;
+            }
+            if self.d4_restricts(state, entry.owner, false, entry.square) {
                 continue;
             }
             let captured_blocker = if let Some(blocker) = self.board_piece_at(state, entry.square) {
@@ -4865,6 +5223,7 @@ impl Engine {
             if state.ply < pending.due_ply {
                 state.card_runtime.pending_lobsters.push(pending);
             } else if self.board_piece_at(state, pending.square).is_none()
+                && !self.d4_restricts(state, pending.owner, false, pending.square)
                 && !state.card_runtime.barricades.contains(&pending.square)
                 && !state.card_runtime.black_holes.contains(&pending.square)
                 && state.card_runtime.crown_pos != Some(pending.square)
@@ -5032,6 +5391,30 @@ impl Engine {
     }
 
     fn resolve_holdout_promotions(&self, state: &mut GameState, player: Player) {
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            let now =
+                state.turns_taken[1].saturating_mul(2) + u32::from(state.turn == Player::Black);
+            let due: Vec<_> = state
+                .card_runtime
+                .holdout_promotions
+                .iter()
+                .filter_map(|(id, ready)| (now >= *ready).then_some(*id))
+                .collect();
+            for id in due {
+                if let Some((square, mut piece)) = state.board.find_by_id(id) {
+                    piece.kind = PieceKind::Queen;
+                    if let Some(owner) = state.card_runtime.spies.get(&id).copied()
+                        && owner != piece.owner
+                    {
+                        state.card_runtime.spies.remove(&id);
+                        piece.owner = owner;
+                    }
+                    state.board.set(square, Some(piece));
+                }
+                state.card_runtime.holdout_promotions.remove(&id);
+            }
+            return;
+        }
         let due = state
             .card_runtime
             .holdout_promotions
@@ -5324,7 +5707,11 @@ impl Engine {
             .iter()
             .filter(|(_, piece)| {
                 piece.owner == actor
-                    && piece.kind == PieceKind::Thief
+                    && (if state.ruleset_id == crate::LATEST_RULESET_ID {
+                        state.card_runtime.wanted_piece_ids.contains(&piece.id)
+                    } else {
+                        piece.kind == PieceKind::Thief
+                    })
                     && !state.card_runtime.submerged_piece_ids.contains(&piece.id)
             })
             .collect::<Vec<_>>();
@@ -5357,7 +5744,12 @@ impl Engine {
                 command: format!("wizard-hazard:{:?}", hazard.kind),
             });
             for square in hazard.squares {
-                let Some(piece) = state.board.get(square) else {
+                let entry = if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.board_piece_entry_at(state, square)
+                } else {
+                    state.board.get(square).map(|piece| (square, piece))
+                };
+                let Some((storage, piece)) = entry else {
                     continue;
                 };
                 if state.card_runtime.frozen.contains_key(&piece.id) {
@@ -5370,7 +5762,10 @@ impl Engine {
                     });
                     continue;
                 }
-                state.board.set(square, None);
+                if self.fracture_large_cell(state, piece, square) == Some(false) {
+                    continue;
+                }
+                state.board.set(storage, None);
                 self.record_new_capture_reactions(state, piece);
                 self.clear_removed_piece_statuses(state, piece.id);
                 events.push(Event::PieceRemoved {
@@ -5384,7 +5779,9 @@ impl Engine {
                     .to_owned(),
                 });
                 self.grant_wizard_mana_for_loss(state, piece.owner);
-                self.resolve_reaper_deaths(state, &[(square, piece)], hazard.owner, events);
+                if state.ruleset_id != crate::LATEST_RULESET_ID {
+                    self.resolve_reaper_deaths(state, &[(square, piece)], hazard.owner, events);
+                }
             }
         }
     }
@@ -5512,6 +5909,7 @@ impl Engine {
         // hazard removes it before the board is inspected again.
         self.refresh_submerged_pieces(state);
         self.arrest_unsubmerged_thieves(state, actor, events);
+        state.card_runtime.thief_turn_paths.clear();
         self.resolve_delayed_hazards(state, actor, events);
         self.advance_logs_after_turn(state, actor, events);
         self.resolve_missing_king(state, events);
@@ -6517,22 +6915,33 @@ impl Engine {
                 ],
                 actions,
             ),
-            PieceKind::Reaper => self.generate_leaper_moves(
-                state,
-                from,
-                piece,
-                &[
-                    (-1, -1),
-                    (-1, 0),
-                    (-1, 1),
-                    (0, -1),
-                    (0, 1),
-                    (1, -1),
-                    (1, 0),
-                    (1, 1),
-                ],
-                actions,
-            ),
+            PieceKind::Reaper => {
+                self.generate_leaper_moves(
+                    state,
+                    from,
+                    piece,
+                    &[
+                        (-1, -1),
+                        (-1, 0),
+                        (-1, 1),
+                        (0, -1),
+                        (0, 1),
+                        (1, -1),
+                        (1, 0),
+                        (1, 1),
+                    ],
+                    actions,
+                );
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.generate_leaper_moves(
+                        state,
+                        from,
+                        piece,
+                        &[(-2, -2), (-2, 2), (2, -2), (2, 2)],
+                        actions,
+                    );
+                }
+            }
             PieceKind::Alibaba => self.generate_leaper_moves(
                 state,
                 from,
@@ -6641,6 +7050,9 @@ impl Engine {
             PieceKind::BigRook => self.generate_big_rook_moves(state, from, piece, actions),
             PieceKind::BigBishop => self.generate_big_bishop_moves(state, from, piece, actions),
             PieceKind::Brutus => self.generate_brutus_moves(state, from, piece, actions),
+            PieceKind::Thief if state.ruleset_id == crate::LATEST_RULESET_ID => {
+                self.generate_current_thief_moves(state, from, piece, actions);
+            }
             PieceKind::Thief => self.generate_leaper_moves(
                 state,
                 from,
@@ -6662,7 +7074,15 @@ impl Engine {
                 actions,
             ),
             PieceKind::Colossus => self.generate_large_step_moves(state, from, piece, actions),
-            PieceKind::Merchant => {}
+            PieceKind::Merchant => {
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    for (to, target) in state.board.iter() {
+                        if self.current_merchant_target(state, piece, target) {
+                            actions.push(Action::Move(MoveAction::new(from, to, None)));
+                        }
+                    }
+                }
+            }
             PieceKind::DarkWizard => self.generate_leaper_moves(
                 state,
                 from,
@@ -6883,13 +7303,25 @@ impl Engine {
                 actions,
             ),
             PieceKind::Hedgehog => self.generate_king_step_moves(state, from, piece, actions),
-            PieceKind::Campfire => self.generate_leaper_moves(
-                state,
-                from,
-                piece,
-                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
-                actions,
-            ),
+            PieceKind::Campfire => {
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    self.generate_slider_moves(
+                        state,
+                        from,
+                        piece,
+                        &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                        actions,
+                    );
+                } else {
+                    self.generate_leaper_moves(
+                        state,
+                        from,
+                        piece,
+                        &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                        actions,
+                    );
+                }
+            }
             PieceKind::Siren | PieceKind::Undead => {
                 self.generate_king_step_moves(state, from, piece, actions)
             }
@@ -6902,12 +7334,26 @@ impl Engine {
         }
         self.generate_loyalist_moves(state, from, piece, actions);
         self.augment_middle_moves(state, from, piece, actions);
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && piece.kind == PieceKind::Rook
+            && !state.card_runtime.moved_piece_ids.contains(&piece.id)
+            && state
+                .cards
+                .iter()
+                .any(|c| c.owner == piece.owner && c.definition_id == crate::ROCKET)
+        {
+            self.generate_knight_moves(state, from, piece, actions);
+        }
         if state
             .card_runtime
             .locust_swarm_piece_ids
             .contains(&piece.id)
         {
-            self.generate_locust_swarm_moves(state, from, piece, actions);
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                self.generate_grasshopper_moves(state, from, piece, actions);
+            } else {
+                self.generate_locust_swarm_moves(state, from, piece, actions);
+            }
         }
         self.filter_middle_moves(state, from, piece, actions);
         if state.card_runtime.relay[piece.owner.index()]
@@ -7284,7 +7730,11 @@ impl Engine {
             if unique_on_rank && foremost {
                 for file_delta in [-1, 1] {
                     if let Some(target) = from.offset(file_delta, direction)
-                        && state.board.get(target).is_none()
+                        && (if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            self.board_piece_at(state, target).is_none()
+                        } else {
+                            state.board.get(target).is_none()
+                        })
                     {
                         self.push_card_pawn_move(
                             state,
@@ -7524,7 +7974,11 @@ impl Engine {
         actions: &mut Vec<Action>,
     ) {
         for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
-            let mut cursor = from;
+            let mut cursor = state
+                .card_runtime
+                .large_pieces
+                .get(&piece.id)
+                .map_or(from, |s| s.anchor);
             while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
                 if !self.large_landing_is_legal(state, piece, anchor, 2) {
                     break;
@@ -7546,7 +8000,11 @@ impl Engine {
         actions: &mut Vec<Action>,
     ) {
         for &(file_delta, rank_delta) in &[(-1, -1), (-1, 1), (1, -1), (1, 1)] {
-            let mut cursor = from;
+            let mut cursor = state
+                .card_runtime
+                .large_pieces
+                .get(&piece.id)
+                .map_or(from, |s| s.anchor);
             while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
                 if !self.large_landing_is_legal(state, piece, anchor, 2) {
                     break;
@@ -7621,7 +8079,7 @@ impl Engine {
         anchor: Square,
     ) -> Vec<(Square, Piece)> {
         let mut seen = BTreeSet::new();
-        large_piece_cells(anchor)
+        large_piece_occupied_cells(state, piece.id, anchor)
             .into_iter()
             .filter_map(|cell| {
                 self.board_piece_entry_at(state, cell)
@@ -7653,7 +8111,7 @@ impl Engine {
                     .large_pieces
                     .iter()
                     .find_map(|(piece_id, status)| {
-                        large_piece_cells(status.anchor)
+                        large_piece_occupied_cells(state, *piece_id, status.anchor)
                             .contains(&square)
                             .then(|| state.board.find_by_id(*piece_id))
                             .flatten()
@@ -8269,6 +8727,9 @@ impl Engine {
                 continue;
             }
             if piece.kind == PieceKind::Merchant {
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    continue;
+                }
                 let gold = state
                     .card_runtime
                     .merchant_gold
@@ -8312,7 +8773,10 @@ impl Engine {
             }
             if mana >= 2 {
                 for (square, target) in state.board.iter() {
-                    if target.owner == piece.owner {
+                    if target.owner == piece.owner
+                        && (state.ruleset_id != crate::LATEST_RULESET_ID
+                            || !matches!(target.kind, PieceKind::Scarecrow | PieceKind::Monster))
+                    {
                         actions.push(Action::UsePieceAbility {
                             piece_id: piece.id,
                             ability: PieceAbility::WizardShield,
@@ -8430,11 +8894,13 @@ impl Engine {
         let mut origin_attacked = None;
         for (rook_file, king_file, clear_files, safe_files) in sides {
             let rook_square = Square::new(rook_file, home_rank).expect("castling rook square");
-            let Some(rook) = state.board.get(rook_square) else {
+            let Some((_, rook)) = self.board_piece_entry_at(state, rook_square) else {
                 continue;
             };
+            let big_rook =
+                state.ruleset_id == crate::LATEST_RULESET_ID && rook.kind == PieceKind::BigRook;
             if rook.owner != king.owner
-                || rook.kind != PieceKind::Rook
+                || !(rook.kind == PieceKind::Rook || big_rook)
                 || state
                     .card_runtime
                     .october
@@ -8446,10 +8912,29 @@ impl Engine {
                         state,
                         Square::new(*file, home_rank).expect("castling path square"),
                     )
-                    .is_some()
+                    .is_some_and(|occupant| !big_rook || occupant.id != rook.id)
                 })
             {
                 continue;
+            }
+            if big_rook {
+                let anchor = Square::new(
+                    if king_file == 6 { 4 } else { 3 },
+                    if king.owner == Player::White { 1 } else { 7 },
+                )
+                .unwrap();
+                if large_piece_cells(anchor).len() != 4
+                    || large_piece_occupied_cells(state, rook.id, anchor)
+                        .iter()
+                        .any(|square| {
+                            self.d4_restricts(state, rook.owner, false, *square)
+                                || self
+                                    .board_piece_at(state, *square)
+                                    .is_some_and(|target| target.owner != king.owner)
+                        })
+                {
+                    continue;
+                }
             }
             // Attack queries clone the state and enumerate opponent moves.
             // Skip them unless a rook and an empty path make castling possible.
@@ -8494,9 +8979,21 @@ impl Engine {
         };
         let rook_from = Square::new(rook_file, movement.from.rank())?;
         let rook_to = Square::new(rook_to_file, movement.from.rank())?;
-        let rook = state.board.get(rook_from)?;
-        (rook.owner == king.owner && rook.kind == PieceKind::Rook)
-            .then_some((rook_from, rook_to, rook))
+        let (storage, rook) = self.board_piece_entry_at(state, rook_from)?;
+        if rook.owner != king.owner {
+            return None;
+        }
+        if rook.kind == PieceKind::Rook {
+            return Some((storage, rook_to, rook));
+        }
+        if state.ruleset_id == crate::LATEST_RULESET_ID && rook.kind == PieceKind::BigRook {
+            let anchor = Square::new(
+                if movement.to.file() == 6 { 4 } else { 3 },
+                if king.owner == Player::White { 1 } else { 7 },
+            )?;
+            return Some((storage, anchor, rook));
+        }
+        None
     }
 
     fn can_capture(&self, state: &GameState, attacker: Piece, target: Piece) -> bool {
@@ -8544,9 +9041,17 @@ impl Engine {
                 .copied()
                 .unwrap_or(0)
                 >= 3;
-        state.rule_runtime.chaos_until_halfmove.is_none_or(|due| {
-            state.turns_taken[1] * 2 + u32::from(state.turn == Player::Black) >= due
-        }) && state.ply >= state.card_runtime.chaos_no_capture_until_ply
+        state
+            .rule_runtime
+            .piece_fresh_until
+            .get(&attacker.id)
+            .is_none_or(|due| {
+                state.turns_taken[1] * 2 + u32::from(state.turn == Player::Black) >= *due
+            })
+            && state.rule_runtime.chaos_until_halfmove.is_none_or(|due| {
+                state.turns_taken[1] * 2 + u32::from(state.turn == Player::Black) >= due
+            })
+            && state.ply >= state.card_runtime.chaos_no_capture_until_ply
             && !state.card_runtime.free_move_no_capture[attacker.owner.index()]
             && !state.card_runtime.disarmed.contains_key(&attacker.id)
             && !manner_locked
@@ -8691,6 +9196,19 @@ fn large_piece_cells(anchor: Square) -> Vec<Square> {
     [(0, 0), (1, 0), (0, -1), (1, -1)]
         .into_iter()
         .filter_map(|(file_delta, rank_delta)| anchor.offset(file_delta, rank_delta))
+        .collect()
+}
+
+fn large_piece_occupied_cells(state: &GameState, piece_id: u32, anchor: Square) -> Vec<Square> {
+    let missing = state
+        .card_runtime
+        .large_missing_cells
+        .get(&piece_id)
+        .copied();
+    large_piece_cells(anchor)
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, square)| (missing != Some(i as u8)).then_some(square))
         .collect()
 }
 

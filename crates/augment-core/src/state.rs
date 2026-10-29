@@ -510,6 +510,7 @@ pub struct CardRuntimeState {
     /// Owner turn number at which this temporary protection was granted.
     pub coronation_protection: BTreeMap<u32, u32>,
     pub queens_gambit_protection: BTreeSet<u32>,
+    pub queens_gambit_previous_protection: BTreeSet<u32>,
     pub potion_basic_training_piece_ids: BTreeSet<u32>,
     pub poison_stun_turns: BTreeMap<u32, u8>,
     pub potion_manner_piece_ids: BTreeSet<u32>,
@@ -528,6 +529,11 @@ pub struct CardRuntimeState {
     pub quantum_positions: BTreeMap<u32, Square>,
     pub stealth_piece_ids: BTreeSet<u32>,
     pub submerged_piece_ids: BTreeSet<u32>,
+    pub wanted_piece_ids: BTreeSet<u32>,
+    /// Visited squares and last direction during the current turn.
+    pub thief_turn_paths: BTreeMap<u32, (BTreeSet<Square>, i8, i8)>,
+    /// Missing cell of a fractured 2x2 rook or bishop, in top-left row-major order.
+    pub large_missing_cells: BTreeMap<u32, u8>,
     pub substitution: [bool; 2],
     pub switcheroo: [bool; 2],
     pub twin_bonds: Vec<TwinBond>,
@@ -592,6 +598,16 @@ pub struct CardRuntimeState {
 }
 
 impl CardRuntimeState {
+    pub(crate) fn remember_permanent_before_timed_protection(&mut self, piece_id: u32) {
+        if self.protected_piece_ids.contains(&piece_id)
+            && !self.queens_gambit_protection.contains(&piece_id)
+            && !self.sacrifice_protection.contains_key(&piece_id)
+            && !self.last_resistance.contains_key(&piece_id)
+            && !self.coronation_protection.contains_key(&piece_id)
+        {
+            self.queens_gambit_previous_protection.insert(piece_id);
+        }
+    }
     fn has_middle_state(&self) -> bool {
         [
             self.backward_knight,
@@ -641,6 +657,9 @@ impl CardRuntimeState {
             || !self.last_resistance.is_empty()
             || !self.coronation_protection.is_empty()
             || !self.queens_gambit_protection.is_empty()
+            || !self.queens_gambit_previous_protection.is_empty()
+            || !self.thief_turn_paths.is_empty()
+            || !self.large_missing_cells.is_empty()
             || !self.potion_basic_training_piece_ids.is_empty()
             || !self.poison_stun_turns.is_empty()
             || !self.potion_manner_piece_ids.is_empty()
@@ -980,7 +999,16 @@ impl GameState {
                     .due_turn
                     .saturating_sub(self.turns_taken[entry.piece.owner.index()]);
             }
-            hash.bytes(format!("{october:?}").as_bytes());
+            // Ascension snapshots embed CardRuntimeState. Preserve the old key
+            // for snapshots without wanted status while retaining nonempty data.
+            hash.bytes(
+                format!("{october:?}")
+                    .replace(", wanted_piece_ids: {}", "")
+                    .replace(", thief_turn_paths: {}", "")
+                    .replace(", large_missing_cells: {}", "")
+                    .replace(", queens_gambit_previous_protection: {}", "")
+                    .as_bytes(),
+            );
         }
         hash.bytes(self.ruleset_id.as_bytes());
         hash.bytes(self.mode.id().as_bytes());
@@ -1220,7 +1248,12 @@ impl GameState {
         }
         for (piece_id, ready) in &self.card_runtime.holdout_promotions {
             hash.u32(*piece_id);
-            hash.u32(ready.saturating_sub(self.shared_turn_count()));
+            let now = if self.ruleset_id == crate::LATEST_RULESET_ID {
+                self.turns_taken[1].saturating_mul(2) + u32::from(self.turn == Player::Black)
+            } else {
+                self.shared_turn_count()
+            };
+            hash.u32(ready.saturating_sub(now));
         }
         for pending in &self.card_runtime.pending_otherworld {
             hash.u32(pending.piece_id);
@@ -1533,6 +1566,33 @@ impl GameState {
             hash.bytes(b"long-en-passant");
             hash.u8(u8::from(self.card_runtime.long_en_passant[0]));
             hash.u8(u8::from(self.card_runtime.long_en_passant[1]));
+        }
+        if !self.card_runtime.wanted_piece_ids.is_empty() {
+            hash.bytes(b"wanted");
+            for id in &self.card_runtime.wanted_piece_ids {
+                hash.u32(*id);
+            }
+        }
+        if !self.card_runtime.thief_turn_paths.is_empty() {
+            hash.bytes(b"thief-turn-paths");
+            hash.bytes(format!("{:?}", self.card_runtime.thief_turn_paths).as_bytes());
+        }
+        if !self.card_runtime.large_missing_cells.is_empty() {
+            hash.bytes(b"large-missing-cells");
+            for (id, index) in &self.card_runtime.large_missing_cells {
+                hash.u32(*id);
+                hash.u8(*index);
+            }
+        }
+        if !self
+            .card_runtime
+            .queens_gambit_previous_protection
+            .is_empty()
+        {
+            hash.bytes(b"queens-gambit-previous-protection");
+            for id in &self.card_runtime.queens_gambit_previous_protection {
+                hash.u32(*id);
+            }
         }
         if self.card_runtime.vanguard != [false, false] {
             hash.bytes(b"vanguard");

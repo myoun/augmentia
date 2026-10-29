@@ -69,7 +69,7 @@ impl Engine {
             {
                 continue;
             }
-            if state.board.get(to).is_none() {
+            if self.board_piece_at(state, to).is_none() {
                 if self.card_landing_open(state, to) {
                     candidates.push(to);
                 }
@@ -113,7 +113,9 @@ impl Engine {
         let i = rule_random(state, events, candidates.len(), "rule.monster.move").unwrap();
         let to = candidates[i];
         if let Some((anchor, victim)) = self.board_piece_entry_at(state, to) {
-            self.remove_piece_for_card(state, anchor, victim, state.turn, ID, events);
+            if self.fracture_large_cell(state, victim, to) != Some(false) {
+                self.remove_piece_for_card(state, anchor, victim, state.turn, ID, events);
+            }
         }
         state.board.set(from, None);
         state.board.set(to, Some(monster));

@@ -986,6 +986,642 @@
         ]
       ],
       "notes": "White-end preview, Black-end application every three fullmoves; up to three nonroyals per army; replace frozen set and permanently disable at army size four or less."
+    },
+    {
+      "id": "barrier",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "beacon",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "campfire",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "constitutional-monarchy",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "don-quixote",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "eagle",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          200553,
+          200604
+        ]
+      ],
+      "notes": "Preserve and transform every own Knight; spawn at most one extra per Knight in the globally nearest safe open cells, algebraic tie ordering; no unsafe fallback; no draw if no safe cell."
+    },
+    {
+      "id": "eastern-policy",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "grappler",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203600,
+          203606
+        ],
+        [
+          204044,
+          204059
+        ]
+      ],
+      "notes": "Queen first, nonroyal native minor second; sacrifice is a noncapture; preserve queen identity and generic statuses."
+    },
+    {
+      "id": "idol",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201083,
+          201110
+        ],
+        [
+          204296,
+          204320
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "jester",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "killer",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "medium",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ],
+        [
+          183024,
+          183230
+        ],
+        [
+          221498,
+          221528
+        ]
+      ],
+      "notes": "Native-minor transform; global last-capture movement tracked before the card or Medium exists; preserve captured Windmill mode and Trickster actual movement; 320 pinned base-memory geometry cases, borrowed Checker jump and Dragon swap transitions. Full copied ability/state propagation is outside this slice."
+    },
+    {
+      "id": "reaper",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ],
+        [
+          4287,
+          4291
+        ],
+        [
+          211645,
+          211738
+        ],
+        [
+          207895,
+          207895
+        ]
+      ],
+      "notes": "King+Alfil movement; two adjacent allied losses captured by opponent execute the enemy royal. Sacrifices, hazards and environmental removals do not count."
+    },
+    {
+      "id": "reformation",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199269,
+          199287
+        ],
+        [
+          199535,
+          199540
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "revolving-door",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "transmission-tower",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "windmill",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199288,
+          199330
+        ],
+        [
+          199556,
+          199556
+        ]
+      ],
+      "notes": "Authority requires one selected Bishop/Rook pair despite mass wording in catalog; both orders valid; moved flags preserved; initial mode Bishop."
+    },
+    {
+      "id": "wizard",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201083,
+          201110
+        ],
+        [
+          204296,
+          204320
+        ],
+        [
+          217981,
+          218080
+        ]
+      ],
+      "notes": "Zero initial mana; costs 1/2/3/5, max 5; preserve statuses; source 2x2 meteor orientation and delayed boundary; time stop retains the turn."
+    },
+    {
+      "id": "apprentice-knights",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222027
+        ],
+        [
+          210048,
+          210054
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "dutch",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196704,
+          196728
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "last-stand",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222027
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "pawn-conversion",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196729,
+          196739
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "guard",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196428,
+          196430
+        ],
+        [
+          199403,
+          199418
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "queen-cavalry",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196432,
+          196434
+        ],
+        [
+          199419,
+          199434
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "knightmate",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201196,
+          201213
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "martyrdom",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          197958,
+          197978
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "elephant-escape",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222013
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "herald",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196444,
+          196490
+        ],
+        [
+          199220,
+          199258
+        ]
+      ],
+      "notes": "Opening random choice consumes no RNG for a single target."
+    },
+    {
+      "id": "princess",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196444,
+          196490
+        ],
+        [
+          199220,
+          199258
+        ]
+      ],
+      "notes": "Opening random choice consumes no RNG for a single target."
+    },
+    {
+      "id": "vanguard",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          207130,
+          207160
+        ]
+      ],
+      "notes": "Unique foremost pawn gains quiet diagonal moves."
+    },
+    {
+      "id": "locust-swarm",
+      "stage": 11,
+      "scope": "current opening acquisition and movement slice; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          182878,
+          182884
+        ],
+        [
+          221270,
+          221271
+        ]
+      ],
+      "notes": "Unmoved native minor or rook receives first grasshopper move."
+    },
+    {
+      "id": "rocket",
+      "stage": 11,
+      "scope": "current opening acquisition and movement slice; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          207150,
+          207158
+        ]
+      ],
+      "notes": "Unmoved rook gains knight movement while the passive is held."
+    },
+    {
+      "id": "big-rook",
+      "stage": 11,
+      "scope": "current opening layout using core large-body abstraction; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          196031,
+          196080
+        ],
+        [
+          196631,
+          196636
+        ]
+      ],
+      "notes": "Native layout and color-specific acquisition; source large-body fracture is outside core abstraction."
+    },
+    {
+      "id": "horde",
+      "stage": 11,
+      "scope": "current opening layout using core large-body abstraction; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          196165,
+          196245
+        ],
+        [
+          199462,
+          199533
+        ]
+      ],
+      "notes": "Native layout and color-specific acquisition; source large-body fracture is outside core abstraction."
+    },
+    {
+      "id": "holdout",
+      "stage": 11,
+      "scope": "random acquisition and owner-aligned 28-fullmove promotion; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          806,
+          810
+        ],
+        [
+          198919,
+          198930
+        ],
+        [
+          211265,
+          211285
+        ]
+      ],
+      "notes": "Target ID and normalized deadline survive movement and type changes; singleton selection consumes no RNG."
+    },
+    {
+      "id": "queens-gambit",
+      "stage": 11,
+      "scope": "random selection, sacrifice and file protection; full overlapping protection parity not claimed",
+      "source_ranges": [
+        [
+          2546,
+          2557
+        ],
+        [
+          198036,
+          198100
+        ],
+        [
+          196459,
+          196469
+        ]
+      ],
+      "notes": "Pick queen then a separated file, preferring files containing allied pawns; singleton choices do not consume RNG."
+    },
+    {
+      "id": "d4",
+      "stage": 11,
+      "scope": "ordinary movement, large-footprint destination and implemented spawn restrictions; full forced-placement parity not claimed",
+      "source_ranges": [
+        [
+          221898,
+          221913
+        ]
+      ],
+      "notes": "White d4 or Black d5 is forbidden to opposing pieces and own royal; ordinary checker, alfil and eagle placements honor the same restriction."
+    },
+    {
+      "id": "calling-card",
+      "stage": 11,
+      "scope": "random acquisition and ordinary capture reaction; full simultaneous capture parity not claimed",
+      "source_ranges": [
+        [
+          199948,
+          199962
+        ],
+        [
+          206308,
+          206319
+        ],
+        [
+          212102,
+          212121
+        ]
+      ],
+      "notes": "Singleton acquisition skips RNG; capture reserves one 64-way draw even with no follow-up candidate."
+    },
+    {
+      "id": "wanted",
+      "stage": 11,
+      "scope": "random ranged target, submerged and wanted state, exposed arrest at owner turn end",
+      "source_ranges": [
+        [
+          198831,
+          198879
+        ],
+        [
+          204058,
+          204065
+        ],
+        [
+          221563,
+          221570
+        ],
+        [
+          221816,
+          221818
+        ]
+      ],
+      "notes": "Singleton acquisition skips RNG. Wanted status survives movement and is part of repetition state."
+    },
+    {
+      "id": "iron-monarch",
+      "stage": 11,
+      "scope": "opening acquisition and optional same-piece extra movement; full concurrent action ordering not claimed",
+      "source_ranges": [
+        [
+          208900,
+          208940
+        ],
+        [
+          209185,
+          209215
+        ]
+      ],
+      "notes": "Extra move can be skipped; thief quiet jumps cannot capture through a hurdle."
+    },
+    {
+      "id": "thief",
+      "stage": 11,
+      "scope": "opening acquisition and optional same-piece extra movement; full concurrent action ordering not claimed",
+      "source_ranges": [
+        [
+          182814,
+          182830
+        ],
+        [
+          208900,
+          208908
+        ],
+        [
+          221277,
+          221299
+        ]
+      ],
+      "notes": "Extra move can be skipped; thief quiet jumps cannot capture through a hurdle."
+    },
+    {
+      "id": "merchant-guild",
+      "stage": 11,
+      "scope": "opening king transformation, gold and purchase with core combat values; full large-body and cross-card parity not claimed",
+      "source_ranges": [
+        [
+          4796,
+          4807
+        ],
+        [
+          201417,
+          201441
+        ],
+        [
+          218209,
+          218296
+        ]
+      ],
+      "notes": "Moves king two ranks, starts with one gold, purchases are selected as moves but merchant stays and nonroyal targets convert in place."
     }
   ]
 }

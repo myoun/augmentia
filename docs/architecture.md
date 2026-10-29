@@ -15,7 +15,7 @@
 웹의 HTTP·세션·설정·view·정적 파일은 `src/web/`, 수집기는 `src/snapshot/`에 모은다.
 규칙과 탐색을 앱 안으로 복제하거나 실행 파일끼리 서로 호출하지 않는다.
 
-최신 카드 147장의 획득 조건·효과·행동 열거는 `augment-core/src/engine/cards/<card_id>.rs`와
+최신 카드 189장의 획득 조건·효과·행동 열거는 `augment-core/src/engine/cards/<card_id>.rs`와
 단일 등록부에 모은다. 과거 룰셋 분기는 `engine/compat/`에 분리한다.
 공통 정의 타입은 `card.rs`, Rust ID는 `card_ids.rs`, 과거 메타데이터는
 `compat/card_definitions.rs`가 소유한다. 최신 정의는 자체 카탈로그와 실행 프로필에서 구성한다.

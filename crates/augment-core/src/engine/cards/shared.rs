@@ -2,6 +2,47 @@
 use super::*;
 
 impl Engine {
+    /// Returns whether a fractured body was defeated, or None for other pieces.
+    pub(in crate::engine) fn fracture_large_cell(
+        &self,
+        state: &mut GameState,
+        piece: Piece,
+        square: Square,
+    ) -> Option<bool> {
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            || !matches!(piece.kind, PieceKind::BigRook | PieceKind::BigBishop)
+        {
+            return None;
+        }
+        let body = state.card_runtime.large_pieces.get(&piece.id).copied()?;
+        let index = large_piece_cells(body.anchor)
+            .iter()
+            .position(|cell| *cell == square)? as u8;
+        if state
+            .card_runtime
+            .large_missing_cells
+            .contains_key(&piece.id)
+        {
+            return Some(true);
+        }
+        state
+            .card_runtime
+            .large_missing_cells
+            .insert(piece.id, index);
+        state
+            .card_runtime
+            .large_pieces
+            .get_mut(&piece.id)
+            .unwrap()
+            .hp = 1;
+        if let Some((storage, _)) = state.board.find_by_id(piece.id) {
+            state.board.set(storage, None);
+        }
+        let storage = large_piece_occupied_cells(state, piece.id, body.anchor)[0];
+        state.board.set(storage, Some(piece));
+        Some(false)
+    }
+
     pub(in crate::engine) fn install_card_layout(
         &self,
         state: &mut GameState,
@@ -44,7 +85,7 @@ impl Engine {
                 state.card_runtime.moved_piece_ids.insert(piece.id);
             }
             // openingPassiveSkipsFreshCapture: London/BISHOP can capture immediately.
-            if kind == PieceKind::BigBishop {
+            if matches!(kind, PieceKind::BigBishop | PieceKind::BigRook) {
                 state.card_runtime.large_pieces.insert(
                     piece.id,
                     LargePieceStatus {
@@ -130,6 +171,12 @@ impl Engine {
         events: &mut Vec<Event>,
     ) {
         if let Some((anchor, piece)) = self.board_piece_entry_at(state, square) {
+            if let Some(defeated) = self.fracture_large_cell(state, piece, square) {
+                if defeated {
+                    self.remove_piece_for_card(state, anchor, piece, owner, cause, events);
+                }
+                return;
+            }
             // Reuse the current core's large-body hit abstraction. Cell fracture
             // parity remains outside these scoped ports, as for other landings.
             if let Some(large) = state.card_runtime.large_pieces.get_mut(&piece.id) {
@@ -203,6 +250,44 @@ impl Engine {
 
         if state.ruleset_id != crate::LATEST_RULESET_ID {
             return;
+        }
+        if self.piece_ability_kind(state, piece) == PieceKind::Thief
+            && let Some((visited, df, dr)) = state.card_runtime.thief_turn_paths.get(&piece.id)
+        {
+            actions.retain(|action| match action {
+                Action::Move(m) => {
+                    let route = self.rule_portal_route(state, from, piece, m.to);
+                    let entry = route.map_or(m.to, |r| r.entry);
+                    let landing = route.map_or(m.to, |r| r.landing);
+                    let reverse = (
+                        (from.file() as i8 - entry.file() as i8).signum(),
+                        (from.rank() as i8 - entry.rank() as i8).signum(),
+                    );
+                    reverse != (*df, *dr)
+                        && !visited.contains(&entry)
+                        && !visited.contains(&landing)
+                }
+                _ => true,
+            });
+        }
+        if state
+            .cards
+            .iter()
+            .any(|card| card.definition_id == crate::D4)
+        {
+            actions.retain(|action| match action {
+                Action::Move(m) => {
+                    let cells = if state.card_runtime.large_pieces.contains_key(&piece.id) {
+                        large_piece_occupied_cells(state, piece.id, m.to)
+                    } else {
+                        vec![m.to]
+                    };
+                    !cells.into_iter().any(|s| {
+                        self.d4_restricts(state, piece.owner, self.is_royal_piece(state, piece), s)
+                    })
+                }
+                _ => true,
+            });
         }
         let rt = &state.card_runtime.october;
         if rt.grudge_losses.is_empty() && rt.pawn_chain_links.is_empty() {

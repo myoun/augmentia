@@ -108,6 +108,11 @@ impl Engine {
             LAST_RESISTANCE => {
                 for (_, piece) in state.board.iter() {
                     if piece.owner == actor && self.is_royal_piece(state, piece) {
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            state
+                                .card_runtime
+                                .remember_permanent_before_timed_protection(piece.id);
+                        }
                         state.card_runtime.protected_piece_ids.insert(piece.id);
                         state.card_runtime.last_resistance.insert(
                             piece.id,

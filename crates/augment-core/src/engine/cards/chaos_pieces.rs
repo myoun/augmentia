@@ -207,35 +207,51 @@ impl Engine {
         &self,
         state: &GameState,
         victims: &[Piece],
-    ) -> Vec<Option<ParrotMemoryStatus>> {
-        if !rule_dependencies_active(state) {
+    ) -> Vec<(Option<ParrotMemoryStatus>, Option<WindmillMode>)> {
+        if state.ruleset_id != crate::LATEST_RULESET_ID {
             return Vec::new();
         }
         victims
             .iter()
             .filter_map(|p| {
                 let kind = match p.kind {
-                    PieceKind::Colossus | PieceKind::Football => return None,
-                    PieceKind::Medium => return Some(state.rule_runtime.medium_memory),
+                    PieceKind::Colossus | PieceKind::Football | PieceKind::Monster => return None,
+                    PieceKind::Medium => {
+                        return Some((
+                            state.rule_runtime.medium_memory,
+                            state.rule_runtime.medium_windmill_mode,
+                        ));
+                    }
                     PieceKind::Parrot => {
-                        return Some(state.card_runtime.parrot_memory[p.owner.index()]);
+                        return Some((state.card_runtime.parrot_memory[p.owner.index()], None));
                     }
                     PieceKind::BigRook => PieceKind::Rook,
                     PieceKind::BigBishop => PieceKind::Bishop,
+                    PieceKind::Trickster => self.piece_ability_kind(state, *p),
                     kind => kind,
                 };
-                Some(Some(ParrotMemoryStatus {
-                    source: kind,
-                    effective: kind,
-                }))
+                let mode = (kind == PieceKind::Windmill).then(|| {
+                    state
+                        .card_runtime
+                        .windmill_modes
+                        .get(&p.id)
+                        .copied()
+                        .unwrap_or(WindmillMode::Bishop)
+                });
+                Some((
+                    Some(ParrotMemoryStatus {
+                        source: kind,
+                        effective: kind,
+                    }),
+                    mode,
+                ))
             })
             .collect()
     }
-
     pub(in crate::engine) fn settle_rule_capture_memories(
         &self,
         state: &mut GameState,
-        choices: &[Option<ParrotMemoryStatus>],
+        choices: &[(Option<ParrotMemoryStatus>, Option<WindmillMode>)],
         events: &mut Vec<Event>,
     ) {
         let index = match choices.len() {
@@ -243,7 +259,10 @@ impl Engine {
             1 => 0,
             n => rule_random(state, events, n, "rule.medium.capture-batch").unwrap(),
         };
-        state.rule_runtime.medium_memory = choices[index];
+        (
+            state.rule_runtime.medium_memory,
+            state.rule_runtime.medium_windmill_mode,
+        ) = choices[index];
     }
 
     pub(in crate::engine) fn rule_berolina_capture(
@@ -279,25 +298,14 @@ impl Engine {
         state: &mut GameState,
         captured: Piece,
     ) {
-        if !rule_dependencies_active(state) {
-            return;
+        if let Some((memory, mode)) = self
+            .rule_capture_memories(state, &[captured])
+            .into_iter()
+            .next()
+        {
+            state.rule_runtime.medium_memory = memory;
+            state.rule_runtime.medium_windmill_mode = mode;
         }
-        let kind = match captured.kind {
-            PieceKind::Colossus => return,
-            PieceKind::BigRook => PieceKind::Rook,
-            PieceKind::BigBishop => PieceKind::Bishop,
-            PieceKind::Medium => return,
-            PieceKind::Parrot => {
-                state.rule_runtime.medium_memory =
-                    state.card_runtime.parrot_memory[captured.owner.index()];
-                return;
-            }
-            kind => kind,
-        };
-        state.rule_runtime.medium_memory = Some(ParrotMemoryStatus {
-            source: kind,
-            effective: kind,
-        });
     }
 
     pub(in crate::engine) fn rule_grappler_pull(
@@ -733,12 +741,7 @@ impl Engine {
                 ],
                 actions,
             ),
-            PieceKind::Medium => {
-                let mut probe = state.clone();
-                probe.card_runtime.parrot_memory[piece.owner.index()] =
-                    state.rule_runtime.medium_memory;
-                self.generate_parrot_memory_moves(&probe, from, piece, actions)
-            }
+            PieceKind::Medium => self.generate_current_medium_moves(state, from, piece, actions),
             PieceKind::Killer => {
                 for &(df, dr) in diagonal {
                     let mut cursor = from;

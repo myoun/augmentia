@@ -43,7 +43,9 @@ pub(super) fn actions(
         {
             for index in 0..64 {
                 let landing = Square::from_index(index).unwrap();
-                if engine.card_landing_open(state, landing) {
+                if engine.card_landing_open(state, landing)
+                    && !engine.d4_restricts(state, piece.owner, false, landing)
+                {
                     actions.push(Action::UseCard {
                         instance_id: card.instance_id,
                         target: ActionTarget::Squares(vec![square, landing]),
@@ -90,6 +92,9 @@ impl Engine {
                 state.card_runtime.october.pending_ascensions.push(entry);
                 continue;
             }
+            if self.d4_restricts(state, entry.piece.owner, false, entry.square) {
+                continue;
+            }
             // Landing clears alternate quantum occupancy without killing its real piece.
             state
                 .card_runtime
@@ -128,6 +133,40 @@ pub struct PendingAscension {
 mod tests {
     use super::super::tests::delayed::*;
     use super::*;
+    #[test]
+    fn ascension_respects_d4_at_selection_and_again_on_return() {
+        let engine = Engine::bundled_latest().unwrap();
+        let base = position(&[("d1", Player::White, PieceKind::Queen)]);
+        let blocked = engine
+            .acquire_for_setup(&base, crate::D4, Player::Black)
+            .unwrap()
+            .state;
+        let blocked = engine
+            .grant_card(&blocked, 2, crate::ASCENSION, Player::White)
+            .unwrap()
+            .state;
+        let action = Action::UseCard {
+            instance_id: 2,
+            target: pair("d1", "d5"),
+        };
+        assert!(!engine.legal_actions(&blocked).unwrap().contains(&action));
+        assert!(engine.apply(&blocked, action).is_err());
+
+        let mut pending = base;
+        let queen = at(&pending, "d1");
+        use_at(&mut pending, &engine, crate::ASCENSION, pair("d1", "d5"));
+        pending = engine
+            .acquire_for_setup(&pending, crate::D4, Player::Black)
+            .unwrap()
+            .state;
+        let blocker = Piece::new(Player::Black, PieceKind::Pawn).with_id(100);
+        pending.board.set("d5".parse().unwrap(), Some(blocker));
+        pending.turns_taken[Player::White.index()] = 3;
+        engine.settle_ascension(&mut pending, Player::White, &mut Vec::new());
+        assert_eq!(pending.board.get("d5".parse().unwrap()), Some(blocker));
+        assert!(pending.board.find_by_id(queen.id).is_none());
+        assert!(pending.card_runtime.october.pending_ascensions.is_empty());
+    }
     #[test]
     fn ascension_returns_on_third_owner_start_with_frozen_metadata_and_original_identity() {
         let engine = Engine::bundled_latest().unwrap();

@@ -1,4 +1,5 @@
-//! Before/after refactor contract through the public engine interface.
+//! Public engine regression baseline; intentional source-contract revisions are
+//! recorded in docs/card-implementation.md.
 use augment_core::{
     AcquisitionContext, Action, Board, CardActivation, Engine, GameState, Mode, Piece, PieceKind,
     Player, check_card_eligibility, latest_catalog,
@@ -88,6 +89,9 @@ fn supported_cards_preserve_acquisition_actions_events_and_state_identity() {
         .map(|case| case["id"].as_str().unwrap())
         .collect();
     let actual = contracts(&ids);
+    if let Ok(path) = std::env::var("AUGMENTIA_CONTRACT_DIAGNOSTIC") {
+        std::fs::write(path, serde_json::to_string_pretty(&actual).unwrap() + "\n").unwrap();
+    }
     let mut differences = Vec::new();
     for (actual, expected) in actual
         .as_array()

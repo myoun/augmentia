@@ -259,7 +259,7 @@ function phaseDetail() {
     return "카드 효과를 계속하려면 한 가지를 선택하세요.";
   }
   if (game.phase.kind === "forced_move") {
-    return `기물 #${game.phase.pieceId}의 이동을 완료해야 합니다.`;
+    return game.phase.optional ? `기물 #${game.phase.pieceId}을 한 번 더 움직이거나 추가 이동을 건너뛸 수 있습니다.` : `기물 #${game.phase.pieceId}의 이동을 완료해야 합니다.`;
   }
   return game.actionsRemaining > 1
     ? `이번 차례에 ${game.actionsRemaining}번 행동할 수 있습니다.`
@@ -562,6 +562,18 @@ function renderDecisionPanel() {
 }
 
 function renderAbilities() {
+  const skip = game.actions.find((action) => action.kind === "skip_optional_move");
+  if (skip) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ability-button";
+    button.textContent = skip.label;
+    button.disabled = busy;
+    button.addEventListener("click", () => applyAction(skip.index));
+    elements.abilityList.className = "ability-list";
+    elements.abilityList.replaceChildren(button);
+    return;
+  }
   const abilities = game.actions.filter((action) => action.kind === "ability");
   if (abilities.length === 0) {
     elements.abilityList.className = "ability-list empty-message";

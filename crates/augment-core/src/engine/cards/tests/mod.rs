@@ -10,3 +10,7 @@ mod rule_ports;
 pub(super) mod target_procedures;
 
 pub(super) mod board_objectives;
+
+mod piece_cards;
+
+mod opening_cards;

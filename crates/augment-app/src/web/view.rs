@@ -74,7 +74,8 @@ fn phase_view(state: &GameState) -> Value {
             piece_id, source, ..
         } => json!({
             "kind": "forced_move",
-            "label": "강제 이동",
+            "label": if matches!(source, augment_core::ForcedMoveSource::Effect(id) if id == augment_core::IRON_MONARCH || id == augment_core::THIEF) { "선택 추가 이동" } else { "강제 이동" },
+            "optional": matches!(source, augment_core::ForcedMoveSource::Effect(id) if id == augment_core::IRON_MONARCH || id == augment_core::THIEF),
             "pieceId": piece_id,
             "detail": format!("{source:?}"),
         }),
@@ -128,11 +129,14 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
         cells.insert(square, (piece, true, square));
     }
     for (piece_id, status) in &state.card_runtime.large_pieces {
-        let Some((_, piece)) = state.board.find_by_id(*piece_id) else {
+        let Some((storage, piece)) = state.board.find_by_id(*piece_id) else {
             continue;
         };
-        for square in large_piece_cells(status.anchor) {
-            cells.insert(square, (piece, square == status.anchor, status.anchor));
+        for (index, square) in large_piece_cells(status.anchor).into_iter().enumerate() {
+            if state.card_runtime.large_missing_cells.get(piece_id) == Some(&(index as u8)) {
+                continue;
+            }
+            cells.insert(square, (piece, square == storage, storage));
         }
     }
     for (piece_id, position) in &state.card_runtime.quantum_positions {
@@ -320,7 +324,20 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
         statuses.push(format!("마나 {mana}"));
     }
     if let Some(souls) = state.card_runtime.reaper_souls.get(&piece.id) {
-        statuses.push(format!("영혼 {souls}"));
+        statuses.push(if state.ruleset_id == augment_core::LATEST_RULESET_ID {
+            format!("영혼 {souls}/2")
+        } else {
+            format!("영혼 {souls}")
+        });
+    }
+    let halfmove = state.turns_taken[1] * 2 + u32::from(state.turn == Player::Black);
+    if state
+        .rule_runtime
+        .piece_fresh_until
+        .get(&piece.id)
+        .is_some_and(|due| *due > halfmove)
+    {
+        statuses.push("다음 자기 턴까지 포획 불가".into());
     }
     if let Some(gold) = state.card_runtime.merchant_gold.get(&piece.id) {
         statuses.push(format!("골드 {gold}"));
@@ -464,6 +481,12 @@ fn cards_view(
 
 pub(crate) fn action_view(state: &GameState, index: usize, action: &Action) -> Value {
     match action {
+        Action::SkipOptionalMove => json!({
+            "index": index,
+            "kind": "skip_optional_move",
+            "label": "추가 이동 건너뛰기",
+            "targetSquares": Vec::<String>::new(),
+        }),
         Action::Move(movement) => json!({
             "index": index,
             "kind": "move",
@@ -492,6 +515,8 @@ pub(crate) fn action_view(state: &GameState, index: usize, action: &Action) -> V
                 "selectionSteps": match definition_id {
                     augment_core::ARCHBISHOP => vec!["희생할 아군 나이트", "변환할 아군 비숍"],
                     augment_core::CHANCELLOR => vec!["희생할 아군 나이트", "변환할 아군 룩"],
+                    augment_core::GRAPPLER => vec!["변환할 아군 퀸", "희생할 아군 마이너"],
+                    augment_core::WINDMILL => vec!["변환할 아군 비숍 또는 룩", "함께 변환할 다른 종류의 기물"],
                     augment_core::ASCENSION => vec!["하늘로 올릴 아군 퀸", "착지할 빈 칸"],
                     augment_core::TABOO => vec!["희생을 예약할 아군 퀸", "괴물을 소환할 빈 칸"],
                     _ => Vec::new(),
@@ -564,6 +589,24 @@ pub(crate) fn piece_description(kind: &str) -> &'static str {
     match kind {
         "archbishop" => return "아치비숍: 나이트와 비숍의 이동을 모두 사용할 수 있습니다.",
         "chancellor" => return "챈슬러: 나이트와 룩의 이동을 모두 사용할 수 있습니다.",
+        "campfire" => {
+            return "캠프파이어: 룩처럼 이동하며 잡을 수 없습니다. 상하좌우 인접 아군의 비왕실 기물을 보호합니다.";
+        }
+        "reaper" => {
+            return "사신: 킹과 알필처럼 이동합니다. 인접한 아군이 적에게 두 번 잡히면 상대 왕실 기물을 처형하고 승리합니다.";
+        }
+        "protestant" => {
+            return "몬시뇰: 대각선으로 최대 세 칸 이동하며 중간 기물을 뛰어넘을 수 있습니다.";
+        }
+        "prime_minister" => {
+            return "국무총리: 킹처럼 한 칸 또는 두 번 이어서 이동합니다. 중간 칸이 비어 있어야 두 번째 칸으로 갈 수 있습니다.";
+        }
+        "idol" => {
+            return "아이돌: 잡을 수 없는 퀸처럼 이동합니다. 인접 아군의 첫 이동에 턴당 한 번 앙코르를 주며, 먼저 움직인 기물은 이번 턴에 쉽니다.";
+        }
+        "wizard" => {
+            return "마법사: 주변 빈칸으로 한 칸 이동합니다. 아군이 잡힐 때 마나를 얻습니다. 번개·보호막·2×2 운석·시간 정지의 비용은 1·2·3·5이며 마나는 최대 5입니다.";
+        }
         "grappler" => {
             return "그래플러: 퀸처럼 이동합니다. 같은 직선의 먼 상대를 인접 칸으로 당기며 두 기물은 상대 턴 종료까지 속박됩니다.";
         }
@@ -923,7 +966,7 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::Log => ("log", "통나무", "L"),
         PieceKind::Missionary => ("missionary", "선교사", "MI"),
         PieceKind::Cardinal => ("cardinal", "추기경", "CA"),
-        PieceKind::Protestant => ("protestant", "프로테스탄트", "P"),
+        PieceKind::Protestant => ("protestant", "몬시뇰", "P"),
         PieceKind::StandardBearer => ("standard_bearer", "기수", "SB"),
         PieceKind::Windmill => ("windmill", "풍차", "W"),
         PieceKind::Squire => ("squire", "종자", "SQ"),
@@ -995,6 +1038,39 @@ fn large_piece_cells(anchor: Square) -> Vec<Square> {
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
 mod tests {
+    #[test]
+    fn fractured_large_body_does_not_hide_the_piece_on_its_missing_cell() {
+        let mut state = augment_core::GameState::standard(
+            augment_core::LATEST_RULESET_ID,
+            augment_core::Mode::Standard,
+            1,
+        );
+        state.board = augment_core::Board::empty();
+        let big = augment_core::Piece::new(
+            augment_core::Player::Black,
+            augment_core::PieceKind::BigRook,
+        )
+        .with_id(20);
+        let attacker =
+            augment_core::Piece::new(augment_core::Player::White, augment_core::PieceKind::Knight)
+                .with_id(21);
+        state.board.set("h8".parse().unwrap(), Some(big));
+        state.board.set("g8".parse().unwrap(), Some(attacker));
+        state.card_runtime.large_pieces.insert(
+            big.id,
+            augment_core::LargePieceStatus {
+                anchor: "g8".parse().unwrap(),
+                hp: 1,
+                max_hp: 2,
+            },
+        );
+        state.card_runtime.large_missing_cells.insert(big.id, 0);
+        let cells = super::board_view(&state);
+        let cell = |square| cells.iter().find(|cell| cell["square"] == square).unwrap();
+        assert_eq!(cell("g8")["piece"]["kind"], "knight");
+        assert_eq!(cell("h8")["piece"]["kind"], "big_rook");
+        assert_eq!(cell("g7")["piece"]["kind"], "big_rook");
+    }
     use super::super::analyzer::{DEFAULT_SEED, GameSession};
     use super::*;
 
@@ -1124,5 +1200,34 @@ mod tests {
             assert!(codes.insert(code));
             assert!(!piece_description(key).starts_with("합법 이동은"));
         }
+    }
+
+    #[test]
+    fn grappler_and_windmill_show_their_actual_selection_steps() {
+        let engine = augment_core::Engine::bundled_latest().unwrap();
+        for id in [augment_core::GRAPPLER, augment_core::WINDMILL] {
+            let state = GameState::standard(
+                augment_core::LATEST_RULESET_ID,
+                augment_core::Mode::Standard,
+                31,
+            );
+            let state = engine
+                .acquire_for_setup(&state, id, Player::White)
+                .unwrap()
+                .state;
+            let action = engine
+                .legal_actions(&state)
+                .unwrap()
+                .into_iter()
+                .find(|a| matches!(a, Action::UseCard { .. }))
+                .unwrap();
+            let view = action_view(&state, 0, &action);
+            assert_eq!(view["selectionSteps"].as_array().unwrap().len(), 2);
+            assert_eq!(view["targetSquares"].as_array().unwrap().len(), 2);
+            assert_eq!(view["cardId"], id);
+        }
+        assert_eq!(piece_meta(PieceKind::Protestant, Player::White).1, "몬시뇰");
+        assert!(piece_description("reaper").contains("두 번"));
+        assert!(piece_description("campfire").contains("룩처럼"));
     }
 }

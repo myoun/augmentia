@@ -99,6 +99,12 @@ impl Engine {
                 || victim.kind == PieceKind::Guard
             {
                 impact = true;
+            } else if let Some(defeated) = self.fracture_large_cell(&mut next, victim, movement.to)
+            {
+                impact = true;
+                if defeated {
+                    self.remove_piece_for_card(&mut next, anchor, victim, actor, ID, &mut events);
+                }
             } else if let Some(body) = next.card_runtime.large_pieces.get_mut(&victim.id) {
                 impact = true;
                 body.hp = body.hp.saturating_sub(1);

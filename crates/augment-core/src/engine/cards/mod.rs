@@ -7,12 +7,56 @@ use eligibility_support::*;
 pub use penta_check::PentaCheckProgress;
 pub use seal::PendingSeal;
 pub use taboo::PendingTaboo;
+mod apprentice_knights;
+mod big_rook;
+mod calling_card;
+mod d4;
+mod dutch;
+mod elephant_escape;
 mod eligibility_support;
+mod guard;
+mod herald;
+mod holdout;
+mod horde;
+mod iron_monarch;
+mod knightmate;
+mod last_stand;
+mod locust_swarm;
+mod martyrdom;
+mod merchant_guild;
+mod opening_support;
+mod pawn_conversion;
+mod princess;
+mod queen_cavalry;
+mod queens_gambit;
+mod rocket;
+mod thief;
+mod vanguard;
+mod wanted;
 
 use shared::*;
+mod barrier;
+mod beacon;
+mod campfire;
+mod constitutional_monarchy;
+mod don_quixote;
+mod eagle;
+mod eastern_policy;
+mod grappler;
+mod idol;
+mod jester;
+mod killer;
 mod lifecycle;
+mod medium;
+mod reaper;
+mod reformation;
+mod revolving_door;
 mod runtime;
 mod shared;
+mod transform_support;
+mod transmission_tower;
+mod windmill;
+mod wizard;
 pub use runtime::OctoberRuntimeState;
 #[cfg(test)]
 mod tests;
@@ -241,6 +285,7 @@ impl CardBehavior {
 const CARDS: &[CardBehavior] = &[
     acceleration::BEHAVIOR,
     amazon::BEHAVIOR,
+    apprentice_knights::BEHAVIOR,
     archbishop::BEHAVIOR,
     armistice::BEHAVIOR,
     ascension::BEHAVIOR,
@@ -248,14 +293,19 @@ const CARDS: &[CardBehavior] = &[
     assembly::BEHAVIOR,
     baby_bear::BEHAVIOR,
     backward_knight::BEHAVIOR,
+    barrier::BEHAVIOR,
+    beacon::BEHAVIOR,
     berserker::BEHAVIOR,
     big_bishop::BEHAVIOR,
+    big_rook::BEHAVIOR,
     bina_mate::BEHAVIOR,
     black_hole::BEHAVIOR,
     blue_jeans::BEHAVIOR,
     breakthrough_order::BEHAVIOR,
     brutus::BEHAVIOR,
+    calling_card::BEHAVIOR,
     camouflage_color::BEHAVIOR,
+    campfire::BEHAVIOR,
     capture_the_flag::BEHAVIOR,
     chancellor::BEHAVIOR,
     checker::BEHAVIOR,
@@ -265,17 +315,24 @@ const CARDS: &[CardBehavior] = &[
     cleanup::BEHAVIOR,
     clockwork::BEHAVIOR,
     clone::BEHAVIOR,
+    constitutional_monarchy::BEHAVIOR,
     conversion::BEHAVIOR,
     conveyor::BEHAVIOR,
     cool_guy::BEHAVIOR,
     corner_kick::BEHAVIOR,
     coronation::BEHAVIOR,
     crown::BEHAVIOR,
+    d4::BEHAVIOR,
     desperado::BEHAVIOR,
     diagonal_chess::BEHAVIOR,
     disassembly::BEHAVIOR,
+    don_quixote::BEHAVIOR,
     dragon::BEHAVIOR,
+    dutch::BEHAVIOR,
+    eagle::BEHAVIOR,
     early_promotion::BEHAVIOR,
+    eastern_policy::BEHAVIOR,
+    elephant_escape::BEHAVIOR,
     empty_lunchbox::BEHAVIOR,
     exhaustion::BEHAVIOR,
     extinction::BEHAVIOR,
@@ -290,30 +347,42 @@ const CARDS: &[CardBehavior] = &[
     geneva_convention::BEHAVIOR,
     ghost::BEHAVIOR,
     gomoku::BEHAVIOR,
+    grappler::BEHAVIOR,
     grasshopper::BEHAVIOR,
     greek_gift::BEHAVIOR,
     grudge::BEHAVIOR,
+    guard::BEHAVIOR,
     hallucination::BEHAVIOR,
     hedgehog::BEHAVIOR,
+    herald::BEHAVIOR,
     high_ground::BEHAVIOR,
     highlander::BEHAVIOR,
     highway::BEHAVIOR,
+    holdout::BEHAVIOR,
     homecoming::BEHAVIOR,
     hook::BEHAVIOR,
     hope::BEHAVIOR,
+    horde::BEHAVIOR,
     horse_riding::BEHAVIOR,
     hypocrisy::BEHAVIOR,
+    idol::BEHAVIOR,
     imperial_studies::BEHAVIOR,
     infiltration::BEHAVIOR,
     initiative::BEHAVIOR,
     injury::BEHAVIOR,
     insight::BEHAVIOR,
     iqp::BEHAVIOR,
+    iron_monarch::BEHAVIOR,
+    jester::BEHAVIOR,
     joker::BEHAVIOR,
+    killer::BEHAVIOR,
     killer_king::BEHAVIOR,
     king_of_the_hill::BEHAVIOR,
     knightmaster::BEHAVIOR,
+    knightmate::BEHAVIOR,
+    last_stand::BEHAVIOR,
     local_conscription::BEHAVIOR,
+    locust_swarm::BEHAVIOR,
     log::BEHAVIOR,
     london_system::BEHAVIOR,
     long_en_passant::BEHAVIOR,
@@ -321,6 +390,9 @@ const CARDS: &[CardBehavior] = &[
     magic_girl::BEHAVIOR,
     majesty::BEHAVIOR,
     man::BEHAVIOR,
+    martyrdom::BEHAVIOR,
+    medium::BEHAVIOR,
+    merchant_guild::BEHAVIOR,
     miracle::BEHAVIOR,
     missionary::BEHAVIOR,
     mistake::BEHAVIOR,
@@ -339,6 +411,7 @@ const CARDS: &[CardBehavior] = &[
     parrot::BEHAVIOR,
     parry::BEHAVIOR,
     pawn_chain::BEHAVIOR,
+    pawn_conversion::BEHAVIOR,
     pawn_storm::BEHAVIOR,
     pegasus::BEHAVIOR,
     penta_check::BEHAVIOR,
@@ -347,14 +420,19 @@ const CARDS: &[CardBehavior] = &[
     poisoned_pawn::BEHAVIOR,
     portal::BEHAVIOR,
     portal_gun::BEHAVIOR,
+    princess::BEHAVIOR,
     proficiency::BEHAVIOR,
     prophecy::BEHAVIOR,
     quantum_mechanics::BEHAVIOR,
     queen_afterimage::BEHAVIOR,
+    queen_cavalry::BEHAVIOR,
+    queens_gambit::BEHAVIOR,
     racing_king::BEHAVIOR,
     radical_charge::BEHAVIOR,
+    reaper::BEHAVIOR,
     recurrence::BEHAVIOR,
     recycling::BEHAVIOR,
+    reformation::BEHAVIOR,
     relay::BEHAVIOR,
     religious_victory::BEHAVIOR,
     replay::BEHAVIOR,
@@ -362,6 +440,8 @@ const CARDS: &[CardBehavior] = &[
     revelation::BEHAVIOR,
     reversal::BEHAVIOR,
     reverse_pawns::BEHAVIOR,
+    revolving_door::BEHAVIOR,
+    rocket::BEHAVIOR,
     rook_lift::BEHAVIOR,
     rule_bombs::BEHAVIOR,
     saturation::BEHAVIOR,
@@ -379,13 +459,19 @@ const CARDS: &[CardBehavior] = &[
     suspicious_potion::BEHAVIOR,
     symmetry::BEHAVIOR,
     taboo::BEHAVIOR,
+    thief::BEHAVIOR,
     transcendence::BEHAVIOR,
+    transmission_tower::BEHAVIOR,
     trickster::BEHAVIOR,
     trojan_horse::BEHAVIOR,
     undead::BEHAVIOR,
     underpromotion::BEHAVIOR,
+    vanguard::BEHAVIOR,
+    wanted::BEHAVIOR,
     white_box::BEHAVIOR,
+    windmill::BEHAVIOR,
     winter_kingdom::BEHAVIOR,
+    wizard::BEHAVIOR,
 ];
 fn find(id: &str) -> Option<&'static CardBehavior> {
     CARDS

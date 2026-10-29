@@ -6,7 +6,9 @@ use std::collections::BTreeMap;
 pub struct RuleRuntime {
     pub enabled: BTreeSet<String>,
     pub automatic: bool,
+    pub piece_fresh_until: BTreeMap<u32, u32>,
     pub medium_memory: Option<ParrotMemoryStatus>,
+    pub medium_windmill_mode: Option<WindmillMode>,
     pub grappler_bound: BTreeMap<u32, Player>,
     pub beacon_due: BTreeMap<u32, (Player, u32)>,
     pub berolina_rights: BTreeMap<u32, (Player, Square, Vec<Square>)>,
@@ -35,6 +37,9 @@ impl RuleRuntime {
         normalized.automatic = false;
         let black = state.turns_taken[Player::Black.index()];
         let halfmove = black.saturating_mul(2) + u32::from(state.turn == Player::Black);
+        for due in normalized.piece_fresh_until.values_mut() {
+            *due = due.saturating_sub(halfmove);
+        }
         for (_, due) in normalized.beacon_due.values_mut() {
             *due = due.saturating_sub(halfmove);
         }
@@ -272,6 +277,11 @@ impl Engine {
         actor: Player,
         events: &mut Vec<Event>,
     ) {
+        let halfmove = rule_halfmove(state);
+        state
+            .rule_runtime
+            .piece_fresh_until
+            .retain(|_, due| *due > halfmove);
         if state.rule_runtime.enabled.is_empty() && !rule_dependencies_active(state) {
             return;
         }

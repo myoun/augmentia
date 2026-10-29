@@ -47,6 +47,10 @@ pub(super) fn play(
                 .card_runtime
                 .queens_gambit_protection
                 .remove(&piece.id);
+            state
+                .card_runtime
+                .queens_gambit_previous_protection
+                .remove(&piece.id);
             state.card_runtime.evasion_piece_ids.remove(&piece.id);
             state.card_runtime.parry_piece_ids.remove(&piece.id);
             state.card_runtime.loyalist_piece_ids.remove(&piece.id);

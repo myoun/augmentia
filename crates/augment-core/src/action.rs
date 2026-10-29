@@ -5,6 +5,7 @@ use std::fmt;
 #[serde(deny_unknown_fields)]
 pub enum Action {
     Move(MoveAction),
+    SkipOptionalMove,
     UsePieceAbility {
         piece_id: u32,
         ability: PieceAbility,

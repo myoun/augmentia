@@ -1,9 +1,9 @@
 # 카드 구현 위치와 추가 방법
 
-최신 실행 프로필의 지원 카드 147장은 `crates/augment-core/src/engine/cards/`에 둔다.
+최신 실행 프로필의 지원 카드 189장은 `crates/augment-core/src/engine/cards/`에 둔다.
 파일명은 공식 ID의 `-`를 `_`로 바꾼 것이다. 예를 들어 `pawn-chain`은 `pawn_chain.rs`다.
 카탈로그·지원 목록·원본 계약은 계속 `rulesets/augment_chess_20261017/cards/`에서 관리한다.
-현재 미지원 128장의 최신 효과·변경 항목·이식 확인사항은 [남은 카드 목록](remaining-card-ports.md)을 참고한다.
+현재 미지원 86장의 최신 효과·변경 항목·이식 확인사항은 [남은 카드 목록](remaining-card-ports.md)을 참고한다.
 
 ## 파일의 책임
 
@@ -17,6 +17,8 @@
 | `engine/cards/mod.rs` | 최신 지원 카드의 단일 등록부와 실행 연결 |
 | `engine/cards/lifecycle.rs` | 여러 카드에 걸친 정산 순서: 턴 시작·종료, 체크 목표 등 |
 | `engine/cards/shared.rs` | 공통 배치 가능 칸, 착지 처리, 실제 왕실 공격 검사와 이동 제약의 조합 |
+| `engine/cards/opening_support.rs` | 최신 오프닝 기물 변환의 상태·포획 지연 처리 |
+| `engine/cards/transform_support.rs` | 최신 기물 카드의 공통 대상 검사와 ID·일반 상태를 보존하는 변환 |
 | `engine/cards/eligibility_support.rs` | 획득 조건의 공통 판정 도구 |
 | `engine/cards/runtime.rs` | 카드 상태의 집계 저장소 |
 | `engine/cards/rule_support.rs`, `chaos_pieces.rs` | 최신 RULE 예약·정산 순서와 카오스 기물 의존성 |
@@ -67,6 +69,10 @@
 `tests/card_contracts.rs`는 리팩터링 당시 128장 각각을 공개 Engine API로 두 보드·두 색상에서 실행한다.
 획득 조건, 획득 결과, 전체 합법 행동 목록, 이벤트, 상태 fingerprint와 대표 이동·카드 사용 전이를
 정리 전 커밋 `c63c68a`에서 수집한 `tests/fixtures/card-contracts.json`과 비교한다.
+2026-10-29 기물 카드 이식에서는 무덤이 생성되기 전의 포획도 기억하도록 전역 이력을 추가했다.
+원본 `main-RjrZ5fFP.js:221498–221528`의 기억 계약에 따른 의도적인 상태 식별 변경이다.
+기존 512개 사례를 유지하며 fingerprint 138개만 갱신했다. 행동·이벤트·나머지 값은 모두 이전 기준과 같다.
+이력과 포획된 풍차 모드는 반복 키에 포함되며 별도 기물 카드 테스트로 검증한다.
 일반 테스트 실행은 이 기준 파일을 수정하지 않는다. 의도적인 규칙 변경 때만 원본 계약에 근거해 갱신한다.
 
 전체 검증은 루트에서 다음 명령으로 실행한다.

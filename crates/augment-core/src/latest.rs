@@ -320,7 +320,7 @@ mod tests {
         assert!(state.deathmatch.is_none());
         assert!(
             engine
-                .grant_card(&state, 1, "merchant-guild", Player::White)
+                .grant_card(&state, 1, "judgment", Player::White)
                 .is_err()
         );
         state.applied_rules.push("garden".into());
@@ -385,7 +385,7 @@ mod tests {
         let catalog = latest_catalog();
         assert_eq!(catalog.len(), 275);
         assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 271);
-        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 147);
+        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 189);
         for card in catalog {
             assert_eq!(
                 ruleset_card(LATEST_RULESET_ID, &card.id).is_some(),
@@ -394,6 +394,6 @@ mod tests {
         }
         assert!(ruleset_card(LATEST_RULESET_ID, "qxe1").is_none());
         assert!(ruleset_card("augment_chess_20260915", "qxe1").is_some());
-        assert!(ruleset_card(LATEST_RULESET_ID, "merchant-guild").is_none());
+        assert!(ruleset_card(LATEST_RULESET_ID, "judgment").is_none());
     }
 }

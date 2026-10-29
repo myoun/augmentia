@@ -47,6 +47,11 @@ impl Engine {
                 });
                 match effects[index.unwrap_or(0)] {
                     "sacrifice-protection" => {
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            state
+                                .card_runtime
+                                .remember_permanent_before_timed_protection(piece.id);
+                        }
                         state.card_runtime.protected_piece_ids.insert(piece.id);
                         state.card_runtime.sacrifice_protection.insert(
                             piece.id,
@@ -57,6 +62,11 @@ impl Engine {
                         );
                     }
                     "last-resistance" => {
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            state
+                                .card_runtime
+                                .remember_permanent_before_timed_protection(piece.id);
+                        }
                         state.card_runtime.protected_piece_ids.insert(piece.id);
                         state.card_runtime.last_resistance.insert(
                             piece.id,
@@ -67,6 +77,11 @@ impl Engine {
                         );
                     }
                     "coronation-protection" => {
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            state
+                                .card_runtime
+                                .remember_permanent_before_timed_protection(piece.id);
+                        }
                         state.card_runtime.protected_piece_ids.insert(piece.id);
                         state
                             .card_runtime
@@ -349,6 +364,11 @@ impl Engine {
                     at: sacrifice_square,
                     cause: SACRIFICE.to_owned(),
                 });
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    state
+                        .card_runtime
+                        .remember_permanent_before_timed_protection(protected.id);
+                }
                 state.card_runtime.protected_piece_ids.insert(protected.id);
                 state.card_runtime.sacrifice_protection.insert(
                     protected.id,
@@ -833,6 +853,10 @@ impl Engine {
                         state
                             .card_runtime
                             .queens_gambit_protection
+                            .remove(&piece.id);
+                        state
+                            .card_runtime
+                            .queens_gambit_previous_protection
                             .remove(&piece.id);
                         state.card_runtime.evasion_piece_ids.remove(&piece.id);
                         state.card_runtime.parry_piece_ids.remove(&piece.id);

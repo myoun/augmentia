@@ -26,10 +26,10 @@ impl Engine {
         let cells = [0, 1, 6, 7].map(|file| Square::new(file, rank).unwrap());
         // acquireSeptember27OpeningPieces is all-or-nothing and quietly settles
         // the passive if any prescribed square is occupied/reserved.
-        if !cells
-            .iter()
-            .all(|square| self.card_landing_open(state, *square))
-        {
+        if !cells.iter().all(|square| {
+            self.card_landing_open(state, *square)
+                && !self.d4_restricts(state, owner, false, *square)
+        }) {
             return;
         }
         for square in cells {

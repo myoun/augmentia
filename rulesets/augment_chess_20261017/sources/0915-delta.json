@@ -6684,27 +6684,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "apprentice-knights",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "barricade",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "barrier",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "basic-training",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "beacon",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "big-rook",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6729,14 +6713,6 @@
     },
     {
       "id": "bribe",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "calling-card",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "campfire",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6776,15 +6752,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "constitutional-monarchy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "counterattack",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "d4",
       "reason": "new_card_not_ported"
     },
     {
@@ -6804,28 +6772,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "don-quixote",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "dutch",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "e4",
       "reason": "new_card_not_ported"
-    },
-    {
-      "id": "eagle",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "eastern-policy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "elephant-escape",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "emergency-evacuation",
@@ -6876,26 +6824,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "grappler",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "guard",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "herald",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "holdout",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "horde",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "icbm",
       "reason": "changed_contract_not_ported"
     },
@@ -6908,19 +6836,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "idol",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "inertia",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "iron-monarch",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "jester",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6928,19 +6844,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "killer",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "knightmate",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "last-resistance",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "last-stand",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6952,27 +6856,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "locust-swarm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "loyalist",
       "reason": "changed_contract_not_ported"
     },
     {
       "id": "mad-horse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "martyrdom",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "medium",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "merchant-guild",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7004,27 +6892,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "pawn-conversion",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "premove",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "princess",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "promotion-rush",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "queen-cavalry",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "queens-gambit",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -7036,28 +6908,12 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "reaper",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "reformation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "reposition",
       "reason": "changed_contract_not_ported"
     },
     {
       "id": "resolve",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "revolving-door",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "rocket",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "roller",
@@ -7124,16 +6980,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "thief",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "traitor",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "transmission-tower",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "trolley",
@@ -7152,10 +7000,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "vanguard",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "vanish",
       "reason": "changed_contract_not_ported"
     },
@@ -7172,19 +7016,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "wanted",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "windmill",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "witch-trial",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "wizard",
       "reason": "changed_contract_not_ported"
     },
     {

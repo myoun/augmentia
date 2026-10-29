@@ -994,6 +994,7 @@ impl Engine {
                 && captured_piece.kind == PieceKind::Queen
                 && state.card_runtime.queen_afterimage[owner.index()]
                 && state.board.get(movement.from).is_none()
+                && !self.d4_restricts(state, owner, false, movement.from)
             {
                 let afterimage =
                     Piece::new(owner, PieceKind::Queen).with_id(state.allocate_piece_id());
@@ -1348,7 +1349,9 @@ impl Engine {
             scarecrow.remaining_ply = scarecrow.remaining_ply.saturating_sub(1);
             if scarecrow.remaining_ply > 0 {
                 state.card_runtime.pending_scarecrows.push(scarecrow);
-            } else if state.board.get(scarecrow.square).is_none() {
+            } else if state.board.get(scarecrow.square).is_none()
+                && !self.d4_restricts(state, scarecrow.owner, false, scarecrow.square)
+            {
                 let piece = Piece::new(scarecrow.owner, PieceKind::Scarecrow)
                     .with_id(state.allocate_piece_id());
                 state.board.set(scarecrow.square, Some(piece));
@@ -1895,7 +1898,7 @@ pub(super) fn is_major_piece(kind: PieceKind) -> bool {
     )
 }
 
-fn has_piece_protection_source(state: &GameState, piece_id: u32) -> bool {
+pub(super) fn has_piece_protection_source(state: &GameState, piece_id: u32) -> bool {
     state
         .card_runtime
         .sacrifice_protection
@@ -1908,6 +1911,10 @@ fn has_piece_protection_source(state: &GameState, piece_id: u32) -> bool {
         || state
             .card_runtime
             .queens_gambit_protection
+            .contains(&piece_id)
+        || state
+            .card_runtime
+            .queens_gambit_previous_protection
             .contains(&piece_id)
 }
 

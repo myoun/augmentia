@@ -47,6 +47,11 @@ impl Engine {
         if state.card_runtime.coronation[actor.index()]
             && movement.promotion == Some(PieceKind::Queen)
         {
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                state
+                    .card_runtime
+                    .remember_permanent_before_timed_protection(piece.id);
+            }
             state.card_runtime.protected_piece_ids.insert(piece.id);
             state
                 .card_runtime
@@ -328,10 +333,10 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
             basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
             ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
-            poisoned_piece_ids, queens_gambit_protection, potion_basic_training_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, potion_basic_training_piece_ids,
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
-            stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
+            stealth_piece_ids, submerged_piece_ids, wanted_piece_ids, charge_pawns, desperado_pieces,
             field_promoted_piece_ids, locust_swarm_piece_ids, metalized_piece_ids,
             recurrence_piece_ids, nullification_piece_ids
         );
@@ -340,7 +345,7 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
             reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
-            sacrifice_protection, last_resistance, coronation_protection,
+            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
             trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns
@@ -400,10 +405,10 @@ pub(super) fn restore_piece_runtime(
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
             basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
             ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
-            poisoned_piece_ids, queens_gambit_protection, potion_basic_training_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, potion_basic_training_piece_ids,
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
-            stealth_piece_ids, submerged_piece_ids, charge_pawns, desperado_pieces,
+            stealth_piece_ids, submerged_piece_ids, wanted_piece_ids, charge_pawns, desperado_pieces,
             field_promoted_piece_ids, locust_swarm_piece_ids, metalized_piece_ids,
             recurrence_piece_ids, nullification_piece_ids
         );
@@ -412,7 +417,7 @@ pub(super) fn restore_piece_runtime(
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
             reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
-            sacrifice_protection, last_resistance, coronation_protection,
+            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
             trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns

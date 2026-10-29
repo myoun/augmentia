@@ -76,4 +76,60 @@ assert.deepEqual(result.skips,[true,true,false]); assert.deepEqual(result.priori
 assert.equal(result.definition.activation,'PASSIVE'); assert.equal(result.definition.turnPolicy,'NOT_APPLICABLE');
 for (const kind of ['octopus','man','big-bishop','queen','rook']) assert.ok(result.majors.includes(kind));
 for (const kind of ['wizard','recruiter','trickster','crown','king']) assert.ok(!result.majors.includes(kind));
-console.log('Opening acquisition: pinned RNG choice control flow, false-start file groups, London/BISHOP layouts, fresh-capture exceptions, activation and major-family source checks passed.');
+
+// The current d4 passive applies both to the opponent and to its owner's royal.
+const d4helpers = ['expansionNamedSquare', 'expansionDestinationAllowed'].map(declaration).join('\n');
+const d4result = JSON.parse(new vm.Script(`
+ const inside$1=(board,r,c)=>r>=0&&r<8&&c>=0&&c<8;
+ const opponent$2=c=>c==='white'?'black':'white';
+ ${d4helpers}
+ const board=Array.from({length:8},()=>Array(8).fill(null));
+ JSON.stringify(['white','black'].flatMap(color=>[false,true].map(ownKing=>expansionDestinationAllowed({board,color,cells:[{row:4,col:3}],d4:{white:true,black:false},ownKing}))))
+`).runInNewContext({}, {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}));
+assert.deepEqual(d4result,[true,false,false,false]);
+
+// The source retains earlier protection and leaves later timed protection active
+// when a non-promotion transformation removes the gambit status.
+const protectionResult = JSON.parse(new vm.Script(`
+ ${declaration('clearQueensGambitProtectionAfterTransformation')}
+ const prior={protected:true,queensGambitProtection:true,queensGambitPreviousProtected:true};
+ const timed={protected:true,queensGambitProtection:true,lastResistance:{previousProtected:true}};
+ const plain={protected:true,queensGambitProtection:true};
+ [prior,timed,plain].forEach(clearQueensGambitProtectionAfterTransformation);
+ JSON.stringify({prior,timed,plain});
+`).runInNewContext({}, {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}));
+assert.deepEqual(protectionResult,{prior:{protected:true},timed:{protected:true,lastResistance:{previousProtected:false}},plain:{}});
+
+const thiefResult = JSON.parse(new vm.Script(`
+ const usesThiefRemake=()=>true;
+ ${['thiefMoveDirection','thiefMoveAllowed','noteThiefMove'].map(declaration).join('\n')}
+ const item={type:'thief'}, from={row:4,col:3}, to={row:2,col:3};
+ noteThiefMove(item,from,to,{});
+ JSON.stringify({back:thiefMoveAllowed(item,{row:5,col:3},{},to),
+ visited:thiefMoveAllowed(item,from,{},to),
+ sideways:thiefMoveAllowed(item,{row:2,col:2},{},to)});
+`).runInNewContext({}, {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}));
+assert.deepEqual(thiefResult,{back:false,visited:false,sideways:true});
+
+const fractureResult = JSON.parse(new vm.Script(`
+ ${['TYPES$1','isFracturableLarge','isFracturedLarge','largeBodyCells','damageLargeBodyBoardCells'].map(declaration).join('\n')}
+ const result=[];
+ for(let hit=0;hit<4;hit++) {
+   const board=Array.from({length:8},()=>Array(8).fill(null));
+   const item={id:'r',type:'bigRook',largeMissingCells:[],anchorRow:2,anchorCol:3};
+   for(let i=0;i<4;i++) board[2+(i>>1)][3+(i&1)]=item;
+   const first=damageLargeBodyBoardCells(board,item,[{row:2+(hit>>1),col:3+(hit&1)}]);
+   const next=(hit+1)%4;
+   const second=damageLargeBodyBoardCells(board,item,[{row:2+(next>>1),col:3+(next&1)}]);
+   result.push({first:first.defeated,missing:item.largeMissingCells,second:second.defeated});
+ }
+ JSON.stringify(result);
+`).runInNewContext({}, {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}));
+assert.deepEqual(fractureResult,[0,1,2,3].map(hit=>({first:false,missing:[hit],second:true})));
+
+const castles = JSON.parse(new vm.Script(`
+ ${declaration('v10BigRookCastleAnchor')}
+ JSON.stringify(['white','black'].flatMap(color=>[2,6].map(col=>v10BigRookCastleAnchor(color,col))));
+`).runInNewContext({}, {timeout:1000,contextCodeGeneration:{strings:false,wasm:false}}));
+assert.deepEqual(castles,[{row:6,col:3},{row:6,col:4},{row:0,col:3},{row:0,col:4}]);
+console.log('Opening source checks: acquisition RNG, layouts, d4, protection, thief path, large-body fracture and castling passed.');

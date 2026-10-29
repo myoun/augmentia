@@ -24,6 +24,11 @@ pub(super) fn play(
     });
     match effects[index.unwrap_or(0)] {
         "sacrifice-protection" => {
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                state
+                    .card_runtime
+                    .remember_permanent_before_timed_protection(piece.id);
+            }
             state.card_runtime.protected_piece_ids.insert(piece.id);
             state.card_runtime.sacrifice_protection.insert(
                 piece.id,
@@ -34,6 +39,11 @@ pub(super) fn play(
             );
         }
         "last-resistance" => {
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                state
+                    .card_runtime
+                    .remember_permanent_before_timed_protection(piece.id);
+            }
             state.card_runtime.protected_piece_ids.insert(piece.id);
             state.card_runtime.last_resistance.insert(
                 piece.id,
@@ -44,6 +54,11 @@ pub(super) fn play(
             );
         }
         "coronation-protection" => {
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                state
+                    .card_runtime
+                    .remember_permanent_before_timed_protection(piece.id);
+            }
             state.card_runtime.protected_piece_ids.insert(piece.id);
             state
                 .card_runtime
@@ -164,8 +179,12 @@ pub(super) fn play(
             state.card_runtime.poisoned_piece_ids.insert(piece.id);
         }
         "queens-gambit-protection" => {
-            state.card_runtime.protected_piece_ids.insert(piece.id);
-            state.card_runtime.queens_gambit_protection.insert(piece.id);
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                super::queens_gambit::apply_protection(&mut state.card_runtime, piece.id);
+            } else {
+                state.card_runtime.protected_piece_ids.insert(piece.id);
+                state.card_runtime.queens_gambit_protection.insert(piece.id);
+            }
         }
         "trojan-horse" => {
             state.card_runtime.trojan_piece_ids.insert(piece.id);

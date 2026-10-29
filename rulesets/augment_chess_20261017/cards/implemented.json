@@ -4,11 +4,11 @@
   "scope": {
     "catalog_entries": 275,
     "active_upstream": 271,
-    "implemented_cards": 147,
+    "implemented_cards": 189,
     "site_parity_verified_cards": 0,
     "profile": "partial-standard-with-scoped-ports",
     "inherited_unchanged_contract_cards": 88,
-    "scoped_ported_cards": 59
+    "scoped_ported_cards": 101
   },
   "cards": [
     {
@@ -52,6 +52,26 @@
         "amazon"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "apprentice-knights",
+      "name_ko": "견습 기사단",
+      "effect": "apprenticeKnights",
+      "phase": "OPENING",
+      "half_stars": 3,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "apprentice-knights"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "activation": "active",
@@ -198,6 +218,48 @@
       "turn_exclusive": false
     },
     {
+      "id": "barrier",
+      "name_ko": "배리어",
+      "effect": "barrier",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "barrier"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
+      "id": "beacon",
+      "name_ko": "신호기",
+      "effect": "beacon",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "beacon"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -239,6 +301,26 @@
         "bigRookMoves"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "big-rook",
+      "name_ko": "ROOK",
+      "effect": "bigRook",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "big-rook"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "activation": "passive",
@@ -346,6 +428,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "calling-card",
+      "name_ko": "예고장",
+      "effect": "callingCard",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "calling-card"
+      ],
+      "compatibility": [
+        "Scoped acquisition and ordinary capture reaction; full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -364,6 +467,27 @@
         "camouflageRule"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "campfire",
+      "name_ko": "캠프파이어",
+      "effect": "campfire",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "campfire"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "rule",
@@ -553,6 +677,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "constitutional-monarchy",
+      "name_ko": "입헌군주제",
+      "effect": "constitutionalMonarchy",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "constitutionalMonarchy"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -676,6 +821,26 @@
       ]
     },
     {
+      "id": "d4",
+      "name_ko": "d4",
+      "effect": "d4",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "d4"
+      ],
+      "compatibility": [
+        "Scoped destination restriction; unported forced placements and full interaction parity remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -735,6 +900,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "don-quixote",
+      "name_ko": "돈 키호테",
+      "effect": "donQuixote",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "donQuixote"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
@@ -755,6 +941,47 @@
       "turn_exclusive": false
     },
     {
+      "id": "dutch",
+      "name_ko": "네덜란드",
+      "effect": "dutch",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "dutch"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "eagle",
+      "name_ko": "알리바바",
+      "effect": "eagle",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "eagle"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -773,6 +1000,47 @@
         "earlyPromotion"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "eastern-policy",
+      "name_ko": "동방견문록",
+      "effect": "easternPolicy",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "easternPolicy"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
+      "id": "elephant-escape",
+      "name_ko": "코끼리 탈출",
+      "effect": "elephantEscape",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "elephant-escape"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "activation": "active",
@@ -1055,6 +1323,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "grappler",
+      "name_ko": "그래플러",
+      "effect": "grappler",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "grappler"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1118,6 +1407,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "guard",
+      "name_ko": "근위병",
+      "effect": "guard",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "guard"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1154,6 +1463,26 @@
         "move_generation"
       ],
       "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "herald",
+      "name_ko": "전령",
+      "effect": "herald",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "herald"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "id": "high-ground",
@@ -1219,6 +1548,26 @@
       ]
     },
     {
+      "id": "holdout",
+      "name_ko": "존버",
+      "effect": "holdout",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "holdout"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition and delayed promotion; full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1279,6 +1628,26 @@
       ]
     },
     {
+      "id": "horde",
+      "name_ko": "호드",
+      "effect": "horde",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "horde"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Scoped stage-5 target/procedure port; see cards/ported.json. Full interaction parity is not claimed."
@@ -1317,6 +1686,27 @@
         "hypocrisy"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "idol",
+      "name_ko": "아이돌",
+      "effect": "idol",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "idol"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "passive",
@@ -1439,6 +1829,48 @@
       ]
     },
     {
+      "id": "iron-monarch",
+      "name_ko": "친정",
+      "effect": "ironMonarch",
+      "phase": "OPENING",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "iron-monarch"
+      ],
+      "compatibility": [
+        "Scoped optional movement and acquisition; full concurrent extra-action ordering remains separately auditable."
+      ]
+    },
+    {
+      "id": "jester",
+      "name_ko": "광대",
+      "effect": "jester",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "jester"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1457,6 +1889,27 @@
         "joker"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "killer",
+      "name_ko": "킬러",
+      "effect": "killer",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "killer"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "passive",
@@ -1517,6 +1970,46 @@
       "turn_exclusive": false
     },
     {
+      "id": "knightmate",
+      "name_ko": "나이트메이트",
+      "effect": "knightmate",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "knightmate"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "last-stand",
+      "name_ko": "집단 광기",
+      "effect": "lastStand",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "last-stand"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
@@ -1535,6 +2028,26 @@
         "localConscription"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "locust-swarm",
+      "name_ko": "메뚜기 창궐",
+      "effect": "locustSwarm",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "locust-swarm"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "activation": "active",
@@ -1668,6 +2181,68 @@
       ],
       "source_symbols": [
         "manConversion"
+      ]
+    },
+    {
+      "id": "martyrdom",
+      "name_ko": "순교",
+      "effect": "martyrdom",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "martyrdom"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "medium",
+      "name_ko": "무덤",
+      "effect": "medium",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "medium"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
+      "id": "merchant-guild",
+      "name_ko": "상인 조합",
+      "effect": "merchantGuild",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "merchant-guild"
+      ],
+      "compatibility": [
+        "Scoped acquisition, gold and purchase; full cross-card and large-body parity is not claimed."
       ]
     },
     {
@@ -2022,6 +2597,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "pawn-conversion",
+      "name_ko": "전환",
+      "effect": "pawnConversion",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "pawn-conversion"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2188,6 +2783,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "princess",
+      "name_ko": "프린세스",
+      "effect": "princess",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "princess"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2268,6 +2883,46 @@
       "turn_exclusive": false
     },
     {
+      "id": "queen-cavalry",
+      "name_ko": "퀸의 기병대",
+      "effect": "queenCavalry",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "queen-cavalry"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "queens-gambit",
+      "name_ko": "퀸즈 갬빗",
+      "effect": "queensGambit",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "queens-gambit"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition; overlapping permanent protection interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2306,6 +2961,27 @@
         "radicalCharge"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "reaper",
+      "name_ko": "사신",
+      "effect": "reaper",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "reaper"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "active",
@@ -2348,6 +3024,27 @@
         "recycling"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "reformation",
+      "name_ko": "몬시뇰",
+      "effect": "reformation",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "reformation"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "active",
@@ -2487,6 +3184,47 @@
         "reversePawns"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "revolving-door",
+      "name_ko": "회전문",
+      "effect": "revolvingDoor",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "revolvingDoor"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
+      "id": "rocket",
+      "name_ko": "로켓",
+      "effect": "rocket",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "rocket"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
     },
     {
       "activation": "passive",
@@ -2831,6 +3569,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "thief",
+      "name_ko": "도적",
+      "effect": "thief",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "thief"
+      ],
+      "compatibility": [
+        "Scoped optional movement and acquisition; full concurrent extra-action ordering remains separately auditable."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2849,6 +3608,27 @@
         "transcendence"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "transmission-tower",
+      "name_ko": "전송탑",
+      "effect": "transmissionTower",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "transmissionTower"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "activation": "active",
@@ -2931,6 +3711,47 @@
       "turn_exclusive": false
     },
     {
+      "id": "vanguard",
+      "name_ko": "선봉",
+      "effect": "vanguard",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "vanguard"
+      ],
+      "compatibility": [
+        "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "wanted",
+      "name_ko": "수배",
+      "effect": "wanted",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "wanted"
+      ],
+      "compatibility": [
+        "Scoped target classification and turn-end arrest; full cross-card parity is not claimed."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2949,6 +3770,27 @@
         "whiteBox"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "windmill",
+      "name_ko": "풍차",
+      "effect": "windmill",
+      "phase": "PIECE",
+      "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "windmill"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     },
     {
       "id": "winter-kingdom",
@@ -2970,6 +3812,27 @@
       "compatibility": [
         "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
       ]
+    },
+    {
+      "id": "wizard",
+      "name_ko": "마법사",
+      "effect": "wizard",
+      "phase": "PIECE",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "piece_transform",
+        "piece_ability"
+      ],
+      "source_symbols": [
+        "wizard"
+      ],
+      "compatibility": [
+        "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
     }
   ],
   "pending": [
@@ -2978,27 +3841,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "apprentice-knights",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "barricade",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "barrier",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "basic-training",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "beacon",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "big-rook",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3023,14 +3870,6 @@
     },
     {
       "id": "bribe",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "calling-card",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "campfire",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3070,15 +3909,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "constitutional-monarchy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "counterattack",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "d4",
       "reason": "new_card_not_ported"
     },
     {
@@ -3098,28 +3929,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "don-quixote",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "dutch",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "e4",
       "reason": "new_card_not_ported"
-    },
-    {
-      "id": "eagle",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "eastern-policy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "elephant-escape",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "emergency-evacuation",
@@ -3170,26 +3981,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "grappler",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "guard",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "herald",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "holdout",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "horde",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "icbm",
       "reason": "changed_contract_not_ported"
     },
@@ -3202,19 +3993,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "idol",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "inertia",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "iron-monarch",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "jester",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3222,19 +4001,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "killer",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "knightmate",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "last-resistance",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "last-stand",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3246,27 +4013,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "locust-swarm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "loyalist",
       "reason": "changed_contract_not_ported"
     },
     {
       "id": "mad-horse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "martyrdom",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "medium",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "merchant-guild",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3298,27 +4049,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "pawn-conversion",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "premove",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "princess",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "promotion-rush",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "queen-cavalry",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "queens-gambit",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3330,28 +4065,12 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "reaper",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "reformation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "reposition",
       "reason": "changed_contract_not_ported"
     },
     {
       "id": "resolve",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "revolving-door",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "rocket",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "roller",
@@ -3418,16 +4137,8 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "thief",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "traitor",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "transmission-tower",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "trolley",
@@ -3446,10 +4157,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "vanguard",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "vanish",
       "reason": "changed_contract_not_ported"
     },
@@ -3466,19 +4173,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "wanted",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "windmill",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "witch-trial",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "wizard",
       "reason": "changed_contract_not_ported"
     },
     {
