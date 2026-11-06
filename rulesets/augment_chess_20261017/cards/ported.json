@@ -2470,6 +2470,198 @@
         ]
       ],
       "notes": "Candidate pool is ACTIVE RULE cards minus the fixed layout rules, already active, installed or pending; the delay is two plies and the random values are captured at play time."
+    },
+    {
+      "id": "stake",
+      "stage": 12,
+      "scope": "current four-turn immobilization then protection",
+      "source_ranges": [
+        [
+          354733,
+          354744
+        ]
+      ],
+      "notes": "Target cannot move for four owner turns, then gains protection."
+    },
+    {
+      "id": "conscription",
+      "stage": 12,
+      "scope": "current second-rank pawn summon",
+      "source_ranges": [
+        [
+          197980,
+          198010
+        ],
+        [
+          354511,
+          354514
+        ]
+      ],
+      "notes": "Summon friendly pawns on the four central files of the second rank."
+    },
+    {
+      "id": "canceling",
+      "stage": 12,
+      "scope": "current castling undo",
+      "source_ranges": [
+        [
+          198522,
+          198566
+        ],
+        [
+          354690,
+          354729
+        ]
+      ],
+      "notes": "Return a castled enemy king to its original square."
+    },
+    {
+      "id": "barricade",
+      "stage": 12,
+      "scope": "current wall placement contract",
+      "source_ranges": [
+        [
+          200753,
+          200761
+        ],
+        [
+          200762,
+          200770
+        ],
+        [
+          354527,
+          354537
+        ]
+      ],
+      "notes": "Three-cell wall selection and expiry."
+    },
+    {
+      "id": "black-magic",
+      "stage": 12,
+      "scope": "current friendly monster summon next to the king",
+      "source_ranges": [
+        [
+          348952,
+          348966
+        ]
+      ],
+      "notes": "Friendly-owned monster with random movement and non-capturable-by-pawns behavior."
+    },
+    {
+      "id": "brainwash",
+      "stage": 12,
+      "scope": "current sacrifice and score-gated conversion",
+      "source_ranges": [
+        [
+          1434,
+          1434
+        ],
+        [
+          198320,
+          198336
+        ]
+      ],
+      "notes": "Sacrifice a friendly piece, then convert a lower-value enemy; royal excluded."
+    },
+    {
+      "id": "bribe",
+      "stage": 12,
+      "scope": "current knight-to-amazon timed override",
+      "source_ranges": [
+        [
+          198930,
+          198939
+        ],
+        [
+          354774,
+          354790
+        ]
+      ],
+      "notes": "Three owner turns as an amazon, then restore the original kind."
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "stage": 12,
+      "scope": "current same-kind exchange with random opponent pick",
+      "source_ranges": [
+        [
+          200321,
+          200331
+        ],
+        [
+          200332,
+          200341
+        ],
+        [
+          352881,
+          352907
+        ]
+      ],
+      "notes": "Remove a friendly piece and a random enemy of the same kind."
+    },
+    {
+      "id": "collapse",
+      "stage": 12,
+      "scope": "current border collapse after the next owner move",
+      "source_ranges": [
+        [
+          200787,
+          200799
+        ],
+        [
+          355167,
+          355171
+        ]
+      ],
+      "notes": "Outer border removal deferred one owner turn."
+    },
+    {
+      "id": "death-squad",
+      "stage": 12,
+      "scope": "current file-wide pawn conversion",
+      "source_ranges": [
+        [
+          198337,
+          198343
+        ],
+        [
+          198344,
+          198365
+        ],
+        [
+          354184,
+          354197
+        ]
+      ],
+      "notes": "All friendly pawns on the chosen file become fanatics."
+    },
+    {
+      "id": "last-resistance",
+      "stage": 12,
+      "scope": "current three-turn king protection",
+      "source_ranges": [
+        [
+          199027,
+          199037
+        ],
+        [
+          352722,
+          352733
+        ]
+      ],
+      "notes": "King protection for three owner turns."
+    },
+    {
+      "id": "witch-trial",
+      "stage": 12,
+      "scope": "current suspicion and trial outcome",
+      "source_ranges": [
+        [
+          352642,
+          352649
+        ]
+      ],
+      "notes": "Suspect one non-king enemy piece and resolve the trial outcome."
     }
   ]
 }

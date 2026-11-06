@@ -6792,6 +6792,9 @@ impl Engine {
             || state.card_runtime.idol_rest_piece_ids.contains(&piece.id)
             || state.card_runtime.dice_locks[piece.owner.index()]
                 .is_some_and(|lock| lock.remaining_turns > 0 && lock.kind == piece.kind)
+            // Stake pins the piece for its duration; the expiry pass in
+            // settle_card_turn_start grants the follow-up protection.
+            || state.card_runtime.stake_statuses.contains_key(&piece.id)
         {
             return;
         }

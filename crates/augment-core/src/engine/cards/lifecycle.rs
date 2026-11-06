@@ -37,6 +37,7 @@ impl Engine {
         {
             state.card_runtime.bishop_infiltration_due[owner.index()] = None;
         }
+        self.settle_stake(state, owner);
         state
             .card_runtime
             .ice_king

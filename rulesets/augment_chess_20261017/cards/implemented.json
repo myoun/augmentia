@@ -239,6 +239,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "barricade",
+      "name_ko": "바리케이드",
+      "effect": "barricade",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "barricadeSelectionContract",
+        "applyBarricadeV9"
+      ],
+      "compatibility": [
+        "current wall placement contract"
+      ]
+    },
+    {
       "id": "barrier",
       "name_ko": "배리어",
       "effect": "barrier",
@@ -429,6 +450,26 @@
       ]
     },
     {
+      "id": "black-magic",
+      "name_ko": "흑마법",
+      "effect": "blackMagic",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "blackMagic"
+      ],
+      "compatibility": [
+        "current friendly monster summon next to the king"
+      ]
+    },
+    {
       "id": "blockade",
       "name_ko": "봉쇄",
       "effect": "blockade",
@@ -471,6 +512,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "brainwash",
+      "name_ko": "마인드 컨트롤",
+      "effect": "brainwash",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_conversion"
+      ],
+      "source_symbols": [
+        "applyBrainwash"
+      ],
+      "compatibility": [
+        "current sacrifice and score-gated conversion"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -489,6 +550,25 @@
         "breakthroughOrder"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "bribe",
+      "name_ko": "삼일천하",
+      "effect": "bribe",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "piece_transform"
+      ],
+      "source_symbols": [
+        "applyBribeV5"
+      ],
+      "compatibility": [
+        "current knight-to-amazon timed override"
+      ]
     },
     {
       "activation": "passive",
@@ -573,6 +653,25 @@
       ],
       "compatibility": [
         "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
+      ]
+    },
+    {
+      "id": "canceling",
+      "name_ko": "캔슬링",
+      "effect": "canceling",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction"
+      ],
+      "source_symbols": [
+        "applyCancelingV4"
+      ],
+      "compatibility": [
+        "current castling undo"
       ]
     },
     {
@@ -790,6 +889,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "cleanup-sacrifice",
+      "name_ko": "강제 교환",
+      "effect": "cleanupSacrifice",
+      "phase": "END",
+      "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng"
+      ],
+      "source_symbols": [
+        "cleanupSacrificeSelectionContract",
+        "applyCleanupSacrificeV8"
+      ],
+      "compatibility": [
+        "current same-kind exchange with random opponent pick"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -826,6 +946,45 @@
         "clonePassive"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "collapse",
+      "name_ko": "붕괴",
+      "effect": "collapse",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyCollapseV9"
+      ],
+      "compatibility": [
+        "current border collapse after the next owner move"
+      ]
+    },
+    {
+      "id": "conscription",
+      "name_ko": "징집",
+      "effect": "conscription",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction"
+      ],
+      "source_symbols": [
+        "applyConscriptionV4"
+      ],
+      "compatibility": [
+        "current second-rank pawn summon"
+      ]
     },
     {
       "id": "constitutional-monarchy",
@@ -1011,6 +1170,26 @@
       ],
       "compatibility": [
         "Scoped destination restriction; unported forced placements and full interaction parity remain separately auditable."
+      ]
+    },
+    {
+      "id": "death-squad",
+      "name_ko": "결사대",
+      "effect": "deathSquad",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "piece_transform"
+      ],
+      "source_symbols": [
+        "deathSquadSelectionContract",
+        "applyDeathSquadV4"
+      ],
+      "compatibility": [
+        "current file-wide pawn conversion"
       ]
     },
     {
@@ -2482,6 +2661,25 @@
       ],
       "compatibility": [
         "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "last-resistance",
+      "name_ko": "마지막 저항",
+      "effect": "lastResistance",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "protection_set"
+      ],
+      "source_symbols": [
+        "applyLastResistanceV5"
+      ],
+      "compatibility": [
+        "current three-turn king protection"
       ]
     },
     {
@@ -4290,6 +4488,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "stake",
+      "name_ko": "말뚝",
+      "effect": "stake",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "movement_filter",
+        "protection_set"
+      ],
+      "source_symbols": [
+        "stake"
+      ],
+      "compatibility": [
+        "current four-turn immobilization then protection"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
@@ -4826,6 +5044,26 @@
       ]
     },
     {
+      "id": "witch-trial",
+      "name_ko": "마녀재판",
+      "effect": "witchTrial",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "choice"
+      ],
+      "source_symbols": [
+        "witchTrial"
+      ],
+      "compatibility": [
+        "current suspicion and trial outcome"
+      ]
+    },
+    {
       "id": "wizard",
       "name_ko": "마법사",
       "effect": "wizard",
@@ -4849,27 +5087,7 @@
   ],
   "pending": [
     {
-      "id": "barricade",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "black-magic",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "brainwash",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "bribe",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "canceling",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4878,22 +5096,6 @@
     },
     {
       "id": "charge",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "cleanup-sacrifice",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "collapse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "conscription",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "death-squad",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4918,10 +5120,6 @@
     },
     {
       "id": "judgment",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "last-resistance",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4965,10 +5163,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "stake",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "summon-colossus",
       "reason": "disabled_upstream"
     },
@@ -4994,10 +5188,6 @@
     },
     {
       "id": "vip",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "witch-trial",
       "reason": "changed_contract_not_ported"
     },
     {

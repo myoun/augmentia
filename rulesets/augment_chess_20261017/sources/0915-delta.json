@@ -6680,27 +6680,7 @@
   ],
   "unsupported": [
     {
-      "id": "barricade",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "black-magic",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "brainwash",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "bribe",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "canceling",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6709,22 +6689,6 @@
     },
     {
       "id": "charge",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "cleanup-sacrifice",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "collapse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "conscription",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "death-squad",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6749,10 +6713,6 @@
     },
     {
       "id": "judgment",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "last-resistance",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -6796,10 +6756,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "stake",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "summon-colossus",
       "reason": "disabled_upstream"
     },
@@ -6825,10 +6781,6 @@
     },
     {
       "id": "vip",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "witch-trial",
       "reason": "changed_contract_not_ported"
     },
     {
