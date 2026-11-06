@@ -128,6 +128,34 @@ mod tests {
     }
 
     #[test]
+    fn exiled_piece_cannot_be_captured_until_the_caster_turn_ends() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[
+            ("d1", Player::White, PieceKind::Rook),
+            ("d4", Player::Black, PieceKind::Knight),
+        ]);
+        let knight = at(&s, "d4");
+        s.card_runtime
+            .piece_origins
+            .insert(knight.id, "d7".parse().unwrap());
+        use_at(&mut s, &engine, crate::EXILE, single("d4"));
+        // While protected, the rook's attack on d7 cannot remove the knight.
+        let after = engine.apply(&s, movement("d1", "d7")).unwrap().state;
+        assert_eq!(
+            after.board.get("d7".parse().unwrap()).map(|p| p.id),
+            Some(knight.id)
+        );
+        // Once the protection lapses the same attack captures normally.
+        let mut expired = s.clone();
+        expired.card_runtime.vigilance_protection.clear();
+        let after = engine.apply(&expired, movement("d1", "d7")).unwrap().state;
+        let captured = at(&after, "d7");
+        assert_eq!(captured.owner, Player::White);
+        assert_eq!(captured.kind, PieceKind::Rook);
+        assert_eq!(captured.capture_count, 1);
+    }
+
+    #[test]
     fn exile_is_unavailable_when_the_origin_is_occupied_or_the_piece_is_home() {
         let engine = Engine::bundled_latest().unwrap();
         let mut s = position(&[

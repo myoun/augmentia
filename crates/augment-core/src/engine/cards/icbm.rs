@@ -454,4 +454,74 @@ mod tests {
         assert!(first.0.card_runtime.icbm_pending.is_empty());
         assert!(first.0.board.get(cell("d1")).is_none());
     }
+
+    /// Pins the settlement boundary against the real engine turn loop.
+    ///
+    /// Upstream resolves ICBM right after the turn flips (main bundle
+    /// L342800-342803: `state.turn = opponent(...)` then
+    /// `resolvePendingIcbmForTurn(state.turn)`), so the shot must not fire while
+    /// the caster is still mid-turn: the opponent has to get their move first.
+    /// `settle_icbm` must therefore be invoked at the caster's next turn
+    /// *start*, not at the end of the caster's own turn.
+    #[test]
+    fn icbm_fires_at_the_next_owner_turn_start_not_at_the_end_of_the_casters_turn() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("d1", Player::White, PieceKind::Queen),
+            ("e8", Player::Black, PieceKind::Queen),
+            ("c3", Player::White, PieceKind::Knight),
+            ("f6", Player::Black, PieceKind::Knight),
+        ]);
+        state = engine
+            .grant_card(&state, 1, crate::ICBM, Player::White)
+            .unwrap()
+            .state;
+        state = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::PieceAt(cell("d1")),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(state.card_runtime.icbm_pending.len(), 1);
+
+        // White plays the card and then finishes its turn. The shot is reserved
+        // for White's *next* turn start, so it must still be pending while Black
+        // is on move: upstream only resolves after the turn flips to the owner
+        // (main bundle L342800-342803).
+        let after_white = engine
+            .apply(
+                &state,
+                Action::Move(crate::MoveAction::new(cell("c3"), cell("d5"), None)),
+            )
+            .unwrap()
+            .state;
+        assert_eq!(after_white.turn, Player::Black);
+        assert_eq!(after_white.turns_taken[0], 1);
+        assert_eq!(
+            after_white.card_runtime.icbm_pending.len(),
+            1,
+            "the missile must not fire during the caster's own turn"
+        );
+        assert!(after_white.board.get(cell("d1")).is_some());
+        assert!(after_white.board.get(cell("e8")).is_some());
+
+        // Black replies; the turn flips back to White, which is the owner turn
+        // start the reservation was waiting for.
+        let after_black = engine
+            .apply(
+                &after_white,
+                Action::Move(crate::MoveAction::new(cell("f6"), cell("g4"), None)),
+            )
+            .unwrap()
+            .state;
+        assert_eq!(after_black.turn, Player::White);
+        assert_eq!(after_black.turns_taken[1], 1);
+        assert!(after_black.card_runtime.icbm_pending.is_empty());
+        assert!(after_black.board.get(cell("d1")).is_none());
+        assert!(after_black.board.get(cell("e8")).is_none());
+    }
 }

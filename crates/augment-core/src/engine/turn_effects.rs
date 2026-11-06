@@ -217,9 +217,8 @@ impl Engine {
             state.card_runtime.shielded_piece_ids.insert(piece_id);
         }
 
-        // ICBM reserves a queen identity, then sacrifices it and blasts the target
-        // at the next owner turn start. The card owns the settlement.
-        self.settle_icbm(state, actor, events);
+        // ICBM fires at the owner's next turn start, which the delayed turn-start
+        // settlement handles; it must not fire at the end of the caster's turn.
 
         if let Some(due_ply) = state.card_runtime.ultimatum {
             if state.ply >= due_ply {

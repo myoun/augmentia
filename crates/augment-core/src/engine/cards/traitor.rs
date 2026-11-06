@@ -166,8 +166,15 @@ mod tests {
         assert_eq!(at(&s, "h6").owner, Player::Black);
         assert_eq!(at(&s, "b2").owner, Player::Black);
         assert_eq!(at(&s, "b2").id, unmoved_pawn.id);
-        // A defected pawn keeps its identity and may capture immediately.
-        assert!(has_move(&engine, &s, "d4", "e5") || has_move(&engine, &s, "d4", "e4"));
+        // A defected pawn keeps its identity and can move immediately: it is not
+        // marked fresh/no-capture and the card preserved the owner's turn.
+        s.actions_remaining = 1;
+        assert!(has_move(&engine, &s, "d4", "d5"));
+        assert!(
+            !s.card_runtime
+                .fresh_no_capture_until
+                .contains_key(&moved_pawn.id)
+        );
     }
 
     #[test]

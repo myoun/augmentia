@@ -74,7 +74,7 @@ fn play(
         .iter_mut()
         .find(|card| card.instance_id == instance_id && card.owner == actor)
         .ok_or_else(|| EngineError::Invariant("collapse card instance is missing".to_owned()))?;
-    card.available_after_turn = Some(state.turns_taken[actor.index()]);
+    card.available_after_turn = Some(state.turns_taken[actor.index()].saturating_add(1));
     Ok(())
 }
 
@@ -95,11 +95,16 @@ fn eligibility(_: &GameState, _: Player, _: AcquisitionContext) -> CardEligibili
 impl Engine {
     /// Collapse the current outer ring after the owner's next move completes.
     ///
-    /// The owner arms the card during their turn; settlement must run at that
-    /// owner's turn end (after the move has been applied, before the board is
-    /// handed over). Mirror `v9ApplyCollapse`: remove every piece on the ring,
-    /// drop ring terrain and spawn reservations, advance the collapse depth, and
-    /// flip the legacy border flag.
+    /// Upstream (`collapse()` + `resolveWorkerPendingCollapse`) queues the owner
+    /// in `collapsePending` and fires the ring only once the turn has flipped
+    /// back to that owner, i.e. at the owner's **next turn start** — after the
+    /// opponent has replied. The card stamps `available_after_turn` with
+    /// `turns_taken + 1`; because `turns_taken` is incremented when the owner's
+    /// turn ends, that due turn is exactly the next owner turn start.
+    ///
+    /// Mirrors `v9ApplyCollapse`: remove every piece on the ring, drop ring
+    /// terrain and spawn reservations, advance the collapse depth, and flip the
+    /// legacy border flag.
     pub(in crate::engine) fn settle_collapse(
         &self,
         state: &mut GameState,
@@ -298,6 +303,7 @@ mod tests {
             ("d4", Player::White, PieceKind::Rook),
         ]));
         let armed_state = arm(&engine, &state);
+        assert_eq!(armed_state.cards[0].available_after_turn, Some(1));
         // The opponent's boundary must not fire the owner's collapse.
         let mut waiting = armed_state.clone();
         engine.settle_collapse(&mut waiting, Player::Black, &mut Vec::new());
@@ -305,7 +311,9 @@ mod tests {
         assert_eq!(waiting.board.iter().count(), 5);
         assert!(armed(&waiting.cards[0]));
 
+        // The owner's turn now completes, which is what the due turn waits for.
         let mut next = waiting.clone();
+        next.turns_taken[0] = 1;
         let mut events = Vec::new();
         engine.settle_collapse(&mut next, Player::White, &mut events);
         assert!(next.card_runtime.collapsed_files_ranks);
@@ -393,6 +401,8 @@ mod tests {
             });
         let armed_state = arm(&engine, &state);
         let mut next = armed_state;
+        // Settlement is due once the owner's turn has completed.
+        next.turns_taken[0] = 1;
         engine.settle_collapse(&mut next, Player::White, &mut Vec::new());
         for square in [cell("a5"), cell("h5"), cell("e1")] {
             assert!(!next.card_runtime.barricades.contains(&square));
@@ -440,6 +450,7 @@ mod tests {
             assert_eq!(next.rule_runtime.collapse_depth, depth);
             let armed_state = arm(&engine, &next);
             next = armed_state;
+            next.turns_taken[0] += 1;
             engine.settle_collapse(&mut next, Player::White, &mut Vec::new());
             next.cards[0].charges = 1;
             next.cards[0].available_after_turn = None;
@@ -463,5 +474,72 @@ mod tests {
             .is_err()
         );
         assert_eq!(capped, before);
+    }
+
+    /// Boundary contract test. Collapse is armed on the owner's turn and the ring
+    /// falls once that owner's turn has completed and the turn has flipped back,
+    /// which is the owner's next turn start (upstream `resolveWorkerPendingCollapse`
+    /// runs after `advanceWorkerTurn`). Until the Lead wires `settle_collapse`
+    /// into that boundary this drives the same sequence by hand.
+    #[test]
+    fn collapse_waits_for_the_owners_next_completed_move() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("c3", Player::White, PieceKind::Knight),
+            ("a5", Player::Black, PieceKind::Rook),
+            ("f6", Player::Black, PieceKind::Knight),
+        ]);
+        state = engine
+            .grant_card(&state, 1, crate::COLLAPSE, Player::White)
+            .unwrap()
+            .state;
+        state = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(armed(&state.cards[0]));
+        assert!(!state.card_runtime.collapsed_files_ranks);
+
+        // The card was played while White is still mid-turn, so nothing settles
+        // yet: not for the opponent, and not for White's own unfinished turn.
+        engine.settle_collapse(&mut state, Player::Black, &mut Vec::new());
+        engine.settle_collapse(&mut state, Player::White, &mut Vec::new());
+        assert!(!state.card_runtime.collapsed_files_ranks);
+        assert!(state.board.get(cell("a5")).is_some());
+
+        // White moves; its turn completes and the boundary is reached.
+        state = engine
+            .apply(
+                &state,
+                Action::Move(crate::MoveAction::new(cell("c3"), cell("d5"), None)),
+            )
+            .unwrap()
+            .state;
+        assert_eq!(state.turns_taken[0], 1);
+        engine.settle_collapse(&mut state, Player::White, &mut Vec::new());
+        assert_eq!(state.rule_runtime.collapse_depth, 1);
+        assert!(state.card_runtime.collapsed_files_ranks);
+        assert!(state.board.get(cell("a5")).is_none());
+        assert!(state.board.get(cell("d5")).is_some());
+        assert_eq!(
+            state
+                .board
+                .iter()
+                .filter(|(square, _)| {
+                    matches!(square.file(), 0 | 7) || matches!(square.rank(), 0 | 7)
+                })
+                .count(),
+            0
+        );
+        // Armed marker consumed, so the next boundary is a no-op.
+        assert!(!armed(&state.cards[0]));
+        engine.settle_collapse(&mut state, Player::White, &mut Vec::new());
+        assert_eq!(state.rule_runtime.collapse_depth, 1);
     }
 }

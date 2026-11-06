@@ -15,9 +15,9 @@ struct Declared {
 
 /// Enumeration guard. The source client builds a declaration incrementally from a
 /// prefix, but an `Action` carries the complete square list, so every legal chain
-/// must be materialised here. Chains are truncated at this many actions to keep
-/// `legal_actions` cheap; single pairs are always complete.
-const MAX_ENUMERATED_ACTIONS: usize = 256;
+/// must be materialised here. Depth 1 and 2 are always complete; depth 3 is capped
+/// because a full army makes it combinatorial.
+const MAX_CHAIN_ACTIONS: usize = 512;
 
 fn is_capture(engine: &Engine, state: &GameState, piece: Piece, to: Square) -> bool {
     if engine.board_piece_at(state, to).is_some() {
@@ -88,6 +88,10 @@ fn apply_declared(state: &mut GameState, declared: Declared) {
     state.card_runtime.moved_piece_ids.insert(piece.id);
 }
 
+/// Enumeration guard. The source client builds a declaration incrementally from a
+/// prefix, but an `Action` carries the complete square list, so every legal chain
+/// must be materialised for `legal_actions`. Depth 1 and 2 are always complete;
+/// depth 3 is capped because a full army makes it combinatorial.
 fn push_action(card: &CardInstance, path: &[Square], out: &mut Vec<Action>) {
     out.push(Action::UseCard {
         instance_id: card.instance_id,
@@ -95,56 +99,59 @@ fn push_action(card: &CardInstance, path: &[Square], out: &mut Vec<Action>) {
     });
 }
 
-fn enumerate_chains(
-    engine: &Engine,
-    state: &GameState,
-    actor: Player,
-    card: &CardInstance,
-    used: &mut Vec<u32>,
-    path: &mut Vec<Square>,
-    out: &mut Vec<Action>,
-) {
-    if used.len() >= 3 || out.len() >= MAX_ENUMERATED_ACTIONS {
-        return;
-    }
-    for declared in declarations(engine, state, actor) {
-        if used.contains(&declared.piece_id) {
-            continue;
-        }
-        let mut next = state.clone();
-        apply_declared(&mut next, declared);
-        used.push(declared.piece_id);
-        path.push(declared.from);
-        path.push(declared.to);
-        if used.len() >= 2 {
-            push_action(card, path, out);
-        }
-        enumerate_chains(engine, &next, actor, card, used, path, out);
-        if out.len() >= MAX_ENUMERATED_ACTIONS {
-            return;
-        }
-        path.truncate(path.len() - 2);
-        used.pop();
-    }
-}
-
 fn actions(engine: &Engine, state: &GameState, card: &CardInstance, out: &mut Vec<Action>) {
     if state.turn != card.owner {
         return;
     }
-    let singles = declarations(engine, state, card.owner);
-    for declared in &singles {
+    let firsts = declarations(engine, state, card.owner);
+    for declared in &firsts {
         push_action(card, &[declared.from, declared.to], out);
     }
-    enumerate_chains(
-        engine,
-        state,
-        card.owner,
-        card,
-        &mut Vec::new(),
-        &mut Vec::new(),
-        out,
-    );
+    // Depth 2 is exhaustive so every one- and two-move declaration is reachable.
+    let mut pairs = Vec::new();
+    for first in &firsts {
+        let mut after_first = state.clone();
+        apply_declared(&mut after_first, *first);
+        for second in declarations(engine, &after_first, card.owner) {
+            if second.piece_id == first.piece_id {
+                continue;
+            }
+            pairs.push((*first, second));
+            push_action(card, &[first.from, first.to, second.from, second.to], out);
+        }
+    }
+    // Depth 3 is capped: a full army makes the product combinatorially large.
+    let mut emitted = 0_usize;
+    for (first, second) in &pairs {
+        if emitted >= MAX_CHAIN_ACTIONS {
+            return;
+        }
+        let mut after_first = state.clone();
+        apply_declared(&mut after_first, *first);
+        let mut after_second = after_first.clone();
+        apply_declared(&mut after_second, *second);
+        for third in declarations(engine, &after_second, card.owner) {
+            if third.piece_id == first.piece_id || third.piece_id == second.piece_id {
+                continue;
+            }
+            if emitted >= MAX_CHAIN_ACTIONS {
+                return;
+            }
+            emitted += 1;
+            push_action(
+                card,
+                &[
+                    first.from,
+                    first.to,
+                    second.from,
+                    second.to,
+                    third.from,
+                    third.to,
+                ],
+                out,
+            );
+        }
+    }
 }
 
 /// Validate one declared pair against the current board. Returns the declared
@@ -329,21 +336,20 @@ mod tests {
     #[test]
     fn premove_offers_chains_only_in_an_order_the_board_allows() {
         let (engine, state) = with_premove(&[
-            ("c1", Player::White, PieceKind::Bishop),
-            ("d2", Player::White, PieceKind::Knight),
-            ("d4", Player::Black, PieceKind::Pawn),
+            ("b1", Player::White, PieceKind::Rook),
+            ("b2", Player::White, PieceKind::Pawn),
         ]);
         let pairs = offered(&engine, &state);
         let squares =
             |pair: &[&str]| -> Vec<Square> { pair.iter().map(|sq| sq.parse().unwrap()).collect() };
-        // d2->d3 opens the c1 bishop's diagonal, so the knight-first order is legal.
+        // The pawn steps first and clears b2, so the rook may then take it.
         assert!(
-            pairs.contains(&squares(&["d2", "d3", "c1", "b2"])),
+            pairs.contains(&squares(&["b2", "b3", "b1", "b2"])),
             "the chain must be validated against the intermediate board"
         );
-        // The bishop-first order is not: c1 has no open diagonal yet.
+        // The reverse order is not: b1->b2 is a capture while the pawn still sits there.
         assert!(
-            !pairs.contains(&squares(&["c1", "b2", "d2", "d3"])),
+            !pairs.contains(&squares(&["b1", "b2", "b2", "b3"])),
             "a declared move that was illegal first must not be offered"
         );
     }
@@ -419,15 +425,16 @@ mod tests {
     #[test]
     fn premove_blocks_captures_through_the_resolution_turn() {
         let (engine, mut state) = with_premove(&[
-            ("a1", Player::White, PieceKind::Rook),
+            ("a2", Player::White, PieceKind::Rook),
             ("a6", Player::Black, PieceKind::Pawn),
         ]);
         // The rook can declare a quiet move but not the capture on a6.
-        let rejected = use_squares(&engine, &state, &["a1", "a6"]);
+        let rejected = use_squares(&engine, &state, &["a2", "a6"]);
         assert!(rejected.is_err(), "a declared capture must be rejected");
-        state = use_squares(&engine, &state, &["a1", "a4"]).unwrap();
+        state = use_squares(&engine, &state, &["a2", "a3"]).unwrap();
         handoff(&engine, &mut state);
         handoff(&engine, &mut state);
+        assert_eq!(state.turn, Player::White);
         assert!(
             state.card_runtime.free_move_no_capture[Player::White.index()],
             "the owner cannot capture during their next turn"
@@ -439,6 +446,10 @@ mod tests {
                 .iter()
                 .any(|action| matches!(action, Action::Move(movement) if movement.to == "a6".parse().unwrap())),
             "capturing the pawn must be illegal during the no-capture turn"
+        );
+        assert!(
+            state.card_runtime.pending_premoves.is_empty(),
+            "the declaration has resolved"
         );
     }
 

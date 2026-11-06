@@ -49,10 +49,14 @@ fn historical_turn_exclusivity_does_not_leak_into_current_rules() {
         let historical = ruleset_card("augment_chess_20260915", id).unwrap();
         assert!(historical.turn_exclusive);
     }
-    assert!(ruleset_card(LATEST_RULESET_ID, augment_core::PREMOVE).is_none());
-    assert!(
-        !ruleset_card(LATEST_RULESET_ID, augment_core::TROLLEY)
-            .unwrap()
-            .turn_exclusive
-    );
+    // Both cards are now ported into the current profile, and neither may inherit
+    // the September turn-exclusive policy: the current contract preserves the turn.
+    for id in [augment_core::PREMOVE, augment_core::TROLLEY] {
+        let current = ruleset_card(LATEST_RULESET_ID, id)
+            .unwrap_or_else(|| panic!("{id} should be ported into the current profile"));
+        assert!(
+            !current.turn_exclusive,
+            "{id} inherited historical exclusivity"
+        );
+    }
 }

@@ -153,7 +153,6 @@ impl Engine {
         }
         self.resolve_othello_all(state, actor, events);
     }
-
     fn resolve_othello_all(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         for (square, mut piece) in candidates(state, actor) {
             if self.is_royal_piece(state, piece) || piece.kind == PieceKind::Vip {
@@ -212,7 +211,13 @@ mod tests {
         use_at(&mut s, &engine, crate::OTHELLO, ActionTarget::None);
         // Nothing converts until the owner's turn actually ends.
         assert_eq!(at(&s, "d4").owner, Player::Black);
-        engine.settle_othello(&mut s, Player::White, &mut Vec::new());
+        assert!(
+            s.cards
+                .iter()
+                .any(|card| card.definition_id == crate::OTHELLO && armed(card))
+        );
+        // The real turn-end lifecycle (settle_delayed_turn_end) is what fires it.
+        handoff(&engine, &mut s);
         assert_eq!(at(&s, "d4").owner, Player::White);
         // Vertically bracketed too: c5/d5/e5.
         assert_eq!(at(&s, "d5").owner, Player::White);
@@ -227,14 +232,45 @@ mod tests {
     fn othello_ignores_pieces_that_are_not_between_two_friendly_pieces() {
         let engine = Engine::bundled_latest().unwrap();
         let mut s = position(&[
+            ("c4", Player::White, PieceKind::Rook),
             ("d4", Player::Black, PieceKind::Knight),
-            ("d5", Player::White, PieceKind::Rook),
+            ("e4", Player::White, PieceKind::Rook),
             ("d6", Player::Black, PieceKind::Rook),
         ]);
         use_at(&mut s, &engine, crate::OTHELLO, ActionTarget::None);
         engine.settle_othello(&mut s, Player::White, &mut Vec::new());
-        assert_eq!(at(&s, "d4").owner, Player::Black);
+        // Bracketed d4 converts, the unbracketed d6 rook stays.
+        assert_eq!(at(&s, "d4").owner, Player::White);
         assert_eq!(at(&s, "d6").owner, Player::Black);
+
+        // A position with no bracketed enemy piece cannot play the card at all.
+        let base = position(&[
+            ("d4", Player::Black, PieceKind::Knight),
+            ("d5", Player::White, PieceKind::Rook),
+        ]);
+        let none = engine
+            .grant_card(&base, 2, crate::OTHELLO, Player::White)
+            .unwrap()
+            .state;
+        assert!(
+            !engine
+                .legal_actions(&none)
+                .unwrap()
+                .iter()
+                .any(|action| matches!(action, Action::UseCard { .. }))
+        );
+        assert!(
+            engine
+                .apply(
+                    &none,
+                    Action::UseCard {
+                        instance_id: 2,
+                        target: ActionTarget::None,
+                    },
+                )
+                .is_err()
+        );
+        assert!(none.card_runtime.vip_pending.is_empty());
     }
 
     #[test]

@@ -4480,6 +4480,7 @@ impl Engine {
     ) {
         self.settle_grudge_captures(state, moving_piece, before, runtime_before, events);
         self.clean_pawn_chains(state, before);
+        self.clean_card_chains(state);
         self.settle_check_objectives(state);
         self.release_seal_after_move(state, moving_piece, before);
         self.settle_poison_captures(
@@ -7938,6 +7939,14 @@ impl Engine {
                         actions,
                     );
                 }
+            }
+        }
+
+        // Last-dash Charge: an armed pawn may advance two or three squares
+        // straight ahead, stopping at the first blocked square.
+        if state.card_runtime.charge_pawns.contains(&piece.id) {
+            for to in self.charge_advance_destinations(state, piece, from) {
+                self.push_card_pawn_move(state, piece, from, to, promotion_rank, actions);
             }
         }
 

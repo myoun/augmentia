@@ -709,8 +709,18 @@ impl Engine {
                     actions.push(Action::Move(MoveAction::new(from, landing, None)));
                 }
             }
+            // Pawn Leap vaults over an adjacent enemy piece and lands two squares
+            // forward; it never captures that way (current contract, replacing the
+            // old knight-offset behavior). The historical rulesets keep the old
+            // knight-offset leap through the legacy path.
             if state.card_runtime.pawn_leap[owner] {
-                self.generate_leaper_moves(state, from, piece, KNIGHT_OFFSETS, actions);
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    for to in self.leap_destinations(state, piece, from) {
+                        actions.push(Action::Move(MoveAction::new(from, to, None)));
+                    }
+                } else {
+                    self.generate_leaper_moves(state, from, piece, KNIGHT_OFFSETS, actions);
+                }
             }
             if state.card_runtime.retreat[owner] {
                 let backward = if piece.owner == Player::White { -1 } else { 1 };

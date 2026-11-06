@@ -306,4 +306,55 @@ mod tests {
         // The reservation no longer blocks adjacent squares for landing.
         assert!(engine.card_landing_open(&state, cell("e4")));
     }
+
+    /// End-to-end through the engine's real turn loop: play the promoted card,
+    /// then let two counted moves pass so the existing consumer spawns it.
+    #[test]
+    fn lobster_spawns_through_the_wired_engine_turn_loop() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("b1", Player::White, PieceKind::Knight),
+            ("g8", Player::Black, PieceKind::Knight),
+        ]);
+        state = engine
+            .grant_card(&state, 1, crate::LOBSTER, Player::White)
+            .unwrap()
+            .state;
+        state = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::Square(cell("e5")),
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(state.card_runtime.pending_lobsters.len(), 1);
+        let due = state.card_runtime.pending_lobsters[0].due_ply;
+        assert_eq!(due, state.ply + 2);
+
+        // Walk balanced moves until the pawn lands, never past its deadline.
+        for _ in 0..4 {
+            if state.board.get(cell("e5")).is_some() {
+                break;
+            }
+            let action = if state.turn == Player::White {
+                Action::Move(crate::MoveAction::new(cell("b1"), cell("c3"), None))
+            } else {
+                Action::Move(crate::MoveAction::new(cell("g8"), cell("f6"), None))
+            };
+            if !engine.legal_actions(&state).unwrap().contains(&action) {
+                break;
+            }
+            state = engine.apply(&state, action).unwrap().state;
+        }
+        let spawned = state
+            .board
+            .get(cell("e5"))
+            .expect("the lobster must spawn once its reserved ply arrives");
+        assert_eq!(spawned.kind, PieceKind::Lobster);
+        assert_eq!(spawned.owner, Player::White);
+        assert!(state.card_runtime.pending_lobsters.is_empty());
+    }
 }

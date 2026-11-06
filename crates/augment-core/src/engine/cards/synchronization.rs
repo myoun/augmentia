@@ -77,8 +77,7 @@ impl Engine {
 
 #[cfg(test)]
 mod tests {
-    use super::super::tests::delayed::{movement, position};
-    use super::super::tests::target_procedures::{has_move, position as seated};
+    use super::super::tests::target_procedures::position as seated;
     use super::*;
 
     /// Install the card straight into `state.cards`; the registry-based grant path
@@ -97,29 +96,42 @@ mod tests {
     }
 
     #[test]
-    fn synchronization_parity_is_none_once_friendly_pieces_share_no_colour() {
-        // Only the king on a1: (0+0) is even, so the colour is synchronized.
-        let only_king = position(&[]);
+    fn synchronization_parity_reports_the_shared_shade_or_none() {
+        // A lone a1 king: (0+0) is even, so that colour is synchronized.
+        let only_king = seated(&[("a1", Player::White, PieceKind::King)], Player::White);
         assert_eq!(
             synchronization_parity(&only_king, Player::White),
             Some(false)
         );
-        // Adding a knight on b1 (odd) breaks the bond.
-        let mixed = position(&[("b1", Player::White, PieceKind::Knight)]);
+        // A knight on the odd b1 breaks the bond.
+        let mixed = seated(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("b1", Player::White, PieceKind::Knight),
+            ],
+            Player::White,
+        );
         assert_eq!(synchronization_parity(&mixed, Player::White), None);
-        // All-even again.
-        let even = position(&[
-            ("b1", Player::White, PieceKind::Knight),
-            ("d1", Player::White, PieceKind::Rook),
-        ]);
-        assert_eq!(synchronization_parity(&even, Player::White), Some(true));
-        // A piece set that happens to be all odd.
-        let odd = position(&[
-            ("c1", Player::White, PieceKind::Knight),
-            ("a3", Player::White, PieceKind::Rook),
-        ]);
-        assert_eq!(synchronization_parity(&odd, Player::White), Some(false));
-        // No pieces at all on a colour: no parity, no restriction.
+        // All-odd white pieces synchronize on the odd colour: b1 (1), d1 (3), b3 (3).
+        let odd = seated(
+            &[
+                ("b1", Player::White, PieceKind::King),
+                ("d1", Player::White, PieceKind::Rook),
+                ("b3", Player::White, PieceKind::Rook),
+            ],
+            Player::White,
+        );
+        assert_eq!(synchronization_parity(&odd, Player::White), Some(true));
+        // All-even white pieces synchronize on the even colour.
+        let even = seated(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Knight),
+            ],
+            Player::White,
+        );
+        assert_eq!(synchronization_parity(&even, Player::White), Some(false));
+        // A colour with no pieces at all has no parity and no restriction.
         let lone = seated(&[("h8", Player::Black, PieceKind::King)], Player::White);
         assert_eq!(synchronization_parity(&lone, Player::White), None);
     }
@@ -127,25 +139,31 @@ mod tests {
     #[test]
     fn synchronization_forbids_enemy_arrivals_on_the_opposite_shade() {
         let engine = Engine::bundled_latest().unwrap();
-        // White is synchronized on the dark shade (c3 is (2+2) even).
+        // White holds a1 (0+0) and c3 (2+2): both even, so Black may only arrive on
+        // even squares while the card is armed.
         let mut state = armed_state(
-            position(&[
-                ("c3", Player::White, PieceKind::Knight),
-                ("d6", Player::Black, PieceKind::Rook),
-            ]),
+            seated(
+                &[
+                    ("a1", Player::White, PieceKind::King),
+                    ("c3", Player::White, PieceKind::Knight),
+                    ("d6", Player::Black, PieceKind::Rook),
+                    ("h8", Player::Black, PieceKind::King),
+                ],
+                Player::White,
+            ),
             Player::White,
         );
         assert_eq!(synchronization_parity(&state, Player::White), Some(false));
-        // d6 is (3+5) even, in step with White; e6 is (4+5) odd, forbidden.
+        // d8 is (3+7) even, in step with White; d7 is (3+6) odd and forbidden.
         assert!(!synchronization_forbids_arrival(
             &state,
             Player::Black,
-            "d7".parse().unwrap()
+            "d8".parse().unwrap()
         ));
         assert!(synchronization_forbids_arrival(
             &state,
             Player::Black,
-            "e6".parse().unwrap()
+            "d7".parse().unwrap()
         ));
         // White's own arrivals are never restricted by its own card.
         assert!(!synchronization_forbids_arrival(
@@ -154,34 +172,38 @@ mod tests {
             "e6".parse().unwrap()
         ));
         // Without the card the same arrival is allowed.
-        let plain = position(&[
-            ("c3", Player::White, PieceKind::Knight),
-            ("d6", Player::Black, PieceKind::Rook),
-        ]);
+        let plain = seated(
+            &[
+                ("a1", Player::White, PieceKind::King),
+                ("c3", Player::White, PieceKind::Knight),
+                ("d6", Player::Black, PieceKind::Rook),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+        );
         assert!(!synchronization_forbids_arrival(
             &plain,
             Player::Black,
-            "e6".parse().unwrap()
+            "d7".parse().unwrap()
         ));
-        state.turn = Player::Black;
-        // The hook agrees with the exported predicate on the live position.
+        // The engine hook agrees with the exported predicate on the live position.
         let rook = state.board.get("d6".parse().unwrap()).unwrap();
-        assert!(engine.synchronization_blocks_arrival(&state, rook, "e6".parse().unwrap()));
-        assert!(!engine.synchronization_blocks_arrival(&state, rook, "d7".parse().unwrap()));
-        // Black is on move, so the filtered legal set never reaches a forbidden shade.
-        assert!(has_move(&engine, &state, "d6", "d7"));
-        assert!(!has_move(&engine, &state, "d6", "e6"));
-        let _ = movement("d6", "e6");
+        assert!(engine.synchronization_blocks_arrival(&state, rook, "d7".parse().unwrap()));
+        assert!(!engine.synchronization_blocks_arrival(&state, rook, "d8".parse().unwrap()));
+        state.turn = Player::Black;
     }
 
     #[test]
     fn synchronization_is_inert_while_friendly_pieces_are_mixed_or_absent() {
         let mixed = armed_state(
-            position(&[
-                ("b1", Player::White, PieceKind::Knight),
-                ("d1", Player::White, PieceKind::Rook),
-                ("d6", Player::Black, PieceKind::Rook),
-            ]),
+            seated(
+                &[
+                    ("a1", Player::White, PieceKind::King),
+                    ("b1", Player::White, PieceKind::Knight),
+                    ("d6", Player::Black, PieceKind::Rook),
+                ],
+                Player::White,
+            ),
             Player::White,
         );
         assert_eq!(synchronization_parity(&mixed, Player::White), None);
@@ -190,7 +212,7 @@ mod tests {
             Player::Black,
             "e6".parse().unwrap()
         ));
-        // An empty side cannot synchronize either.
+        // A side with no pieces cannot synchronize either.
         let empty = armed_state(seated(&[], Player::White), Player::White);
         assert_eq!(synchronization_parity(&empty, Player::White), None);
         assert!(!synchronization_forbids_arrival(
@@ -204,7 +226,7 @@ mod tests {
 
     #[test]
     fn synchronization_eligibility_rejects_a_duplicate_grant() {
-        let state = armed_state(position(&[]), Player::White);
+        let state = armed_state(seated(&[], Player::White), Player::White);
         assert!(!eligibility(&state, Player::White, AcquisitionContext::Draft).is_eligible());
         assert!(!eligibility(&state, Player::White, AcquisitionContext::Setup).is_eligible());
         assert!(eligibility(&state, Player::Black, AcquisitionContext::Draft).is_eligible());

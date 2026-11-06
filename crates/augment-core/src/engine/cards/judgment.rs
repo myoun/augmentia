@@ -94,26 +94,17 @@ mod tests {
     fn judgment_targets_every_piece_tied_for_the_highest_capture_count() {
         let engine = Engine::bundled_latest().unwrap();
         let mut s = position(&[
-            ("a1", Player::White, PieceKind::Rook),
-            ("a8", Player::Black, PieceKind::Rook),
-            ("h1", Player::White, PieceKind::Bishop),
+            ("b1", Player::White, PieceKind::Rook),
+            ("b8", Player::Black, PieceKind::Rook),
+            ("g1", Player::White, PieceKind::Bishop),
         ]);
-        judged(&mut s, "a1", 3);
-        judged(&mut s, "a8", 3);
-        judged(&mut s, "h1", 2);
+        judged(&mut s, "b1", 3);
+        judged(&mut s, "b8", 3);
+        judged(&mut s, "g1", 2);
         s = engine
             .grant_card(&s, 1, crate::JUDGMENT, Player::White)
             .unwrap()
             .state;
-        eprintln!(
-            "legal: {:?} turn={:?} status={:?} phase={:?} acts={} cards={:?}",
-            engine.legal_actions(&s).unwrap(),
-            s.turn,
-            s.status,
-            s.phase,
-            s.actions_remaining,
-            s.cards
-        );
         let targets: Vec<Square> = engine
             .legal_actions(&s)
             .unwrap()
@@ -126,19 +117,19 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(targets, vec!["a1".parse().unwrap(), "a8".parse().unwrap()]);
+        assert_eq!(targets, vec!["b1".parse().unwrap(), "b8".parse().unwrap()]);
         let after = engine
             .apply(
                 &s,
                 Action::UseCard {
                     instance_id: 1,
-                    target: single("a8"),
+                    target: single("b8"),
                 },
             )
             .unwrap()
             .state;
-        assert!(after.board.get("a8".parse().unwrap()).is_none());
-        assert!(after.board.get("a1".parse().unwrap()).is_some());
+        assert!(after.board.get("b8".parse().unwrap()).is_none());
+        assert!(after.board.get("b1".parse().unwrap()).is_some());
         assert_eq!(after.status, GameStatus::Ongoing);
     }
 
@@ -146,26 +137,17 @@ mod tests {
     fn judgment_is_unavailable_below_two_captures_and_rejects_large_bodies() {
         let engine = Engine::bundled_latest().unwrap();
         let mut s = position(&[
-            ("a1", Player::White, PieceKind::Rook),
-            ("a8", Player::Black, PieceKind::Rook),
+            ("b1", Player::White, PieceKind::Rook),
+            ("b8", Player::Black, PieceKind::Rook),
             ("d4", Player::Black, PieceKind::BigRook),
         ]);
-        judged(&mut s, "a1", 2);
-        judged(&mut s, "a8", 1);
+        judged(&mut s, "b1", 2);
+        judged(&mut s, "b8", 1);
         judged(&mut s, "d4", 5);
         s = engine
             .grant_card(&s, 1, crate::JUDGMENT, Player::White)
             .unwrap()
             .state;
-        eprintln!(
-            "legal: {:?} turn={:?} status={:?} phase={:?} acts={} cards={:?}",
-            engine.legal_actions(&s).unwrap(),
-            s.turn,
-            s.status,
-            s.phase,
-            s.actions_remaining,
-            s.cards
-        );
         let targets: Vec<Square> = engine
             .legal_actions(&s)
             .unwrap()
@@ -178,7 +160,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(targets, vec!["a1".parse().unwrap()]);
+        assert_eq!(targets, vec!["b1".parse().unwrap()]);
     }
 
     #[test]

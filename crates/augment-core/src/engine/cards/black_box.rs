@@ -148,6 +148,21 @@ fn try_trigger(
         {
             attempt.request_turn_end();
         }
+        // The probe temporarily re-labelled the source instance as the nested
+        // card and gave it a charge. Restore the real box state, because the
+        // outer engine already consumed the real charge before calling `play`.
+        if let Some(entry) = attempt
+            .cards
+            .iter_mut()
+            .find(|entry| entry.instance_id == source)
+        {
+            entry.definition_id = ID.to_owned();
+            entry.charges = state
+                .cards
+                .iter()
+                .find(|entry| entry.instance_id == source)
+                .map_or(0, |entry| entry.charges);
+        }
         events.extend(attempt_events);
         return Some(attempt);
     }
@@ -170,18 +185,9 @@ fn play(
     }
     shuffle(state, &mut pool, "black-box", events);
     for card_id in pool {
-        let Some(mut triggered) = try_trigger(engine, state, actor, source, card_id, events) else {
+        let Some(triggered) = try_trigger(engine, state, actor, source, card_id, events) else {
             continue;
         };
-        // Restore the source instance: the box itself was consumed by the
-        // caller, and the nested card never joins the inventory.
-        if let Some(entry) = triggered
-            .cards
-            .iter_mut()
-            .find(|card| card.instance_id == source)
-        {
-            entry.definition_id = ID.to_owned();
-        }
         *state = triggered;
         events.push(Event::EffectApplied {
             source_card_instance: source,
@@ -244,6 +250,65 @@ mod tests {
             }
             _ => None,
         })
+    }
+
+    #[test]
+    fn black_box_is_reachable_through_the_engine_and_consumes_its_charge() {
+        let (engine, state) = with_black_box(&[
+            ("d4", Player::White, PieceKind::Rook),
+            ("d8", Player::Black, PieceKind::Queen),
+        ]);
+        let offered = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .filter(|action| matches!(action, Action::UseCard { instance_id: 1, .. }))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            offered.len(),
+            1,
+            "the box offers exactly one targetless use"
+        );
+        let action = offered.into_iter().next().unwrap();
+        let transition = engine.apply(&state, action).unwrap();
+        assert_eq!(
+            transition.state.cards[0].definition_id,
+            crate::BLACK_BOX,
+            "the source instance stays black-box after use"
+        );
+        assert_eq!(
+            transition.state.cards[0].charges, 0,
+            "the box must be consumed"
+        );
+        assert!(
+            triggered(&transition.events).is_some(),
+            "an end-to-end use records the reveal"
+        );
+    }
+
+    #[test]
+    fn black_box_is_not_offered_when_nothing_can_be_triggered() {
+        let (engine, mut state) = with_black_box(&[]);
+        let mut instance = 100;
+        for id in candidates(&state, Player::White) {
+            instance += 1;
+            state.add_card(CardInstance {
+                instance_id: instance,
+                definition_id: id.to_owned(),
+                owner: Player::White,
+                half_stars: 0,
+                charges: 0,
+                available_after_turn: None,
+            });
+        }
+        assert!(
+            !engine
+                .legal_actions(&state)
+                .unwrap()
+                .iter()
+                .any(|action| matches!(action, Action::UseCard { instance_id: 1, .. })),
+            "an empty pool must not be offered"
+        );
     }
 
     #[test]

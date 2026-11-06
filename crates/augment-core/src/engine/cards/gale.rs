@@ -292,4 +292,50 @@ mod tests {
         assert_eq!(first, second);
         assert!(first.0.card_runtime.gale_due_turns[0].is_empty());
     }
+
+    /// End-to-end through the engine's real turn loop: play the promoted card,
+    /// then let the wired turn boundary resolve it after three owner turns.
+    #[test]
+    fn gale_resolves_through_the_wired_engine_boundary() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("d4", Player::White, PieceKind::Rook),
+            ("b1", Player::White, PieceKind::Knight),
+            ("g7", Player::Black, PieceKind::Knight),
+        ]);
+        state = engine
+            .grant_card(&state, 1, crate::GALE, Player::White)
+            .unwrap()
+            .state;
+        state = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        assert_eq!(state.card_runtime.gale_due_turns[0], vec![3]);
+
+        // Neither the caster's own turn end nor the opponent's turns fire it.
+        while state.turns_taken[0] < 2 {
+            handoff(&engine, &mut state);
+        }
+        assert_eq!(state.turns_taken[0], 2);
+        assert!(state.board.get(cell("d4")).is_some());
+        assert_eq!(state.card_runtime.gale_due_turns[0], vec![3]);
+
+        // The third completed owner turn is the due boundary: the isolated white
+        // rook blows away, the friendly minor and the enemy major stay because
+        // both are not isolated majors.
+        while state.turns_taken[0] < 3 {
+            handoff(&engine, &mut state);
+        }
+        assert_eq!(state.turns_taken[0], 3);
+        assert!(state.card_runtime.gale_due_turns[0].is_empty());
+        assert!(state.board.get(cell("d4")).is_none());
+        assert!(state.board.get(cell("b1")).is_some());
+    }
 }

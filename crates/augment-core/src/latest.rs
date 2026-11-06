@@ -339,11 +339,15 @@ mod tests {
         state.turns_taken = [45; 2];
         state = engine.apply(&state, movement("g1", "f3")).unwrap().state;
         assert!(state.deathmatch.is_none());
-        assert!(
-            engine
-                .grant_card(&state, 1, "judgment", Player::White)
-                .is_err()
-        );
+        // Upstream-disabled cards stay rejected no matter how far porting gets.
+        for disabled in ["qxe1", "democracy", "summon-colossus", "underground-bunker"] {
+            assert!(
+                engine
+                    .grant_card(&state, 1, disabled, Player::White)
+                    .is_err(),
+                "{disabled} must stay rejected"
+            );
+        }
         state.applied_rules.push("garden".into());
         assert!(engine.legal_actions(&state).is_err());
     }

@@ -257,6 +257,36 @@ impl Engine {
             }
             _ => true,
         });
+        // A royal already inside its own palace may not step out of it.
+        if state.card_runtime.palaces.contains_key(&piece.owner) {
+            actions.retain(|action| match action {
+                Action::Move(movement) => !self.palace_blocks_move(state, piece, from, movement.to),
+                _ => true,
+            });
+        }
+        // Chain bonds break when the pair separates beyond Chebyshev distance two.
+        if !state.card_runtime.chains.is_empty() {
+            actions.retain(|action| match action {
+                Action::Move(movement) => {
+                    super::chain::chain_allows_move(state, piece.id, movement.to)
+                }
+                _ => true,
+            });
+        }
+        // Synchronization bans enemy arrivals on the opposite square colour while
+        // every friendly piece shares one colour.
+        if state
+            .cards
+            .iter()
+            .any(|c| c.definition_id == crate::SYNCHRONIZATION)
+        {
+            actions.retain(|action| match action {
+                Action::Move(movement) => {
+                    !self.synchronization_blocks_arrival(state, piece, movement.to)
+                }
+                _ => true,
+            });
+        }
         if self.piece_ability_kind(state, piece) == PieceKind::Thief
             && let Some((visited, df, dr)) = state.card_runtime.thief_turn_paths.get(&piece.id)
         {

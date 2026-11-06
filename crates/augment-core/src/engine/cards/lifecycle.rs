@@ -38,6 +38,7 @@ impl Engine {
             state.card_runtime.bishop_infiltration_due[owner.index()] = None;
         }
         self.settle_stake(state, owner);
+        self.settle_palaces(state);
         state
             .card_runtime
             .ice_king
@@ -93,6 +94,7 @@ impl Engine {
             return;
         }
         self.settle_rule_tickets(state, owner, events);
+        self.settle_icbm(state, owner, events);
         self.settle_seal(state, owner, events);
         self.settle_ascension(state, owner, events);
         self.resolve_gomoku_victory(state);
@@ -111,6 +113,8 @@ impl Engine {
         }
         self.settle_greek_gift(state, actor, events);
         self.settle_taboo(state, actor, events);
+        self.settle_collapse(state, actor, events);
+        self.settle_othello(state, actor, events);
         self.resolve_gomoku_victory(state);
     }
 }

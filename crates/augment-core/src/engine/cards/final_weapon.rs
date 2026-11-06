@@ -60,13 +60,6 @@ pub(in crate::engine) fn forced_promotion_rank(state: &GameState, owner: Player)
     armed(state, owner).then(|| final_rank(owner))
 }
 
-/// `Engine::generate_pawn_moves` hook: whether the mover's promotion rank is
-/// locked to the last rank by final-weapon. Live `shouldPromote` returns on this
-/// flag before `earlyPromotion`/`fastGrowth` can advance the rank.
-pub(in crate::engine) fn locks_promotion_rank(state: &GameState) -> bool {
-    armed(state, state.turn)
-}
-
 /// Whether an amazon promotion must be offered for `owner` on `to`.
 ///
 /// Live `promotionChoicesFor` (JS:359238-359249) and the worker
@@ -83,70 +76,53 @@ pub(in crate::engine) fn amazon_promotion_allowed(
         && to.rank() == final_rank(owner)
 }
 
-/// `Engine::push_card_pawn_move` hook: the extra amazon promotion choice, or
-/// `None`. Only offered on the final rank; the promotion rank itself is locked
-/// separately by `locks_promotion_rank`, so a fast-growth narrowed set still
-/// gains the amazon option (live `workerDeferredPromotionChoices` appends it
-/// after narrowing).
-pub(in crate::engine) fn promotions(state: &GameState, owner: Player) -> Option<PieceKind> {
-    let rank = forced_promotion_rank(state, owner)?;
-    (amazon_promotion_allowed(state, owner, Square::new(0, rank)?)).then_some(PieceKind::Amazon)
-}
+/// Standard promotion set, in the order the engine's pawn generator uses.
+const STANDARD_PROMOTIONS: [PieceKind; 4] = [
+    PieceKind::Knight,
+    PieceKind::Bishop,
+    PieceKind::Rook,
+    PieceKind::Queen,
+];
 
-impl Engine {
-    /// `generate_pawn_moves` hook: true when the moving side has final-weapon
-    /// armed, which locks its promotion rank to the last rank.
-    ///
-    /// Use this inherent method from `engine.rs` rather than the free function:
-    /// `cards::final_weapon` is a private module of `cards`, so only items
-    /// re-exported through an `impl Engine` block are reachable from the parent
-    /// `engine` module without changing `cards/mod.rs`.
-    pub(in crate::engine) fn final_weapon_locks_promotion_rank(&self, state: &GameState) -> bool {
-        locks_promotion_rank(state)
+/// Inserts `kind` before a mutation `Monster` choice, or appends it.
+fn insert_promotion(choices: &mut Vec<PieceKind>, kind: PieceKind) {
+    if choices.contains(&kind) {
+        return;
     }
-
-    /// `push_card_pawn_move` hook: the extra promotion kind final-weapon adds, if
-    /// any. Live appends `"amazon"` to the standard choices on the locked rank.
-    pub(in crate::engine) fn final_weapon_promotions(
-        &self,
-        state: &GameState,
-        owner: Player,
-    ) -> Option<PieceKind> {
-        promotions(state, owner)
-    }
-
-    /// `push_card_pawn_move` hook: appends the amazon choice to `choices` when
-    /// final-weapon allows it on `to`. Inserted before a mutation `Monster`
-    /// choice; no duplicates.
-    pub(in crate::engine) fn append_final_weapon_promotion(
-        &self,
-        state: &GameState,
-        owner: Player,
-        to: Square,
-        choices: &mut Vec<PieceKind>,
-    ) {
-        append_amazon_promotion(state, owner, to, choices);
+    match choices
+        .iter()
+        .position(|existing| *existing == PieceKind::Monster)
+    {
+        Some(index) => choices.insert(index, kind),
+        None => choices.push(kind),
     }
 }
 
 /// Appends the amazon choice to a generated promotion list, mirroring live
-/// ordering: standard choices first, then `amazon`, then `monster` from mutation
-/// (JS:240620-240622 dedups in that order). Amazon is inserted before any
-/// already-appended `Monster` so the caller does not have to order its own
-/// pushes. The result never contains duplicates.
+/// `promotionChoicesFor` (JS:359238-359249):
+/// `[...PROMOTION_TYPES, "amazon", ...mutation]`.
+///
+/// ORDERING: final-weapon also suppresses fast-growth's minor-only narrowing.
+/// Live `isWorkerFastGrowthPromotion` (JS:246255-246266) returns false on the
+/// normal promotion row, and `promotionChoicesFor` only returns
+/// `MINOR_PROMOTION_TYPES` from the `fastGrowthPromotion` branch, which never
+/// fires on the final rank. The engine's `push_card_pawn_move` narrows the list
+/// to knight/bishop whenever `fast_growth` is armed, so this function restores
+/// the full standard set here and reports that the caller must push the amazon
+/// choice through this hook rather than appending it separately.
 pub(in crate::engine) fn append_amazon_promotion(
     state: &GameState,
     owner: Player,
     to: Square,
     choices: &mut Vec<PieceKind>,
 ) {
-    if !amazon_promotion_allowed(state, owner, to) || choices.contains(&PieceKind::Amazon) {
+    if !amazon_promotion_allowed(state, owner, to) {
         return;
     }
-    match choices.iter().position(|kind| *kind == PieceKind::Monster) {
-        Some(index) => choices.insert(index, PieceKind::Amazon),
-        None => choices.push(PieceKind::Amazon),
+    for kind in STANDARD_PROMOTIONS {
+        insert_promotion(choices, kind);
     }
+    insert_promotion(choices, PieceKind::Amazon);
 }
 
 #[cfg(test)]
@@ -243,15 +219,42 @@ mod tests {
         super::append_amazon_promotion(&state, Player::White, final_rank, &mut choices);
         assert_eq!(choices.len(), 5);
 
-        // Fast growth narrows the base choices; amazon is still appended, and it
-        // stays after the base list rather than replacing it.
+        // Fast growth narrows the base choices off the normal promotion row, but
+        // live `promotionChoicesFor` returns the full standard set plus amazon on
+        // the final rank (the `fastGrowthPromotion` branch never fires there).
         let mut fast_growth = armed_state(Player::White);
         fast_growth.card_runtime.fast_growth[Player::White.index()] = true;
-        let mut narrowed = vec![PieceKind::Bishop, PieceKind::Knight];
+        let mut narrowed = vec![PieceKind::Knight, PieceKind::Bishop];
         super::append_amazon_promotion(&fast_growth, Player::White, final_rank, &mut narrowed);
         assert_eq!(
             narrowed,
-            vec![PieceKind::Bishop, PieceKind::Knight, PieceKind::Amazon]
+            vec![
+                PieceKind::Knight,
+                PieceKind::Bishop,
+                PieceKind::Rook,
+                PieceKind::Queen,
+                PieceKind::Amazon,
+            ]
+        );
+        // Mutation's monster stays last.
+        let mut with_monster = vec![
+            PieceKind::Knight,
+            PieceKind::Bishop,
+            PieceKind::Rook,
+            PieceKind::Queen,
+            PieceKind::Monster,
+        ];
+        super::append_amazon_promotion(&fast_growth, Player::White, final_rank, &mut with_monster);
+        assert_eq!(
+            with_monster,
+            vec![
+                PieceKind::Knight,
+                PieceKind::Bishop,
+                PieceKind::Rook,
+                PieceKind::Queen,
+                PieceKind::Amazon,
+                PieceKind::Monster,
+            ]
         );
     }
 

@@ -20,7 +20,6 @@ pub(super) fn palace_bounds(center: Square) -> [Square; 2] {
         Square::new(max_file, max_rank).expect("clipped palace corner"),
     ]
 }
-
 pub(super) fn within(state: &GameState, owner: Player, square: Square) -> bool {
     state
         .card_runtime
@@ -142,11 +141,19 @@ mod tests {
         assert_eq!(bounds[1], "h8".parse().unwrap());
         // The royal is pinned inside; everything else may still cross.
         let king = at(&s, "h8");
-        assert!(engine.palace_blocks_move(&s, king, "h8".parse().unwrap(), "h7".parse().unwrap()));
-        assert!(engine.palace_blocks_move(&s, king, "g7".parse().unwrap(), "g6".parse().unwrap()));
+        assert!(engine.palace_blocks_move(&s, king, "h8".parse().unwrap(), "h6".parse().unwrap()));
+        assert!(engine.palace_blocks_move(&s, king, "g7".parse().unwrap(), "f6".parse().unwrap()));
+        assert!(!engine.palace_blocks_move(&s, king, "h8".parse().unwrap(), "h7".parse().unwrap()));
         let mut pawn = Piece::new(Player::Black, PieceKind::Pawn);
         pawn.id = 999;
         assert!(!engine.palace_blocks_move(&s, pawn, "g7".parse().unwrap(), "g6".parse().unwrap()));
+
+        // The rule is reachable through real legal-move generation: the enemy
+        // king cannot step out of the palace, but in-palace steps stay available.
+        s.turn = Player::Black;
+        assert!(!has_move(&engine, &s, "h8", "h6"));
+        assert!(!has_move(&engine, &s, "h8", "g6"));
+        assert!(has_move(&engine, &s, "h8", "h7") || has_move(&engine, &s, "h8", "g7"));
     }
 
     #[test]
