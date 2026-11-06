@@ -2662,6 +2662,390 @@
         ]
       ],
       "notes": "Suspect one non-king enemy piece and resolve the trial outcome."
+    },
+    {
+      "id": "final-weapon",
+      "stage": 12,
+      "scope": "current amazon promotion and final promotion rank",
+      "source_ranges": [
+        [
+          354634,
+          354638
+        ]
+      ],
+      "notes": "Adds amazon to promotion choices and locks the promotion rank."
+    },
+    {
+      "id": "black-box",
+      "stage": 12,
+      "scope": "current active-card recursion guard and random invocation",
+      "source_ranges": [
+        [
+          201772,
+          201781
+        ],
+        [
+          202261,
+          202272
+        ],
+        [
+          202387,
+          202413
+        ],
+        [
+          354094,
+          354097
+        ]
+      ],
+      "notes": "Active-card pool minus the recursion exclusion set, single random draw."
+    },
+    {
+      "id": "chain",
+      "stage": 12,
+      "scope": "current two-target distance constraint",
+      "source_ranges": [
+        [
+          198102,
+          198117
+        ],
+        [
+          198118,
+          198131
+        ],
+        [
+          355027,
+          355056
+        ]
+      ],
+      "notes": "Two enemy pieces may not separate beyond two squares."
+    },
+    {
+      "id": "charge",
+      "stage": 12,
+      "scope": "current three-square pawn advance with death fallback",
+      "source_ranges": [
+        [
+          198940,
+          198947
+        ],
+        [
+          352598,
+          352607
+        ]
+      ],
+      "notes": "Advance up to three squares; dies if it does not promote."
+    },
+    {
+      "id": "exile",
+      "stage": 12,
+      "scope": "current return-to-start with timed protection",
+      "source_ranges": [
+        [
+          198164,
+          198173
+        ],
+        [
+          198174,
+          198202
+        ],
+        [
+          352961,
+          352979
+        ]
+      ],
+      "notes": "Enemy piece returns to its starting square and is protected until the caster turn ends."
+    },
+    {
+      "id": "gale",
+      "stage": 12,
+      "scope": "current isolated-major removal after three turns",
+      "source_ranges": [
+        [
+          200289,
+          200300
+        ],
+        [
+          348197,
+          348207
+        ]
+      ],
+      "notes": "Remove majors with no other major in the surrounding eight squares."
+    },
+    {
+      "id": "icbm",
+      "stage": 12,
+      "scope": "current queen sacrifice and 3x3 detonation",
+      "source_ranges": [
+        [
+          199038,
+          199046
+        ],
+        [
+          199047,
+          199065
+        ],
+        [
+          353547,
+          353565
+        ]
+      ],
+      "notes": "Reserve a friendly queen, then detonate around the target queen at the next owner turn start."
+    },
+    {
+      "id": "judgment",
+      "stage": 12,
+      "scope": "current most-captures removal",
+      "source_ranges": [
+        [
+          198394,
+          198434
+        ],
+        [
+          202857,
+          202866
+        ],
+        [
+          348669,
+          348713
+        ]
+      ],
+      "notes": "Remove one of the pieces with the highest capture count; royal excluded."
+    },
+    {
+      "id": "leap",
+      "stage": 12,
+      "scope": "current pawn leap over a blocker without capture",
+      "source_ranges": [
+        [
+          353298,
+          353303
+        ]
+      ],
+      "notes": "Pawn may advance over an occupied square but may not capture that way."
+    },
+    {
+      "id": "lobster",
+      "stage": 12,
+      "scope": "current delayed lobster spawn on an empty square",
+      "source_ranges": [
+        [
+          200910,
+          200914
+        ],
+        [
+          200915,
+          200938
+        ],
+        [
+          348722,
+          348739
+        ]
+      ],
+      "notes": "Reserve an empty destination, then spawn the lobster after the delay."
+    },
+    {
+      "id": "mutation",
+      "stage": 12,
+      "scope": "current double-monster promotion",
+      "source_ranges": [
+        [
+          208832,
+          208832
+        ],
+        [
+          214158,
+          214158
+        ]
+      ],
+      "notes": "A promoted pawn may become two friendly monsters when space allows."
+    },
+    {
+      "id": "necromancy",
+      "stage": 12,
+      "scope": "current four-turn revival of a captured piece",
+      "source_ranges": [
+        [
+          200413,
+          200422
+        ],
+        [
+          200423,
+          200454
+        ],
+        [
+          354398,
+          354437
+        ]
+      ],
+      "notes": "Revive a captured friendly piece on a chosen friendly pawn for four plies."
+    },
+    {
+      "id": "palace",
+      "stage": 12,
+      "scope": "current 3x3 royal zone around the enemy king",
+      "source_ranges": [
+        [
+          200771,
+          200786
+        ],
+        [
+          355127,
+          355142
+        ]
+      ],
+      "notes": "Mark the 3x3 around the enemy king as the palace zone."
+    },
+    {
+      "id": "premove",
+      "stage": 12,
+      "scope": "current ordered deferred move declaration",
+      "source_ranges": [
+        [
+          353830,
+          353875
+        ],
+        [
+          201851,
+          201868
+        ]
+      ],
+      "notes": "Up to three ordered moves resolved after the opponent's next move, with no captures."
+    },
+    {
+      "id": "random-roulette",
+      "stage": 12,
+      "scope": "current non-royal major transformation",
+      "source_ranges": [
+        [
+          200210,
+          200262
+        ],
+        [
+          200263,
+          200288
+        ],
+        [
+          353647,
+          353718
+        ]
+      ],
+      "notes": "Convert a chosen non-royal major into a random transformed piece."
+    },
+    {
+      "id": "resolve",
+      "stage": 12,
+      "scope": "current first-moved pawn turn refund",
+      "source_ranges": [
+        [
+          352900,
+          352920
+        ]
+      ],
+      "notes": "The first friendly pawn to move after a pawn is captured does not spend the turn."
+    },
+    {
+      "id": "synchronization",
+      "stage": 12,
+      "scope": "current opposite-colour arrival ban",
+      "source_ranges": [
+        [
+          1351,
+          1351
+        ]
+      ],
+      "notes": "While all friendly pieces share one square colour, enemies may not land on the other colour."
+    },
+    {
+      "id": "traitor",
+      "stage": 12,
+      "scope": "current weakest-moved-enemy conversion",
+      "source_ranges": [
+        [
+          200484,
+          200524
+        ],
+        [
+          354254,
+          354293
+        ]
+      ],
+      "notes": "Convert the weakest enemy piece that has already moved."
+    },
+    {
+      "id": "ultimatum",
+      "stage": 12,
+      "scope": "current four-turn inactivity purge",
+      "source_ranges": [
+        [
+          199066,
+          199078
+        ],
+        [
+          355175,
+          355184
+        ]
+      ],
+      "notes": "After four turns remove every non-king piece that did not move."
+    },
+    {
+      "id": "vanish",
+      "stage": 12,
+      "scope": "current per-turn-end random removal from both sides",
+      "source_ranges": [
+        [
+          200455,
+          200467
+        ],
+        [
+          353542,
+          353546
+        ]
+      ],
+      "notes": "At every turn end remove one random piece per side."
+    },
+    {
+      "id": "zugzwang",
+      "stage": 12,
+      "scope": "current forced enemy king move",
+      "source_ranges": [
+        [
+          348808,
+          348814
+        ]
+      ],
+      "notes": "The opponent's next move must move the king."
+    },
+    {
+      "id": "othello",
+      "stage": 12,
+      "scope": "current turn-end trapped-piece conversion",
+      "source_ranges": [
+        [
+          198282,
+          198336
+        ],
+        [
+          354378,
+          354397
+        ]
+      ],
+      "notes": "At turn end convert enemy pieces caught between two friendly pieces."
+    },
+    {
+      "id": "vip",
+      "stage": 12,
+      "scope": "current three-turn pawn conversion to vip",
+      "source_ranges": [
+        [
+          198948,
+          198957
+        ],
+        [
+          348815,
+          348824
+        ]
+      ],
+      "notes": "Convert a chosen pawn into a vip after three owner turns if it survives."
     }
   ]
 }

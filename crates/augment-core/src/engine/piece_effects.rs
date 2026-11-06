@@ -1731,29 +1731,9 @@ impl Engine {
             }
         }
 
-        let current_turn = state.turns_taken[owner];
-        let gale_due = state.card_runtime.gale_due_turns[owner]
-            .iter()
-            .any(|due| *due <= current_turn);
-        state.card_runtime.gale_due_turns[owner].retain(|due| *due > current_turn);
-        if gale_due {
-            let isolated = state
-                .board
-                .iter()
-                .filter(|(square, piece)| {
-                    piece.owner == actor
-                        && !KING_OFFSETS.iter().any(|(file, rank)| {
-                            square
-                                .offset(*file, *rank)
-                                .and_then(|near| state.board.get(near))
-                                .is_some_and(|near| near.owner == actor)
-                        })
-                })
-                .collect::<Vec<_>>();
-            for (square, piece) in isolated {
-                self.remove_piece_for_card(state, square, piece, actor.opponent(), GALE, events);
-            }
-        }
+        // Gale is an END card now: it removes major pieces with no other major in
+        // the surrounding eight squares, so the card owns the settlement.
+        self.settle_gale(state, actor, events);
 
         let grown = state
             .card_runtime

@@ -91,22 +91,10 @@ impl Engine {
             };
         }
 
-        if state.card_runtime.vanish[actor.index()] {
-            let candidates = state
-                .board
-                .iter()
-                .filter(|(_, p)| p.owner == actor && !self.is_royal_piece(state, *p))
-                .collect::<Vec<_>>();
-            if !candidates.is_empty() {
-                let (roll, idx) = state.rng_mut().web_choice_index(candidates.len());
-                events.push(Event::RandomSample {
-                    purpose: "vanish".to_owned(),
-                    roll_53: roll,
-                });
-                let (sq, p) = candidates[idx.unwrap_or(0)];
-                self.remove_piece_for_card(state, sq, p, actor.opponent(), VANISH, events);
-            }
-        }
+        // Vanish removes one piece per side at each turn end. The current contract
+        // differs from the old single-side rule, so the card owns the settlement.
+        self.settle_vanish(state, actor, events);
+        self.resolve_missing_king(state, events);
 
         for player in [Player::White, Player::Black] {
             if state.ruleset_id != crate::LATEST_RULESET_ID
@@ -229,37 +217,9 @@ impl Engine {
             state.card_runtime.shielded_piece_ids.insert(piece_id);
         }
 
-        let due_icbm = state
-            .card_runtime
-            .icbm_pending
-            .iter()
-            .filter(|icbm| state.turns_taken[icbm.owner.index()] >= icbm.due_turn)
-            .cloned()
-            .collect::<Vec<_>>();
-        for icbm in due_icbm {
-            let enemy_queen_sq = state
-                .board
-                .iter()
-                .find(|(_, p)| p.owner == icbm.owner.opponent() && p.kind == PieceKind::Queen)
-                .map(|(sq, _)| sq);
-            if let Some(queen_sq) = enemy_queen_sq {
-                let victims = state
-                    .board
-                    .iter()
-                    .filter(|(sq, _)| {
-                        sq.file().abs_diff(queen_sq.file()) <= 1
-                            && sq.rank().abs_diff(queen_sq.rank()) <= 1
-                    })
-                    .collect::<Vec<_>>();
-                for (sq, victim) in victims {
-                    self.remove_piece_for_card(state, sq, victim, icbm.owner, ICBM, events);
-                }
-            }
-        }
-        state
-            .card_runtime
-            .icbm_pending
-            .retain(|icbm| state.turns_taken[icbm.owner.index()] < icbm.due_turn);
+        // ICBM reserves a queen identity, then sacrifices it and blasts the target
+        // at the next owner turn start. The card owns the settlement.
+        self.settle_icbm(state, actor, events);
 
         if let Some(due_ply) = state.card_runtime.ultimatum {
             if state.ply >= due_ply {

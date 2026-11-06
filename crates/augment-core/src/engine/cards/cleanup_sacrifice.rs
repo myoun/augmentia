@@ -209,7 +209,6 @@ mod tests {
         assert!(state.board.get("d8".parse().unwrap()).is_none());
         assert!(state.board.get("a8".parse().unwrap()).is_some());
         assert_eq!(removals(&events).len(), 2);
-        let _ = card("b1");
     }
 
     #[test]

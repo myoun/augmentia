@@ -18,8 +18,8 @@
   "coverage": {
     "status": "partial",
     "target_card_count": 275,
-    "implemented_card_count": 248,
-    "behavioral_slice_card_count": 248,
+    "implemented_card_count": 271,
+    "behavioral_slice_card_count": 271,
     "site_parity_verified_card_count": 0,
     "notes": "271 active upstream cards. 88 inherited unchanged-contract handlers plus 147 scoped source ports, including 19 current global rules, 18 current piece cards and 24 opening cards. Cards outside this profile are rejected. Full source parity is not claimed."
   },

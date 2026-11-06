@@ -6680,112 +6680,20 @@
   ],
   "unsupported": [
     {
-      "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chain",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "charge",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "democracy",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "exile",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "final-weapon",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "gale",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "icbm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "judgment",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "leap",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "lobster",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "mutation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "necromancy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "othello",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "palace",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "premove",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "qxe1",
       "reason": "disabled_upstream"
     },
     {
-      "id": "random-roulette",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "resolve",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "summon-colossus",
       "reason": "disabled_upstream"
     },
     {
-      "id": "synchronization",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "traitor",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "ultimatum",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "underground-bunker",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "vanish",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "vip",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "zugzwang",
-      "reason": "changed_contract_not_ported"
     }
   ]
 }

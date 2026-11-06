@@ -4,24 +4,18 @@ pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions
 
 /// Battle value used for the "cheaper than the sacrifice" comparison.
 ///
-/// Mirrors the upstream `pieceCombatValue` table used by `brainwashChoices`
-/// (L1423-1433). Pieces the source cannot value (`Number.isFinite` is false)
-/// are excluded from both sides of the comparison.
+/// Reuses the repo's single value table (`revelation::combat_value`, which is the
+/// core encoding of the upstream ENCYCLOPEDIA table). Upstream `pieceCombatValue`
+/// returns `null` for unvalued pieces, so a `0` entry means "cannot participate".
 fn combat_value(kind: PieceKind) -> Option<u16> {
-    Some(match kind {
-        PieceKind::Pawn | PieceKind::BerolinaPawn | PieceKind::Squire | PieceKind::Fanatic => 1,
-        PieceKind::Knight | PieceKind::Bishop | PieceKind::Missionary | PieceKind::Protestant => 3,
-        PieceKind::Rook => 5,
-        PieceKind::Queen | PieceKind::PrimeMinister => 9,
-        other => match super::revelation::combat_value(other) {
-            0 => return None,
-            value => value,
-        },
-    })
+    match super::revelation::combat_value(kind) {
+        0 => None,
+        value => Some(value),
+    }
 }
 
 /// A sacrifice or victim is a legal brainwash participant only when it is a
-/// non-royal piece with a finite value.
+/// non-royal, non-monster piece with a finite value.
 fn valued(state: &GameState, piece: Piece) -> Option<u16> {
     if royal(state, piece) || piece.kind == PieceKind::Monster {
         return None;
@@ -30,7 +24,12 @@ fn valued(state: &GameState, piece: Piece) -> Option<u16> {
 }
 
 /// (sacrifice square, sacrifice piece, victim square) triples in web order.
-fn pairs(engine: &Engine, state: &GameState, owner: Player) -> Vec<(Square, Piece, Square)> {
+///
+/// Upstream `brainwashVictims` (L1423-1430) has no reachability requirement: the
+/// sacrifice may be any non-royal ally and the victim any non-royal enemy with a
+/// strictly lower value, wherever they stand. The capture-permission helper is
+/// therefore deliberately not consulted.
+fn pairs(state: &GameState, owner: Player) -> Vec<(Square, Piece, Square)> {
     let own = web_ordered_pieces(state)
         .into_iter()
         .filter(|(_, piece)| piece.owner == owner)
@@ -43,9 +42,8 @@ fn pairs(engine: &Engine, state: &GameState, owner: Player) -> Vec<(Square, Piec
         .collect::<Vec<_>>();
     let mut out = Vec::new();
     for (source_square, source, source_value) in &own {
-        for (victim_square, victim, victim_value) in &enemy {
-            // The victim must be strictly cheaper than the sacrifice.
-            if victim_value < source_value && engine.can_capture(state, *source, *victim) {
+        for (victim_square, _, victim_value) in &enemy {
+            if victim_value < source_value {
                 out.push((*source_square, *source, *victim_square));
             }
         }
@@ -146,8 +144,8 @@ fn play(
     Ok(())
 }
 
-fn actions(engine: &Engine, state: &GameState, card: &CardInstance, out: &mut Vec<Action>) {
-    for (sacrifice, _, victim) in pairs(engine, state, card.owner) {
+fn actions(_engine: &Engine, state: &GameState, card: &CardInstance, out: &mut Vec<Action>) {
+    for (sacrifice, _, victim) in pairs(state, card.owner) {
         out.push(Action::UseCard {
             instance_id: card.instance_id,
             target: ActionTarget::Squares(vec![sacrifice, victim]),
@@ -156,8 +154,6 @@ fn actions(engine: &Engine, state: &GameState, card: &CardInstance, out: &mut Ve
 }
 
 fn eligibility(state: &GameState, owner: Player, _: AcquisitionContext) -> CardEligibility {
-    // `eligibility` has no Engine, so replicate the value comparison without the
-    // extra "the sacrifice could capture the victim" filter the action list adds.
     let values = |color: Player| {
         state
             .board

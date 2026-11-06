@@ -128,8 +128,6 @@ mod tests {
     use super::super::tests::delayed::{has_move, position};
     use super::*;
 
-    // barricade is registered by the Lead; until then the module contract is
-    // exercised directly so these tests do not depend on profile wiring.
     fn card() -> CardInstance {
         CardInstance {
             instance_id: 1,
@@ -337,5 +335,40 @@ mod tests {
             .is_err()
         );
         assert_eq!(next.card_runtime.barricades.len(), 1);
+    }
+
+    /// End-to-end through the public engine path: grant, then apply the same
+    /// action the engine itself offers from `legal_actions`.
+    #[test]
+    fn barricade_plays_through_the_public_engine_api() {
+        let engine = Engine::bundled_latest().unwrap();
+        let state = position(&[("d1", Player::White, PieceKind::Rook)]);
+        let state = engine
+            .grant_card(&state, 1, crate::BARRICADE, Player::White)
+            .unwrap()
+            .state;
+        let legal = engine.legal_actions(&state).unwrap();
+        let action = legal
+            .iter()
+            .find(|action| matches!(action, Action::UseCard { instance_id: 1, .. }))
+            .cloned()
+            .expect("a promoted barricade must offer a placement");
+        let played = engine.apply(&state, action.clone()).unwrap();
+        // The engine frames a card use with ActionApplied then CardUsed.
+        assert!(played.events.iter().any(|event| matches!(
+            event,
+            Event::CardUsed { definition_id, .. } if definition_id == crate::BARRICADE
+        )));
+        assert_eq!(played.state.card_runtime.barricades.len(), 3);
+        // Playing consumes the single charge, so the card is no longer offered.
+        assert!(
+            !engine
+                .legal_actions(&played.state)
+                .unwrap()
+                .iter()
+                .any(|candidate| matches!(candidate, Action::UseCard { instance_id: 1, .. }))
+        );
+        // Same computation, same result.
+        assert_eq!(played, engine.apply(&state, action).unwrap());
     }
 }

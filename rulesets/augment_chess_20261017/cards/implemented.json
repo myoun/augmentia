@@ -428,6 +428,29 @@
       ]
     },
     {
+      "id": "black-box",
+      "name_ko": "검은 상자",
+      "effect": "blackBox",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "V12_BOX_EXCLUDED",
+        "v12BoxCandidates",
+        "applyBlackBoxV12"
+      ],
+      "compatibility": [
+        "current active-card recursion guard and random invocation"
+      ]
+    },
+    {
       "id": "black-hole",
       "name_ko": "블랙홀",
       "effect": "blackHole",
@@ -717,6 +740,27 @@
       ]
     },
     {
+      "id": "chain",
+      "name_ko": "사슬",
+      "effect": "chain",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "chainSelectionContract",
+        "applyChainV4"
+      ],
+      "compatibility": [
+        "current two-target distance constraint"
+      ]
+    },
+    {
       "id": "chameleon-mutation",
       "name_ko": "카멜레온 변이",
       "effect": "chameleonMutation",
@@ -759,6 +803,26 @@
         "applyAmazonV7"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "charge",
+      "name_ko": "마지막 질주",
+      "effect": "charge",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "applyChargeV5"
+      ],
+      "compatibility": [
+        "current three-square pawn advance with death fallback"
+      ]
     },
     {
       "activation": "passive",
@@ -1584,6 +1648,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "exile",
+      "name_ko": "추방",
+      "effect": "exile",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "protection_set"
+      ],
+      "source_symbols": [
+        "exileSelectionContract",
+        "applyExileV4"
+      ],
+      "compatibility": [
+        "current return-to-start with timed protection"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1768,6 +1853,25 @@
       "turn_exclusive": false
     },
     {
+      "id": "final-weapon",
+      "name_ko": "최종병기",
+      "effect": "finalWeapon",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "finalWeapon"
+      ],
+      "compatibility": [
+        "current amazon promotion and final promotion rank"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1870,6 +1974,26 @@
       ],
       "compatibility": [
         "Scoped current acquisition and frontline immunity contract."
+      ]
+    },
+    {
+      "id": "gale",
+      "name_ko": "강풍",
+      "effect": "gale",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyGaleV8"
+      ],
+      "compatibility": [
+        "current isolated-major removal after three turns"
       ]
     },
     {
@@ -2298,6 +2422,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "icbm",
+      "name_ko": "ICBM",
+      "effect": "icbm",
+      "phase": "END",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "source_symbols": [
+        "icbmSelectionContract",
+        "applyIcbmV5"
+      ],
+      "compatibility": [
+        "current queen sacrifice and 3x3 detonation"
+      ]
+    },
+    {
       "id": "ice-king",
       "name_ko": "블리자드",
       "effect": "iceKing",
@@ -2565,6 +2710,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "judgment",
+      "name_ko": "레드카드",
+      "effect": "judgment",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyJudgmentV4",
+        "judgmentSelectionContract"
+      ],
+      "compatibility": [
+        "current most-captures removal"
+      ]
+    },
+    {
       "id": "killer",
       "name_ko": "킬러",
       "effect": "killer",
@@ -2700,6 +2866,46 @@
       ],
       "compatibility": [
         "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "leap",
+      "name_ko": "도약",
+      "effect": "pawnLeap",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "pawnLeap"
+      ],
+      "compatibility": [
+        "current pawn leap over a blocker without capture"
+      ]
+    },
+    {
+      "id": "lobster",
+      "name_ko": "랍스터",
+      "effect": "lobster",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "source_symbols": [
+        "lobsterSelectionContract",
+        "applyLobsterV9"
+      ],
+      "compatibility": [
+        "current delayed lobster spawn on an empty square"
       ]
     },
     {
@@ -3165,6 +3371,47 @@
       "turn_exclusive": false
     },
     {
+      "id": "mutation",
+      "name_ko": "변이",
+      "effect": "mutation",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "piece_transform",
+        "board_transaction"
+      ],
+      "source_symbols": [
+        "applyMutationExtraMonster"
+      ],
+      "compatibility": [
+        "current double-monster promotion"
+      ]
+    },
+    {
+      "id": "necromancy",
+      "name_ko": "빙의",
+      "effect": "necromancy",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "source_symbols": [
+        "necromancySelectionContract",
+        "applyNecromancyV8"
+      ],
+      "compatibility": [
+        "current four-turn revival of a captured piece"
+      ]
+    },
+    {
       "id": "nullification",
       "name_ko": "상쇄",
       "effect": "nullification",
@@ -3219,6 +3466,26 @@
         "ordination"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "othello",
+      "name_ko": "오셀로",
+      "effect": "othello",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "owner_conversion",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyOthelloV4"
+      ],
+      "compatibility": [
+        "current turn-end trapped-piece conversion"
+      ]
     },
     {
       "activation": "passive",
@@ -3295,6 +3562,26 @@
         "overwhelm"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "palace",
+      "name_ko": "궁성",
+      "effect": "palace",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyPalaceV9"
+      ],
+      "compatibility": [
+        "current 3x3 royal zone around the enemy king"
+      ]
     },
     {
       "id": "paladin",
@@ -3584,6 +3871,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "premove",
+      "name_ko": "프리 무브",
+      "effect": "freeMove",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "owner_turn_reservation"
+      ],
+      "source_symbols": [
+        "freeMove",
+        "v12PremoveGeometryValid"
+      ],
+      "compatibility": [
+        "current ordered deferred move declaration"
+      ]
+    },
+    {
       "id": "princess",
       "name_ko": "프린세스",
       "effect": "princess",
@@ -3785,6 +4093,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "random-roulette",
+      "name_ko": "랜덤룰렛",
+      "effect": "randomRoulette",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "piece_transform",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyRandomRouletteV15",
+        "applyRandomRouletteV8"
+      ],
+      "compatibility": [
+        "current non-royal major transformation"
+      ]
+    },
+    {
       "id": "reaper",
       "name_ko": "사신",
       "effect": "reaper",
@@ -3947,6 +4276,25 @@
       ],
       "compatibility": [
         "Scoped no-capture readiness and first-piece forced follow-up; complex special moves remain separately auditable."
+      ]
+    },
+    {
+      "id": "resolve",
+      "name_ko": "결의",
+      "effect": "resolve",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "turn_status"
+      ],
+      "source_symbols": [
+        "resolve"
+      ],
+      "compatibility": [
+        "current first-moved pawn turn refund"
       ]
     },
     {
@@ -4668,6 +5016,25 @@
       "turn_exclusive": false
     },
     {
+      "id": "synchronization",
+      "name_ko": "동기화",
+      "effect": "synchronization",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "movement_filter"
+      ],
+      "source_symbols": [
+        "expansionDestinationAllowed"
+      ],
+      "compatibility": [
+        "current opposite-colour arrival ban"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Reserve queen identity and open destination; sacrifice current owned identity at turn end; crush each distinct landing and spawn neutral monsters. Movable walls cleared, pending spawns and portals retained. Full large-cell fracture parity unverified.",
@@ -4727,6 +5094,26 @@
       ],
       "compatibility": [
         "Scoped optional movement and acquisition; full concurrent extra-action ordering remains separately auditable."
+      ]
+    },
+    {
+      "id": "traitor",
+      "name_ko": "변절자",
+      "effect": "traitor",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "owner_conversion",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyTraitorV8"
+      ],
+      "compatibility": [
+        "current weakest-moved-enemy conversion"
       ]
     },
     {
@@ -4858,6 +5245,26 @@
       ]
     },
     {
+      "id": "ultimatum",
+      "name_ko": "최후 통첩",
+      "effect": "ultimatum",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "mass_removal",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyUltimatumV5"
+      ],
+      "compatibility": [
+        "current four-turn inactivity purge"
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -4918,6 +5325,27 @@
       ]
     },
     {
+      "id": "vanish",
+      "name_ko": "소멸",
+      "effect": "vanish",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "mass_removal",
+        "rng",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyVanishV8"
+      ],
+      "compatibility": [
+        "current per-turn-end random removal from both sides"
+      ]
+    },
+    {
       "id": "vigilance",
       "name_ko": "경계",
       "effect": "vigilance",
@@ -4936,6 +5364,26 @@
       ],
       "compatibility": [
         "Scoped loss-triggered royal protection; complex simultaneous effects remain separately auditable."
+      ]
+    },
+    {
+      "id": "vip",
+      "name_ko": "귀빈",
+      "effect": "vip",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "piece_transform",
+        "owner_turn_reservation"
+      ],
+      "source_symbols": [
+        "applyVipV5"
+      ],
+      "compatibility": [
+        "current three-turn pawn conversion to vip"
       ]
     },
     {
@@ -5083,116 +5531,44 @@
       "compatibility": [
         "Scoped current piece-card selection, transformation and native ability port; see cards/ported.json."
       ]
+    },
+    {
+      "id": "zugzwang",
+      "name_ko": "추크츠방",
+      "effect": "zugzwang",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "movement_filter",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "zugzwang"
+      ],
+      "compatibility": [
+        "current forced enemy king move"
+      ]
     }
   ],
   "pending": [
     {
-      "id": "black-box",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chain",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "charge",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "democracy",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "exile",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "final-weapon",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "gale",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "icbm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "judgment",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "leap",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "lobster",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "mutation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "necromancy",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "othello",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "palace",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "premove",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "qxe1",
       "reason": "disabled_upstream"
     },
     {
-      "id": "random-roulette",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "resolve",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "summon-colossus",
       "reason": "disabled_upstream"
     },
     {
-      "id": "synchronization",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "traitor",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "ultimatum",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "underground-bunker",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "vanish",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "vip",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "zugzwang",
-      "reason": "changed_contract_not_ported"
     }
   ]
 }

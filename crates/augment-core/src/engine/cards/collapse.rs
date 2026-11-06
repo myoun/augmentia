@@ -332,7 +332,8 @@ mod tests {
         assert!(engine.rule_cell_collapsed(&next, cell("a1")));
         assert!(!engine.rule_cell_collapsed(&next, cell("d4")));
         assert!(!engine.card_landing_open(&next, cell("h4")));
-        assert!(armed(&next.cards[0]));
+        // The arming marker was consumed, so a second boundary is a no-op.
+        assert!(!armed(&next.cards[0]));
         // Settling is idempotent: the marker was consumed.
         engine.settle_collapse(&mut next, Player::White, &mut Vec::new());
         assert_eq!(next.rule_runtime.collapse_depth, 1);

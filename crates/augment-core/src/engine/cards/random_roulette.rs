@@ -90,6 +90,11 @@ fn large_piece_anchor_blocked(state: &GameState, piece_id: u32, cell: Square) ->
         Some(occupant) => occupant.id != piece_id,
         None => {
             state.card_runtime.black_holes.contains(&cell)
+                // A 2x2 body cannot stand on a wall, a crown or a collapsed cell.
+                || state.card_runtime.barricades.contains(&cell)
+                || state.card_runtime.crown_pos == Some(cell)
+                || (state.card_runtime.collapsed_files_ranks
+                    && (matches!(cell.file(), 0 | 7) || matches!(cell.rank(), 0 | 7)))
                 || state
                     .card_runtime
                     .pending_scarecrows
@@ -357,11 +362,15 @@ mod tests {
                     },
                 )
                 .unwrap();
-            let (square, piece) = state.board.find_by_id(original_id).unwrap();
+            let (square, _) = state.board.find_by_id(original_id).unwrap();
             assert_eq!(square, "d4".parse().unwrap(), "a small outcome stays put");
             let (_, converted) = next.state.board.find_by_id(original_id).unwrap();
             assert_eq!(converted.owner, Player::White, "owner is preserved");
-            assert_eq!(converted.kind, next.state.board.get(square).unwrap().kind);
+            let (converted_square, _) = next.state.board.find_by_id(original_id).unwrap();
+            assert_eq!(
+                converted.kind,
+                next.state.board.get(converted_square).unwrap().kind
+            );
             assert_ne!(
                 converted.kind,
                 PieceKind::Rook,
@@ -372,7 +381,6 @@ mod tests {
                 "{:?} must come from the current outcome pool",
                 converted.kind
             );
-            assert!(piece.owner == Player::White);
             seen.insert(converted.kind);
             assert!(
                 next.events
@@ -397,7 +405,7 @@ mod tests {
         let mut saw_large = false;
         for seed in 0..256_u64 {
             *state.rng_mut() = crate::DeterministicRng::new(seed);
-            let next = engine
+            let transition = engine
                 .apply(
                     &state,
                     Action::UseCard {
@@ -405,8 +413,8 @@ mod tests {
                         target: single("d4"),
                     },
                 )
-                .unwrap()
-                .state;
+                .unwrap();
+            let next = transition.state;
             let (square, piece) = next.board.find_by_id(rook_id).unwrap();
             if let Some(status) = next.card_runtime.large_pieces.get(&rook_id).copied() {
                 saw_large = true;
@@ -429,7 +437,7 @@ mod tests {
                 assert_eq!(status.hp, expected_hp);
                 assert_eq!(status.max_hp, expected_hp);
                 assert!(
-                    next.events.iter().any(|event| matches!(
+                    transition.events.iter().any(|event| matches!(
                         event,
                         Event::RandomSample { purpose, .. }
                             if purpose == "random-roulette-large-anchor"

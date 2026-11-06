@@ -294,14 +294,23 @@ mod tests {
     fn necromancy_pool_follows_missing_material_and_excludes_royals() {
         let mut state = state_with_room();
         assert_eq!(pool(&state, Player::White), vec![PieceKind::Knight]);
-        // Losing the queen widens the pool deterministically.
+        // Losing the queen widens the pool, in the fixed STANDARD order.
         state.board.set("d1".parse().unwrap(), None);
         assert_eq!(
             pool(&state, Player::White),
-            vec![PieceKind::Knight, PieceKind::Queen]
+            vec![PieceKind::Queen, PieceKind::Knight]
         );
-        // The opponent's missing material never enters the actor's pool.
-        assert!(pool(&state, Player::Black).is_empty());
+        // The pool is per-owner: Black only has a king in this fixture, so every
+        // revivable kind is missing for Black while White still holds all of them.
+        assert_eq!(
+            pool(&state, Player::Black),
+            vec![
+                PieceKind::Queen,
+                PieceKind::Rook,
+                PieceKind::Bishop,
+                PieceKind::Knight
+            ]
+        );
         assert!(!revivable(PieceKind::King));
         assert!(!revivable(PieceKind::Pawn));
         assert!(!revivable(PieceKind::Monster));

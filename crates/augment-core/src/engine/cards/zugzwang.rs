@@ -6,14 +6,19 @@ pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions
 /// A "king move" in the upstream sense: `isWorkerZugzwangKingMove`
 /// (main-RjrZ5fFP.js:232470-232472) excludes castling and the swap-style arrivals,
 /// so a stuck king that can only castle is not a zugzwang candidate.
-fn is_plain_king_move(king: Piece, movement: MoveAction) -> bool {
+fn is_plain_king_move(state: &GameState, king: Piece, movement: MoveAction) -> bool {
     let home_rank = if king.owner == Player::White { 0 } else { 7 };
     let castling = king.kind == PieceKind::King
-        && movement.from == Square::new(4, home_rank).unwrap_or(movement.from)
+        && movement.from.file() == 4
+        && movement.from.rank() == home_rank
         && movement.to.rank() == home_rank
         && matches!(movement.to.file(), 2 | 6);
-    let swap_into_own_piece = false;
-    !castling && !swap_into_own_piece
+    // Swaps and castling-partner arrivals land on a friendly piece; a plain step never does.
+    let onto_friendly = state
+        .board
+        .get(movement.to)
+        .is_some_and(|target| target.owner == king.owner);
+    !castling && !onto_friendly
 }
 
 /// Mirrors `workerZugzwangKingMoves` (main-RjrZ5fFP.js:232473-232481) by asking the
@@ -42,15 +47,7 @@ fn enemy_king_move_count(engine: &Engine, state: &GameState, enemy: Player) -> u
             let Some((_, king)) = royals.iter().find(|(square, _)| *square == movement.from) else {
                 return false;
             };
-            if !is_plain_king_move(*king, *movement) {
-                return false;
-            }
-            // Swaps and other owner-side arrivals are not king moves. A plain king
-            // step always lands on an empty square or an enemy occupant.
-            probe
-                .board
-                .get(movement.to)
-                .is_none_or(|target| target.owner != enemy)
+            is_plain_king_move(&probe, *king, *movement)
         })
         .count()
 }
@@ -106,13 +103,6 @@ mod tests {
     use super::super::tests::delayed::{handoff, movement, position};
     use super::super::tests::target_procedures::position as seated;
     use super::*;
-
-    fn use_none() -> Action {
-        Action::UseCard {
-            instance_id: 1,
-            target: ActionTarget::None,
-        }
-    }
 
     #[test]
     fn zugzwang_arms_only_the_opponent_and_never_the_actor() {
@@ -233,6 +223,5 @@ mod tests {
             .map(|()| state.card_runtime.zugzwang),
             Ok([false, true])
         );
-        assert!(use_none() == use_none());
     }
 }

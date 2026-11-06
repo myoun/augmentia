@@ -3990,6 +3990,10 @@ impl Engine {
         if moving_survived && movement.promotion.is_some() {
             self.clear_promotion_inherited_traits(&mut next, moving_piece.id);
         }
+        // Mutation promotes into two monsters when the promoted pawn lands.
+        if moving_survived && movement.promotion == Some(PieceKind::Monster) {
+            self.summon_mutation_extra_monster(&mut next, actor, movement.to, &mut events);
+        }
         // Outpost protection ends when the protected piece itself moves.
         next.card_runtime
             .outpost_protected_piece_ids
@@ -7817,7 +7821,9 @@ impl Engine {
             Player::White => (
                 1,
                 [1, 0],
-                if state.card_runtime.fast_growth[piece.owner.index()] {
+                if let Some(rank) = cards::final_weapon::forced_promotion_rank(state, piece.owner) {
+                    rank
+                } else if state.card_runtime.fast_growth[piece.owner.index()] {
                     4
                 } else if state.card_runtime.early_promotion[piece.owner.index()] {
                     5
@@ -7828,7 +7834,9 @@ impl Engine {
             Player::Black => (
                 -1,
                 [6, 7],
-                if state.card_runtime.fast_growth[piece.owner.index()] {
+                if let Some(rank) = cards::final_weapon::forced_promotion_rank(state, piece.owner) {
+                    rank
+                } else if state.card_runtime.fast_growth[piece.owner.index()] {
                     3
                 } else if state.card_runtime.early_promotion[piece.owner.index()] {
                     2
@@ -8071,6 +8079,9 @@ impl Engine {
         if state.card_runtime.mutation[piece.owner.index()] {
             promotions.push(PieceKind::Monster);
         }
+        // Final Weapon appends the amazon choice after the standard set and
+        // before mutation's monster, only on the locked final rank.
+        cards::final_weapon::append_amazon_promotion(state, piece.owner, to, &mut promotions);
         let promotions = &promotions[..];
         for &promotion in promotions {
             actions.push(Action::Move(MoveAction::new(from, to, Some(promotion))));

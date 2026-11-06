@@ -1,29 +1,212 @@
-// PORT_STUB: judgment is registered but not yet ported. Remove this file's stub body.
 use super::*;
 pub(super) const ID: &str = crate::JUDGMENT;
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
 
-fn pending<T>(what: &str) -> Result<T, EngineError> {
-    Err(EngineError::Invariant(format!("{what} is not ported yet")))
+/// Upstream `isLargeFootprintPiece`: wall-sized bodies are not judged.
+fn large(state: &GameState, piece: Piece) -> bool {
+    matches!(
+        piece.kind,
+        PieceKind::BigRook | PieceKind::BigBishop | PieceKind::Colossus
+    ) || state.card_runtime.large_pieces.contains_key(&piece.id)
+}
+
+/// Every judged piece carrying the highest capture count, if that count is at
+/// least the upstream threshold of two captures.
+fn candidates(state: &GameState) -> Vec<(Square, Piece)> {
+    let judged: Vec<_> = web_ordered_pieces(state)
+        .into_iter()
+        .filter(|(_, piece)| piece.capture_count >= 2 && !large(state, *piece))
+        .collect();
+    let Some(maximum) = judged.iter().map(|(_, piece)| piece.capture_count).max() else {
+        return Vec::new();
+    };
+    judged
+        .into_iter()
+        .filter(|(_, piece)| piece.capture_count == maximum)
+        .collect()
 }
 
 fn play(
-    _: &Engine,
-    _: &mut GameState,
-    _: Player,
+    engine: &Engine,
+    state: &mut GameState,
+    actor: Player,
     _: u32,
-    _: &ActionTarget,
-    _: &mut Vec<Event>,
+    target: &ActionTarget,
+    events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    pending("this card")
+    let (square, piece) = piece_target(state, target)?;
+    if !candidates(state)
+        .iter()
+        .any(|(candidate_square, candidate)| {
+            *candidate_square == square && candidate.id == piece.id
+        })
+    {
+        return Err(EngineError::Invariant("invalid judgment target".to_owned()));
+    }
+    // The current contract removes the judged piece from the game instead of
+    // exiling it until the next draft (0915 behavior).
+    engine.delete_piece_for_card(state, square, piece, actor, ID, events);
+    if engine.is_royal_piece(state, piece) {
+        // `targetWasKing`: losing the judged royal is an environmental defeat.
+        state.status = GameStatus::Won {
+            winner: if piece.owner == actor {
+                actor.opponent()
+            } else {
+                actor
+            },
+            reason: WinReason::CardEffect(ID.to_owned()),
+        };
+    }
+    Ok(())
 }
 
-fn actions(_: &Engine, _: &GameState, _: &CardInstance, _: &mut Vec<Action>) {}
-
-fn install(_: &Engine, _: &mut GameState, _: &mut Vec<Event>) -> Result<(), EngineError> {
-    pending("this rule")
+fn actions(_: &Engine, state: &GameState, card: &CardInstance, out: &mut Vec<Action>) {
+    for (square, _) in candidates(state) {
+        out.push(Action::UseCard {
+            instance_id: card.instance_id,
+            target: ActionTarget::PieceAt(square),
+        });
+    }
 }
 
-fn eligibility(_: &GameState, _: Player, _: AcquisitionContext) -> CardEligibility {
-    CardEligibility::Eligible
+fn eligibility(state: &GameState, _: Player, context: AcquisitionContext) -> CardEligibility {
+    if context == AcquisitionContext::Draft {
+        return CardEligibility::Eligible;
+    }
+    require(
+        !candidates(state).is_empty(),
+        "2개 이상 잡은 기물이 필요합니다.",
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::delayed::*;
+    use super::*;
+
+    fn judged(s: &mut GameState, square: &str, captures: u16) {
+        let mut piece = at(s, square);
+        piece.capture_count = captures;
+        s.board.set(square.parse().unwrap(), Some(piece));
+    }
+
+    #[test]
+    fn judgment_targets_every_piece_tied_for_the_highest_capture_count() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[
+            ("a1", Player::White, PieceKind::Rook),
+            ("a8", Player::Black, PieceKind::Rook),
+            ("h1", Player::White, PieceKind::Bishop),
+        ]);
+        judged(&mut s, "a1", 3);
+        judged(&mut s, "a8", 3);
+        judged(&mut s, "h1", 2);
+        s = engine
+            .grant_card(&s, 1, crate::JUDGMENT, Player::White)
+            .unwrap()
+            .state;
+        eprintln!(
+            "legal: {:?} turn={:?} status={:?} phase={:?} acts={} cards={:?}",
+            engine.legal_actions(&s).unwrap(),
+            s.turn,
+            s.status,
+            s.phase,
+            s.actions_remaining,
+            s.cards
+        );
+        let targets: Vec<Square> = engine
+            .legal_actions(&s)
+            .unwrap()
+            .into_iter()
+            .filter_map(|action| match action {
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::PieceAt(square),
+                } => Some(square),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(targets, vec!["a1".parse().unwrap(), "a8".parse().unwrap()]);
+        let after = engine
+            .apply(
+                &s,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: single("a8"),
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(after.board.get("a8".parse().unwrap()).is_none());
+        assert!(after.board.get("a1".parse().unwrap()).is_some());
+        assert_eq!(after.status, GameStatus::Ongoing);
+    }
+
+    #[test]
+    fn judgment_is_unavailable_below_two_captures_and_rejects_large_bodies() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[
+            ("a1", Player::White, PieceKind::Rook),
+            ("a8", Player::Black, PieceKind::Rook),
+            ("d4", Player::Black, PieceKind::BigRook),
+        ]);
+        judged(&mut s, "a1", 2);
+        judged(&mut s, "a8", 1);
+        judged(&mut s, "d4", 5);
+        s = engine
+            .grant_card(&s, 1, crate::JUDGMENT, Player::White)
+            .unwrap()
+            .state;
+        eprintln!(
+            "legal: {:?} turn={:?} status={:?} phase={:?} acts={} cards={:?}",
+            engine.legal_actions(&s).unwrap(),
+            s.turn,
+            s.status,
+            s.phase,
+            s.actions_remaining,
+            s.cards
+        );
+        let targets: Vec<Square> = engine
+            .legal_actions(&s)
+            .unwrap()
+            .into_iter()
+            .filter_map(|action| match action {
+                Action::UseCard {
+                    target: ActionTarget::PieceAt(square),
+                    ..
+                } => Some(square),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(targets, vec!["a1".parse().unwrap()]);
+    }
+
+    #[test]
+    fn judging_a_royal_is_an_environmental_defeat() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[("h8", Player::Black, PieceKind::King)]);
+        judged(&mut s, "h8", 2);
+        s = engine
+            .grant_card(&s, 1, crate::JUDGMENT, Player::White)
+            .unwrap()
+            .state;
+        let after = engine
+            .apply(
+                &s,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: single("h8"),
+                },
+            )
+            .unwrap()
+            .state;
+        assert!(after.board.get("h8".parse().unwrap()).is_none());
+        assert_eq!(
+            after.status,
+            GameStatus::Won {
+                winner: Player::White,
+                reason: WinReason::CardEffect(crate::JUDGMENT.to_owned()),
+            }
+        );
+    }
 }
