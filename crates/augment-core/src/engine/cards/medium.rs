@@ -126,7 +126,7 @@ impl Engine {
                 for &(df, dr) in king {
                     let mut cursor = from;
                     while let Some(to) = cursor.offset(df, dr) {
-                        if let Some(target) = self.board_piece_at(state, to) {
+                        if let Some(target) = self.movement_occupant(state, to) {
                             if target.owner != piece.owner
                                 && self.is_royal_piece(state, target)
                                 && self.can_capture(state, piece, target)
@@ -201,10 +201,10 @@ impl Engine {
                 for &(df, dr) in orth {
                     for n in 1..=3 {
                         if let Some(to) = from.offset(df * n, dr * n) {
-                            let target = self.board_piece_at(state, to);
+                            let target = self.movement_occupant(state, to);
                             let jumped = (1..n).any(|step| {
                                 from.offset(df * step, dr * step)
-                                    .is_some_and(|s| self.board_piece_at(state, s).is_some())
+                                    .is_some_and(|s| self.movement_occupant(state, s).is_some())
                             });
                             if target.is_none()
                                 || !jumped
@@ -273,11 +273,11 @@ impl Engine {
                     .collect();
                 for (df, dr) in offsets {
                     if let Some(mid) = from.offset(df, dr) {
-                        match self.board_piece_at(state, mid) {
+                        match self.movement_occupant(state, mid) {
                             None => moves.push(Action::Move(MoveAction::new(from, mid, None))),
                             Some(target) if self.can_capture(state, piece, target) => {
                                 if let Some(to) = mid.offset(df, dr)
-                                    && self.board_piece_at(state, to).is_none()
+                                    && self.movement_occupant(state, to).is_none()
                                 {
                                     moves.push(Action::Move(MoveAction::new(from, to, None)));
                                 }
@@ -322,7 +322,7 @@ impl Engine {
         }
         if quiet {
             moves.retain(
-                |a| matches!(a,Action::Move(m) if self.board_piece_at(state,m.to).is_none()),
+                |a| matches!(a,Action::Move(m) if self.movement_occupant(state,m.to).is_none()),
             );
         }
         out.extend(moves);

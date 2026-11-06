@@ -4,11 +4,11 @@
   "scope": {
     "catalog_entries": 275,
     "active_upstream": 271,
-    "implemented_cards": 189,
+    "implemented_cards": 235,
     "site_parity_verified_cards": 0,
     "profile": "partial-standard-with-scoped-ports",
     "inherited_unchanged_contract_cards": 88,
-    "scoped_ported_cards": 101
+    "scoped_ported_cards": 147
   },
   "cards": [
     {
@@ -31,6 +31,27 @@
       ],
       "compatibility": [
         "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "name_ko": "알레킨의 머신건",
+      "effect": "alekhineMachineGun",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyAlekhineMachineGunV4",
+        "usesAlekhinePermanentProtection"
+      ],
+      "compatibility": [
+        "Scoped formation and permanent-protection port; transformed queen identity interactions remain separately auditable."
       ]
     },
     {
@@ -239,6 +260,28 @@
       ]
     },
     {
+      "id": "basic-training",
+      "name_ko": "기초 훈련",
+      "effect": "basicTraining",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "basicTrainingSelectionContract",
+        "applyBasicTrainingV4",
+        "v19BasicTrainingCaptureAllowed"
+      ],
+      "compatibility": [
+        "Scoped targeting and pawn movement port; special-movement combinations remain separately auditable."
+      ]
+    },
+    {
       "id": "beacon",
       "name_ko": "신호기",
       "effect": "beacon",
@@ -343,6 +386,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "bishop-infiltration",
+      "name_ko": "길리 슈트",
+      "effect": "bishopInfiltration",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "internalSymmetryCandidate",
+        "october13Start"
+      ],
+      "compatibility": [
+        "Scoped empty-square bishop jump and owner-start duration; portal and terrain interactions remain separately auditable."
+      ]
+    },
+    {
       "id": "black-hole",
       "name_ko": "블랙홀",
       "effect": "blackHole",
@@ -362,6 +426,28 @@
       ],
       "compatibility": [
         "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "blockade",
+      "name_ko": "봉쇄",
+      "effect": "blockade",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "october13SelectionContract",
+        "applyOctober13Card",
+        "october13Start"
+      ],
+      "compatibility": [
+        "Scoped blockade placements, movement blocking, conveyor relocation and expiry; unusual movement and installation interactions remain separately auditable."
       ]
     },
     {
@@ -511,6 +597,48 @@
       "turn_exclusive": false
     },
     {
+      "id": "castling",
+      "name_ko": "캐슬링",
+      "effect": "freeCastling",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "freeCastlingSelectionContract",
+        "applyFreeCastlingV4"
+      ],
+      "compatibility": [
+        "Scoped direct castle and destination capture; advanced piece interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "chameleon-mutation",
+      "name_ko": "카멜레온 변이",
+      "effect": "chameleonMutation",
+      "phase": "MIDDLE",
+      "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "chameleonSelectionContract",
+        "applyChameleonV10"
+      ],
+      "compatibility": [
+        "Scoped target and capture transformation port; special piece interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Pinned compound selection and movement contracts; not full interaction parity."
@@ -616,6 +744,29 @@
       ],
       "compatibility": [
         "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "chimera",
+      "name_ko": "키메라",
+      "effect": "chimera",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v19ChimeraTargetTypes",
+        "octoberChimeraTypes",
+        "v18TricksterAbilityDefaults"
+      ],
+      "compatibility": [
+        "Scoped latest major-family targeting and ordered transformation pool; multi-cell transformation and chained effects remain separately auditable."
       ]
     },
     {
@@ -799,6 +950,28 @@
       "turn_exclusive": false
     },
     {
+      "id": "counterattack",
+      "name_ko": "반격",
+      "effect": "counterattack",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "october13SelectionContract",
+        "applyOctober13Card",
+        "applyV14ParryCounter"
+      ],
+      "compatibility": [
+        "Scoped counterattack port; complex capture and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "id": "crown",
       "name_ko": "왕관",
       "effect": "crownRule",
@@ -882,6 +1055,49 @@
       ]
     },
     {
+      "id": "dice",
+      "name_ko": "주사위",
+      "effect": "dice",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "applyDiceV8"
+      ],
+      "compatibility": [
+        "Scoped six-kind sampling and enemy turn lock."
+      ]
+    },
+    {
+      "id": "disarm",
+      "name_ko": "무장해제",
+      "effect": "disarm",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "targetTimedSpecV5",
+        "targetTimedSelectionContract",
+        "applyTargetTimedV5"
+      ],
+      "compatibility": [
+        "Current target and duration contract; cross-card interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -958,6 +1174,27 @@
       ],
       "compatibility": [
         "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "e4",
+      "name_ko": "e4",
+      "effect": "e4",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "internalSymmetryCandidate",
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped color-specific teleport and target contract; complex piece interactions remain separately auditable."
       ]
     },
     {
@@ -1043,6 +1280,27 @@
       ]
     },
     {
+      "id": "emergency-evacuation",
+      "name_ko": "긴급 피난",
+      "effect": "emergencyEvacuation",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "prepareEmergencyEvacuationV12",
+        "applyEmergencyEvacuationV12"
+      ],
+      "compatibility": [
+        "Scoped ordered evacuation and capture restriction; advanced board interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1061,6 +1319,70 @@
         "emptyLunchbox"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "en-passant-bang",
+      "name_ko": "앙파상",
+      "effect": "enPassantBang",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped current turn effect; full interaction parity remains separately auditable."
+      ]
+    },
+    {
+      "id": "encouragement",
+      "name_ko": "독려",
+      "effect": "encouragement",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "isEncouragementProtected",
+        "protectedCaptureContract"
+      ],
+      "compatibility": [
+        "Scoped orthogonal royal aura and protection hit contract; complex effects remain separately auditable."
+      ]
+    },
+    {
+      "id": "evasion",
+      "name_ko": "회피",
+      "effect": "evasion",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyEvasionV8",
+        "applyRoyalShieldV8",
+        "applyFanaticalRitualV8"
+      ],
+      "compatibility": [
+        "Scoped current random target contract; full interaction parity remains separately auditable."
+      ]
     },
     {
       "activation": "passive",
@@ -1121,6 +1443,29 @@
       "turn_exclusive": false
     },
     {
+      "id": "fanatical-ritual",
+      "name_ko": "광신의 의식",
+      "effect": "fanaticalRitual",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyEvasionV8",
+        "applyRoyalShieldV8",
+        "applyFanaticalRitualV8"
+      ],
+      "compatibility": [
+        "Scoped current random target contract; full interaction parity remains separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Scoped stage-4 activation/acquisition port; see cards/ported.json. Full interaction parity is not claimed."
@@ -1139,6 +1484,27 @@
         "fastGrowth"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "feudal-contract",
+      "name_ko": "봉건 계약",
+      "effect": "feudalContract",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "feudalSelectionContract",
+        "applyFeudalCounterstrikeV4"
+      ],
+      "compatibility": [
+        "Scoped identity contract and counterstrike; unusual chained capture interactions remain separately auditable."
+      ]
     },
     {
       "activation": "passive",
@@ -1179,6 +1545,28 @@
         "fieldPromotion"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "file-conveyor",
+      "name_ko": "컨베이어",
+      "effect": "fileConveyor",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyOctober13Card",
+        "october13Start",
+        "v9ResolveConveyor"
+      ],
+      "compatibility": [
+        "Scoped file selection, delayed activation and linear conveyor; complex terrain arrival and automatic-movement interactions remain separately auditable."
+      ]
     },
     {
       "activation": "passive",
@@ -1243,6 +1631,28 @@
       ]
     },
     {
+      "id": "freeze",
+      "name_ko": "빙결",
+      "effect": "freeze",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "freezeTargetsV8",
+        "applyFreezeV8"
+      ],
+      "compatibility": [
+        "Scoped current target and duration contract; full interaction parity remains separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -1261,6 +1671,27 @@
         "frenzy"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "frontline-response",
+      "name_ko": "철벽",
+      "effect": "frontlineResponse",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "frontlineResponseBlocksCapture",
+        "frontlineGrantedTo"
+      ],
+      "compatibility": [
+        "Scoped current acquisition and frontline immunity contract."
+      ]
     },
     {
       "activation": "passive",
@@ -1688,6 +2119,48 @@
       "turn_exclusive": false
     },
     {
+      "id": "ice-king",
+      "name_ko": "블리자드",
+      "effect": "iceKing",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "october13SelectionContract",
+        "applyMistakeCardV8"
+      ],
+      "compatibility": [
+        "Scoped current timing and target contract."
+      ]
+    },
+    {
+      "id": "ice-sheet",
+      "name_ko": "빙판",
+      "effect": "iceSheet",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v19IceSheetTarget",
+        "applyIceSheetV9"
+      ],
+      "compatibility": [
+        "Scoped target and directional range contract."
+      ]
+    },
+    {
       "id": "idol",
       "name_ko": "아이돌",
       "effect": "idol",
@@ -1727,6 +2200,28 @@
         "imperialStudies"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "inertia",
+      "name_ko": "관성",
+      "effect": "inertia",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "targetTimedSpecV5",
+        "targetTimedSelectionContract",
+        "applyTargetTimedV5"
+      ],
+      "compatibility": [
+        "Current target and duration contract; cross-card interactions remain separately auditable."
+      ]
     },
     {
       "id": "infiltration",
@@ -2107,6 +2602,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "loyalist",
+      "name_ko": "충신",
+      "effect": "loyalist",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "loyalistSelectionContract",
+        "v14ApplyLoyalist"
+      ],
+      "compatibility": [
+        "Scoped targeting and royal-adjacent relocation; promotion and portal interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2125,6 +2641,27 @@
         "machoChess"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "mad-horse",
+      "name_ko": "광마",
+      "effect": "madHorse",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "madHorseMoveContractV10",
+        "applyMadHorseMoveV10"
+      ],
+      "compatibility": [
+        "Scoped friendly knight capture and forced continuation; complex protection interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -2246,6 +2783,28 @@
       ]
     },
     {
+      "id": "metal",
+      "name_ko": "메탈",
+      "effect": "metal",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "metalSelectionContract",
+        "applyInternalThreeCard",
+        "internalThreeRestriction"
+      ],
+      "compatibility": [
+        "Scoped metal targeting, capture protection and cooldown; unusual movement and area effects remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -2302,6 +2861,27 @@
       ],
       "compatibility": [
         "Scoped current RULE port; core large-body abstraction and cross-card interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "mistake-card",
+      "name_ko": "실수",
+      "effect": "mistakeCard",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "october13SelectionContract",
+        "applyMistakeCardV8"
+      ],
+      "compatibility": [
+        "Scoped current timing and target contract."
       ]
     },
     {
@@ -2535,6 +3115,29 @@
         "move_generation"
       ],
       "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc"
+    },
+    {
+      "id": "panic",
+      "name_ko": "패닉",
+      "effect": "panic",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "panicSelectionContract",
+        "v8PanicDestinations",
+        "applyPostMoveV8"
+      ],
+      "compatibility": [
+        "Scoped ordered panic reservation and RNG; complex automatic move restrictions remain separately auditable."
+      ]
     },
     {
       "id": "parrot",
@@ -2819,6 +3422,27 @@
       "phase": "MIDDLE",
       "source_bundle_sha256": "60d5816e78896d4b5371c0d5cc37ef0a302aa0cc814c3b027be3936124878dfc",
       "turn_exclusive": false
+    },
+    {
+      "id": "promotion-rush",
+      "name_ko": "승진 체험",
+      "effect": "promotionRush",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "targetTimedSelectionContract",
+        "applyTargetTimedV5"
+      ],
+      "compatibility": [
+        "Scoped target, queen movement and turn-bound capture restriction; special movement interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -3107,6 +3731,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "reposition",
+      "name_ko": "재배치",
+      "effect": "reposition",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyV6RetainedTurn",
+        "moveRestrictionCode"
+      ],
+      "compatibility": [
+        "Scoped no-capture readiness and first-piece forced follow-up; complex special moves remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -3227,6 +3872,28 @@
       ]
     },
     {
+      "id": "roller",
+      "name_ko": "롤러",
+      "effect": "roller",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "rollerTravelCells",
+        "resolveRollerRoads",
+        "highwayMoves"
+      ],
+      "compatibility": [
+        "Scoped trail creation, continuous road movement, teleport, castling and portal segments; complex chained effects remain separately auditable."
+      ]
+    },
+    {
       "activation": "passive",
       "compatibility": [
         "Scoped latest source port; see cards/ported.json. Full site parity is not claimed."
@@ -3245,6 +3912,49 @@
         "rookLift"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "royal-command",
+      "name_ko": "왕명",
+      "effect": "royalCommand",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped current turn effect; full interaction parity remains separately auditable."
+      ]
+    },
+    {
+      "id": "royal-shield",
+      "name_ko": "가호",
+      "effect": "royalShield",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rng",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "applyEvasionV8",
+        "applyRoyalShieldV8",
+        "applyFanaticalRitualV8"
+      ],
+      "compatibility": [
+        "Scoped current random target contract; full interaction parity remains separately auditable."
+      ]
     },
     {
       "id": "rule-bombs",
@@ -3269,6 +3979,51 @@
       ]
     },
     {
+      "id": "rule-ticket",
+      "name_ko": "규칙 티켓",
+      "effect": "ruleTicket",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng",
+        "choice"
+      ],
+      "source_symbols": [
+        "v12RuleTicketCandidates",
+        "v12RuleTicketChoiceCardId",
+        "applyRuleTicketV12"
+      ],
+      "compatibility": [
+        "Current RULE candidate pool, deferred installation and recorded random replay; interaction with rules installed in the same turn remains separately auditable."
+      ]
+    },
+    {
+      "id": "sacrifice",
+      "name_ko": "희생",
+      "effect": "sacrifice",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "sacrificeSelectionContract",
+        "applySacrificeV8"
+      ],
+      "compatibility": [
+        "Scoped current combat values, protection priority and owner-turn duration; large body interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "rule",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -3287,6 +4042,28 @@
         "saturation"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "scarecrow",
+      "name_ko": "허수아비",
+      "effect": "scarecrow",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "scarecrowSelectionContract",
+        "applyScarecrowV9",
+        "v9ResolveScarecrows"
+      ],
+      "compatibility": [
+        "Scoped sacrificial reservation and owner-start timing; complex transformation interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -3328,6 +4105,28 @@
         "seal"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "severance",
+      "name_ko": "절단",
+      "effect": "severance",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "targetTimedSpecV5",
+        "targetTimedSelectionContract",
+        "applyTargetTimedV5"
+      ],
+      "compatibility": [
+        "Current target and duration contract; cross-card interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -3388,6 +4187,67 @@
         "slime"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "snipe",
+      "name_ko": "저격",
+      "effect": "bishopSnipe",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped current turn effect; full interaction parity remains separately auditable."
+      ]
+    },
+    {
+      "id": "socialism",
+      "name_ko": "사회주의",
+      "effect": "socialism",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped current turn effect; full interaction parity remains separately auditable."
+      ]
+    },
+    {
+      "id": "solidarity",
+      "name_ko": "연대",
+      "effect": "solidarity",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "relayMoveContractV16",
+        "finalizeInternalFive"
+      ],
+      "compatibility": [
+        "Scoped minor exchange and turn expiry; chain, special destination and replay interactions remain separately auditable."
+      ]
     },
     {
       "activation": "passive",
@@ -3510,6 +4370,27 @@
       "turn_exclusive": false
     },
     {
+      "id": "suicide-bomber",
+      "name_ko": "자폭병",
+      "effect": "suicideBomber",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "suicideBomberSelectionContract",
+        "applySuicideBomberV10"
+      ],
+      "compatibility": [
+        "Scoped pawn-family target and explosion contract; simultaneous large-body interactions remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -3528,6 +4409,27 @@
         "suspiciousPotion"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "switcheroo",
+      "name_ko": "바꿔치기",
+      "effect": "switcheroo",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "switcherooMoveContractV6",
+        "applySwitcherooMoveV6"
+      ],
+      "compatibility": [
+        "Scoped royal and pawn exchange; special simultaneous-move interactions remain separately auditable."
+      ]
     },
     {
       "activation": "active",
@@ -3567,6 +4469,26 @@
         "taboo"
       ],
       "turn_exclusive": false
+    },
+    {
+      "id": "taunt",
+      "name_ko": "도발",
+      "effect": "taunt",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "v5ColorEffectAction"
+      ],
+      "compatibility": [
+        "Scoped current turn effect; full interaction parity remains separately auditable."
+      ]
     },
     {
       "id": "thief",
@@ -3671,6 +4593,53 @@
       "turn_exclusive": false
     },
     {
+      "id": "trolley",
+      "name_ko": "트롤리",
+      "effect": "trolley",
+      "phase": "MIDDLE",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng",
+        "choice"
+      ],
+      "source_symbols": [
+        "balancedTrolleyScores",
+        "v12TrolleyBundles",
+        "applyTrolleyV12",
+        "v12OpenTrolleyWindow",
+        "v12ApplyTrolleyResponse"
+      ],
+      "compatibility": [
+        "Current balanced score selection uses a saved seed and opens an opponent choice at the turn boundary; complex simultaneous death interactions remain separately auditable."
+      ]
+    },
+    {
+      "id": "twins",
+      "name_ko": "환상의 콤비",
+      "effect": "twins",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "twinsSelectionContract",
+        "applyTwinSwapAfterMoveV4"
+      ],
+      "compatibility": [
+        "Scoped twin selection and deferred file-surge exchange; complex chained effects remain separately auditable."
+      ]
+    },
+    {
       "activation": "active",
       "compatibility": [
         "Unchanged described effect/phase/activation/turn policy with an inherited 0915 handler. Not full source-behavior parity."
@@ -3728,6 +4697,49 @@
       ],
       "compatibility": [
         "Scoped opening acquisition port; see cards/ported.json. Full interaction parity is not claimed."
+      ]
+    },
+    {
+      "id": "vigilance",
+      "name_ko": "경계",
+      "effect": "vigilance",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook"
+      ],
+      "source_symbols": [
+        "grantAuthorityVigilance",
+        "captureProtectionKind"
+      ],
+      "compatibility": [
+        "Scoped loss-triggered royal protection; complex simultaneous effects remain separately auditable."
+      ]
+    },
+    {
+      "id": "vortex",
+      "name_ko": "소용돌이",
+      "effect": "vortex",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false,
+      "engine_primitives": [
+        "board_transaction",
+        "rule_hook",
+        "rng"
+      ],
+      "source_symbols": [
+        "v8VortexEntries",
+        "applyVortexV8"
+      ],
+      "compatibility": [
+        "Scoped candidates and shuffle; complex relocations remain separately auditable."
       ]
     },
     {
@@ -3837,20 +4849,8 @@
   ],
   "pending": [
     {
-      "id": "alekhine-machine-gun",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "barricade",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "basic-training",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "bishop-infiltration",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "black-box",
@@ -3859,10 +4859,6 @@
     {
       "id": "black-magic",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "blockade",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "brainwash",
@@ -3877,23 +4873,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "castling",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "chain",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "chameleon-mutation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "charge",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "chimera",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3909,10 +4893,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "counterattack",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "death-squad",
       "reason": "changed_contract_not_ported"
     },
@@ -3921,59 +4901,11 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "dice",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "disarm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "e4",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "emergency-evacuation",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "en-passant-bang",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "encouragement",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "evasion",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "exile",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "fanatical-ritual",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "feudal-contract",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "file-conveyor",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "final-weapon",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "freeze",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "frontline-response",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -3982,18 +4914,6 @@
     },
     {
       "id": "icbm",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "ice-king",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "ice-sheet",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "inertia",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4013,22 +4933,6 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "loyalist",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "mad-horse",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "metal",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "mistake-card",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "mutation",
       "reason": "changed_contract_not_ported"
     },
@@ -4045,15 +4949,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "panic",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "premove",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "promotion-rush",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4065,59 +4961,11 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "reposition",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "resolve",
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "roller",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "royal-command",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "royal-shield",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "rule-ticket",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "sacrifice",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "scarecrow",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "severance",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "snipe",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "socialism",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "solidarity",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "stake",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "suicide-bomber",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4125,27 +4973,11 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "switcheroo",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "synchronization",
       "reason": "new_card_not_ported"
     },
     {
-      "id": "taunt",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "traitor",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "trolley",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "twins",
       "reason": "changed_contract_not_ported"
     },
     {
@@ -4161,15 +4993,7 @@
       "reason": "changed_contract_not_ported"
     },
     {
-      "id": "vigilance",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "vip",
-      "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "vortex",
       "reason": "changed_contract_not_ported"
     },
     {

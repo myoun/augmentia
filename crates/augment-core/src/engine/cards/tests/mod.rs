@@ -13,4 +13,5 @@ pub(super) mod board_objectives;
 
 mod piece_cards;
 
+mod middle_cards;
 mod opening_cards;

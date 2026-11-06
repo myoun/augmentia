@@ -280,6 +280,15 @@ pub struct PendingPremove {
     pub moves: Vec<MoveAction>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingRuleTicket {
+    pub owner: Player,
+    pub source_card_instance: u32,
+    pub due_turn: u32,
+    pub rule_id: String,
+    pub random_values: Vec<usize>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PendingPortal {
     pub owner: Player,
@@ -404,10 +413,14 @@ pub struct CardRuntimeState {
     pub overtake: [bool; 2],
     pub reversal: [bool; 2],
     pub symmetry: [bool; 2],
+    pub e4_active: [bool; 2],
+    pub roller_active: [bool; 2],
+    pub solidarity_active: [bool; 2],
     pub mutation: [bool; 2],
     pub long_en_passant: [bool; 2],
     pub vanguard: [bool; 2],
     pub infiltration: [bool; 2],
+    pub bishop_infiltration_due: [Option<u32>; 2],
     pub resolve: [bool; 2],
     pub resolve_ready: [bool; 2],
     pub resolve_move_credit: [bool; 2],
@@ -417,6 +430,7 @@ pub struct CardRuntimeState {
     pub initiative: [Option<InitiativeStatus>; 2],
     pub dice_locks: [Option<DiceLockStatus>; 2],
     pub moved_piece_ids: BTreeSet<u32>,
+    pub castled_piece_ids: BTreeSet<u32>,
     pub locust_swarm_piece_ids: BTreeSet<u32>,
     pub metalized_piece_ids: BTreeSet<u32>,
     pub metal_cooldowns: BTreeMap<u32, u8>,
@@ -426,6 +440,7 @@ pub struct CardRuntimeState {
     pub disarmed: BTreeMap<u32, u32>,
     pub frozen: BTreeMap<u32, FrozenStatus>,
     pub reposition: Option<RepositionStatus>,
+    pub reposition_ready: [bool; 2],
     pub revelation: bool,
     pub parry_piece_ids: BTreeSet<u32>,
     pub empty_lunchboxes: BTreeMap<u32, EmptyLunchboxStatus>,
@@ -458,6 +473,11 @@ pub struct CardRuntimeState {
     pub field_promotion: [bool; 2],
     pub field_promoted_piece_ids: BTreeSet<u32>,
     pub frontline_response: [bool; 2],
+    pub frontline_piece_ids: BTreeSet<u32>,
+    /// Blizzard source and owner-turn boundary when the freeze expires.
+    pub ice_king: BTreeMap<u32, (Player, u32)>,
+    pub counterattack_ready: BTreeSet<u32>,
+    pub counterattack_locked: BTreeSet<u32>,
     pub relay: [bool; 2],
     pub gomoku: [bool; 2],
     pub magic_girl_surge: [bool; 2],
@@ -481,6 +501,8 @@ pub struct CardRuntimeState {
     pub retreat: [bool; 2],
     pub rook_lift: [bool; 2],
     pub encouragement: [bool; 2],
+    pub vigilance: [bool; 2],
+    pub vigilance_protection: BTreeMap<u32, TimedPieceStatus>,
     pub exhaustion: [bool; 2],
     pub overwhelm: [bool; 2],
     pub imperial_studies: [bool; 2],
@@ -489,6 +511,8 @@ pub struct CardRuntimeState {
     pub religious_victory: [bool; 2],
     pub basic_training_piece_ids: BTreeSet<u32>,
     pub promotion_rush_piece_ids: BTreeSet<u32>,
+    pub promotion_rush_capture_cleared: BTreeSet<u32>,
+    pub evacuation_no_capture: BTreeSet<u32>,
     pub evasion_piece_ids: BTreeSet<u32>,
     pub ghost_piece_ids: BTreeSet<u32>,
     pub inertia_piece_ids: BTreeSet<u32>,
@@ -525,6 +549,7 @@ pub struct CardRuntimeState {
     pub pending_panic: Vec<PendingPanic>,
     pub pending_premoves: Vec<PendingPremove>,
     pub pending_scarecrows: Vec<PendingScarecrow>,
+    pub scarecrow_reservations: BTreeMap<u32, (Player, u32)>,
     pub quantum_pending: [bool; 2],
     pub quantum_positions: BTreeMap<u32, Square>,
     pub stealth_piece_ids: BTreeSet<u32>,
@@ -537,8 +562,11 @@ pub struct CardRuntimeState {
     pub substitution: [bool; 2],
     pub switcheroo: [bool; 2],
     pub twin_bonds: Vec<TwinBond>,
+    pub twin_swap_pending: BTreeSet<u32>,
     pub witch_trials: BTreeMap<u32, TimedPieceStatus>,
     pub pending_trolley_by: [Option<Player>; 2],
+    pub pending_trolley_seed: [Option<(Player, u32, u32)>; 2],
+    pub pending_rule_tickets: Vec<PendingRuleTicket>,
     pub active_trolley: Option<TrolleyDilemma>,
     pub baby_bear_grow_turns: BTreeMap<u32, u32>,
     pub bear_retaliations: BTreeMap<u32, u8>,
@@ -555,6 +583,7 @@ pub struct CardRuntimeState {
     pub underpromotion: [bool; 2],
     pub vip_pending: Vec<PendingVip>,
     pub barricades: BTreeSet<Square>,
+    pub blockade_walls: BTreeMap<Square, (Player, u32)>,
     pub chains: Vec<[u32; 2]>,
     pub collapsed_files_ranks: bool,
     pub desperado_pieces: BTreeSet<u32>,
@@ -583,6 +612,8 @@ pub struct CardRuntimeState {
     pub football_pos: Option<Square>,
     pub high_ground_squares: BTreeSet<Square>,
     pub highways: BTreeSet<u8>,
+    pub highway_cells: BTreeSet<Square>,
+    pub file_conveyors: Vec<(u8, Player, u32)>,
     pub macho_chess: bool,
     pub mistake_rule: bool,
     pub monochrome_chess: bool,
@@ -598,6 +629,11 @@ pub struct CardRuntimeState {
 }
 
 impl CardRuntimeState {
+    pub(crate) fn remove_barricade(&mut self, square: Square) {
+        self.barricades.remove(&square);
+        self.blockade_walls.remove(&square);
+    }
+
     pub(crate) fn remember_permanent_before_timed_protection(&mut self, piece_id: u32) {
         if self.protected_piece_ids.contains(&piece_id)
             && !self.queens_gambit_protection.contains(&piece_id)
@@ -660,6 +696,13 @@ impl CardRuntimeState {
             || !self.queens_gambit_previous_protection.is_empty()
             || !self.thief_turn_paths.is_empty()
             || !self.large_missing_cells.is_empty()
+            || !self.frontline_piece_ids.is_empty()
+            || !self.ice_king.is_empty()
+            || !self.counterattack_ready.is_empty()
+            || !self.counterattack_locked.is_empty()
+            || !self.evacuation_no_capture.is_empty()
+            || self.vigilance != [false, false]
+            || !self.vigilance_protection.is_empty()
             || !self.potion_basic_training_piece_ids.is_empty()
             || !self.poison_stun_turns.is_empty()
             || !self.potion_manner_piece_ids.is_empty()
@@ -676,10 +719,12 @@ impl CardRuntimeState {
             || !self.pending_panic.is_empty()
             || !self.pending_premoves.is_empty()
             || !self.pending_scarecrows.is_empty()
+            || !self.scarecrow_reservations.is_empty()
             || !self.quantum_positions.is_empty()
             || !self.stealth_piece_ids.is_empty()
             || !self.submerged_piece_ids.is_empty()
             || !self.twin_bonds.is_empty()
+            || !self.twin_swap_pending.is_empty()
             || !self.witch_trials.is_empty()
             || self.pending_trolley_by != [None, None]
             || self.active_trolley.is_some()
@@ -1006,6 +1051,27 @@ impl GameState {
                     .replace(", wanted_piece_ids: {}", "")
                     .replace(", thief_turn_paths: {}", "")
                     .replace(", large_missing_cells: {}", "")
+                    .replace(", frontline_piece_ids: {}", "")
+                    .replace(", ice_king: {}", "")
+                    .replace(", counterattack_ready: {}", "")
+                    .replace(", counterattack_locked: {}", "")
+                    .replace(", promotion_rush_capture_cleared: {}", "")
+                    .replace(", evacuation_no_capture: {}", "")
+                    .replace(", vigilance: [false, false]", "")
+                    .replace(", vigilance_protection: {}", "")
+                    .replace(", bishop_infiltration_due: [None, None]", "")
+                    .replace(", castled_piece_ids: {}", "")
+                    .replace(", reposition_ready: [false, false]", "")
+                    .replace(", e4_active: [false, false]", "")
+                    .replace(", roller_active: [false, false]", "")
+                    .replace(", highway_cells: {}", "")
+                    .replace(", file_conveyors: []", "")
+                    .replace(", solidarity_active: [false, false]", "")
+                    .replace(", twin_swap_pending: {}", "")
+                    .replace(", pending_trolley_seed: [None, None]", "")
+                    .replace(", pending_rule_tickets: []", "")
+                    .replace(", blockade_walls: {}", "")
+                    .replace(", scarecrow_reservations: {}", "")
                     .replace(", queens_gambit_previous_protection: {}", "")
                     .as_bytes(),
             );
@@ -1584,6 +1650,73 @@ impl GameState {
                 hash.u8(*index);
             }
         }
+        if !self.card_runtime.frontline_piece_ids.is_empty() {
+            hash.bytes(b"frontline-pieces");
+            for id in &self.card_runtime.frontline_piece_ids {
+                hash.u32(*id);
+            }
+        }
+        if self.card_runtime.vigilance != [false, false]
+            || !self.card_runtime.vigilance_protection.is_empty()
+        {
+            hash.bytes(b"vigilance");
+            hash.bytes(
+                format!(
+                    "{:?}{:?}",
+                    self.card_runtime.vigilance, self.card_runtime.vigilance_protection
+                )
+                .as_bytes(),
+            );
+        }
+        if !self.card_runtime.ice_king.is_empty() {
+            hash.bytes(b"ice-king");
+            for (id, (owner, due)) in &self.card_runtime.ice_king {
+                hash.u32(*id);
+                hash.u8(owner.index() as u8);
+                hash.u32(due.saturating_sub(self.turns_taken[owner.index()]));
+            }
+        }
+        if !self.card_runtime.scarecrow_reservations.is_empty() {
+            hash.bytes(b"scarecrow-reservations");
+            for (id, (owner, due)) in &self.card_runtime.scarecrow_reservations {
+                hash.u32(*id);
+                hash.u8(owner.index() as u8);
+                hash.u32(due.saturating_sub(self.turns_taken[owner.index()]));
+            }
+        }
+        for (tag, ids) in [
+            (
+                b"twin-swap-pending".as_slice(),
+                &self.card_runtime.twin_swap_pending,
+            ),
+            (
+                b"castled-pieces".as_slice(),
+                &self.card_runtime.castled_piece_ids,
+            ),
+            (
+                b"evacuation-no-capture".as_slice(),
+                &self.card_runtime.evacuation_no_capture,
+            ),
+            (
+                b"promotion-rush-cleared".as_slice(),
+                &self.card_runtime.promotion_rush_capture_cleared,
+            ),
+            (
+                b"counterattack-ready".as_slice(),
+                &self.card_runtime.counterattack_ready,
+            ),
+            (
+                b"counterattack-locked".as_slice(),
+                &self.card_runtime.counterattack_locked,
+            ),
+        ] {
+            if !ids.is_empty() {
+                hash.bytes(tag);
+                for id in ids {
+                    hash.u32(*id);
+                }
+            }
+        }
         if !self
             .card_runtime
             .queens_gambit_previous_protection
@@ -1603,6 +1736,89 @@ impl GameState {
             hash.bytes(b"infiltration");
             hash.u8(u8::from(self.card_runtime.infiltration[0]));
             hash.u8(u8::from(self.card_runtime.infiltration[1]));
+        }
+        if self.card_runtime.reposition_ready != [false, false] {
+            hash.bytes(b"reposition-ready");
+            hash.u8(u8::from(self.card_runtime.reposition_ready[0]));
+            hash.u8(u8::from(self.card_runtime.reposition_ready[1]));
+        }
+        if self.card_runtime.solidarity_active != [false, false] {
+            hash.bytes(b"solidarity-active");
+            hash.u8(u8::from(self.card_runtime.solidarity_active[0]));
+            hash.u8(u8::from(self.card_runtime.solidarity_active[1]));
+        }
+        if !self.card_runtime.blockade_walls.is_empty() {
+            hash.bytes(b"blockade-walls");
+            for (square, (owner, due)) in &self.card_runtime.blockade_walls {
+                hash.u8(square.index() as u8);
+                hash.u8(owner.index() as u8);
+                hash.u32(due.saturating_sub(self.turns_taken[owner.index()]));
+            }
+        }
+        if self.card_runtime.roller_active != [false, false] {
+            hash.bytes(b"roller-active");
+            hash.u8(u8::from(self.card_runtime.roller_active[0]));
+            hash.u8(u8::from(self.card_runtime.roller_active[1]));
+        }
+        if !self.card_runtime.pending_rule_tickets.is_empty() {
+            hash.bytes(b"rule-ticket");
+            for pending in &self.card_runtime.pending_rule_tickets {
+                hash.u8(pending.owner.index() as u8);
+                hash.u32(pending.source_card_instance);
+                hash.u32(
+                    pending
+                        .due_turn
+                        .saturating_sub(self.turns_taken[pending.owner.index()]),
+                );
+                hash.bytes(pending.rule_id.as_bytes());
+                for value in &pending.random_values {
+                    hash.u64(*value as u64);
+                }
+            }
+        }
+        if self.card_runtime.pending_trolley_seed != [None, None] {
+            hash.bytes(b"trolley-seed");
+            for pending in self.card_runtime.pending_trolley_seed {
+                if let Some((by, source, seed)) = pending {
+                    hash.u8(1);
+                    hash.u8(by.index() as u8);
+                    hash.u32(source);
+                    hash.u32(seed);
+                } else {
+                    hash.u8(0);
+                }
+            }
+        }
+        if !self.card_runtime.file_conveyors.is_empty() {
+            hash.bytes(b"file-conveyors");
+            for (file, owner, due) in &self.card_runtime.file_conveyors {
+                hash.u8(*file);
+                hash.u8(owner.index() as u8);
+                hash.u32(due.saturating_sub(self.turns_taken[owner.index()]));
+            }
+        }
+        if !self.card_runtime.highway_cells.is_empty() {
+            hash.bytes(b"highway-cells");
+            for square in &self.card_runtime.highway_cells {
+                hash.u8(square.index() as u8);
+            }
+        }
+        if self.card_runtime.e4_active != [false, false] {
+            hash.bytes(b"e4-active");
+            hash.u8(u8::from(self.card_runtime.e4_active[0]));
+            hash.u8(u8::from(self.card_runtime.e4_active[1]));
+        }
+        if self.card_runtime.bishop_infiltration_due != [None, None] {
+            hash.bytes(b"bishop-infiltration");
+            for player in [Player::White, Player::Black] {
+                match self.card_runtime.bishop_infiltration_due[player.index()] {
+                    Some(due) => {
+                        hash.u8(1);
+                        hash.u32(due.saturating_sub(self.turns_taken[player.index()]));
+                    }
+                    None => hash.u8(0),
+                }
+            }
         }
         if self.card_runtime.resolve != [false, false] {
             hash.bytes(b"resolve");

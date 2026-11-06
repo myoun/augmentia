@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RuleRuntime {
     pub enabled: BTreeSet<String>,
+    pub(crate) ticket_random_record: Option<Vec<(usize, usize)>>,
+    pub(crate) ticket_random_replay: Option<(Vec<usize>, usize, bool)>,
     pub automatic: bool,
     pub piece_fresh_until: BTreeMap<u32, u32>,
     pub medium_memory: Option<ParrotMemoryStatus>,
@@ -88,6 +90,8 @@ impl RuleRuntime {
                     .then(|| 60u32.saturating_sub(black))
             )
         )
+        .replace(", ticket_random_record: None", "")
+        .replace(", ticket_random_replay: None", "")
     }
 }
 
@@ -122,17 +126,47 @@ pub(super) fn rule_halfmove(state: &GameState) -> u32 {
     state.turns_taken[Player::Black.index()].saturating_mul(2)
         + u32::from(state.turn == Player::Black)
 }
+pub(in crate::engine) fn rule_sample(
+    state: &mut GameState,
+    len: usize,
+) -> (u64, Option<usize>, bool) {
+    if let Some((values, cursor, missing)) = &mut state.rule_runtime.ticket_random_replay {
+        if len == 0 {
+            return (0, None, true);
+        }
+        let index = if let Some(value) = values.get(*cursor) {
+            *value % len
+        } else {
+            *missing = true;
+            0
+        };
+        *cursor += 1;
+        return (0, Some(index), true);
+    }
+    if len == 0 && state.rule_runtime.ticket_random_record.is_some() {
+        return (0, None, true);
+    }
+    let (roll, index) = state.rng_mut().web_choice_index(len);
+    if let Some(record) = &mut state.rule_runtime.ticket_random_record
+        && let Some(index) = index
+    {
+        record.push((len, index));
+    }
+    (roll, index, false)
+}
 pub(super) fn rule_random(
     state: &mut GameState,
     events: &mut Vec<Event>,
     len: usize,
     purpose: &str,
 ) -> Option<usize> {
-    let (roll, index) = state.rng_mut().web_choice_index(len);
-    events.push(Event::RandomSample {
-        purpose: purpose.into(),
-        roll_53: roll,
-    });
+    let (roll, index, replayed) = rule_sample(state, len);
+    if !replayed {
+        events.push(Event::RandomSample {
+            purpose: purpose.into(),
+            roll_53: roll,
+        });
+    }
     index
 }
 pub(super) fn rule_shuffle<T>(
@@ -163,9 +197,13 @@ impl Engine {
         piece: Piece,
         actions: &mut Vec<Action>,
     ) {
-        if state.rule_runtime.enabled.is_empty() && !rule_dependencies_active(state) {
+        if state.rule_runtime.enabled.is_empty()
+            && !rule_dependencies_active(state)
+            && state.card_runtime.highway_cells.is_empty()
+        {
             return;
         }
+        self.generate_highway_trail_moves(state, from, piece, actions);
         if matches!(
             self.piece_ability_kind(state, piece),
             PieceKind::Pawn | PieceKind::BerolinaPawn
@@ -179,7 +217,8 @@ impl Engine {
                 }
             }
         }
-        if rule_active(state, crate::HIGHWAY)
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            && rule_active(state, crate::HIGHWAY)
             && state.card_runtime.highways.contains(&from.file())
             && !state.card_runtime.large_pieces.contains_key(&piece.id)
             && !matches!(
@@ -215,6 +254,71 @@ impl Engine {
             }
         }
         self.augment_rule_portal_moves(state, from, piece, actions);
+    }
+
+    fn generate_highway_trail_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        let road = |square: Square| {
+            state.card_runtime.highway_cells.contains(&square)
+                || (rule_active(state, crate::HIGHWAY)
+                    && state.card_runtime.highways.contains(&square.file()))
+        };
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            || (state.card_runtime.highway_cells.is_empty() && !rule_active(state, crate::HIGHWAY))
+            || !road(from)
+            || state.card_runtime.large_pieces.contains_key(&piece.id)
+            || matches!(
+                piece.kind,
+                PieceKind::Football
+                    | PieceKind::Crown
+                    | PieceKind::Scarecrow
+                    | PieceKind::Colossus
+                    | PieceKind::BigRook
+                    | PieceKind::BigBishop
+            )
+        {
+            return;
+        }
+        let capture_allowed = !matches!(
+            self.piece_ability_kind(state, piece),
+            PieceKind::Guard
+                | PieceKind::Recruiter
+                | PieceKind::Wizard
+                | PieceKind::Herald
+                | PieceKind::Merchant
+                | PieceKind::Scarecrow
+        );
+        for (df, dr) in [(0, 1), (0, -1), (1, 0), (-1, 0)] {
+            let mut cursor = from;
+            while let Some(to) = cursor.offset(df, dr) {
+                if !road(to) {
+                    break;
+                }
+                match self.movement_occupant(state, to) {
+                    None => actions.push(Action::Move(MoveAction::new(from, to, None))),
+                    Some(target) => {
+                        let jester_target = piece.kind != PieceKind::Jester
+                            || matches!(
+                                target.kind,
+                                PieceKind::King | PieceKind::RoyalKnight | PieceKind::Merchant
+                            );
+                        if capture_allowed
+                            && jester_target
+                            && self.can_capture(state, piece, target)
+                        {
+                            actions.push(Action::Move(MoveAction::new(from, to, None)));
+                        }
+                        break;
+                    }
+                }
+                cursor = to;
+            }
+        }
     }
 
     pub(in crate::engine) fn rule_cell_collapsed(&self, state: &GameState, square: Square) -> bool {

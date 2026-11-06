@@ -14,6 +14,16 @@ const WIN: f64 = 100_000.0;
 // Abort rather than score a truncated action chain as a completed turn.
 const MAX_ACTION_PATH: u16 = 64;
 
+// Keep the large engine transition off each recursive search frame.
+#[inline(never)]
+fn apply_search_transition(
+    actions: &LegalActionBatch<'_>,
+    action: &Action,
+    chance: &mut SearchChanceContext,
+) -> Result<Box<augment_core::SearchTransition>, augment_core::EngineError> {
+    actions.apply_for_search(action, chance).map(Box::new)
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DepthUnit {
@@ -319,7 +329,7 @@ impl Context<'_> {
                 path ^ (sample as u64).wrapping_mul(0x9e3779b97f4a7c15)
             ));
             let start = Instant::now();
-            let transition = actions.apply_for_search(action, &mut chance);
+            let transition = apply_search_transition(actions, action, &mut chance);
             self.stats.apply_calls += 1;
             self.stats.apply_ms += start.elapsed().as_secs_f64() * 1000.0;
             let transition = transition.map_err(|e| SearchError::Engine(e.to_string()))?;

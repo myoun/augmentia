@@ -147,6 +147,27 @@ fn execution_profile() -> &'static BTreeMap<String, bool> {
     })
 }
 
+/// Cards the canonical catalog still declares unported. They must never execute.
+#[cfg(test)]
+fn pending_ids() -> Vec<String> {
+    #[derive(Deserialize)]
+    struct Pending {
+        id: String,
+    }
+    #[derive(Deserialize)]
+    struct Profile {
+        pending: Vec<Pending>,
+    }
+    serde_json::from_str::<Profile>(include_str!(
+        "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+    ))
+    .expect("bundled executable card profile")
+    .pending
+    .into_iter()
+    .map(|entry| entry.id)
+    .collect()
+}
+
 impl LatestCard {
     pub fn supported(&self) -> bool {
         self.enabled && execution_profile().contains_key(&self.id)
@@ -385,15 +406,27 @@ mod tests {
         let catalog = latest_catalog();
         assert_eq!(catalog.len(), 275);
         assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 271);
-        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), 189);
+        // The supported count grows as cards are ported, so it is checked against
+        // the execution profile itself instead of a pinned snapshot.
+        let profile = crate::latest::execution_profile().len();
+        assert_eq!(catalog.iter().filter(|c| c.supported()).count(), profile);
         for card in catalog {
             assert_eq!(
                 ruleset_card(LATEST_RULESET_ID, &card.id).is_some(),
                 card.supported()
             );
         }
-        assert!(ruleset_card(LATEST_RULESET_ID, "qxe1").is_none());
+        // Upstream-disabled cards stay rejected regardless of port progress.
+        for disabled in ["qxe1", "democracy", "summon-colossus", "underground-bunker"] {
+            assert!(ruleset_card(LATEST_RULESET_ID, disabled).is_none());
+        }
         assert!(ruleset_card("augment_chess_20260915", "qxe1").is_some());
-        assert!(ruleset_card(LATEST_RULESET_ID, "judgment").is_none());
+        // A card still queued in `pending` must not be executable.
+        for pending in crate::latest::pending_ids() {
+            assert!(
+                ruleset_card(LATEST_RULESET_ID, &pending).is_none(),
+                "{pending} is pending but executable"
+            );
+        }
     }
 }

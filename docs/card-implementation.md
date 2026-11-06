@@ -1,9 +1,9 @@
 # 카드 구현 위치와 추가 방법
 
-최신 실행 프로필의 지원 카드 189장은 `crates/augment-core/src/engine/cards/`에 둔다.
+최신 실행 프로필의 지원 카드 235장은 `crates/augment-core/src/engine/cards/`에 둔다.
 파일명은 공식 ID의 `-`를 `_`로 바꾼 것이다. 예를 들어 `pawn-chain`은 `pawn_chain.rs`다.
 카탈로그·지원 목록·원본 계약은 계속 `rulesets/augment_chess_20261017/cards/`에서 관리한다.
-현재 미지원 86장의 최신 효과·변경 항목·이식 확인사항은 [남은 카드 목록](remaining-card-ports.md)을 참고한다.
+현재 미지원 40장의 최신 효과·변경 항목·이식 확인사항은 [남은 카드 목록](remaining-card-ports.md)을 참고한다.
 
 ## 파일의 책임
 

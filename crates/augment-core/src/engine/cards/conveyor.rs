@@ -35,6 +35,16 @@ impl Engine {
         ring: &[Square],
         events: &mut Vec<Event>,
     ) {
+        self.rotate_conveyor(state, ring, false, events);
+    }
+
+    pub(in crate::engine) fn rotate_conveyor(
+        &self,
+        state: &mut GameState,
+        ring: &[Square],
+        linear: bool,
+        events: &mut Vec<Event>,
+    ) {
         let n = ring.len();
         if n == 0 {
             return;
@@ -43,6 +53,10 @@ impl Engine {
         let walls: Vec<_> = ring
             .iter()
             .map(|s| state.card_runtime.barricades.contains(s))
+            .collect();
+        let blockade_walls: Vec<_> = ring
+            .iter()
+            .map(|square| state.card_runtime.blockade_walls.get(square).copied())
             .collect();
         let balls: Vec<_> = ring
             .iter()
@@ -55,7 +69,18 @@ impl Engine {
                 self.board_piece_at(state, *s).is_some_and(|p| {
                     state.card_runtime.large_pieces.contains_key(&p.id)
                         || p.kind == PieceKind::Slime
+                        || (state.ruleset_id == crate::LATEST_RULESET_ID
+                            && self.piece_has_ability(state, p, PieceKind::Slime))
+                        || (linear
+                            && i + 1 < n
+                            && self.d4_restricts(
+                                state,
+                                p.owner,
+                                self.is_royal_piece(state, p),
+                                ring[i + 1],
+                            ))
                 }) || pieces[i].is_some() && (walls[i] || balls[i])
+                    || (linear && walls[i] && balls[i])
             })
             .collect();
         let occupied: Vec<_> = (0..n)
@@ -63,33 +88,44 @@ impl Engine {
             .collect();
         let mut moving: Vec<_> = (0..n)
             .map(|i| {
-                occupied[i]
+                !linear
+                    && occupied[i]
                     && !fixed[i]
                     && !fixed[(i + 1) % n]
                     && (!fixed.iter().any(|f| *f) || !occupied[(i + 1) % n])
             })
             .collect();
-        loop {
-            let mut changed = false;
-            for i in 0..n {
-                if occupied[i]
+        if linear {
+            for i in (0..n.saturating_sub(1)).rev() {
+                moving[i] = occupied[i]
                     && !fixed[i]
-                    && !fixed[(i + 1) % n]
-                    && !moving[i]
-                    && moving[(i + 1) % n]
-                {
-                    moving[i] = true;
-                    changed = true;
-                }
+                    && !fixed[i + 1]
+                    && (!occupied[i + 1] || moving[i + 1]);
             }
-            if !changed {
-                break;
+        }
+        if !linear {
+            loop {
+                let mut changed = false;
+                for i in 0..n {
+                    if occupied[i]
+                        && !fixed[i]
+                        && !fixed[(i + 1) % n]
+                        && !moving[i]
+                        && moving[(i + 1) % n]
+                    {
+                        moving[i] = true;
+                        changed = true;
+                    }
+                }
+                if !changed {
+                    break;
+                }
             }
         }
         for i in 0..n {
             if moving[i] {
                 state.board.set(ring[i], None);
-                state.card_runtime.barricades.remove(&ring[i]);
+                state.card_runtime.remove_barricade(ring[i]);
                 if balls[i] {
                     state.card_runtime.football_pos = None;
                 }
@@ -102,13 +138,11 @@ impl Engine {
             let to = ring[(i + 1) % n];
             if let Some(mut p) = pieces[i] {
                 state.card_runtime.moved_piece_ids.insert(p.id);
-                if matches!(
+                if (matches!(
                     p.kind,
-                    PieceKind::Pawn
-                        | PieceKind::BerolinaPawn
-                        | PieceKind::Squire
-                        | PieceKind::StandardBearer
-                ) && to.rank() == if p.owner == Player::White { 7 } else { 0 }
+                    PieceKind::Pawn | PieceKind::Squire | PieceKind::StandardBearer
+                ) || (!linear && p.kind == PieceKind::BerolinaPawn))
+                    && to.rank() == if p.owner == Player::White { 7 } else { 0 }
                 {
                     p.kind = PieceKind::Queen;
                 }
@@ -116,6 +150,9 @@ impl Engine {
             }
             if walls[i] && !self.rule_cell_collapsed(state, to) {
                 state.card_runtime.barricades.insert(to);
+                if let Some(wall) = blockade_walls[i] {
+                    state.card_runtime.blockade_walls.insert(to, wall);
+                }
             }
             if balls[i] && !self.rule_cell_collapsed(state, to) {
                 state.card_runtime.football_pos = Some(to);

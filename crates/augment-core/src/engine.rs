@@ -591,6 +591,7 @@ impl Engine {
     ) {
         self.transfer_rule_crown(state, square, piece.id, None);
         state.board.set(square, None);
+        self.grant_vigilance_after_loss(state, piece);
         self.clear_removed_piece_statuses(state, piece.id);
         events.push(Event::PieceRemoved {
             actor,
@@ -635,6 +636,7 @@ impl Engine {
     }
 
     fn record_new_capture_reactions(&self, state: &mut GameState, captured: Piece) {
+        self.grant_vigilance_after_loss(state, captured);
         self.current_rule_dependency_capture(state, captured);
 
         state.card_runtime.magic_girl_surge[captured.owner.index()] = true;
@@ -674,6 +676,37 @@ impl Engine {
                     piece: captured,
                     due_ply: state.ply.saturating_add(6),
                 });
+        }
+    }
+
+    fn grant_vigilance_after_loss(&self, state: &mut GameState, victim: Piece) {
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            || !state.card_runtime.vigilance[victim.owner.index()]
+        {
+            return;
+        }
+        let enemy = victim.owner.opponent();
+        let remaining = if state.turn == enemy { 2 } else { 1 };
+        let royals: Vec<_> = state
+            .board
+            .iter()
+            .filter_map(|(_, piece)| {
+                (piece.owner == victim.owner
+                    && piece.id != victim.id
+                    && piece.kind != PieceKind::Barrier
+                    && self.is_royal_piece(state, piece))
+                .then_some(piece.id)
+            })
+            .collect();
+        for id in royals {
+            let status = state.card_runtime.vigilance_protection.entry(id).or_insert(
+                crate::TimedPieceStatus {
+                    by: enemy,
+                    remaining_turns: 0,
+                },
+            );
+            status.by = enemy;
+            status.remaining_turns = status.remaining_turns.max(remaining);
         }
     }
 
@@ -1920,6 +1953,7 @@ impl Engine {
         action: Action,
     ) -> Result<Transition, EngineError> {
         let is_draft_pick = matches!(action, Action::DraftPick { .. });
+        let roller_action = action.clone();
         let mut transition = match action.clone() {
             Action::Move(movement) => self.apply_move(state, action, movement),
             Action::SkipOptionalMove => {
@@ -1957,10 +1991,19 @@ impl Engine {
                 option_index,
             } => self.apply_choice(state, action, choice_id, option_index),
         }?;
+        self.settle_roller(
+            state,
+            &roller_action,
+            &mut transition.state,
+            &transition.events,
+        );
         self.refresh_submerged_pieces(&mut transition.state);
         self.clean_pawn_chains(&mut transition.state, &state.board);
         self.settle_check_objectives(&mut transition.state);
         self.resolve_empty_forced_move(&mut transition.state, &mut transition.events)?;
+        self.settle_twin_sequences(&mut transition.state);
+        self.clean_pawn_chains(&mut transition.state, &state.board);
+        self.settle_check_objectives(&mut transition.state);
         self.advance_capture_flags(&mut transition.state, state.turn, false);
         self.refresh_submerged_pieces(&mut transition.state);
         if !is_draft_pick
@@ -2104,10 +2147,16 @@ impl Engine {
             return false;
         };
         let unique = squares.iter().copied().collect::<BTreeSet<_>>();
-        if unique.len() != squares.len() {
+        if unique.len() != squares.len()
+            && !(state.ruleset_id == crate::LATEST_RULESET_ID
+                && card.definition_id == crate::EMERGENCY_EVACUATION)
+        {
             return false;
         }
         match card.definition_id.as_str() {
+            crate::EMERGENCY_EVACUATION if state.ruleset_id == crate::LATEST_RULESET_ID => {
+                cards::emergency_evacuation::valid_selection(self, state, squares)
+            }
             CLEANUP => {
                 !squares.is_empty()
                     && squares.len() <= 3
@@ -2753,7 +2802,13 @@ impl Engine {
         action: Action,
         mut movement: MoveAction,
     ) -> Result<Transition, EngineError> {
+        let e4_move = state.ruleset_id == crate::LATEST_RULESET_ID
+            && state.card_runtime.e4_active[state.turn.index()]
+            && movement.from != movement.to
+            && movement.to
+                == Square::new(4, if state.turn == Player::White { 3 } else { 4 }).unwrap();
         if state.ruleset_id == crate::LATEST_RULESET_ID
+            && !e4_move
             && let Some(merchant) = state.board.get(movement.from)
             && merchant.kind == PieceKind::Merchant
             && let Some(target) = state.board.get(movement.to)
@@ -2767,7 +2822,7 @@ impl Engine {
                 ActionTarget::PieceAt(movement.to),
             );
         }
-        if let Some((to, target)) = self.rule_grappler_pull(state, movement) {
+        if !e4_move && let Some((to, target)) = self.rule_grappler_pull(state, movement) {
             return self.apply_rule_grappler(state, action, movement, to, target);
         }
 
@@ -2829,7 +2884,18 @@ impl Engine {
         let mut moving_piece = next
             .move_source_piece(movement.from)
             .ok_or_else(|| EngineError::Invariant("legal move has no source piece".to_owned()))?;
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && forced_continuation.is_none()
+            && next.card_runtime.reposition_ready[actor.index()]
+        {
+            next.card_runtime.reposition_ready[actor.index()] = false;
+            next.card_runtime.reposition = Some(RepositionStatus {
+                piece_id: moving_piece.id,
+                used: false,
+            });
+        }
         let thief_extra = state.ruleset_id == crate::LATEST_RULESET_ID
+            && !e4_move
             && self.piece_ability_kind(state, moving_piece) == PieceKind::Thief
             && state.board.get(movement.to).is_none()
             && {
@@ -2853,7 +2919,7 @@ impl Engine {
         }
         let moved_ability_kind = self.piece_ability_kind(&next, moving_piece);
         let moved_as_kind = moving_piece.kind;
-        if moved_ability_kind == PieceKind::SiegeRam {
+        if moved_ability_kind == PieceKind::SiegeRam && !e4_move {
             let file_delta = movement.to.file() as i8 - movement.from.file() as i8;
             let rank_delta = movement.to.rank() as i8 - movement.from.rank() as i8;
             if file_delta.abs() + rank_delta.abs() == 2 {
@@ -2992,7 +3058,17 @@ impl Engine {
             && destination_piece.is_some_and(|target| {
                 target.owner == actor && !self.piece_has_ability(&next, target, PieceKind::Slime)
             });
-        if substitution_swap || switcheroo_swap || relay_swap {
+        let solidarity_swap = next.card_runtime.solidarity_active[actor.index()]
+            && crate::latest::latest_minor_kind(moving_piece.kind)
+            && !self.is_royal_piece(&next, moving_piece)
+            && !self.piece_has_ability(&next, moving_piece, PieceKind::Slime)
+            && destination_piece.is_some_and(|target| {
+                target.owner == actor
+                    && crate::latest::latest_minor_kind(target.kind)
+                    && !self.is_royal_piece(&next, target)
+                    && !self.piece_has_ability(&next, target, PieceKind::Slime)
+            });
+        if substitution_swap || switcheroo_swap || relay_swap || solidarity_swap {
             let swapped = destination_piece.expect("swap destination was checked");
             next.board.set(movement.from, Some(swapped));
             next.board.set(movement.to, Some(moving_piece));
@@ -3003,7 +3079,11 @@ impl Engine {
             next.card_runtime.moved_piece_ids.insert(swapped.id);
             next.en_passant = None;
             next.ply = next.ply.saturating_add(1);
-            next.quiet_ply = next.quiet_ply.saturating_add(1);
+            next.quiet_ply = if switcheroo_swap && next.ruleset_id == crate::LATEST_RULESET_ID {
+                0
+            } else {
+                next.quiet_ply.saturating_add(1)
+            };
             self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             events.push(Event::EffectApplied {
@@ -3012,6 +3092,8 @@ impl Engine {
                     "{}:{}:{}",
                     if substitution_swap {
                         "substitution"
+                    } else if solidarity_swap {
+                        "solidarity"
                     } else if relay_swap {
                         "relay"
                     } else {
@@ -3030,6 +3112,14 @@ impl Engine {
                 &replay_before_runtime,
                 &mut events,
             );
+            if state.ruleset_id == crate::LATEST_RULESET_ID
+                && self.try_start_reposition_extra_move(&mut next, moving_piece.id, &mut events)
+            {
+                return Ok(Transition {
+                    state: next,
+                    events,
+                });
+            }
             self.finish_turn(&mut next, actor, &mut events)?;
             return Ok(Transition {
                 state: next,
@@ -3077,15 +3167,25 @@ impl Engine {
         if let Some((counter_square, counter)) = reversal_candidate
             && counter.owner != actor
             && (next.card_runtime.mistake_card[actor.index()] || next.card_runtime.mistake_rule)
-            && (!next.rule_runtime.enabled.contains(crate::MISTAKE)
-                || !matches!(
+            && (if next.ruleset_id == crate::LATEST_RULESET_ID {
+                !matches!(
                     counter.kind,
                     PieceKind::Colossus
                         | PieceKind::BigRook
                         | PieceKind::BigBishop
                         | PieceKind::Football
-                        | PieceKind::Monster
-                ))
+                )
+            } else {
+                !next.rule_runtime.enabled.contains(crate::MISTAKE)
+                    || !matches!(
+                        counter.kind,
+                        PieceKind::Colossus
+                            | PieceKind::BigRook
+                            | PieceKind::BigBishop
+                            | PieceKind::Football
+                            | PieceKind::Monster
+                    )
+            })
         {
             let denominator = if next.card_runtime.mistake_card[actor.index()] {
                 2
@@ -3410,7 +3510,25 @@ impl Engine {
         if let Some(target) = target_piece
             && target.owner != actor
             && moved_ability_kind != PieceKind::Missionary
-            && (next.card_runtime.shielded_piece_ids.remove(&target.id)
+            && ((next.ruleset_id == crate::LATEST_RULESET_ID
+                && target.kind != PieceKind::Scarecrow
+                && next.card_runtime.metalized_piece_ids.contains(&target.id))
+                || (next.ruleset_id == crate::LATEST_RULESET_ID
+                    && self.middle_encouragement_protects(&next, target))
+                || (next.ruleset_id == crate::LATEST_RULESET_ID
+                    && next
+                        .card_runtime
+                        .scarecrow_reservations
+                        .contains_key(&target.id))
+                || (next.ruleset_id == crate::LATEST_RULESET_ID
+                    && target.kind != PieceKind::Barrier
+                    && next
+                        .card_runtime
+                        .vigilance_protection
+                        .contains_key(&target.id))
+                || (next.ruleset_id == crate::LATEST_RULESET_ID
+                    && next.card_runtime.protected_piece_ids.contains(&target.id))
+                || next.card_runtime.shielded_piece_ids.remove(&target.id)
                 || next.card_runtime.protected_piece_ids.contains(&target.id))
         {
             next.ply = next.ply.saturating_add(1);
@@ -3427,7 +3545,25 @@ impl Engine {
             );
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
-                command: format!("shield-broken:{}", target.id),
+                command: if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && next.card_runtime.metalized_piece_ids.contains(&target.id)
+                    && target.kind != PieceKind::Scarecrow
+                {
+                    format!("metal-hit:{}", target.id)
+                } else if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && self.middle_encouragement_protects(&next, target)
+                {
+                    format!("encouragement-hit:{}", target.id)
+                } else if next.ruleset_id == crate::LATEST_RULESET_ID
+                    && next
+                        .card_runtime
+                        .vigilance_protection
+                        .contains_key(&target.id)
+                {
+                    format!("vigilance-hit:{}", target.id)
+                } else {
+                    format!("shield-broken:{}", target.id)
+                },
             });
             self.finish_turn(&mut next, actor, &mut events)?;
             return Ok(Transition {
@@ -3699,10 +3835,17 @@ impl Engine {
             next.board.set(real_square, None);
         }
         next.card_runtime.quantum_positions.remove(&moving_piece.id);
-        let parry_attempt = target_piece.filter(|target| {
-            target.owner != actor && next.card_runtime.parry_piece_ids.remove(&target.id)
+        let counterattack = target_piece.is_some_and(|target| {
+            target.owner != actor && next.card_runtime.counterattack_ready.remove(&target.id)
         });
-        let parry_triggered = if parry_attempt.is_some() {
+        let parry_attempt = target_piece.filter(|target| {
+            !counterattack
+                && target.owner != actor
+                && next.card_runtime.parry_piece_ids.remove(&target.id)
+        });
+        let parry_triggered = if counterattack {
+            true
+        } else if parry_attempt.is_some() {
             let (roll, triggered) = next.rng_mut().web_probability(2, 5);
             events.push(Event::RandomSample {
                 purpose: "parry".to_owned(),
@@ -3721,6 +3864,10 @@ impl Engine {
                 let mut retaliator = captured;
                 retaliator.capture_count = retaliator.capture_count.saturating_add(1);
                 next.board.set(movement.from, Some(retaliator));
+                if counterattack {
+                    next.card_runtime.counterattack_locked.insert(retaliator.id);
+                    next.card_runtime.moved_piece_ids.insert(retaliator.id);
+                }
                 self.break_initiative_by_capture(&mut next, moving_piece.owner, captured.owner);
                 moving_survived = false;
                 events.push(Event::PieceCaptured {
@@ -3895,6 +4042,9 @@ impl Engine {
             }
         }
         if let Some((rook_from, rook_to, rook)) = castling_rook {
+            if state.ruleset_id == crate::LATEST_RULESET_ID {
+                next.card_runtime.castled_piece_ids.insert(moving_piece.id);
+            }
             if rook.kind == PieceKind::BigRook && state.ruleset_id == crate::LATEST_RULESET_ID {
                 if rook_from != movement.to {
                     next.board.set(rook_from, None);
@@ -4103,6 +4253,10 @@ impl Engine {
         let previous_en_passant = next.en_passant;
         next.en_passant = if moving_survived
             && moved_ability_kind == PieceKind::Pawn
+            && next
+                .board
+                .get(movement.to)
+                .is_some_and(|p| p.id == moving_piece.id)
             && movement.from.file() == movement.to.file()
             && movement.from.rank().abs_diff(movement.to.rank()) == 2
         {
@@ -4186,6 +4340,15 @@ impl Engine {
         }
         if next.status == GameStatus::Ongoing
             && moving_survived
+            && self.try_start_reposition_extra_move(&mut next, moving_piece.id, &mut events)
+        {
+            return Ok(Transition {
+                state: next,
+                events,
+            });
+        }
+        if next.status == GameStatus::Ongoing
+            && moving_survived
             && thief_extra
             && self.start_opening_optional_move(
                 &mut next,
@@ -4208,15 +4371,6 @@ impl Engine {
                 moving_piece.id,
                 &mut events,
             )
-        {
-            return Ok(Transition {
-                state: next,
-                events,
-            });
-        }
-        if next.status == GameStatus::Ongoing
-            && moving_survived
-            && self.try_start_reposition_extra_move(&mut next, moving_piece.id, &mut events)
         {
             return Ok(Transition {
                 state: next,
@@ -4937,6 +5091,15 @@ impl Engine {
     }
 
     fn clear_removed_piece_statuses(&self, state: &mut GameState, piece_id: u32) {
+        state.card_runtime.counterattack_ready.remove(&piece_id);
+        state.card_runtime.counterattack_locked.remove(&piece_id);
+        state.card_runtime.vigilance_protection.remove(&piece_id);
+        state.card_runtime.evacuation_no_capture.remove(&piece_id);
+        state.card_runtime.castled_piece_ids.remove(&piece_id);
+        state.card_runtime.twin_swap_pending.remove(&piece_id);
+        state.card_runtime.scarecrow_reservations.remove(&piece_id);
+        state.card_runtime.ice_king.remove(&piece_id);
+        state.card_runtime.frontline_piece_ids.remove(&piece_id);
         state.card_runtime.wanted_piece_ids.remove(&piece_id);
         state.card_runtime.thief_turn_paths.remove(&piece_id);
         state.card_runtime.large_missing_cells.remove(&piece_id);
@@ -5024,6 +5187,10 @@ impl Engine {
         state
             .card_runtime
             .promotion_rush_piece_ids
+            .remove(&piece_id);
+        state
+            .card_runtime
+            .promotion_rush_capture_cleared
             .remove(&piece_id);
         state.card_runtime.evasion_piece_ids.remove(&piece_id);
         state.card_runtime.ghost_piece_ids.remove(&piece_id);
@@ -5981,6 +6148,9 @@ impl Engine {
         state.turn = next_player;
         state.phase = GamePhase::Playing;
         self.current_rule_turn(state, actor, events);
+        if state.status == GameStatus::Ongoing {
+            self.settle_file_conveyors(state, actor, events);
+        }
         self.resolve_missing_king(state, events);
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
@@ -6341,7 +6511,7 @@ impl Engine {
                 }
             }
         }
-        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+        let (roll, index, replayed) = cards::rule_sample(state, candidates.len());
         let cell = index.map(|index| candidates[index]);
         let platform = state
             .card_runtime
@@ -6353,10 +6523,12 @@ impl Engine {
         platform.next_at = shared_turn.saturating_add(5);
         platform.triggered_piece_ids.clear();
         platform.nonce = platform.nonce.saturating_add(1);
-        events.push(Event::RandomSample {
-            purpose: "platform-cell".to_owned(),
-            roll_53: roll,
-        });
+        if !replayed {
+            events.push(Event::RandomSample {
+                purpose: "platform-cell".to_owned(),
+                roll_53: roll,
+            });
+        }
         events.push(Event::PlatformSpawned {
             square: cell,
             shared_turn,
@@ -6553,7 +6725,7 @@ impl Engine {
             .iter()
             .filter(|action| {
                 matches!(action, Action::Move(movement) if state.board.get(movement.to).is_some_and(|target| {
-                    target.owner != state.turn && target.kind == PieceKind::Scarecrow
+                    target.owner != state.turn && target.kind == PieceKind::Scarecrow && !state.card_runtime.scarecrow_reservations.contains_key(&target.id)
                 }))
             })
             .cloned()
@@ -6590,6 +6762,8 @@ impl Engine {
     ) {
         if state.rule_runtime.grappler_bound.contains_key(&piece.id)
             || state.rule_runtime.winter_frozen.contains(&piece.id)
+            || state.card_runtime.ice_king.contains_key(&piece.id)
+            || state.card_runtime.counterattack_locked.contains(&piece.id)
             || state.rule_runtime.crown_id == Some(piece.id)
         {
             return;
@@ -6658,6 +6832,7 @@ impl Engine {
             && !self.is_royal_piece(state, piece)
         {
             self.generate_socialism_moves(state, from, piece, actions);
+            self.generate_e4_move(state, from, piece, actions);
             self.filter_middle_moves(state, from, piece, actions);
             self.filter_metal_moves(state, piece, from, actions);
             self.filter_card_state_moves(state, from, piece, actions);
@@ -7129,7 +7304,7 @@ impl Engine {
                         let Some(target) = cursor.offset(file_delta, rank_delta) else {
                             break;
                         };
-                        match self.board_piece_at(state, target) {
+                        match self.movement_occupant(state, target) {
                             None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                             Some(target_piece) if self.can_capture(state, piece, target_piece) => {
                                 actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -7334,6 +7509,7 @@ impl Engine {
         }
         self.generate_loyalist_moves(state, from, piece, actions);
         self.augment_middle_moves(state, from, piece, actions);
+        self.generate_e4_move(state, from, piece, actions);
         if state.ruleset_id == crate::LATEST_RULESET_ID
             && piece.kind == PieceKind::Rook
             && !state.card_runtime.moved_piece_ids.contains(&piece.id)
@@ -7382,6 +7558,35 @@ impl Engine {
                 }
             }
         }
+        if state.card_runtime.solidarity_active[piece.owner.index()]
+            && crate::latest::latest_minor_kind(piece.kind)
+            && !self.is_royal_piece(state, piece)
+            && !self.piece_has_ability(state, piece, PieceKind::Slime)
+            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+        {
+            for (square, ally) in state.board.iter() {
+                if ally.owner == piece.owner
+                    && ally.id != piece.id
+                    && crate::latest::latest_minor_kind(ally.kind)
+                    && !self.is_royal_piece(state, ally)
+                    && !self.piece_has_ability(state, ally, PieceKind::Slime)
+                    && !state
+                        .card_runtime
+                        .october
+                        .bound_piece_ids
+                        .contains(&ally.id)
+                    && !state.card_runtime.large_pieces.contains_key(&ally.id)
+                    && !self.paladin_radiance_blocks_move(
+                        state,
+                        piece,
+                        MoveAction::new(from, square, None),
+                        false,
+                    )
+                {
+                    generated.push(Action::Move(MoveAction::new(from, square, None)));
+                }
+            }
+        }
         // Symmetry: alongside normal moves, a mirror move across the vertical center
         // line (file 7 - file, same rank) ignores intermediate blockers. Own-piece
         // destinations are rejected; enemy destinations become captures
@@ -7413,6 +7618,56 @@ impl Engine {
         self.filter_metal_moves(state, piece, from, &mut generated);
         self.filter_card_state_moves(state, from, piece, &mut generated);
         all_actions.extend(generated);
+    }
+
+    fn generate_e4_move(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            || !state.card_runtime.e4_active[piece.owner.index()]
+            || self.piece_has_ability(state, piece, PieceKind::Slime)
+            || piece.kind == PieceKind::Football
+        {
+            return;
+        }
+        let to = Square::new(4, if piece.owner == Player::White { 3 } else { 4 }).unwrap();
+        if from == to
+            || state.card_runtime.barricades.contains(&to)
+            || self.rule_cell_collapsed(state, to)
+        {
+            return;
+        }
+        if state.card_runtime.large_pieces.contains_key(&piece.id) {
+            if large_piece_cells(to).len() == 4
+                && self
+                    .large_landing_targets(state, piece, to)
+                    .iter()
+                    .all(|(_, target)| {
+                        target.owner != piece.owner
+                            && target.kind != PieceKind::Monster
+                            && self.can_capture(state, piece, *target)
+                    })
+            {
+                actions.push(Action::Move(MoveAction::new(from, to, None)));
+            }
+            return;
+        }
+        match self.movement_occupant(state, to) {
+            None => actions.push(Action::Move(MoveAction::new(from, to, None))),
+            Some(target)
+                if target.owner != piece.owner
+                    && target.kind != PieceKind::Monster
+                    && self.piece_ability_kind(state, piece) != PieceKind::Missionary
+                    && self.can_capture(state, piece, target) =>
+            {
+                actions.push(Action::Move(MoveAction::new(from, to, None)))
+            }
+            _ => {}
+        }
     }
 
     fn filter_metal_moves(
@@ -7497,10 +7752,13 @@ impl Engine {
                 let Some(target) = cursor.offset(file_delta, rank_delta) else {
                     break;
                 };
-                let blocked = state.board.get(target).is_some_and(|victim| {
-                    self.is_royal_piece(state, victim) && victim.owner == piece.owner
-                        || (victim.owner != piece.owner && !self.can_capture(state, piece, victim))
-                });
+                let blocked = self
+                    .direct_movement_occupant(state, target)
+                    .is_some_and(|victim| {
+                        self.is_royal_piece(state, victim) && victim.owner == piece.owner
+                            || (victim.owner != piece.owner
+                                && !self.can_capture(state, piece, victim))
+                    });
                 if blocked {
                     break;
                 }
@@ -7537,7 +7795,7 @@ impl Engine {
                     let Some(target) = from.offset(file_delta, rank_delta) else {
                         continue;
                     };
-                    match state.board.get(target) {
+                    match self.direct_movement_occupant(state, target) {
                         None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                         Some(target_piece)
                             if capture_ready
@@ -7581,18 +7839,18 @@ impl Engine {
         {
             for file_delta in [-1, 1] {
                 if let Some(one_step) = from.offset(file_delta, direction)
-                    && self.board_piece_at(state, one_step).is_none()
+                    && self.movement_occupant(state, one_step).is_none()
                 {
                     self.push_card_pawn_move(state, piece, from, one_step, promotion_rank, actions);
                     if !state.card_runtime.moved_piece_ids.contains(&piece.id)
                         && double_step_ranks.contains(&from.rank())
                         && let Some(two_steps) = from.offset(file_delta * 2, direction * 2)
-                        && self.board_piece_at(state, two_steps).is_none()
+                        && self.movement_occupant(state, two_steps).is_none()
                     {
                         actions.push(Action::Move(MoveAction::new(from, two_steps, None)));
                         if state.card_runtime.pawn_sprint[piece.owner.index()]
                             && let Some(three_steps) = from.offset(file_delta * 3, direction * 3)
-                            && self.board_piece_at(state, three_steps).is_none()
+                            && self.movement_occupant(state, three_steps).is_none()
                         {
                             self.push_card_pawn_move(
                                 state,
@@ -7608,7 +7866,7 @@ impl Engine {
             }
             if let Some(target) = from.offset(0, direction)
                 && self
-                    .board_piece_at(state, target)
+                    .movement_occupant(state, target)
                     .is_some_and(|target_piece| self.can_capture(state, piece, target_piece))
             {
                 self.push_card_pawn_move(state, piece, from, target, promotion_rank, actions);
@@ -7619,7 +7877,7 @@ impl Engine {
         // A concealed enemy piece (stealth, non-royal) is invisible to this mover: the pawn may
         // step onto or through its square (live addPawnDirectionalMoves.movementTarget).
         let forward_open = |square: Square| {
-            self.board_piece_at(state, square).is_none_or(|target| {
+            self.movement_occupant(state, square).is_none_or(|target| {
                 target.owner != piece.owner
                     && state.card_runtime.stealth_piece_ids.contains(&target.id)
                     && !self.is_royal_piece(state, target)
@@ -7634,7 +7892,7 @@ impl Engine {
                     Player::Black => 1,
                 }
             && let Some(promotion_capture) = from.offset(0, direction)
-            && let Some(target_piece) = self.board_piece_at(state, promotion_capture)
+            && let Some(target_piece) = self.movement_occupant(state, promotion_capture)
             && self.can_capture(state, piece, target_piece)
         {
             self.push_card_pawn_move(
@@ -7676,16 +7934,16 @@ impl Engine {
             let Some(target) = from.offset(file_delta, direction) else {
                 continue;
             };
-            let regular_capture = self
-                .board_piece_at(state, target)
-                .is_some_and(|target_piece| {
-                    if piece.kind == PieceKind::StandardBearer {
-                        self.can_capture_ignoring_fresh(state, piece, target_piece)
-                            && self.capture_status_allows_ignoring_fresh(state, piece)
-                    } else {
-                        self.can_capture(state, piece, target_piece)
-                    }
-                });
+            let regular_capture =
+                self.movement_occupant(state, target)
+                    .is_some_and(|target_piece| {
+                        if piece.kind == PieceKind::StandardBearer {
+                            self.can_capture_ignoring_fresh(state, piece, target_piece)
+                                && self.capture_status_allows_ignoring_fresh(state, piece)
+                        } else {
+                            self.can_capture(state, piece, target_piece)
+                        }
+                    });
             let en_passant_capture = state.en_passant.is_some_and(|en_passant| {
                 en_passant.target == target
                     && en_passant.pawn_owner != piece.owner
@@ -7731,9 +7989,9 @@ impl Engine {
                 for file_delta in [-1, 1] {
                     if let Some(target) = from.offset(file_delta, direction)
                         && (if state.ruleset_id == crate::LATEST_RULESET_ID {
-                            self.board_piece_at(state, target).is_none()
+                            self.movement_occupant(state, target).is_none()
                         } else {
-                            state.board.get(target).is_none()
+                            self.direct_movement_occupant(state, target).is_none()
                         })
                     {
                         self.push_card_pawn_move(
@@ -7767,7 +8025,7 @@ impl Engine {
                 let Some(target) = from.offset(file_delta, 0) else {
                     continue;
                 };
-                match state.board.get(target) {
+                match self.direct_movement_occupant(state, target) {
                     None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                     Some(target_piece)
                         if capture_ready
@@ -7828,7 +8086,7 @@ impl Engine {
             let Some(target) = from.offset(0, direction * distance) else {
                 break;
             };
-            match self.board_piece_at(state, target) {
+            match self.movement_occupant(state, target) {
                 None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                 Some(target_piece) if self.can_capture(state, piece, target_piece) => {
                     actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -7857,12 +8115,12 @@ impl Engine {
         let moves_in_allowed_direction = piece.kind == PieceKind::CheckerKing
             || (piece.owner == Player::White && rank_delta == 2)
             || (piece.owner == Player::Black && rank_delta == -2);
-        if !moves_in_allowed_direction || self.board_piece_at(state, to).is_some() {
+        if !moves_in_allowed_direction || self.movement_occupant(state, to).is_some() {
             return None;
         }
 
         let mid = Square::new((from.file() + to.file()) / 2, (from.rank() + to.rank()) / 2)?;
-        self.board_piece_at(state, mid)
+        self.movement_occupant(state, mid)
             .filter(|target| self.can_capture(state, piece, *target))
             .map(|captured| (mid, captured))
     }
@@ -7907,7 +8165,7 @@ impl Engine {
         }
         for &(rank_delta, file_delta) in directions {
             if let Some(target) = from.offset(file_delta, rank_delta)
-                && self.board_piece_at(state, target).is_none()
+                && self.movement_occupant(state, target).is_none()
             {
                 actions.push(Action::Move(MoveAction::new(from, target, None)));
             }
@@ -7941,7 +8199,9 @@ impl Engine {
                 for file_delta in -1..=1 {
                     if (file_delta != 0 || rank_delta != 0)
                         && let Some(target) = anchor.offset(file_delta, rank_delta)
-                        && self.board_piece_at(state, target).is_none()
+                        && self.movement_occupant(state, target).is_none()
+                        && (state.ruleset_id != crate::LATEST_RULESET_ID
+                            || self.card_landing_open(state, target))
                     {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
                     }
@@ -8035,7 +8295,7 @@ impl Engine {
         for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                match self.board_piece_at(state, target) {
+                match self.movement_occupant(state, target) {
                     None => cursor = target,
                     Some(target_piece) => {
                         if target_piece.owner == piece.owner
@@ -8059,6 +8319,13 @@ impl Engine {
     ) -> bool {
         let cells = large_piece_cells(anchor);
         if cells.len() != 4 {
+            return false;
+        }
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && large_piece_occupied_cells(state, piece.id, anchor)
+                .iter()
+                .any(|square| state.card_runtime.barricades.contains(square))
+        {
             return false;
         }
         let targets = self.large_landing_targets(state, piece, anchor);
@@ -8086,6 +8353,24 @@ impl Engine {
                     .filter(|(_, target)| target.id != piece.id && seen.insert(target.id))
             })
             .collect()
+    }
+
+    // Keep movement providers that use the physical board independent of shadow/large-piece occupancy.
+    fn direct_movement_occupant(&self, state: &GameState, square: Square) -> Option<Piece> {
+        state.board.get(square).or_else(|| {
+            (state.ruleset_id == crate::LATEST_RULESET_ID
+                && state.card_runtime.barricades.contains(&square))
+            .then(|| Piece::new(state.turn.opponent(), PieceKind::Football))
+        })
+    }
+
+    // Blocking installations participate in movement geometry but are not board pieces.
+    fn movement_occupant(&self, state: &GameState, square: Square) -> Option<Piece> {
+        self.board_piece_at(state, square).or_else(|| {
+            (state.ruleset_id == crate::LATEST_RULESET_ID
+                && state.card_runtime.barricades.contains(&square))
+            .then(|| Piece::new(state.turn.opponent(), PieceKind::Football))
+        })
     }
 
     fn board_piece_at(&self, state: &GameState, square: Square) -> Option<Piece> {
@@ -8194,7 +8479,7 @@ impl Engine {
             let Some(target) = from.offset(file_delta, rank_delta) else {
                 continue;
             };
-            match self.board_piece_at(state, target) {
+            match self.movement_occupant(state, target) {
                 None if !self.fianchetto_destination_blocked(state, piece, from, target)
                     && !self.majesty_destination_blocked(state, piece, target) =>
                 {
@@ -8224,7 +8509,7 @@ impl Engine {
         for &(file_delta, rank_delta) in directions {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                match self.board_piece_at(state, target) {
+                match self.movement_occupant(state, target) {
                     None => {
                         if !self.fianchetto_destination_blocked(state, piece, from, target)
                             && !self.majesty_destination_blocked(state, piece, target)
@@ -8309,7 +8594,7 @@ impl Engine {
         ] {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                if let Some(target_piece) = state.board.get(target) {
+                if let Some(target_piece) = self.direct_movement_occupant(state, target) {
                     if self.is_royal_piece(state, target_piece)
                         && self.can_capture(state, piece, target_piece)
                     {
@@ -8342,13 +8627,13 @@ impl Engine {
             let Some(hurdle) = from.offset(file_delta, rank_delta) else {
                 continue;
             };
-            if state.board.get(hurdle).is_none() {
+            if self.direct_movement_occupant(state, hurdle).is_none() {
                 continue;
             }
             let Some(landing) = hurdle.offset(file_delta, rank_delta) else {
                 continue;
             };
-            match state.board.get(landing) {
+            match self.direct_movement_occupant(state, landing) {
                 None => actions.push(Action::Move(MoveAction::new(from, landing, None))),
                 Some(target) if self.can_capture(state, piece, target) => {
                     actions.push(Action::Move(MoveAction::new(from, landing, None)));
@@ -8380,7 +8665,7 @@ impl Engine {
                 let Some(target) = cursor.offset(file_delta, rank_delta) else {
                     break None;
                 };
-                if state.board.get(target).is_some() {
+                if self.direct_movement_occupant(state, target).is_some() {
                     break Some(target);
                 }
                 cursor = target;
@@ -8389,7 +8674,7 @@ impl Engine {
             else {
                 continue;
             };
-            match state.board.get(landing) {
+            match self.direct_movement_occupant(state, landing) {
                 None => actions.push(Action::Move(MoveAction::new(from, landing, None))),
                 Some(target) if self.can_capture(state, piece, target) => {
                     actions.push(Action::Move(MoveAction::new(from, landing, None)));
@@ -8418,7 +8703,7 @@ impl Engine {
     ) {
         for &(file_delta, rank_delta) in offsets {
             if let Some(target) = from.offset(file_delta, rank_delta)
-                && self.board_piece_at(state, target).is_none()
+                && self.movement_occupant(state, target).is_none()
             {
                 actions.push(Action::Move(MoveAction::new(from, target, None)));
             }
@@ -8446,7 +8731,7 @@ impl Engine {
             let Some(mid) = from.offset(first_file, first_rank) else {
                 continue;
             };
-            if state.board.get(mid).is_some() {
+            if self.direct_movement_occupant(state, mid).is_some() {
                 continue;
             }
             for &(second_file, second_rank) in KING_OFFSETS {
@@ -8456,7 +8741,7 @@ impl Engine {
                 if target == from {
                     continue;
                 }
-                match state.board.get(target) {
+                match self.direct_movement_occupant(state, target) {
                     None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                     Some(target_piece) if self.can_capture(state, piece, target_piece) => {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -8478,7 +8763,7 @@ impl Engine {
             let mut cursor = from;
             let mut jumped = false;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                match (jumped, state.board.get(target)) {
+                match (jumped, self.direct_movement_occupant(state, target)) {
                     (false, None) => {}
                     (false, Some(hurdle)) if hurdle.kind != PieceKind::Cannon => jumped = true,
                     (false, Some(_)) => break,
@@ -8517,7 +8802,7 @@ impl Engine {
                 let Some(target) = cursor.offset(file_delta, rank_delta) else {
                     break;
                 };
-                if state.board.get(target).is_none() {
+                if self.direct_movement_occupant(state, target).is_none() {
                     actions.push(Action::Move(MoveAction::new(from, target, None)));
                 } else if jump_locked {
                     break;
@@ -8539,7 +8824,7 @@ impl Engine {
             if target == from {
                 continue;
             }
-            match state.board.get(target) {
+            match self.direct_movement_occupant(state, target) {
                 None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                 Some(target_piece)
                     if KNIGHT_OFFSETS.iter().any(|(file_delta, rank_delta)| {
@@ -8585,7 +8870,7 @@ impl Engine {
         for &(file_delta, rank_delta) in ORTHOGONALS {
             let mut cursor = from;
             while let Some(target) = cursor.offset(file_delta, rank_delta) {
-                match state.board.get(target) {
+                match self.direct_movement_occupant(state, target) {
                     None => {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
                         for &(turn_file, turn_rank) in ORTHOGONALS {
@@ -8594,7 +8879,7 @@ impl Engine {
                             }
                             let mut bent_cursor = target;
                             while let Some(bent_target) = bent_cursor.offset(turn_file, turn_rank) {
-                                match state.board.get(bent_target) {
+                                match self.direct_movement_occupant(state, bent_target) {
                                     None => actions.push(Action::Move(MoveAction::new(
                                         from,
                                         bent_target,
@@ -8655,7 +8940,7 @@ impl Engine {
                 if !seen.insert((target, file_delta, rank_delta)) {
                     break;
                 }
-                match state.board.get(target) {
+                match self.direct_movement_occupant(state, target) {
                     None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                     Some(target_piece) if self.can_capture(state, piece, target_piece) => {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -8680,7 +8965,7 @@ impl Engine {
                 let Some(target) = from.offset(file_delta * distance, rank_delta * distance) else {
                     continue;
                 };
-                match state.board.get(target) {
+                match self.direct_movement_occupant(state, target) {
                     None => actions.push(Action::Move(MoveAction::new(from, target, None))),
                     Some(target_piece) if self.can_capture(state, piece, target_piece) => {
                         actions.push(Action::Move(MoveAction::new(from, target, None)));
@@ -8697,6 +8982,8 @@ impl Engine {
                 continue;
             }
             if state.rule_runtime.winter_frozen.contains(&piece.id)
+                || state.card_runtime.ice_king.contains_key(&piece.id)
+                || state.card_runtime.counterattack_locked.contains(&piece.id)
                 || state.rule_runtime.grappler_bound.contains_key(&piece.id)
                 || state.rule_runtime.crown_id == Some(piece.id)
             {
@@ -8713,9 +9000,10 @@ impl Engine {
                 };
                 for sector in colossus_attack_sectors(status.anchor, piece.owner) {
                     if sector.iter().any(|square| {
-                        self.board_piece_at(state, *square).is_some_and(|target| {
-                            target.owner != piece.owner && target.kind != PieceKind::Guard
-                        })
+                        self.movement_occupant(state, *square)
+                            .is_some_and(|target| {
+                                target.owner != piece.owner && target.kind != PieceKind::Guard
+                            })
                     }) {
                         actions.push(Action::UsePieceAbility {
                             piece_id: piece.id,
@@ -9053,7 +9341,21 @@ impl Engine {
             })
             && state.ply >= state.card_runtime.chaos_no_capture_until_ply
             && !state.card_runtime.free_move_no_capture[attacker.owner.index()]
+            && !state.card_runtime.reposition_ready[attacker.owner.index()]
             && !state.card_runtime.disarmed.contains_key(&attacker.id)
+            && !state
+                .card_runtime
+                .evacuation_no_capture
+                .contains(&attacker.id)
+            && !(state.ruleset_id == crate::LATEST_RULESET_ID
+                && state
+                    .card_runtime
+                    .promotion_rush_piece_ids
+                    .contains(&attacker.id)
+                && !state
+                    .card_runtime
+                    .promotion_rush_capture_cleared
+                    .contains(&attacker.id))
             && !manner_locked
             && !saturation_locked
             && state
@@ -9091,6 +9393,41 @@ impl Engine {
         attacker: Piece,
         target: Piece,
     ) -> bool {
+        let e4_capture = state.ruleset_id == crate::LATEST_RULESET_ID
+            && state.card_runtime.e4_active[attacker.owner.index()]
+            && matches!(attacker.kind, PieceKind::Wizard | PieceKind::Herald)
+            && state.board.find_by_id(target.id).is_some_and(|(s, _)| {
+                s == Square::new(
+                    4,
+                    if attacker.owner == Player::White {
+                        3
+                    } else {
+                        4
+                    },
+                )
+                .unwrap()
+            });
+        let trained_capture = state.ruleset_id == crate::LATEST_RULESET_ID
+            && state
+                .card_runtime
+                .basic_training_piece_ids
+                .contains(&attacker.id)
+            && !matches!(
+                attacker.kind,
+                PieceKind::Missionary | PieceKind::Campfire | PieceKind::Paladin
+            )
+            && state
+                .board
+                .find_by_id(attacker.id)
+                .zip(state.board.find_by_id(target.id))
+                .is_some_and(|((from, _), (to, _))| {
+                    let direction = if attacker.owner == Player::White {
+                        1
+                    } else {
+                        -1
+                    };
+                    from.offset(1, direction) == Some(to) || from.offset(-1, direction) == Some(to)
+                });
         if !self.current_rule_capture_allowed(state, attacker, target) {
             return false;
         }
@@ -9100,25 +9437,43 @@ impl Engine {
         }
 
         if target.kind == PieceKind::Rook
-            && state.card_runtime.frontline_response[target.owner.index()]
+            && (if state.ruleset_id == crate::LATEST_RULESET_ID {
+                state.card_runtime.frontline_piece_ids.contains(&target.id)
+            } else {
+                state.card_runtime.frontline_response[target.owner.index()]
+            })
             && let (Some((from, _)), Some((to, _))) = (
                 state.board.find_by_id(attacker.id),
                 state.board.find_by_id(target.id),
             )
-            && (from.file() == to.file() || from.rank() == to.rank())
+            && (state.ruleset_id != crate::LATEST_RULESET_ID
+                || if target.owner == Player::White {
+                    to.rank() < 4
+                } else {
+                    to.rank() >= 4
+                })
+            && (from.file() == to.file()
+                || from.rank() == to.rank()
+                || state.ruleset_id == crate::LATEST_RULESET_ID
+                    && matches!(
+                        self.piece_ability_kind(state, attacker),
+                        PieceKind::Hook | PieceKind::Brutus
+                    ))
         {
             return false;
         }
         (target.kind == PieceKind::Monster || attacker.owner != target.owner)
             && state.card_runtime.armistice_remaining_ply == 0
             && !state.card_runtime.frozen.contains_key(&target.id)
+            && !state.card_runtime.ice_king.contains_key(&target.id)
             && !self.middle_submerged_protects(state, target)
             && !(state.card_runtime.overwhelm[target.owner.index()]
                 && self.is_royal_piece(state, attacker)
                 && (target.kind == PieceKind::Queen
                     || (state.ruleset_id != crate::LATEST_RULESET_ID
                         && self.is_royal_piece(state, target))))
-            && !self.middle_encouragement_protects(state, target)
+            && (state.ruleset_id == crate::LATEST_RULESET_ID
+                || !self.middle_encouragement_protects(state, target))
             && !self.campfire_protects(state, target)
             && !(state
                 .card_runtime
@@ -9126,7 +9481,7 @@ impl Engine {
                 .contains(&target.id)
                 && attacker.kind == target.kind)
             && target.kind != PieceKind::Guard
-            && !matches!(
+            && (!matches!(
                 attacker.kind,
                 PieceKind::Idol
                     | PieceKind::Recruiter
@@ -9134,7 +9489,8 @@ impl Engine {
                     | PieceKind::Herald
                     | PieceKind::Paladin
                     | PieceKind::Campfire
-            )
+            ) || trained_capture
+                || e4_capture)
             && (attacker.kind != PieceKind::Jester || self.is_royal_piece(state, target))
             && (target.kind != PieceKind::Jester || self.is_royal_piece(state, attacker))
             && !(attacker.kind == PieceKind::Queen

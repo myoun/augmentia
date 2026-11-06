@@ -62,7 +62,7 @@ impl Engine {
         }
         self.settle_rule_capture_memories(state, &memories, events);
         for square in cells {
-            state.card_runtime.barricades.remove(&square);
+            state.card_runtime.remove_barricade(square);
         }
         for square in triggered {
             state.card_runtime.rule_bombs.remove(&square);

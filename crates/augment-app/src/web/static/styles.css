@@ -234,3 +234,6 @@ input[type="range"], input[type="checkbox"] { accent-color: var(--blue); }
 .square.terrain-highGround { box-shadow:inset 0 0 0 2px #42996c; }
 .square.terrain-bomb { box-shadow:inset 0 0 0 3px #e5864d; }
 .square.terrain-highway { background-image:linear-gradient(90deg,transparent 44%,#80a5af55 44%,#80a5af55 56%,transparent 56%); }
+.square.terrain-wall { box-shadow:inset 0 0 0 4px #755b45; }
+.square.terrain-fileConveyorUp, .square.terrain-fileConveyorDown { outline:2px dashed #386a79; outline-offset:-3px; }
+.square.terrain-fileConveyorPending { outline-style:dotted; }

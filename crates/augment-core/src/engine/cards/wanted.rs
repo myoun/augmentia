@@ -1,7 +1,7 @@
 use super::*;
 pub(super) const ID: &str = crate::WANTED;
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::passive(ID, Some(acquire), eligibility);
-fn ranged(state: &GameState, piece: Piece, square: Square) -> bool {
+pub(super) fn ranged(state: &GameState, piece: Piece, square: Square) -> bool {
     let kind = if piece.kind == PieceKind::Trickster {
         state
             .card_runtime
@@ -48,7 +48,7 @@ fn ranged(state: &GameState, piece: Piece, square: Square) -> bool {
             state
                 .board
                 .iter()
-                .filter(|(_, p)| p.owner == piece.owner && p.kind != PieceKind::Monster)
+                .filter(|(_, p)| p.owner == piece.owner)
                 .count()
                 <= 9
         }

@@ -162,7 +162,18 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
                 "terrain": {
                     "blackHole":state.card_runtime.black_holes.contains(&square),
                     "highGround":state.card_runtime.high_ground_squares.contains(&square),
-                    "highway":state.card_runtime.highways.contains(&square.file()),
+                    "highway":state.card_runtime.highways.contains(&square.file())
+                        || state.card_runtime.highway_cells.contains(&square),
+                    "wall":state.card_runtime.barricades.contains(&square),
+                    "fileConveyorUp":state.card_runtime.file_conveyors.iter().any(|(file, owner, _)|
+                        *file == square.file() && *owner == Player::White),
+                    "fileConveyorDown":state.card_runtime.file_conveyors.iter().any(|(file, owner, _)|
+                        *file == square.file() && *owner == Player::Black),
+                    "fileConveyorPending":state.card_runtime.file_conveyors.iter().any(|(file, owner, due)| {
+                        let next_owner_start = state.turns_taken[owner.index()].saturating_add(1);
+                        *file == square.file() && (next_owner_start < *due
+                            || (next_owner_start == *due && state.turn != *owner))
+                    }),
                     "bomb":state.card_runtime.rule_bombs.contains(&square),
                     "portal":state.card_runtime.rule_portals.is_some_and(|pair|pair.contains(&square)),
                     "crown":state.card_runtime.crown_pos==Some(square),
@@ -519,6 +530,11 @@ pub(crate) fn action_view(state: &GameState, index: usize, action: &Action) -> V
                     augment_core::WINDMILL => vec!["변환할 아군 비숍 또는 룩", "함께 변환할 다른 종류의 기물"],
                     augment_core::ASCENSION => vec!["하늘로 올릴 아군 퀸", "착지할 빈 칸"],
                     augment_core::TABOO => vec!["희생을 예약할 아군 퀸", "괴물을 소환할 빈 칸"],
+                    augment_core::FEUDAL_CONTRACT => vec!["첫 번째 계약 기물", "두 번째 계약 기물"],
+                    augment_core::TWINS => vec!["첫 번째 아군 기물", "두 번째 아군 기물"],
+                    augment_core::PANIC => vec!["먼저 이동할 상대 기물", "다음에 이동할 상대 기물"],
+                    augment_core::SACRIFICE => vec!["희생할 아군 기물", "보호할 아군 기물"],
+                    augment_core::FILE_CONVEYOR => vec!["컨베이어를 설치할 파일"],
                     _ => Vec::new(),
                 },
                 "targetKind": target_kind(target),
@@ -792,6 +808,7 @@ pub(crate) fn event_label(event: &Event) -> Option<String> {
 fn target_kind(target: &ActionTarget) -> &'static str {
     match target {
         ActionTarget::None => "none",
+        ActionTarget::Choice(_) => "choice",
         ActionTarget::Square(_) => "square",
         ActionTarget::PieceAt(_) => "piece",
         ActionTarget::Squares(_) => "squares",
@@ -831,7 +848,7 @@ fn castling_notation(movement: &MoveAction) -> Option<&'static str> {
 
 fn target_squares(target: &ActionTarget) -> Vec<String> {
     match target {
-        ActionTarget::None => Vec::new(),
+        ActionTarget::None | ActionTarget::Choice(_) => Vec::new(),
         ActionTarget::Square(square) | ActionTarget::PieceAt(square) => {
             vec![square.to_string()]
         }
@@ -840,6 +857,9 @@ fn target_squares(target: &ActionTarget) -> Vec<String> {
 }
 
 fn target_label(target: &ActionTarget) -> String {
+    if let ActionTarget::Choice(id) = target {
+        return card_name(id).to_owned();
+    }
     let squares = target_squares(target);
     if squares.is_empty() {
         "즉시 발동".to_owned()
@@ -1229,5 +1249,90 @@ mod tests {
         assert_eq!(piece_meta(PieceKind::Protestant, Player::White).1, "몬시뇰");
         assert!(piece_description("reaper").contains("두 번"));
         assert!(piece_description("campfire").contains("룩처럼"));
+    }
+
+    #[test]
+    fn middle_card_terrain_is_visible_with_conveyor_activation_timing() {
+        let mut state = GameState::standard(
+            augment_core::LATEST_RULESET_ID,
+            augment_core::Mode::Standard,
+            31,
+        );
+        let square = "c4".parse().unwrap();
+        state.card_runtime.barricades.insert(square);
+        state.card_runtime.highway_cells.insert(square);
+        state
+            .card_runtime
+            .file_conveyors
+            .push((2, Player::White, 2));
+        let cell = board_view(&state)
+            .into_iter()
+            .find(|c| c["square"] == "c4")
+            .unwrap();
+        assert_eq!(cell["terrain"]["wall"], true);
+        assert_eq!(cell["terrain"]["highway"], true);
+        assert_eq!(cell["terrain"]["fileConveyorUp"], true);
+        assert_eq!(cell["terrain"]["fileConveyorPending"], true);
+        state.turns_taken[Player::White.index()] = 1;
+        state.turn = Player::Black;
+        let cell = board_view(&state)
+            .into_iter()
+            .find(|c| c["square"] == "c4")
+            .unwrap();
+        assert_eq!(cell["terrain"]["fileConveyorPending"], true);
+        state.turn = Player::White;
+        let cell = board_view(&state)
+            .into_iter()
+            .find(|c| c["square"] == "c4")
+            .unwrap();
+        assert_eq!(cell["terrain"]["fileConveyorPending"], false);
+    }
+
+    #[test]
+    fn middle_card_targets_are_selected_in_their_required_order() {
+        let engine = augment_core::Engine::bundled_latest().unwrap();
+        for (id, steps) in [
+            (augment_core::FEUDAL_CONTRACT, 2),
+            (augment_core::TWINS, 2),
+            (augment_core::PANIC, 2),
+            (augment_core::SACRIFICE, 2),
+            (augment_core::FILE_CONVEYOR, 1),
+        ] {
+            let mut state = GameState::standard(
+                augment_core::LATEST_RULESET_ID,
+                augment_core::Mode::Standard,
+                31,
+            );
+            state.completed_drafts = [true; 3];
+            let state = engine
+                .grant_card(&state, 1, id, Player::White)
+                .unwrap()
+                .state;
+            let action = engine
+                .legal_actions(&state)
+                .unwrap()
+                .into_iter()
+                .find(|action| matches!(action, Action::UseCard { instance_id: 1, .. }))
+                .unwrap();
+            let view = action_view(&state, 0, &action);
+            assert_eq!(
+                view["selectionSteps"].as_array().unwrap().len(),
+                steps,
+                "{id}"
+            );
+            assert_eq!(
+                view["targetSquares"].as_array().unwrap().len(),
+                steps,
+                "{id}"
+            );
+        }
+    }
+
+    #[test]
+    fn named_card_choice_uses_the_catalog_name_instead_of_a_square() {
+        let target = ActionTarget::Choice(augment_core::HIGHWAY.to_owned());
+        assert_eq!(target_kind(&target), "choice");
+        assert_eq!(target_label(&target), card_name(augment_core::HIGHWAY));
+        assert!(target_squares(&target).is_empty());
     }
 }

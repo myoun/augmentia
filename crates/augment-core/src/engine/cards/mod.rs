@@ -7,31 +7,80 @@ use eligibility_support::*;
 pub use penta_check::PentaCheckProgress;
 pub use seal::PendingSeal;
 pub use taboo::PendingTaboo;
+mod alekhine_machine_gun;
 mod apprentice_knights;
+mod basic_training;
 mod big_rook;
+mod bishop_infiltration;
+mod blockade;
 mod calling_card;
+mod castling;
+mod chameleon_mutation;
+mod chimera;
+mod counterattack;
 mod d4;
+mod dice;
+mod disarm;
 mod dutch;
+mod e4;
 mod elephant_escape;
 mod eligibility_support;
+pub(super) mod emergency_evacuation;
+mod en_passant_bang;
+mod encouragement;
+mod evasion;
+mod fanatical_ritual;
+mod feudal_contract;
+mod file_conveyor;
+mod freeze;
+mod frontline_response;
 mod guard;
 mod herald;
 mod holdout;
 mod horde;
+mod ice_king;
+mod ice_sheet;
+mod inertia;
 mod iron_monarch;
 mod knightmate;
 mod last_stand;
 mod locust_swarm;
+mod loyalist;
+mod mad_horse;
 mod martyrdom;
 mod merchant_guild;
+mod metal;
+mod mistake_card;
 mod opening_support;
+mod panic;
 mod pawn_conversion;
 mod princess;
+mod promotion_rush;
 mod queen_cavalry;
 mod queens_gambit;
+mod random_status;
+mod reposition;
 mod rocket;
+mod roller;
+mod royal_command;
+mod royal_shield;
+mod sacrifice;
+mod scarecrow;
+mod severance;
+mod snipe;
+mod socialism;
+mod solidarity;
+mod suicide_bomber;
+mod switcheroo;
+mod target_status;
+mod taunt;
 mod thief;
+mod trolley;
+mod turn_effect_card;
+mod twins;
 mod vanguard;
+mod vigilance;
+mod vortex;
 mod wanted;
 
 use shared::*;
@@ -199,6 +248,7 @@ mod undead;
 mod underpromotion;
 mod white_box;
 pub use rule_support::RuleRuntime;
+pub(in crate::engine) use rule_support::rule_sample;
 use rule_support::*;
 mod acceleration;
 mod black_hole;
@@ -218,6 +268,7 @@ mod periodic_collapse;
 mod portal;
 mod revelation;
 mod rule_bombs;
+mod rule_ticket;
 mod winter_kingdom;
 type Eligibility = fn(&GameState, Player, AcquisitionContext) -> CardEligibility;
 type Acquisition = fn(&Engine, &mut GameState, Player, &mut Vec<Event>) -> Result<(), EngineError>;
@@ -284,6 +335,7 @@ impl CardBehavior {
 }
 const CARDS: &[CardBehavior] = &[
     acceleration::BEHAVIOR,
+    alekhine_machine_gun::BEHAVIOR,
     amazon::BEHAVIOR,
     apprentice_knights::BEHAVIOR,
     archbishop::BEHAVIOR,
@@ -294,12 +346,15 @@ const CARDS: &[CardBehavior] = &[
     baby_bear::BEHAVIOR,
     backward_knight::BEHAVIOR,
     barrier::BEHAVIOR,
+    basic_training::BEHAVIOR,
     beacon::BEHAVIOR,
     berserker::BEHAVIOR,
     big_bishop::BEHAVIOR,
     big_rook::BEHAVIOR,
     bina_mate::BEHAVIOR,
+    bishop_infiltration::BEHAVIOR,
     black_hole::BEHAVIOR,
+    blockade::BEHAVIOR,
     blue_jeans::BEHAVIOR,
     breakthrough_order::BEHAVIOR,
     brutus::BEHAVIOR,
@@ -307,11 +362,14 @@ const CARDS: &[CardBehavior] = &[
     camouflage_color::BEHAVIOR,
     campfire::BEHAVIOR,
     capture_the_flag::BEHAVIOR,
+    castling::BEHAVIOR,
+    chameleon_mutation::BEHAVIOR,
     chancellor::BEHAVIOR,
     checker::BEHAVIOR,
     chess_344200::BEHAVIOR,
     chess_960::BEHAVIOR,
     chess_n_pow_30::BEHAVIOR,
+    chimera::BEHAVIOR,
     cleanup::BEHAVIOR,
     clockwork::BEHAVIOR,
     clone::BEHAVIOR,
@@ -321,29 +379,42 @@ const CARDS: &[CardBehavior] = &[
     cool_guy::BEHAVIOR,
     corner_kick::BEHAVIOR,
     coronation::BEHAVIOR,
+    counterattack::BEHAVIOR,
     crown::BEHAVIOR,
     d4::BEHAVIOR,
     desperado::BEHAVIOR,
     diagonal_chess::BEHAVIOR,
+    dice::BEHAVIOR,
+    disarm::BEHAVIOR,
     disassembly::BEHAVIOR,
     don_quixote::BEHAVIOR,
     dragon::BEHAVIOR,
     dutch::BEHAVIOR,
+    e4::BEHAVIOR,
     eagle::BEHAVIOR,
     early_promotion::BEHAVIOR,
     eastern_policy::BEHAVIOR,
     elephant_escape::BEHAVIOR,
+    emergency_evacuation::BEHAVIOR,
     empty_lunchbox::BEHAVIOR,
+    en_passant_bang::BEHAVIOR,
+    encouragement::BEHAVIOR,
+    evasion::BEHAVIOR,
     exhaustion::BEHAVIOR,
     extinction::BEHAVIOR,
     false_start::BEHAVIOR,
+    fanatical_ritual::BEHAVIOR,
     fast_growth::BEHAVIOR,
+    feudal_contract::BEHAVIOR,
     fianchetto::BEHAVIOR,
     field_promotion::BEHAVIOR,
+    file_conveyor::BEHAVIOR,
     file_surge::BEHAVIOR,
     fleeting_dream::BEHAVIOR,
     football::BEHAVIOR,
+    freeze::BEHAVIOR,
     frenzy::BEHAVIOR,
+    frontline_response::BEHAVIOR,
     geneva_convention::BEHAVIOR,
     ghost::BEHAVIOR,
     gomoku::BEHAVIOR,
@@ -365,8 +436,11 @@ const CARDS: &[CardBehavior] = &[
     horde::BEHAVIOR,
     horse_riding::BEHAVIOR,
     hypocrisy::BEHAVIOR,
+    ice_king::BEHAVIOR,
+    ice_sheet::BEHAVIOR,
     idol::BEHAVIOR,
     imperial_studies::BEHAVIOR,
+    inertia::BEHAVIOR,
     infiltration::BEHAVIOR,
     initiative::BEHAVIOR,
     injury::BEHAVIOR,
@@ -386,16 +460,20 @@ const CARDS: &[CardBehavior] = &[
     log::BEHAVIOR,
     london_system::BEHAVIOR,
     long_en_passant::BEHAVIOR,
+    loyalist::BEHAVIOR,
     macho_chess::BEHAVIOR,
+    mad_horse::BEHAVIOR,
     magic_girl::BEHAVIOR,
     majesty::BEHAVIOR,
     man::BEHAVIOR,
     martyrdom::BEHAVIOR,
     medium::BEHAVIOR,
     merchant_guild::BEHAVIOR,
+    metal::BEHAVIOR,
     miracle::BEHAVIOR,
     missionary::BEHAVIOR,
     mistake::BEHAVIOR,
+    mistake_card::BEHAVIOR,
     mongolian_gambit::BEHAVIOR,
     monochrome_chess::BEHAVIOR,
     monster::BEHAVIOR,
@@ -408,6 +486,7 @@ const CARDS: &[CardBehavior] = &[
     overtake::BEHAVIOR,
     overwhelm::BEHAVIOR,
     paladin::BEHAVIOR,
+    panic::BEHAVIOR,
     parrot::BEHAVIOR,
     parry::BEHAVIOR,
     pawn_chain::BEHAVIOR,
@@ -422,6 +501,7 @@ const CARDS: &[CardBehavior] = &[
     portal_gun::BEHAVIOR,
     princess::BEHAVIOR,
     proficiency::BEHAVIOR,
+    promotion_rush::BEHAVIOR,
     prophecy::BEHAVIOR,
     quantum_mechanics::BEHAVIOR,
     queen_afterimage::BEHAVIOR,
@@ -436,37 +516,55 @@ const CARDS: &[CardBehavior] = &[
     relay::BEHAVIOR,
     religious_victory::BEHAVIOR,
     replay::BEHAVIOR,
+    reposition::BEHAVIOR,
     retreat::BEHAVIOR,
     revelation::BEHAVIOR,
     reversal::BEHAVIOR,
     reverse_pawns::BEHAVIOR,
     revolving_door::BEHAVIOR,
     rocket::BEHAVIOR,
+    roller::BEHAVIOR,
     rook_lift::BEHAVIOR,
+    royal_command::BEHAVIOR,
+    royal_shield::BEHAVIOR,
     rule_bombs::BEHAVIOR,
+    rule_ticket::BEHAVIOR,
+    sacrifice::BEHAVIOR,
     saturation::BEHAVIOR,
+    scarecrow::BEHAVIOR,
     schrodinger_pawns::BEHAVIOR,
     seal::BEHAVIOR,
+    severance::BEHAVIOR,
     siege_ram::BEHAVIOR,
     siren::BEHAVIOR,
     slime::BEHAVIOR,
+    snipe::BEHAVIOR,
+    socialism::BEHAVIOR,
+    solidarity::BEHAVIOR,
     sprint::BEHAVIOR,
     spy::BEHAVIOR,
     standard_bearer::BEHAVIOR,
     stealth::BEHAVIOR,
     submerge::BEHAVIOR,
     substitution::BEHAVIOR,
+    suicide_bomber::BEHAVIOR,
     suspicious_potion::BEHAVIOR,
+    switcheroo::BEHAVIOR,
     symmetry::BEHAVIOR,
     taboo::BEHAVIOR,
+    taunt::BEHAVIOR,
     thief::BEHAVIOR,
     transcendence::BEHAVIOR,
     transmission_tower::BEHAVIOR,
     trickster::BEHAVIOR,
     trojan_horse::BEHAVIOR,
+    trolley::BEHAVIOR,
+    twins::BEHAVIOR,
     undead::BEHAVIOR,
     underpromotion::BEHAVIOR,
     vanguard::BEHAVIOR,
+    vigilance::BEHAVIOR,
+    vortex::BEHAVIOR,
     wanted::BEHAVIOR,
     white_box::BEHAVIOR,
     windmill::BEHAVIOR,

@@ -101,7 +101,7 @@ impl Engine {
                 .quantum_positions
                 .retain(|_, s| *s != entry.square);
             self.crush_card_landing(state, entry.square, owner, crate::ASCENSION, events);
-            state.card_runtime.barricades.remove(&entry.square);
+            state.card_runtime.remove_barricade(entry.square);
             if !self.collapsed_card_landing(state, entry.square)
                 && self.board_piece_at(state, entry.square).is_none()
             {

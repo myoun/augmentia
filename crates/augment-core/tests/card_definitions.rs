@@ -44,10 +44,15 @@ fn current_definitions_use_their_own_catalog_and_execution_profile() {
 }
 
 #[test]
-fn historical_turn_exclusive_cards_do_not_enable_current_cards() {
+fn historical_turn_exclusivity_does_not_leak_into_current_rules() {
     for id in [augment_core::PREMOVE, augment_core::TROLLEY] {
         let historical = ruleset_card("augment_chess_20260915", id).unwrap();
         assert!(historical.turn_exclusive);
-        assert!(ruleset_card(LATEST_RULESET_ID, id).is_none());
     }
+    assert!(ruleset_card(LATEST_RULESET_ID, augment_core::PREMOVE).is_none());
+    assert!(
+        !ruleset_card(LATEST_RULESET_ID, augment_core::TROLLEY)
+            .unwrap()
+            .turn_exclusive
+    );
 }

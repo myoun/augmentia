@@ -8,8 +8,27 @@ pub(super) fn play(
     _target: &ActionTarget,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
+    state.card_runtime.dice_locks[actor.index()] = None;
     for (_, piece) in state.board.iter() {
+        if state
+            .card_runtime
+            .ice_king
+            .get(&piece.id)
+            .is_some_and(|(source, _)| *source != actor)
+        {
+            state.card_runtime.ice_king.remove(&piece.id);
+        }
         if piece.owner == actor {
+            if state
+                .card_runtime
+                .promotion_rush_piece_ids
+                .contains(&piece.id)
+            {
+                state
+                    .card_runtime
+                    .promotion_rush_capture_cleared
+                    .insert(piece.id);
+            }
             state.card_runtime.frozen.remove(&piece.id);
             state.card_runtime.disarmed.remove(&piece.id);
             state.card_runtime.severed.remove(&piece.id);
@@ -38,6 +57,19 @@ pub(super) fn play(
                     .remove(&piece.id);
             }
         } else {
+            state.card_runtime.vigilance_protection.remove(&piece.id);
+            state.card_runtime.metalized_piece_ids.remove(&piece.id);
+            state.card_runtime.metal_cooldowns.remove(&piece.id);
+            state
+                .card_runtime
+                .promotion_rush_piece_ids
+                .remove(&piece.id);
+            state
+                .card_runtime
+                .promotion_rush_capture_cleared
+                .remove(&piece.id);
+            state.card_runtime.frontline_piece_ids.remove(&piece.id);
+            state.card_runtime.counterattack_ready.remove(&piece.id);
             state.card_runtime.shielded_piece_ids.remove(&piece.id);
             state.card_runtime.protected_piece_ids.remove(&piece.id);
             state.card_runtime.sacrifice_protection.remove(&piece.id);

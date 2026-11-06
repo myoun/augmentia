@@ -32,16 +32,18 @@ impl Engine {
     ) {
         let mut flags = [Square::new(0, 0).unwrap(), Square::new(0, 7).unwrap()];
         for owner in [Player::White, Player::Black] {
-            let (roll, file) = state.rng_mut().web_choice_index(8);
+            let (roll, file, replayed) = rule_sample(state, 8);
             flags[owner.index()] = Square::new(
                 file.unwrap() as u8,
                 if owner == Player::White { 0 } else { 7 },
             )
             .unwrap();
-            events.push(Event::RandomSample {
-                purpose: format!("capture-the-flag:{owner}"),
-                roll_53: roll,
-            });
+            if !replayed {
+                events.push(Event::RandomSample {
+                    purpose: format!("capture-the-flag:{owner}"),
+                    roll_53: roll,
+                });
+            }
         }
         state.card_runtime.capture_the_flag = Some(crate::CaptureTheFlagState {
             flags,

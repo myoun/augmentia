@@ -103,7 +103,7 @@ impl Engine {
                 }
                 self.crush_card_landing(state, square, actor, crate::TABOO, events);
                 // Source removes movable wall/football/monster installations.
-                state.card_runtime.barricades.remove(&square);
+                state.card_runtime.remove_barricade(square);
                 if self.card_landing_open(state, square) {
                     let monster =
                         Piece::new(actor, PieceKind::Monster).with_id(state.allocate_piece_id());

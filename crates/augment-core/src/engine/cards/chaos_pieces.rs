@@ -505,7 +505,7 @@ impl Engine {
                 }
             }
             for s in neighbors {
-                state.card_runtime.barricades.remove(&s);
+                state.card_runtime.remove_barricade(s);
                 if state.card_runtime.football_pos == Some(s) {
                     state.card_runtime.football_pos = None;
                 }
@@ -749,7 +749,7 @@ impl Engine {
                         let Some(to) = cursor.offset(df, dr) else {
                             break;
                         };
-                        let target = self.board_piece_at(state, to);
+                        let target = self.movement_occupant(state, to);
                         if target.is_none()
                             || target.is_some_and(|p| self.can_capture(state, piece, p))
                         {
@@ -774,7 +774,7 @@ impl Engine {
                     (-1, -1),
                 ] {
                     if let Some(to) = from.offset(df, dr)
-                        && self.board_piece_at(state, to).is_none()
+                        && self.movement_occupant(state, to).is_none()
                     {
                         actions.push(Action::Move(MoveAction::new(from, to, None)));
                     }
@@ -784,13 +784,13 @@ impl Engine {
                 let dr = if piece.owner == Player::White { 1 } else { -1 };
                 for df in [-1, 1] {
                     if let Some(to) = from.offset(df, dr)
-                        && self.board_piece_at(state, to).is_none()
+                        && self.movement_occupant(state, to).is_none()
                     {
                         self.push_rule_berolina_move(state, from, to, piece, actions);
                         if !state.card_runtime.moved_piece_ids.contains(&piece.id)
                             && matches!(from.rank(), 0 | 1 | 6 | 7)
                             && let Some(far) = to.offset(df, dr)
-                            && self.board_piece_at(state, far).is_none()
+                            && self.movement_occupant(state, far).is_none()
                         {
                             self.push_rule_berolina_move(state, from, far, piece, actions);
                         }
@@ -798,7 +798,7 @@ impl Engine {
                 }
                 if let Some(to) = from.offset(0, dr)
                     && self
-                        .board_piece_at(state, to)
+                        .movement_occupant(state, to)
                         .is_some_and(|p| self.can_capture(state, piece, p))
                 {
                     self.push_rule_berolina_move(state, from, to, piece, actions);

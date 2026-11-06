@@ -69,7 +69,23 @@ impl fmt::Display for MoveAction {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub enum ActionTarget {
     None,
+    Choice(String),
     Square(Square),
     PieceAt(Square),
     Squares(Vec<Square>),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn named_card_choices_round_trip_without_becoming_board_squares() {
+        let action = Action::UseCard {
+            instance_id: 7,
+            target: ActionTarget::Choice("highway".to_owned()),
+        };
+        let encoded = serde_json::to_string(&action).unwrap();
+        assert_eq!(serde_json::from_str::<Action>(&encoded).unwrap(), action);
+    }
 }

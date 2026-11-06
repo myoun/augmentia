@@ -23,6 +23,35 @@ pub(super) struct MiddleCaptureContext {
 
 impl Engine {
     pub(super) fn alekhine_formation(&self, state: &GameState, actor: Player) -> Option<Vec<u32>> {
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            let mut entries = state.board.iter().collect::<Vec<_>>();
+            entries.sort_by_key(|(square, _)| (7 - square.rank(), square.file()));
+            for (square, queen) in entries
+                .iter()
+                .copied()
+                .filter(|(_, p)| p.owner == actor && p.kind == PieceKind::Queen)
+            {
+                let rooks = entries
+                    .iter()
+                    .copied()
+                    .filter(|(s, p)| {
+                        p.owner == actor && p.kind == PieceKind::Rook && s.file() == square.file()
+                    })
+                    .collect::<Vec<_>>();
+                if rooks.len() >= 2
+                    && rooks.iter().all(|(s, _)| {
+                        if actor == Player::White {
+                            s.rank() > square.rank()
+                        } else {
+                            s.rank() < square.rank()
+                        }
+                    })
+                {
+                    return Some(vec![queen.id, rooks[0].1.id, rooks[1].1.id]);
+                }
+            }
+            return None;
+        }
         let queens = state
             .board
             .iter()
@@ -64,9 +93,13 @@ impl Engine {
             .board
             .get(rook_square)
             .ok_or_else(|| EngineError::Invariant("castling rook disappeared".to_owned()))?;
-        let (king_square, king) = state
-            .board
-            .iter()
+        let candidates = if state.ruleset_id == crate::LATEST_RULESET_ID {
+            web_ordered_pieces(state)
+        } else {
+            state.board.iter().collect()
+        };
+        let (king_square, king) = candidates
+            .into_iter()
             .find(|(_, piece)| piece.owner == actor && self.is_royal_piece(state, *piece))
             .ok_or_else(|| EngineError::Invariant("castling king disappeared".to_owned()))?;
         let (file_delta, rank_delta, distance) = aligned_distance(king_square, rook_square)
@@ -84,9 +117,21 @@ impl Engine {
             .expect("aligned rook destination");
         state.board.set(king_square, None);
         state.board.set(rook_square, None);
+        let mut enemy_king_captured = false;
         for (square, attacker) in [(king_to, king), (rook_to, rook)] {
             if let Some(victim) = state.board.get(square) {
                 state.board.set(square, None);
+                if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    enemy_king_captured |= victim.owner != actor && victim.kind == PieceKind::King;
+                    if state.card_runtime.imperial_studies[actor.index()] {
+                        state
+                            .card_runtime
+                            .imperial_moves
+                            .entry(king.id)
+                            .or_default()
+                            .insert(victim.kind);
+                    }
+                }
                 self.clear_removed_piece_statuses(state, victim.id);
                 events.push(Event::PieceCaptured {
                     actor,
@@ -96,6 +141,15 @@ impl Engine {
             }
             state.board.set(square, Some(attacker));
             state.card_runtime.moved_piece_ids.insert(attacker.id);
+        }
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            state.card_runtime.castled_piece_ids.insert(king.id);
+            if enemy_king_captured {
+                state.status = GameStatus::Won {
+                    winner: actor,
+                    reason: WinReason::KingCaptured,
+                };
+            }
         }
         state.en_passant = None;
         Ok(())
@@ -112,9 +166,24 @@ impl Engine {
         if !state.card_runtime.encouragement[target.owner.index()] {
             return false;
         }
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && matches!(target.kind, PieceKind::Scarecrow | PieceKind::Barrier)
+        {
+            return false;
+        }
         let Some((target_square, _)) = state.board.find_by_id(target.id) else {
             return false;
         };
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            return web_ordered_pieces(state)
+                .into_iter()
+                .find(|(_, p)| p.owner == target.owner && self.is_royal_piece(state, *p))
+                .is_some_and(|(square, _)| {
+                    square.file().abs_diff(target_square.file())
+                        + square.rank().abs_diff(target_square.rank())
+                        == 1
+                });
+        }
         state.board.iter().any(|(square, piece)| {
             piece.owner == target.owner
                 && self.is_royal_piece(state, piece)
@@ -546,6 +615,12 @@ impl Engine {
         {
             actions.push(Action::Move(MoveAction::new(from, to, None)));
         }
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && self.piece_has_ability(state, piece, PieceKind::Missionary)
+            && state.card_runtime.socialism[piece.owner.index()] == 0
+        {
+            return;
+        }
         for file_delta in [-1, 1] {
             if let Some(to) = from.offset(file_delta, direction)
                 && self
@@ -568,6 +643,44 @@ impl Engine {
             return;
         }
         let owner = piece.owner.index();
+        if piece.kind == PieceKind::Bishop
+            && state.card_runtime.bishop_infiltration_due[owner].is_some()
+        {
+            for &(df, dr) in BISHOP_DIRECTIONS {
+                let mut cursor = from;
+                while let Some(to) = cursor.offset(df, dr) {
+                    let hole = state.card_runtime.black_holes.contains(&to)
+                        && self.board_piece_at(state, to).is_none()
+                        && !state.card_runtime.barricades.contains(&to)
+                        && state.card_runtime.crown_pos != Some(to)
+                        && !self.rule_cell_collapsed(state, to)
+                        && !state
+                            .card_runtime
+                            .pending_lobsters
+                            .iter()
+                            .any(|p| p.square == to)
+                        && !state
+                            .card_runtime
+                            .pending_scarecrows
+                            .iter()
+                            .any(|p| p.square == to)
+                        && !state
+                            .card_runtime
+                            .pending_portals
+                            .iter()
+                            .any(|p| p.squares.contains(&to))
+                        && !state.card_runtime.portals.is_some_and(|p| p.contains(&to))
+                        && !state
+                            .card_runtime
+                            .rule_portals
+                            .is_some_and(|p| p.contains(&to));
+                    if self.card_landing_open(state, to) || hole {
+                        actions.push(Action::Move(MoveAction::new(from, to, None)));
+                    }
+                    cursor = to;
+                }
+            }
+        }
         if state
             .card_runtime
             .basic_training_piece_ids
@@ -631,6 +744,8 @@ impl Engine {
                         continue;
                     };
                     if self.board_piece_at(state, to).is_none()
+                        && (state.ruleset_id != crate::LATEST_RULESET_ID
+                            || target_piece.owner != piece.owner)
                         && self.can_capture(state, piece, target_piece)
                     {
                         actions.push(Action::Move(MoveAction::new(from, to, None)));
@@ -663,7 +778,39 @@ impl Engine {
             for &(file, rank) in KNIGHT_OFFSETS {
                 if let Some(to) = from.offset(file, rank)
                     && self.board_piece_at(state, to).is_some_and(|target| {
-                        target.owner == piece.owner && !self.is_royal_piece(state, target)
+                        target.owner == piece.owner
+                            && !self.is_royal_piece(state, target)
+                            && (state.ruleset_id != crate::LATEST_RULESET_ID
+                                || (self.capture_status_allows(state, piece)
+                                    && !matches!(
+                                        target.kind,
+                                        PieceKind::Colossus
+                                            | PieceKind::BigRook
+                                            | PieceKind::BigBishop
+                                            | PieceKind::Guard
+                                            | PieceKind::Jester
+                                    )
+                                    && !state.card_runtime.shielded_piece_ids.contains(&target.id)
+                                    && !state
+                                        .card_runtime
+                                        .protected_piece_ids
+                                        .contains(&target.id)
+                                    && !state
+                                        .card_runtime
+                                        .metalized_piece_ids
+                                        .contains(&target.id)
+                                    && !state
+                                        .card_runtime
+                                        .vigilance_protection
+                                        .contains_key(&target.id)
+                                    && !state
+                                        .card_runtime
+                                        .outpost_protected_piece_ids
+                                        .contains(&target.id)
+                                    && !state.card_runtime.frozen.contains_key(&target.id)
+                                    && !state.rule_runtime.winter_frozen.contains(&target.id)
+                                    && !self.middle_encouragement_protects(state, target)
+                                    && !self.campfire_protects(state, target)))
                     })
                 {
                     actions.push(Action::Move(MoveAction::new(from, to, None)));
@@ -679,13 +826,51 @@ impl Engine {
         }
         if self.is_royal_piece(state, piece) && state.card_runtime.switcheroo[owner] {
             for (to, target) in state.board.iter() {
-                if target.owner == piece.owner && target.kind == PieceKind::Pawn {
+                let allowed = state.ruleset_id != crate::LATEST_RULESET_ID
+                    || (!state.rule_runtime.grappler_bound.contains_key(&target.id)
+                        && !self.d4_restricts(state, piece.owner, false, from)
+                        && state
+                            .card_runtime
+                            .october
+                            .pawn_chain_links
+                            .iter()
+                            .all(|pair| {
+                                let [a, b] = *pair;
+                                let Some((a_pos, _)) = state.board.find_by_id(a) else {
+                                    return true;
+                                };
+                                let Some((b_pos, _)) = state.board.find_by_id(b) else {
+                                    return true;
+                                };
+                                let distance = |x: Square, y: Square| {
+                                    x.file().abs_diff(y.file()).max(x.rank().abs_diff(y.rank()))
+                                };
+                                let new_pos = |id, square| {
+                                    if id == piece.id {
+                                        to
+                                    } else if id == target.id {
+                                        from
+                                    } else {
+                                        square
+                                    }
+                                };
+                                distance(a_pos, b_pos) > 2
+                                    || distance(new_pos(a, a_pos), new_pos(b, b_pos)) <= 2
+                            }));
+                if target.owner == piece.owner && target.kind == PieceKind::Pawn && allowed {
                     actions.push(Action::Move(MoveAction::new(from, to, None)));
                 }
             }
         }
         if piece.kind == PieceKind::Bishop && state.card_runtime.bishop_snipe[owner] {
-            for &(file, rank) in BISHOP_DIRECTIONS {
+            let directions = if state.ruleset_id == crate::LATEST_RULESET_ID
+                && state.card_runtime.reversal[owner]
+            {
+                ROOK_DIRECTIONS
+            } else {
+                BISHOP_DIRECTIONS
+            };
+            for &(file, rank) in directions {
                 let mut cursor = from;
                 let mut hurdle = false;
                 while let Some(to) = cursor.offset(file, rank) {
@@ -694,6 +879,11 @@ impl Engine {
                             if self.can_capture(state, piece, target) {
                                 actions.push(Action::Move(MoveAction::new(from, to, None)));
                             }
+                            break;
+                        }
+                        if state.ruleset_id == crate::LATEST_RULESET_ID
+                            && target.kind != PieceKind::Pawn
+                        {
                             break;
                         }
                         hurdle = true;
@@ -962,6 +1152,16 @@ impl Engine {
         events: &mut Vec<Event>,
     ) -> bool {
         self.note_middle_piece_moved(state, original_piece);
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            state
+                .card_runtime
+                .promotion_rush_piece_ids
+                .remove(&original_piece.id);
+            state
+                .card_runtime
+                .promotion_rush_capture_cleared
+                .remove(&original_piece.id);
+        }
         state
             .card_runtime
             .quantum_positions
@@ -975,8 +1175,17 @@ impl Engine {
                 .chameleon_piece_ids
                 .contains(&original_piece.id)
                 && let Some(mut attacker) = state.board.get(movement.to)
+                && attacker.id == original_piece.id
+                && (state.ruleset_id != crate::LATEST_RULESET_ID
+                    || (!self.is_royal_piece(state, captured_piece)
+                        && !matches!(
+                            captured_piece.kind,
+                            PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
+                        )))
             {
-                self.clear_queens_gambit_protection(state, attacker.id);
+                if state.ruleset_id != crate::LATEST_RULESET_ID {
+                    self.clear_queens_gambit_protection(state, attacker.id);
+                }
                 attacker.kind = captured_piece.kind;
                 state.board.set(movement.to, Some(attacker));
             }
@@ -1018,10 +1227,19 @@ impl Engine {
             }
         }
 
-        if state
-            .card_runtime
-            .chimera_piece_ids
-            .contains(&original_piece.id)
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && state
+                .card_runtime
+                .chimera_piece_ids
+                .contains(&original_piece.id)
+            && movement.from != movement.to
+        {
+            self.resolve_current_chimera(state, original_piece.id, events);
+        } else if state.ruleset_id != crate::LATEST_RULESET_ID
+            && state
+                .card_runtime
+                .chimera_piece_ids
+                .contains(&original_piece.id)
             && let Some(mut chimera) = state.board.get(movement.to)
         {
             let (roll, selected) = state.rng_mut().web_choice_index(25);
@@ -1108,11 +1326,31 @@ impl Engine {
                             && square.rank().abs_diff(center.rank()) <= 1
                     })
                     .filter(|(_, piece)| {
-                        !state.card_runtime.frozen.contains_key(&piece.id)
-                            && !matches!(
-                                piece.kind,
-                                PieceKind::Guard | PieceKind::Jester | PieceKind::Monster
-                            )
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            let permanent =
+                                state.card_runtime.protected_piece_ids.contains(&piece.id)
+                                    && (state
+                                        .card_runtime
+                                        .queens_gambit_protection
+                                        .contains(&piece.id)
+                                        || !has_piece_protection_source(state, piece.id)
+                                        || state
+                                            .card_runtime
+                                            .queens_gambit_previous_protection
+                                            .contains(&piece.id));
+                            !permanent
+                                && !state
+                                    .card_runtime
+                                    .vigilance_protection
+                                    .contains_key(&piece.id)
+                                && piece.kind != PieceKind::Colossus
+                        } else {
+                            !state.card_runtime.frozen.contains_key(&piece.id)
+                                && !matches!(
+                                    piece.kind,
+                                    PieceKind::Guard | PieceKind::Jester | PieceKind::Monster
+                                )
+                        }
                     })
                     .collect::<Vec<_>>();
                 for (square, victim) in victims {
@@ -1120,7 +1358,11 @@ impl Engine {
                         state,
                         square,
                         victim,
-                        owner,
+                        if state.ruleset_id == crate::LATEST_RULESET_ID {
+                            captured_piece.map_or(owner.opponent(), |p| p.owner)
+                        } else {
+                            owner
+                        },
                         SUICIDE_BOMBER,
                         events,
                     );
@@ -1164,12 +1406,15 @@ impl Engine {
             }
         }
 
-        if let Some(bond) = state
-            .card_runtime
-            .twin_bonds
-            .iter()
-            .find(|bond| bond.first_id == original_piece.id || bond.second_id == original_piece.id)
-            .copied()
+        if state.ruleset_id != crate::LATEST_RULESET_ID
+            && let Some(bond) = state
+                .card_runtime
+                .twin_bonds
+                .iter()
+                .find(|bond| {
+                    bond.first_id == original_piece.id || bond.second_id == original_piece.id
+                })
+                .copied()
         {
             let partner_id = if bond.first_id == original_piece.id {
                 bond.second_id
@@ -1220,6 +1465,33 @@ impl Engine {
             || (original_piece.kind == PieceKind::Knight
                 && state.card_runtime.mad_horse[owner.index()]
                 && captured_friend);
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && state
+                .card_runtime
+                .twin_bonds
+                .iter()
+                .any(|b| b.first_id == original_piece.id || b.second_id == original_piece.id)
+        {
+            let file_surge = self.piece_ability_kind(state, original_piece) == PieceKind::Knight
+                && state.card_runtime.file_surge[owner.index()]
+                && state
+                    .board
+                    .find_by_id(original_piece.id)
+                    .is_some_and(|(s, _)| matches!(s.file(), 0 | 7));
+            if state
+                .card_runtime
+                .twin_swap_pending
+                .contains(&original_piece.id)
+                || file_surge
+            {
+                state
+                    .card_runtime
+                    .twin_swap_pending
+                    .insert(original_piece.id);
+            } else {
+                self.apply_twin_swap(state, original_piece.id);
+            }
+        }
         if extra_move && state.board.find_by_id(original_piece.id).is_some() {
             state.phase = GamePhase::ForcedMove {
                 piece_id: original_piece.id,
@@ -1236,6 +1508,68 @@ impl Engine {
         state.board.find_by_id(original_piece.id).is_some()
     }
 
+    fn apply_twin_swap(&self, state: &mut GameState, id: u32) {
+        let Some(bond) = state
+            .card_runtime
+            .twin_bonds
+            .iter()
+            .find(|b| b.first_id == id || b.second_id == id)
+            .copied()
+        else {
+            return;
+        };
+        let partner_id = if bond.first_id == id {
+            bond.second_id
+        } else {
+            bond.first_id
+        };
+        let (Some((from, piece)), Some((to, partner))) = (
+            state.board.find_by_id(id),
+            state.board.find_by_id(partner_id),
+        ) else {
+            return;
+        };
+        if self.piece_has_ability(state, piece, PieceKind::Slime)
+            || self.piece_has_ability(state, partner, PieceKind::Slime)
+        {
+            state
+                .card_runtime
+                .twin_bonds
+                .retain(|b| b.first_id != id && b.second_id != id);
+            state.card_runtime.twin_swap_pending.remove(&id);
+            state.card_runtime.twin_swap_pending.remove(&partner_id);
+            return;
+        }
+        let ep = state
+            .en_passant
+            .and_then(|e| state.board.get(e.captured).map(|p| (e.captured, p.id)));
+        state.board.set(from, Some(partner));
+        state.board.set(to, Some(piece));
+        state.card_runtime.moved_piece_ids.extend([id, partner_id]);
+        if ep.is_some_and(|(square, victim)| state.board.get(square).is_none_or(|p| p.id != victim))
+        {
+            state.en_passant = None;
+        }
+        state.card_runtime.twin_swap_pending.remove(&id);
+        state.card_runtime.twin_swap_pending.remove(&partner_id);
+    }
+
+    pub(super) fn settle_twin_sequences(&self, state: &mut GameState) {
+        let pending: Vec<_> = state
+            .card_runtime
+            .twin_swap_pending
+            .iter()
+            .copied()
+            .collect();
+        for id in pending {
+            if matches!(state.phase, GamePhase::ForcedMove { piece_id, .. } if piece_id == id) {
+                continue;
+            }
+            state.card_runtime.twin_swap_pending.remove(&id);
+            self.apply_twin_swap(state, id);
+        }
+    }
+
     pub(super) fn tick_middle_statuses_after_turn(
         &self,
         state: &mut GameState,
@@ -1243,6 +1577,36 @@ impl Engine {
         events: &mut Vec<Event>,
     ) {
         let owner = actor.index();
+        state.card_runtime.evacuation_no_capture.retain(|id| {
+            state
+                .board
+                .find_by_id(*id)
+                .is_some_and(|(_, piece)| piece.owner != actor)
+        });
+        state.card_runtime.vigilance_protection.retain(|_, status| {
+            if status.by == actor {
+                status.remaining_turns = status.remaining_turns.saturating_sub(1);
+            }
+            status.remaining_turns > 0
+        });
+        if state.ruleset_id == crate::LATEST_RULESET_ID {
+            state.card_runtime.promotion_rush_piece_ids.retain(|id| {
+                state
+                    .board
+                    .find_by_id(*id)
+                    .is_some_and(|(_, p)| p.owner != actor)
+            });
+            state
+                .card_runtime
+                .promotion_rush_capture_cleared
+                .retain(|id| state.card_runtime.promotion_rush_piece_ids.contains(id));
+        }
+        state.card_runtime.counterattack_locked.retain(|id| {
+            state
+                .board
+                .find_by_id(*id)
+                .is_some_and(|(_, p)| p.owner != actor)
+        });
         state.card_runtime.breakthrough_pawns[owner] = false;
         state.card_runtime.en_passant_frenzy[owner] = false;
         state.card_runtime.bishop_snipe[owner] = false;
@@ -1251,7 +1615,11 @@ impl Engine {
         state.card_runtime.overtake[owner] = false;
         state.card_runtime.disassembly[owner] = false;
         state.card_runtime.symmetry[owner] = false;
+        state.card_runtime.e4_active[owner] = false;
+        state.card_runtime.roller_active[owner] = false;
+        state.card_runtime.solidarity_active[owner] = false;
         state.card_runtime.switcheroo[owner] = false;
+        state.card_runtime.reposition_ready[owner] = false;
         state.card_runtime.mistake_card[owner] = false;
         state.card_runtime.socialism[owner] = state.card_runtime.socialism[owner].saturating_sub(1);
         state.card_runtime.taunt[owner] = state.card_runtime.taunt[owner].saturating_sub(1);
@@ -1472,13 +1840,29 @@ impl Engine {
                         _ => None,
                     })
                     .collect::<Vec<_>>();
-                let (roll, selected) = state.rng_mut().web_choice_index(candidates.len());
+                let (roll, selected) = if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    let mut candidates = candidates;
+                    if state.board.find_by_id(piece_id).is_none_or(|(_, piece)| {
+                        piece.owner != player
+                            || self.piece_has_ability(state, piece, PieceKind::Slime)
+                    }) {
+                        candidates.clear();
+                    }
+                    candidates.sort_by_key(|movement| (7 - movement.to.rank(), movement.to.file()));
+                    candidates.dedup_by_key(|movement| movement.to);
+                    let (roll, random) = state.rng_mut().web_choice_index(64);
+                    let selected =
+                        (!candidates.is_empty()).then(|| random.unwrap() % candidates.len());
+                    (roll, selected.map(|index| candidates[index]))
+                } else {
+                    let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+                    (roll, index.map(|index| candidates[index]))
+                };
                 events.push(Event::RandomSample {
                     purpose: "panic".to_owned(),
                     roll_53: roll,
                 });
-                if let Some(selected) = selected {
-                    let movement = candidates[selected];
+                if let Some(movement) = selected {
                     if let Some(piece) = state.board.get(movement.from) {
                         state.board.set(movement.from, None);
                         state.board.set(movement.to, Some(piece));
@@ -1495,6 +1879,11 @@ impl Engine {
             }
         }
 
+        if state.ruleset_id == crate::LATEST_RULESET_ID
+            && self.open_current_trolley(state, player, events)
+        {
+            return;
+        }
         if let Some(by) = state.card_runtime.pending_trolley_by[player.index()].take()
             && let Some(bundles) = self.sample_middle_trolley_bundle_pair(state, player, events)
         {
@@ -1542,10 +1931,15 @@ impl Engine {
             .bundles
             .get(option_index)
             .ok_or_else(|| EngineError::Invariant("trolley choice index is invalid".to_owned()))?;
+        let mut removed = false;
         for piece_id in doomed {
             if let Some((square, piece)) = state.board.find_by_id(*piece_id) {
                 self.remove_piece_for_card(state, square, piece, dilemma.by, TROLLEY, events);
+                removed = true;
             }
+        }
+        if state.ruleset_id == crate::LATEST_RULESET_ID && removed {
+            self.cancel_prophecies(state);
         }
         self.resolve_missing_king(state, events);
         Ok(())

@@ -63,6 +63,7 @@ impl Engine {
                     s.file() >= d && s.rank() >= d && s.file() < 8 - d && s.rank() < 8 - d
                 };
                 state.card_runtime.barricades.retain(|s| open(*s));
+                state.card_runtime.blockade_walls.retain(|s, _| open(*s));
                 state.card_runtime.rule_bombs.retain(|s| open(*s));
                 state.rule_runtime.bomb_ignore.retain(|s, _| open(*s));
                 state

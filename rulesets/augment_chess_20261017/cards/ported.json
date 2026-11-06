@@ -1622,6 +1622,854 @@
         ]
       ],
       "notes": "Moves king two ranks, starts with one gold, purchases are selected as moves but merchant stays and nonroyal targets convert in place."
+    },
+    {
+      "id": "disarm",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "inertia",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "severance",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "evasion",
+      "stage": 12,
+      "scope": "current random target and effect; full interaction parity unverified",
+      "source_ranges": [
+        [
+          199866,
+          199942
+        ]
+      ],
+      "notes": "V19 candidate selection, one random draw, and target effect."
+    },
+    {
+      "id": "fanatical-ritual",
+      "stage": 12,
+      "scope": "current random target and effect; full interaction parity unverified",
+      "source_ranges": [
+        [
+          199866,
+          199942
+        ]
+      ],
+      "notes": "V19 candidate selection, one random draw, and target effect."
+    },
+    {
+      "id": "royal-shield",
+      "stage": 12,
+      "scope": "current random target and effect; full interaction parity unverified",
+      "source_ranges": [
+        [
+          199866,
+          199942
+        ]
+      ],
+      "notes": "V19 candidate selection, one random draw, and target effect."
+    },
+    {
+      "id": "freeze",
+      "stage": 12,
+      "scope": "current enemy-army eligibility, random targets and duration",
+      "source_ranges": [
+        [
+          199877,
+          199905
+        ],
+        [
+          212945,
+          212951
+        ]
+      ],
+      "notes": "V19 samples up to three eligible nonroyals after checking enemy army size."
+    },
+    {
+      "id": "en-passant-bang",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "royal-command",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "snipe",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "socialism",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "taunt",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "frontline-response",
+      "stage": 12,
+      "scope": "rook identity and own-half frontal capture restriction",
+      "source_ranges": [
+        [
+          4509,
+          4520
+        ],
+        [
+          196610,
+          196614
+        ]
+      ],
+      "notes": "Only rooks present when the card is acquired receive frontline."
+    },
+    {
+      "id": "ice-king",
+      "stage": 12,
+      "scope": "current turn-bound effect and timing",
+      "source_ranges": [
+        [
+          199855,
+          199865
+        ],
+        [
+          203650,
+          203700
+        ],
+        [
+          217280,
+          217292
+        ]
+      ],
+      "notes": "Current blizzard and mistake-card contracts."
+    },
+    {
+      "id": "mistake-card",
+      "stage": 12,
+      "scope": "current turn-bound effect and timing",
+      "source_ranges": [
+        [
+          199855,
+          199865
+        ],
+        [
+          203650,
+          203700
+        ],
+        [
+          217280,
+          217292
+        ]
+      ],
+      "notes": "Current blizzard and mistake-card contracts."
+    },
+    {
+      "id": "ice-sheet",
+      "stage": 12,
+      "scope": "enemy target classification and directional longest movement",
+      "source_ranges": [
+        [
+          198861,
+          198883
+        ],
+        [
+          200861,
+          200869
+        ]
+      ],
+      "notes": "Current target and three-owner-turn duration."
+    },
+    {
+      "id": "counterattack",
+      "stage": 12,
+      "scope": "pawn selection, one-shot counterattack and turn lock",
+      "source_ranges": [
+        [
+          203640,
+          203674
+        ],
+        [
+          206852,
+          206852
+        ],
+        [
+          210810,
+          210900
+        ]
+      ],
+      "notes": "Scoped counterattack port; complex capture and cross-card interactions remain separately auditable."
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "stage": 12,
+      "scope": "same-file formation and permanent protection",
+      "source_ranges": [
+        [
+          197927,
+          197959
+        ]
+      ],
+      "notes": "Scoped port; transformed queen identity interactions remain separately auditable."
+    },
+    {
+      "id": "chameleon-mutation",
+      "stage": 12,
+      "scope": "selection and capture transformation",
+      "source_ranges": [
+        [
+          201443,
+          201456
+        ],
+        [
+          213305,
+          213323
+        ]
+      ],
+      "notes": "Scoped port; special piece interactions remain separately auditable."
+    },
+    {
+      "id": "promotion-rush",
+      "stage": 12,
+      "scope": "selection, queen movement and capture restriction",
+      "source_ranges": [
+        [
+          198992,
+          199019
+        ],
+        [
+          207064,
+          207064
+        ],
+        [
+          211348,
+          211356
+        ]
+      ],
+      "notes": "Current timed effect and capture restriction."
+    },
+    {
+      "id": "metal",
+      "stage": 12,
+      "scope": "ranged target, protection and cooldown",
+      "source_ranges": [
+        [
+          221913,
+          221946
+        ],
+        [
+          182677,
+          182711
+        ]
+      ],
+      "notes": "Scoped current metal contract."
+    },
+    {
+      "id": "basic-training",
+      "stage": 12,
+      "scope": "target selection and pawn movement",
+      "source_ranges": [
+        [
+          195795,
+          195809
+        ],
+        [
+          198011,
+          198030
+        ],
+        [
+          205682,
+          205689
+        ],
+        [
+          208010,
+          208014
+        ]
+      ],
+      "notes": "Scoped current training contract."
+    },
+    {
+      "id": "encouragement",
+      "stage": 12,
+      "scope": "orthogonal royal aura and protection contact",
+      "source_ranges": [
+        [
+          204966,
+          204990
+        ],
+        [
+          209232,
+          209275
+        ]
+      ],
+      "notes": "Current encouragement protection contract."
+    },
+    {
+      "id": "vigilance",
+      "stage": 12,
+      "scope": "loss-triggered royal protection and enemy-turn expiry",
+      "source_ranges": [
+        [
+          211850,
+          211860
+        ],
+        [
+          221580,
+          221586
+        ]
+      ],
+      "notes": "Current vigilance timing and protection."
+    },
+    {
+      "id": "suicide-bomber",
+      "stage": 12,
+      "scope": "pawn-family selection and capture-triggered explosion",
+      "source_ranges": [
+        [
+          752,
+          755
+        ],
+        [
+          201458,
+          201470
+        ],
+        [
+          213346,
+          213375
+        ]
+      ],
+      "notes": "Current suicide bomber targeting and explosion."
+    },
+    {
+      "id": "dice",
+      "stage": 12,
+      "scope": "six-kind roll and two-enemy-turn lock",
+      "source_ranges": [
+        [
+          199934,
+          199947
+        ],
+        [
+          212004,
+          212008
+        ]
+      ],
+      "notes": "Current dice sampling and duration."
+    },
+    {
+      "id": "switcheroo",
+      "stage": 12,
+      "scope": "royal-pawn exchange and turn consumption",
+      "source_ranges": [
+        [
+          217074,
+          217138
+        ]
+      ],
+      "notes": "Current switcheroo contract."
+    },
+    {
+      "id": "bishop-infiltration",
+      "stage": 12,
+      "scope": "bishop quiet jump and owner-start expiry",
+      "source_ranges": [
+        [
+          203850,
+          203859
+        ],
+        [
+          204071,
+          204075
+        ],
+        [
+          221465,
+          221471
+        ]
+      ],
+      "notes": "Current bishop infiltration timing and movement."
+    },
+    {
+      "id": "loyalist",
+      "stage": 12,
+      "scope": "own nonroyal target and royal-adjacent relocation",
+      "source_ranges": [
+        [
+          202495,
+          202508
+        ],
+        [
+          207854,
+          207857
+        ]
+      ],
+      "notes": "Current loyalist selection and movement."
+    },
+    {
+      "id": "vortex",
+      "stage": 12,
+      "scope": "enemy target set and ordered shuffle",
+      "source_ranges": [
+        [
+          200047,
+          200055
+        ],
+        [
+          200301,
+          200319
+        ]
+      ],
+      "notes": "Current vortex selection and shuffle."
+    },
+    {
+      "id": "emergency-evacuation",
+      "stage": 12,
+      "scope": "ordered selection and one-turn capture restriction",
+      "source_ranges": [
+        [
+          201965,
+          202070
+        ]
+      ],
+      "notes": "Current sequential evacuation and moved-piece restriction."
+    },
+    {
+      "id": "castling",
+      "stage": 12,
+      "scope": "aligned rook selection and immediate free castling",
+      "source_ranges": [
+        [
+          198435,
+          198515
+        ]
+      ],
+      "notes": "Current free castling target and placement contract."
+    },
+    {
+      "id": "scarecrow",
+      "stage": 12,
+      "scope": "sacrifice, protected reservation and activation timing",
+      "source_ranges": [
+        [
+          200869,
+          200898
+        ],
+        [
+          212447,
+          212480
+        ]
+      ],
+      "notes": "Current scarecrow reservation and owner-start expiry."
+    },
+    {
+      "id": "sacrifice",
+      "stage": 12,
+      "scope": "ordered value comparison and three-turn protection",
+      "source_ranges": [
+        [
+          200523,
+          200551
+        ],
+        [
+          212021,
+          212028
+        ]
+      ],
+      "notes": "Current sacrifice and protection contract."
+    },
+    {
+      "id": "reposition",
+      "stage": 12,
+      "scope": "first-mover forced follow-up with no capture",
+      "source_ranges": [
+        [
+          204379,
+          204383
+        ],
+        [
+          206874,
+          206902
+        ],
+        [
+          209004,
+          209075
+        ]
+      ],
+      "notes": "Current reposition readiness and forced move."
+    },
+    {
+      "id": "mad-horse",
+      "stage": 12,
+      "scope": "friendly capture and forced continuation",
+      "source_ranges": [
+        [
+          218131,
+          218166
+        ],
+        [
+          208915,
+          208950
+        ]
+      ],
+      "notes": "Current mad horse targeting and chained extra movement."
+    },
+    {
+      "id": "e4",
+      "stage": 12,
+      "scope": "color-specific e4/e5 teleport and turn expiry",
+      "source_ranges": [
+        [
+          204071,
+          204075
+        ],
+        [
+          221463,
+          221477
+        ]
+      ],
+      "notes": "Current e4 movement target and turn timing."
+    },
+    {
+      "id": "twins",
+      "stage": 12,
+      "scope": "twin identity selection and post-move exchange",
+      "source_ranges": [
+        [
+          198366,
+          198393
+        ],
+        [
+          210547,
+          210625
+        ],
+        [
+          220667,
+          220680
+        ]
+      ],
+      "notes": "Current twin bond and deferred exchange."
+    },
+    {
+      "id": "feudal-contract",
+      "stage": 12,
+      "scope": "feudal identity selection and immediate counterstrike",
+      "source_ranges": [
+        [
+          198132,
+          198163
+        ],
+        [
+          210466,
+          210528
+        ]
+      ],
+      "notes": "Current contract replacement and counterstrike."
+    },
+    {
+      "id": "solidarity",
+      "stage": 12,
+      "scope": "friendly nonroyal minor exchange for the current turn",
+      "source_ranges": [
+        [
+          204071,
+          204075
+        ],
+        [
+          217206,
+          217245
+        ],
+        [
+          221567,
+          221575
+        ]
+      ],
+      "notes": "Current solidarity exchange and turn expiry."
+    },
+    {
+      "id": "panic",
+      "stage": 12,
+      "scope": "ordered enemy reservation and random legal movement at turn boundary",
+      "source_ranges": [
+        [
+          200342,
+          200365
+        ],
+        [
+          211969,
+          211997
+        ],
+        [
+          212123,
+          212140
+        ]
+      ],
+      "notes": "Current panic selection and bounded random movement."
+    },
+    {
+      "id": "blockade",
+      "stage": 12,
+      "scope": "timed blocking walls adjacent to the first allied royal",
+      "source_ranges": [
+        [
+          203646,
+          203656
+        ],
+        [
+          203685,
+          203693
+        ],
+        [
+          203845,
+          203854
+        ]
+      ],
+      "notes": "Current blockade placement and owner-turn expiry."
+    },
+    {
+      "id": "roller",
+      "stage": 12,
+      "scope": "rook travel deposits continuous persistent highway terrain",
+      "source_ranges": [
+        [
+          193103,
+          193124
+        ],
+        [
+          221525,
+          221550
+        ],
+        [
+          347631,
+          347664
+        ]
+      ],
+      "notes": "Current roller trail and highway movement."
+    },
+    {
+      "id": "chimera",
+      "stage": 12,
+      "scope": "major-piece chimera status and ordered random transformation",
+      "source_ranges": [
+        [
+          197026,
+          197030
+        ],
+        [
+          197058,
+          197068
+        ],
+        [
+          204307,
+          204315
+        ],
+        [
+          213326,
+          213344
+        ]
+      ],
+      "notes": "Current major target, ordered pool and ability defaults."
+    },
+    {
+      "id": "file-conveyor",
+      "stage": 12,
+      "scope": "delayed directional linear file conveyor",
+      "source_ranges": [
+        [
+          203675,
+          203685
+        ],
+        [
+          203859,
+          203861
+        ],
+        [
+          203941,
+          203945
+        ],
+        [
+          212608,
+          212700
+        ]
+      ],
+      "notes": "Current file ownership, delayed activation and linear movement."
+    },
+    {
+      "id": "trolley",
+      "stage": 12,
+      "scope": "seeded balanced trolley bundles and delayed opponent response",
+      "source_ranges": [
+        [
+          191832,
+          191857
+        ],
+        [
+          202079,
+          202153
+        ],
+        [
+          202171,
+          202191
+        ],
+        [
+          202232,
+          202260
+        ],
+        [
+          215292,
+          215315
+        ],
+        [
+          215495,
+          215565
+        ]
+      ],
+      "notes": "Current source score ranking, seed timing and mixed-color removal."
+    },
+    {
+      "id": "rule-ticket",
+      "stage": 12,
+      "scope": "current ordered rule choice, deferred installation by owner turn and recorded random replay",
+      "source_ranges": [
+        [
+          201766,
+          201771
+        ],
+        [
+          201793,
+          201796
+        ],
+        [
+          201806,
+          201851
+        ],
+        [
+          202307,
+          202310
+        ],
+        [
+          205993,
+          206010
+        ],
+        [
+          210031,
+          210034
+        ]
+      ],
+      "notes": "Candidate pool is ACTIVE RULE cards minus the fixed layout rules, already active, installed or pending; the delay is two plies and the random values are captured at play time."
     }
   ]
 }

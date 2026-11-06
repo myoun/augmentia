@@ -77,8 +77,13 @@ mod tests {
             .unwrap();
         assert!(picked.state.board.get("c7".parse().unwrap()).is_some());
         assert!(picked.state.card_runtime.october.iqp_pending[0]);
+        let mut next_state = picked.state;
+        let GamePhase::Draft(offer) = &mut next_state.phase else {
+            panic!("expected second opening draft")
+        };
+        offer.offers = vec![crate::RADICAL_CHARGE.into()];
         let next = engine
-            .apply(&picked.state, Action::DraftPick { offer_index: 0 })
+            .apply(&next_state, Action::DraftPick { offer_index: 0 })
             .unwrap();
         assert!(next.state.board.get("c7".parse().unwrap()).is_none());
         assert!(next.state.board.get("e7".parse().unwrap()).is_none());

@@ -306,7 +306,7 @@ function renderBoard() {
         if (active) square.classList.add(`terrain-${kind}`);
       }
       const terrainLabels = Object.entries(cell?.terrain || {}).filter(([, active]) => active)
-        .map(([kind]) => ({blackHole:"블랙홀",highGround:"고지대",highway:"고속도로",bomb:"룰 폭탄",portal:"포탈",crown:"왕관",collapsed:"붕괴"})[kind]).filter(Boolean);
+        .map(([kind]) => terrainNames[kind]).filter(Boolean);
       if (terrainLabels.length) {
         const terrain = document.createElement("span"); terrain.className = "terrain-label";
         terrain.textContent = terrainLabels.join(" · "); square.append(terrain);
@@ -353,9 +353,13 @@ function renderPiece(piece) {
   return element;
 }
 
+const terrainNames = {blackHole:"블랙홀",highGround:"고지대",highway:"고속도로",wall:"엄폐물",fileConveyorUp:"컨베이어 ↑",fileConveyorDown:"컨베이어 ↓",fileConveyorPending:"가동 대기",bomb:"룰 폭탄",portal:"포탈",crown:"왕관",collapsed:"붕괴"};
 function squareAriaLabel(cell) {
-  if (!cell?.piece) return cell?.square || "빈 칸";
-  return `${cell.square} ${cell.piece.ownerLabel} ${cell.piece.name}`;
+  const parts = [cell?.square || "빈 칸"];
+  if (cell?.piece) parts.push(cell.piece.ownerLabel, cell.piece.name);
+  parts.push(...Object.entries(cell?.terrain || {}).filter(([, active]) => active)
+    .map(([kind]) => terrainNames[kind]).filter(Boolean));
+  return parts.join(" ");
 }
 
 function targetingSquares(selection) {

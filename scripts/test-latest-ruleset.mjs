@@ -40,11 +40,13 @@ const inherited = catalog.cards.filter(card => {
     && handler.ends_turn === (card.turn_policy === 'END_TURN');
 }).map(card => card.id).sort();
 const portIds = ports.cards.map(card => card.id).sort();
-assert.equal(new Set(portIds).size, 101);
+// Port coverage grows as cards are ported, so the count is derived from the data
+// rather than pinned. The partition invariants below are what must hold.
+assert.equal(new Set(portIds).size, ports.cards.length);
 assert.equal(inherited.filter(id => portIds.includes(id)).length, 0);
 assert.deepEqual(profile.cards.map(card => card.id).sort(), [...inherited, ...portIds].sort());
 assert.equal(inherited.length + portIds.length, manifest.coverage.implemented_card_count);
-assert.equal(profile.pending.length, 86);
+assert.equal(profile.cards.length + profile.pending.length, catalog.cards.length);
 assert.equal(new Set([...inherited, ...portIds, ...profile.pending.map(card => card.id)]).size, 275);
 assert.deepEqual(profile.pending, delta.unsupported);
 
@@ -69,4 +71,4 @@ try {
   for (const file of [output, evidence, invalid]) if (existsSync(file)) unlinkSync(file);
   rmdirSync(directory);
 }
-console.log('Latest ruleset: raw hashes, canonical replay, 88 inherited + 101 scoped ports / 86 blocked, unknown source rejection passed.');
+console.log(`Latest ruleset: raw hashes, canonical replay, ${inherited.length} inherited + ${portIds.length} scoped ports / ${profile.pending.length} blocked, unknown source rejection passed.`);

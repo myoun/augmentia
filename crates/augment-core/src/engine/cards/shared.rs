@@ -251,6 +251,12 @@ impl Engine {
         if state.ruleset_id != crate::LATEST_RULESET_ID {
             return;
         }
+        actions.retain(|action| match action {
+            Action::Move(movement) if movement.to != from => {
+                !state.card_runtime.barricades.contains(&movement.to)
+            }
+            _ => true,
+        });
         if self.piece_ability_kind(state, piece) == PieceKind::Thief
             && let Some((visited, df, dr)) = state.card_runtime.thief_turn_paths.get(&piece.id)
         {

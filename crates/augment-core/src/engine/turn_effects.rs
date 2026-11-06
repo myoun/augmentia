@@ -299,6 +299,18 @@ fn replay_piece_ids(replay: &MoveReplayState) -> Vec<u32> {
         .flatten()
         .map(|piece| piece.id)
         .collect::<Vec<_>>();
+    ids.extend(
+        replay
+            .runtime_before
+            .vigilance_protection
+            .keys()
+            .chain(replay.runtime_after.vigilance_protection.keys())
+            .copied()
+            .filter(|id| {
+                replay.runtime_before.vigilance_protection.get(id)
+                    != replay.runtime_after.vigilance_protection.get(id)
+            }),
+    );
     ids.sort_unstable();
     ids.dedup();
     ids
@@ -329,11 +341,11 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             return false;
         }
         sets_match!(id;
-            moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
+            moved_piece_ids, castled_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
-            basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
+            basic_training_piece_ids, promotion_rush_piece_ids, promotion_rush_capture_cleared, evacuation_no_capture, twin_swap_pending, evasion_piece_ids,
             ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
-            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, potion_basic_training_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, frontline_piece_ids, counterattack_ready, counterattack_locked, potion_basic_training_piece_ids,
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
             stealth_piece_ids, submerged_piece_ids, wanted_piece_ids, charge_pawns, desperado_pieces,
@@ -345,7 +357,7 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
             reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
-            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells,
+            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells, ice_king, vigilance_protection, scarecrow_reservations,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
             trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns
@@ -401,11 +413,11 @@ pub(super) fn restore_piece_runtime(
             current.october.bound_piece_ids.remove(&id);
         }
         restore_sets!(id;
-            moved_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
+            moved_piece_ids, castled_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,
             idol_rest_piece_ids, loyalist_piece_ids, royal_piece_ids,
-            basic_training_piece_ids, promotion_rush_piece_ids, evasion_piece_ids,
+            basic_training_piece_ids, promotion_rush_piece_ids, promotion_rush_capture_cleared, evacuation_no_capture, twin_swap_pending, evasion_piece_ids,
             ghost_piece_ids, inertia_piece_ids, chameleon_piece_ids, chimera_piece_ids,
-            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, potion_basic_training_piece_ids,
+            poisoned_piece_ids, queens_gambit_protection, queens_gambit_previous_protection, frontline_piece_ids, counterattack_ready, counterattack_locked, potion_basic_training_piece_ids,
             potion_manner_piece_ids, manner_captured_last_piece_ids,
             potion_saturation_piece_ids, explosive_piece_ids, trojan_piece_ids,
             stealth_piece_ids, submerged_piece_ids, wanted_piece_ids, charge_pawns, desperado_pieces,
@@ -417,7 +429,7 @@ pub(super) fn restore_piece_runtime(
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
             reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
-            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells,
+            sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells, ice_king, vigilance_protection, scarecrow_reservations,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
             witch_trials, baby_bear_grow_turns, bear_retaliations,
             trickster_move_kinds, stake_statuses, bunkers, spies, metal_cooldowns
@@ -475,12 +487,25 @@ pub(in crate::engine) fn restore_replay_color_runtime(
     restore_color_fields!(
         quantum_pending,
         switcheroo,
+        reposition_ready,
+        e4_active,
+        roller_active,
+        solidarity_active,
         moving,
         moving_consecutive,
         exhaustion_last_piece,
         exhaustion_count,
         zugzwang,
     );
+    if current.pending_rule_tickets == after.pending_rule_tickets {
+        current.pending_rule_tickets = before.pending_rule_tickets.clone();
+    }
+    if current.file_conveyors == after.file_conveyors {
+        current.file_conveyors = before.file_conveyors.clone();
+    }
+    if current.highway_cells == after.highway_cells {
+        current.highway_cells = before.highway_cells.clone();
+    }
     if current.crown_pos == after.crown_pos && current.crown_holder == after.crown_holder {
         current.crown_pos = before.crown_pos;
         current.crown_holder = before.crown_holder;
