@@ -28,15 +28,13 @@ pub(super) fn actions(
 }
 
 pub(super) fn eligibility(
-    _state: &GameState,
-    _player: Player,
+    state: &GameState,
+    player: Player,
     _context: AcquisitionContext,
 ) -> CardEligibility {
-    let id = ID;
-    denied(
-        EligibilityReasonCode::UnsupportedPredicate,
-        id,
-        "공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.",
+    require(
+        has_matching_type(state, player),
+        "상대와 같은 종류의 아군 기물이 필요합니다.",
     )
 }
 

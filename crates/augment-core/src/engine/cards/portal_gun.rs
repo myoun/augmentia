@@ -38,15 +38,13 @@ pub(super) fn actions(
 }
 
 pub(super) fn eligibility(
-    _state: &GameState,
+    state: &GameState,
     _player: Player,
     _context: AcquisitionContext,
 ) -> CardEligibility {
-    let id = ID;
-    denied(
-        EligibilityReasonCode::UnsupportedPredicate,
-        id,
-        "공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.",
+    require(
+        empty_square_count(state) >= 2,
+        "빈 칸이 2개 이상 필요합니다.",
     )
 }
 

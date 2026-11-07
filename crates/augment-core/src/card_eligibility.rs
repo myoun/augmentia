@@ -533,4 +533,90 @@ mod tests {
         assert!(!result.reason().unwrap().message_ko.is_empty());
         assert_eq!(canonical_card_id("free-move"), "premove");
     }
+
+    /// The 46 cards that used to deny every acquisition with UnsupportedPredicate now
+    /// resolve their catalog `draw_requirement` against the board. On a standard
+    /// opening position every one of those requirements holds, so drafting must be
+    /// allowed instead of silently excluding more than a sixth of the card pool.
+    #[test]
+    fn every_formerly_denied_card_can_be_drafted_from_the_opening_position() {
+        let state = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 7);
+        let previously_denied = [
+            "camouflage-color",
+            "capture-the-flag",
+            "cleanup",
+            "clone",
+            "cool-guy",
+            "coronation",
+            "desperado",
+            "disassembly",
+            "empty-lunchbox",
+            "extinction",
+            "fleeting-dream",
+            "hallucination",
+            "homecoming",
+            "hypocrisy",
+            "infiltration",
+            "injury",
+            "insight",
+            "joker",
+            "killer-king",
+            "long-en-passant",
+            "macho-chess",
+            "majesty",
+            "miracle",
+            "missionary",
+            "moving",
+            "nullification",
+            "octopus",
+            "outpost",
+            "overtake",
+            "parrot",
+            "parry",
+            "pawn-storm",
+            "platform",
+            "portal-gun",
+            "proficiency",
+            "quantum-mechanics",
+            "recycling",
+            "replay",
+            "saturation",
+            "schrodinger-pawns",
+            "stealth",
+            "submerge",
+            "substitution",
+            "suspicious-potion",
+            "transcendence",
+            "white-box",
+        ];
+        let mut rejected = Vec::new();
+        for id in previously_denied {
+            let result =
+                check_card_eligibility(&state, id, Player::White, AcquisitionContext::Draft);
+            if let Some(reason) = result.reason() {
+                // RULE cards are correctly kept out of the ordinary draft by an earlier
+                // gate; that rejection is unrelated to the draw requirement.
+                if reason.code == EligibilityReasonCode::RuleCardInDraft {
+                    continue;
+                }
+                rejected.push(format!("{id}: {:?}", reason.code));
+            }
+        }
+        assert!(
+            rejected.is_empty(),
+            "cards that must be draftable were rejected: {rejected:?}"
+        );
+        // The draw requirement itself must no longer be the reason for any of them.
+        for id in previously_denied {
+            let result =
+                check_card_eligibility(&state, id, Player::White, AcquisitionContext::Setup);
+            if let Some(reason) = result.reason() {
+                assert_ne!(
+                    reason.code,
+                    EligibilityReasonCode::UnsupportedPredicate,
+                    "{id} still denies acquisition on an unmapped predicate"
+                );
+            }
+        }
+    }
 }

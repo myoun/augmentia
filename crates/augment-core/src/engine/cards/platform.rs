@@ -22,12 +22,8 @@ pub(super) fn eligibility(
     _player: Player,
     _context: AcquisitionContext,
 ) -> CardEligibility {
-    let id = ID;
-    denied(
-        EligibilityReasonCode::UnsupportedPredicate,
-        id,
-        "공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.",
-    )
+    // Upstream `v19DraftRequirementMet` allows ANY unconditionally.
+    CardEligibility::Eligible
 }
 
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::rule(ID, install, eligibility);

@@ -520,10 +520,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "cleanup",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -582,10 +582,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "clone",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -682,10 +682,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "coronation",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -719,10 +719,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "desperado",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -748,10 +748,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "disassembly",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -843,10 +843,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "empty-lunchbox",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -905,10 +905,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "extinction",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1059,10 +1059,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "fleeting-dream",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1295,10 +1295,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hallucination",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1385,7 +1385,7 @@
     "draft": "Eligible",
     "id": "homecoming",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"homecoming\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1506,10 +1506,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hypocrisy",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1556,10 +1556,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "infiltration",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1606,10 +1606,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "injury",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1638,7 +1638,7 @@
     "draft": "Eligible",
     "id": "insight",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"insight\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1692,7 +1692,7 @@
     "draft": "Eligible",
     "id": "joker",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"joker\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1714,10 +1714,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "killer-king",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1888,10 +1888,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "long-en-passant",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -1971,10 +1971,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "majesty",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2037,10 +2037,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "miracle",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2070,10 +2070,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "missionary",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2120,10 +2120,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "moving",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2157,10 +2157,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "nullification",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2190,10 +2190,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "octopus",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2273,10 +2273,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "outpost",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2302,10 +2302,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "overtake",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2393,10 +2393,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parrot",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2430,10 +2430,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parry",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2492,10 +2492,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "pawn-storm",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2641,10 +2641,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "portal-gun",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2666,10 +2666,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "proficiency",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2724,10 +2724,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "quantum-mechanics",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -2932,10 +2932,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "replay",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3098,10 +3098,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "schrodinger-pawns",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3358,10 +3358,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "stealth",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3395,10 +3395,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "submerge",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3424,10 +3424,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "substitution",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3461,10 +3461,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "suspicious-potion",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -3660,10 +3660,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "white-box",
     "scenario": 0,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4186,10 +4186,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "cleanup",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4248,10 +4248,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "clone",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4348,10 +4348,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "coronation",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4385,10 +4385,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "desperado",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4414,10 +4414,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "disassembly",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4509,10 +4509,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "empty-lunchbox",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4571,10 +4571,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "extinction",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4725,10 +4725,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "fleeting-dream",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -4961,10 +4961,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hallucination",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5051,7 +5051,7 @@
     "draft": "Eligible",
     "id": "homecoming",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"homecoming\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5172,10 +5172,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hypocrisy",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5222,10 +5222,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "infiltration",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5272,10 +5272,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "injury",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5304,7 +5304,7 @@
     "draft": "Eligible",
     "id": "insight",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"insight\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5358,7 +5358,7 @@
     "draft": "Eligible",
     "id": "joker",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"joker\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5380,10 +5380,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "killer-king",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5554,10 +5554,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "long-en-passant",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5637,10 +5637,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "majesty",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5703,10 +5703,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "miracle",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5736,10 +5736,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "missionary",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5786,10 +5786,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "moving",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5823,10 +5823,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "nullification",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5856,10 +5856,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "octopus",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5939,10 +5939,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "outpost",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -5968,10 +5968,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "overtake",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6059,10 +6059,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parrot",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6096,10 +6096,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parry",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6158,10 +6158,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "pawn-storm",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6307,10 +6307,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "portal-gun",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6332,10 +6332,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "proficiency",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6390,10 +6390,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "quantum-mechanics",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6598,10 +6598,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "replay",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -6768,10 +6768,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "schrodinger-pawns",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7028,10 +7028,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "stealth",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7065,10 +7065,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "submerge",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7094,10 +7094,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "substitution",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7131,10 +7131,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "suspicious-potion",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7330,10 +7330,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "white-box",
     "scenario": 1,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7856,10 +7856,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "cleanup",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -7918,10 +7918,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "clone",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8018,10 +8018,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "coronation",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8055,10 +8055,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "desperado",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8084,10 +8084,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "disassembly",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8179,10 +8179,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "empty-lunchbox",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8241,10 +8241,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "extinction",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8395,10 +8395,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "fleeting-dream",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8631,10 +8631,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hallucination",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8721,7 +8721,7 @@
     "draft": "Eligible",
     "id": "homecoming",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"homecoming\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8842,10 +8842,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hypocrisy",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8892,10 +8892,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "infiltration",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8942,10 +8942,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "injury",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -8974,7 +8974,7 @@
     "draft": "Eligible",
     "id": "insight",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"insight\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9028,7 +9028,7 @@
     "draft": "Eligible",
     "id": "joker",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"joker\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9050,10 +9050,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "killer-king",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9224,10 +9224,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "long-en-passant",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9307,10 +9307,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "majesty",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9373,10 +9373,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "miracle",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9406,10 +9406,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "missionary",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9456,10 +9456,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "moving",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9493,10 +9493,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "nullification",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9526,10 +9526,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "octopus",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9609,10 +9609,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "outpost",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9638,10 +9638,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "overtake",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9729,10 +9729,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parrot",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9766,10 +9766,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parry",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9828,10 +9828,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "pawn-storm",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -9977,10 +9977,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "portal-gun",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10002,10 +10002,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "proficiency",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10060,10 +10060,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "quantum-mechanics",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10268,10 +10268,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "replay",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10434,10 +10434,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "schrodinger-pawns",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10694,10 +10694,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "stealth",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10731,10 +10731,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "submerge",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10760,10 +10760,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "substitution",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10797,10 +10797,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "suspicious-potion",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -10996,10 +10996,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "white-box",
     "scenario": 2,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11522,10 +11522,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "cleanup",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"cleanup\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11584,10 +11584,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "clone",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"clone\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11684,10 +11684,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "coronation",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"coronation\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11721,10 +11721,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "desperado",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"desperado\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11750,10 +11750,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "disassembly",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"disassembly\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11845,10 +11845,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "empty-lunchbox",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"empty-lunchbox\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -11907,10 +11907,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "extinction",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"extinction\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12061,10 +12061,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "fleeting-dream",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"fleeting-dream\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12297,10 +12297,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hallucination",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hallucination\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12387,7 +12387,7 @@
     "draft": "Eligible",
     "id": "homecoming",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"homecoming\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12508,10 +12508,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "hypocrisy",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"hypocrisy\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12558,10 +12558,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "infiltration",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"infiltration\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12608,10 +12608,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "injury",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"injury\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12640,7 +12640,7 @@
     "draft": "Eligible",
     "id": "insight",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"insight\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12694,7 +12694,7 @@
     "draft": "Eligible",
     "id": "joker",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"joker\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12716,10 +12716,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "killer-king",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"killer-king\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12890,10 +12890,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "long-en-passant",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"long-en-passant\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -12973,10 +12973,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "majesty",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"majesty\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13039,10 +13039,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "miracle",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"miracle\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13072,10 +13072,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "missionary",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"missionary\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13122,10 +13122,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "moving",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"moving\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13159,10 +13159,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "nullification",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"nullification\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13192,10 +13192,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "octopus",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"octopus\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13279,10 +13279,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "outpost",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"outpost\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13308,10 +13308,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "overtake",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"overtake\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13399,10 +13399,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parrot",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parrot\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13436,10 +13436,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "parry",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"parry\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13498,10 +13498,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "pawn-storm",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"pawn-storm\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13647,10 +13647,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "portal-gun",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"portal-gun\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13672,10 +13672,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "proficiency",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"proficiency\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13730,10 +13730,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "quantum-mechanics",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"quantum-mechanics\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -13938,10 +13938,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "replay",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"replay\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14108,10 +14108,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "schrodinger-pawns",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"schrodinger-pawns\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14368,10 +14368,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "stealth",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"stealth\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14405,10 +14405,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "submerge",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"submerge\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14434,10 +14434,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "substitution",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"substitution\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14471,10 +14471,10 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "suspicious-potion",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"suspicious-potion\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   },
   {
     "acquired": {
@@ -14670,9 +14670,9 @@
         }
       ]
     },
-    "draft": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })",
+    "draft": "Eligible",
     "id": "white-box",
     "scenario": 3,
-    "setup": "Ineligible(EligibilityReason { code: UnsupportedPredicate, detail: \"white-box\", message_ko: \"공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.\" })"
+    "setup": "Eligible"
   }
 ]
