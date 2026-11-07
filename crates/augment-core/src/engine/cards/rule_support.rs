@@ -222,7 +222,7 @@ impl Engine {
         if state.ruleset_id != crate::LATEST_RULESET_ID
             && rule_active(state, crate::HIGHWAY)
             && state.card_runtime.highways.contains(&from.file())
-            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+            && !state.card_runtime.piece_status.contains_key(&piece.id)
             && !matches!(
                 piece.kind,
                 PieceKind::Football | PieceKind::Crown | PieceKind::Scarecrow
@@ -273,7 +273,7 @@ impl Engine {
         if state.ruleset_id != crate::LATEST_RULESET_ID
             || (state.card_runtime.highway_cells.is_empty() && !rule_active(state, crate::HIGHWAY))
             || !road(from)
-            || state.card_runtime.large_pieces.contains_key(&piece.id)
+            || state.card_runtime.piece_status.contains_key(&piece.id)
             || matches!(
                 piece.kind,
                 PieceKind::Football

@@ -10,13 +10,13 @@ use crate::{
     GamePhase, GameState, GameStatus, HERALD, HOLDOUT, HOOK, HORDE, HYPOCRISY, IDOL,
     IMPLEMENTED_CARDS, INITIATIVE, IRON_MONARCH, InitiativeStatus, JESTER, JUDGMENT, JudgmentExile,
     KING_OF_THE_HILL, KNIGHTMASTER, KNIGHTMATE, LAST_STAND, LOCAL_CONSCRIPTION, LOG, LONDON_SYSTEM,
-    LOYALIST, LargePieceStatus, LogStatus, MAGIC_GIRL, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode,
-    MoveAction, MoveReplayState, ORDINATION, OTHERWORLD, PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM,
-    ParrotMemoryStatus, PendingChoice, PendingOtherworld, Piece, PieceAbility, PieceKind,
-    PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER, REFORMATION, REPOSITION,
-    REVELATION, ReplayCell, RepositionStatus, RulesetManifest, SIEGE_RAM, SIREN, SLIME, SPRINT,
-    STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD, WINDMILL,
-    WIZARD, WinReason, WindmillMode, implemented_card,
+    LOYALIST, LogStatus, MAGIC_GIRL, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode, MoveAction,
+    MoveReplayState, ORDINATION, OTHERWORLD, PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM,
+    ParrotMemoryStatus, PendingChoice, PendingOtherworld, Piece, PieceAbility, PieceHealth,
+    PieceKind, PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER, REFORMATION,
+    REPOSITION, REVELATION, ReplayCell, RepositionStatus, RulesetManifest, SIEGE_RAM, SIREN, SLIME,
+    SPRINT, STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD,
+    WINDMILL, WIZARD, WinReason, WindmillMode, implemented_card,
 };
 use std::borrow::Cow;
 use std::collections::BTreeSet;
@@ -908,14 +908,9 @@ impl Engine {
         }
         let rook = Piece::new(actor, PieceKind::BigRook).with_id(state.allocate_piece_id());
         state.board.set(anchor, Some(rook));
-        state.card_runtime.large_pieces.insert(
-            rook.id,
-            LargePieceStatus {
-                anchor,
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(rook.id, anchor, PieceHealth::new(2));
         self.register_spawned_piece(state, anchor, rook, false);
     }
 
@@ -965,14 +960,9 @@ impl Engine {
         }
         let bishop = Piece::new(actor, PieceKind::BigBishop).with_id(state.allocate_piece_id());
         state.board.set(anchor, Some(bishop));
-        state.card_runtime.large_pieces.insert(
-            bishop.id,
-            LargePieceStatus {
-                anchor,
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(bishop.id, anchor, PieceHealth::new(2));
         self.register_spawned_piece(state, anchor, bishop, false);
     }
 
@@ -1154,7 +1144,7 @@ impl Engine {
                 .is_some_and(|destination| {
                     self.board_piece_at(state, destination).is_none_or(|piece| {
                         piece.owner == actor
-                            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                            && !state.card_runtime.piece_status.contains_key(&piece.id)
                     })
                 }),
             QXE1 => state.board.iter().any(|(king_square, king)| {
@@ -2108,7 +2098,7 @@ impl Engine {
                     && squares.iter().all(|square| {
                         state.board.get(*square).is_some_and(|piece| {
                             piece.owner == state.turn
-                                && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                                && !state.card_runtime.piece_status.contains_key(&piece.id)
                                 && !matches!(
                                     piece.kind,
                                     PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football
@@ -2218,11 +2208,12 @@ impl Engine {
                     );
                     continue;
                 }
-                if let Some(status) = next.card_runtime.large_pieces.get_mut(&target_piece.id) {
-                    status.hp = status.hp.saturating_sub(1);
-                    if status.hp > 0 {
-                        continue;
-                    }
+                if next
+                    .card_runtime
+                    .health_mut(target_piece.id)
+                    .is_some_and(|health| !health.take_hit())
+                {
+                    continue;
                 }
                 self.remove_piece_for_card(
                     &mut next,
@@ -3339,9 +3330,8 @@ impl Engine {
             next.board.set(movement.from, None);
             let storage = large_piece_occupied_cells(&next, moving_piece.id, movement.to)[0];
             next.board.set(storage, Some(moving_piece));
-            if let Some(status) = next.card_runtime.large_pieces.get_mut(&moving_piece.id) {
-                status.anchor = movement.to;
-            }
+            next.card_runtime
+                .move_large_anchor(moving_piece.id, movement.to);
             next.card_runtime.moved_piece_ids.insert(moving_piece.id);
             next.en_passant = None;
             next.ply = next.ply.saturating_add(1);
@@ -3531,17 +3521,16 @@ impl Engine {
         if let Some(target) = target_piece
             && !(next.ruleset_id == crate::LATEST_RULESET_ID
                 && matches!(target.kind, PieceKind::BigRook | PieceKind::BigBishop))
-            && let Some(status) = next.card_runtime.large_pieces.get_mut(&target.id)
+            && let Some(health) = next.card_runtime.health_mut(target.id)
         {
-            status.hp = status.hp.saturating_sub(1);
-            let defeated = status.hp == 0;
+            let defeated = health.take_hit();
             events.push(Event::EffectApplied {
                 source_card_instance: 0,
-                command: format!("hp-hit:{}:{}/{}", target.id, status.hp, status.max_hp),
+                command: format!("hp-hit:{}:{}/{}", target.id, health.hp, health.max_hp),
             });
             if defeated {
                 next.board.set(capture_square, None);
-                next.card_runtime.large_pieces.remove(&target.id);
+                next.card_runtime.clear_piece_status(target.id);
                 self.record_new_capture_reactions(&mut next, target);
                 self.clear_removed_piece_statuses(&mut next, target.id);
                 // A lethal large-body hit is a real capture, so the attacker's
@@ -3679,12 +3668,11 @@ impl Engine {
                 jumped_attack = true;
                 if let Some(result) = self.fracture_large_cell(&mut next, captured, mid) {
                     defeated = result;
-                } else if let Some(status) = next.card_runtime.large_pieces.get_mut(&captured.id) {
-                    status.hp = status.hp.saturating_sub(1);
-                    defeated = status.hp == 0;
+                } else if let Some(health) = next.card_runtime.health_mut(captured.id) {
+                    defeated = health.take_hit();
                     events.push(Event::EffectApplied {
                         source_card_instance: 0,
-                        command: format!("hp-hit:{}:{}/{}", captured.id, status.hp, status.max_hp),
+                        command: format!("hp-hit:{}:{}/{}", captured.id, health.hp, health.max_hp),
                     });
                 } else {
                     defeated = true;
@@ -4026,9 +4014,7 @@ impl Engine {
                     );
                 }
                 next.board.set(landing[0], Some(rook));
-                if let Some(body) = next.card_runtime.large_pieces.get_mut(&rook.id) {
-                    body.anchor = rook_to;
-                }
+                next.card_runtime.move_large_anchor(rook.id, rook_to);
             } else {
                 next.board.set(rook_from, None);
                 next.board.set(rook_to, Some(rook));
@@ -5138,7 +5124,7 @@ impl Engine {
         state.card_runtime.royal_piece_ids.remove(&piece_id);
         state.card_runtime.holdout_promotions.remove(&piece_id);
         state.card_runtime.merchant_gold.remove(&piece_id);
-        state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.piece_status.remove(&piece_id);
         state.card_runtime.large_missing_cells.remove(&piece_id);
         state.card_runtime.piece_origins.remove(&piece_id);
         state
@@ -5230,7 +5216,7 @@ impl Engine {
         state.card_runtime.wizard_mana.remove(&piece_id);
         state.card_runtime.reaper_souls.remove(&piece_id);
         state.card_runtime.merchant_gold.remove(&piece_id);
-        state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.piece_status.remove(&piece_id);
         state.card_runtime.large_missing_cells.remove(&piece_id);
         state.card_runtime.baby_bear_grow_turns.remove(&piece_id);
         state.card_runtime.bear_retaliations.remove(&piece_id);
@@ -7556,8 +7542,8 @@ impl Engine {
                     && ally.id != piece.id
                     && !self.piece_has_ability(state, ally, PieceKind::Slime)
                     && (square.file() == from.file() || square.rank() == from.rank())
-                    && !state.card_runtime.large_pieces.contains_key(&ally.id)
-                    && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                    && !state.card_runtime.piece_status.contains_key(&ally.id)
+                    && !state.card_runtime.piece_status.contains_key(&piece.id)
                     && !self.paladin_radiance_blocks_move(
                         state,
                         piece,
@@ -7573,7 +7559,7 @@ impl Engine {
             && crate::latest::latest_minor_kind(piece.kind)
             && !self.is_royal_piece(state, piece)
             && !self.piece_has_ability(state, piece, PieceKind::Slime)
-            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+            && !state.card_runtime.piece_status.contains_key(&piece.id)
         {
             for (square, ally) in state.board.iter() {
                 if ally.owner == piece.owner
@@ -7586,7 +7572,7 @@ impl Engine {
                         .october
                         .bound_piece_ids
                         .contains(&ally.id)
-                    && !state.card_runtime.large_pieces.contains_key(&ally.id)
+                    && !state.card_runtime.piece_status.contains_key(&ally.id)
                     && !self.paladin_radiance_blocks_move(
                         state,
                         piece,
@@ -7606,7 +7592,7 @@ impl Engine {
             let mirror_file = 7 - from.file();
             if let Some(mirror) = Square::new(mirror_file, from.rank())
                 && mirror != from
-                && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                && !state.card_runtime.piece_status.contains_key(&piece.id)
                 && !self.paladin_radiance_blocks_move(
                     state,
                     piece,
@@ -7652,7 +7638,7 @@ impl Engine {
         {
             return;
         }
-        if state.card_runtime.large_pieces.contains_key(&piece.id) {
+        if state.card_runtime.piece_status.contains_key(&piece.id) {
             if large_piece_cells(to).len() == 4
                 && self
                     .large_landing_targets(state, piece, to)
@@ -8260,11 +8246,7 @@ impl Engine {
         actions: &mut Vec<Action>,
     ) {
         for &(file_delta, rank_delta) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
-            let mut cursor = state
-                .card_runtime
-                .large_pieces
-                .get(&piece.id)
-                .map_or(from, |s| s.anchor);
+            let mut cursor = state.card_runtime.large_anchor(piece.id).unwrap_or(from);
             while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
                 if !self.large_landing_is_legal(state, piece, anchor, 2) {
                     break;
@@ -8286,11 +8268,7 @@ impl Engine {
         actions: &mut Vec<Action>,
     ) {
         for &(file_delta, rank_delta) in &[(-1, -1), (-1, 1), (1, -1), (1, 1)] {
-            let mut cursor = state
-                .card_runtime
-                .large_pieces
-                .get(&piece.id)
-                .map_or(from, |s| s.anchor);
+            let mut cursor = state.card_runtime.large_anchor(piece.id).unwrap_or(from);
             while let Some(anchor) = cursor.offset(file_delta, rank_delta) {
                 if !self.large_landing_is_legal(state, piece, anchor, 2) {
                     break;
@@ -8419,12 +8397,13 @@ impl Engine {
             .or_else(|| {
                 state
                     .card_runtime
-                    .large_pieces
+                    .piece_status
                     .iter()
-                    .find_map(|(piece_id, status)| {
-                        large_piece_occupied_cells(state, *piece_id, status.anchor)
+                    .filter_map(|(piece_id, status)| status.large.map(|body| (*piece_id, body)))
+                    .find_map(|(piece_id, body)| {
+                        large_piece_occupied_cells(state, piece_id, body.anchor)
                             .contains(&square)
-                            .then(|| state.board.find_by_id(*piece_id))
+                            .then(|| state.board.find_by_id(piece_id))
                             .flatten()
                     })
             })
@@ -9086,10 +9065,10 @@ impl Engine {
                 continue;
             }
             if piece.kind == PieceKind::Colossus {
-                let Some(status) = state.card_runtime.large_pieces.get(&piece.id) else {
+                let Some(anchor) = state.card_runtime.large_anchor(piece.id) else {
                     continue;
                 };
-                for sector in colossus_attack_sectors(status.anchor, piece.owner) {
+                for sector in colossus_attack_sectors(anchor, piece.owner) {
                     if sector.iter().any(|square| {
                         self.movement_occupant(state, *square)
                             .is_some_and(|target| {
@@ -13546,7 +13525,7 @@ mod tests {
             .state;
         let piece = rook.board.get("g2".parse().unwrap()).unwrap();
         assert_eq!(piece.kind, PieceKind::BigRook);
-        assert_eq!(rook.card_runtime.large_pieces[&piece.id].hp, 2);
+        assert_eq!(rook.card_runtime.health(piece.id).unwrap().hp, 2);
 
         let mut colossus = standard_play_state(112);
         grant_test_card(&mut colossus, SUMMON_COLOSSUS, 1);
@@ -13556,7 +13535,7 @@ mod tests {
             .state;
         let piece = colossus.board.get("d3".parse().unwrap()).unwrap();
         assert_eq!(piece.kind, PieceKind::Colossus);
-        assert_eq!(colossus.card_runtime.large_pieces[&piece.id].hp, 3);
+        assert_eq!(colossus.card_runtime.health(piece.id).unwrap().hp, 3);
         assert_eq!(
             colossus
                 .board
@@ -14023,21 +14002,16 @@ mod tests {
         let engine = Engine::bundled_20260807().unwrap();
         let mut state = standard_play_state(4);
         let rook = state.board.get("a1".parse().unwrap()).unwrap();
-        state.card_runtime.large_pieces.insert(
-            rook.id,
-            LargePieceStatus {
-                anchor: "a1".parse().unwrap(),
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(rook.id, "a1".parse().unwrap(), PieceHealth::new(2));
         let mut events = Vec::new();
         engine
             .resolve_black_tower_legacy(&mut state, &mut events)
             .unwrap();
         assert!(state.board.contains(Player::White, PieceKind::DarkWizard));
         assert!(!state.board.contains(Player::White, PieceKind::King));
-        assert!(!state.card_runtime.large_pieces.contains_key(&rook.id));
+        assert!(!state.card_runtime.piece_status.contains_key(&rook.id));
         assert_eq!(
             state
                 .board
@@ -16321,14 +16295,9 @@ mod tests {
         let mut state = standard_play_state(4);
         state.board.set("d2".parse().unwrap(), None);
         let rook = state.board.get("a1".parse().unwrap()).unwrap();
-        state.card_runtime.large_pieces.insert(
-            rook.id,
-            LargePieceStatus {
-                anchor: "a1".parse().unwrap(),
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(rook.id, "a1".parse().unwrap(), PieceHealth::new(2));
         grant_test_card(&mut state, crate::BLACK_MAGIC, 1);
         let mut state = engine
             .apply(&state, use_card_without_target(1))
@@ -16339,7 +16308,7 @@ mod tests {
         // large rook runtime is preserved.
         assert!(state.board.contains(Player::White, PieceKind::King));
         assert!(!state.board.contains(Player::White, PieceKind::DarkWizard));
-        assert!(state.card_runtime.large_pieces.contains_key(&rook.id));
+        assert!(state.card_runtime.piece_status.contains_key(&rook.id));
         // Exactly one allied monster spawns on an open square adjacent to the
         // royal. From the standard opening the first candidate is d2 beside e1.
         let monsters: Vec<_> = state
@@ -17059,14 +17028,9 @@ mod tests {
             213,
         );
         let rook = state.board.get("a1".parse().unwrap()).unwrap();
-        state.card_runtime.large_pieces.insert(
-            rook.id,
-            LargePieceStatus {
-                anchor: "a1".parse().unwrap(),
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(rook.id, "a1".parse().unwrap(), PieceHealth::new(2));
         grant_test_card(&mut state, crate::REPLAY, 5);
 
         let rook_move = engine
@@ -17082,12 +17046,7 @@ mod tests {
             .expect("Big Rook must have a legal move");
         state = engine.apply(&state, rook_move).unwrap().state;
         state = engine.apply(&state, movement("h8", "h7")).unwrap().state;
-        state
-            .card_runtime
-            .large_pieces
-            .get_mut(&rook.id)
-            .unwrap()
-            .hp = 1;
+        state.card_runtime.health_mut(rook.id).unwrap().hp = 1;
 
         let replay = use_card_without_target(5);
         assert!(!engine.legal_actions(&state).unwrap().contains(&replay));
@@ -17753,13 +17712,8 @@ mod tests {
         let bishop = opened.board.get("f2".parse().unwrap()).unwrap();
         assert_eq!(bishop.kind, PieceKind::BigBishop);
         assert_eq!(
-            opened
-                .card_runtime
-                .large_pieces
-                .get(&bishop.id)
-                .unwrap()
-                .anchor,
-            "f2".parse().unwrap()
+            opened.card_runtime.large_anchor(bishop.id),
+            Some("f2".parse().unwrap())
         );
         opened.board.set("f3".parse().unwrap(), None);
         assert!(has_move(&engine, &opened, "f2", "e3"));

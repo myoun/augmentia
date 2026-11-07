@@ -118,15 +118,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(0)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "59be58e708d3785c"
+          "fingerprint": "001018d70262990b"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(1)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "ff8142f39f36e809"
+          "fingerprint": "eb1e3c0381836263"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(2)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "d4c0d45b0b0ba0d0"
+          "fingerprint": "9da1db6a8b25b721"
         }
       ]
     },
@@ -276,19 +276,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(21), to: Square(29), promotion: None }), Move(MoveAction { from: Square(22), to: Square(30), promotion: None }), Move(MoveAction { from: Square(23), to: Square(29), promotion: None }), Move(MoveAction { from: Square(23), to: Square(38), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 6, owner: White, kind: Bishop, capture_count: 0 }, at: Square(5), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 7, owner: White, kind: Knight, capture_count: 0 }, at: Square(6), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 14, owner: White, kind: Pawn, capture_count: 0 }, at: Square(13), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 15, owner: White, kind: Pawn, capture_count: 0 }, at: Square(14), cause: \"big-bishop\" }]",
-      "fingerprint": "959e33118e82b573",
+      "fingerprint": "50acb0241df03d94",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "3912978caf01d756"
+          "fingerprint": "7dd5d2a1a111818c"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "88d75c7ec5fda150"
+          "fingerprint": "49491a57f10cdd1a"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(8), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "53d2c9d749328191"
+          "fingerprint": "61359fb582920d01"
         }
       ]
     },
@@ -3776,15 +3776,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(0)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "4dd901bbb63e734b"
+          "fingerprint": "7f0d16b12f2da63e"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(1)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "599072107a6b49ea"
+          "fingerprint": "3688002b1d4ac8ec"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(2)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "cd903263097d5abc"
+          "fingerprint": "7fd5efe2e3a2cb71"
         }
       ]
     },
@@ -3934,19 +3934,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None }), Move(MoveAction { from: Square(22), to: Square(29), promotion: None }), Move(MoveAction { from: Square(22), to: Square(30), promotion: None }), Move(MoveAction { from: Square(23), to: Square(29), promotion: None }), Move(MoveAction { from: Square(23), to: Square(38), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 5, owner: White, kind: Bishop, capture_count: 0 }, at: Square(5), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 6, owner: White, kind: Knight, capture_count: 0 }, at: Square(6), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 12, owner: White, kind: Pawn, capture_count: 0 }, at: Square(13), cause: \"big-bishop\" }, PieceRemoved { actor: White, piece: Piece { id: 13, owner: White, kind: Pawn, capture_count: 0 }, at: Square(14), cause: \"big-bishop\" }]",
-      "fingerprint": "cae89bfb9ffc5079",
+      "fingerprint": "951c3d2d519c8d7e",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "a9a0dbcac0d47fee"
+          "fingerprint": "8b003e8b6f3a54ca"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "3c3851fcb50e441d"
+          "fingerprint": "16cdaeb8c9228129"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "17c7acac54559fa3"
+          "fingerprint": "5a4a1d036224208b"
         }
       ]
     },
@@ -7438,15 +7438,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(0)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "56ef8f2df825960d"
+          "fingerprint": "9a7d2dd5b52327ff"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(1)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "1762bca2b00d820e"
+          "fingerprint": "9acf4ce716c3d5d0"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(2)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "4fb0f3f42782a5fb"
+          "fingerprint": "ef52c9f46390fcfa"
         }
       ]
     },
@@ -7596,19 +7596,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(45), to: Square(37), promotion: None }), Move(MoveAction { from: Square(46), to: Square(38), promotion: None }), Move(MoveAction { from: Square(47), to: Square(30), promotion: None }), Move(MoveAction { from: Square(47), to: Square(37), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 22, owner: Black, kind: Pawn, capture_count: 0 }, at: Square(53), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 23, owner: Black, kind: Pawn, capture_count: 0 }, at: Square(54), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 30, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(61), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 31, owner: Black, kind: Knight, capture_count: 0 }, at: Square(62), cause: \"big-bishop\" }]",
-      "fingerprint": "27b9cccf28f55ce0",
+      "fingerprint": "de04b8d0bf849e38",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(45), to: Square(37), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "cd2b92af3a52e839"
+          "fingerprint": "c873b02ac3141df3"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(46), to: Square(38), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "fc8f6905dab26403"
+          "fingerprint": "1aeffa6f7a131899"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(47), to: Square(30), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "a0fa93b016b3ace2"
+          "fingerprint": "a56d2a80c3a44bfa"
         }
       ]
     },
@@ -11096,15 +11096,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(0)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "20bbecef852191c3"
+          "fingerprint": "93cefefb11c162e2"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(1)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "f2a5fceb7693de7a"
+          "fingerprint": "20742ce4ca147f5e"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(2)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "c22f081d772bebd9"
+          "fingerprint": "517d14cb1179f6b2"
         }
       ]
     },
@@ -11254,19 +11254,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(45), to: Square(37), promotion: None }), Move(MoveAction { from: Square(46), to: Square(38), promotion: None }), Move(MoveAction { from: Square(47), to: Square(39), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 24, owner: Black, kind: Pawn, capture_count: 0 }, at: Square(53), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 25, owner: Black, kind: Pawn, capture_count: 0 }, at: Square(54), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 31, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(61), cause: \"big-bishop\" }, PieceRemoved { actor: Black, piece: Piece { id: 32, owner: Black, kind: Knight, capture_count: 0 }, at: Square(62), cause: \"big-bishop\" }]",
-      "fingerprint": "fc1495d2c5c31a53",
+      "fingerprint": "84cac733be41ee16",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "2b22754031f1e228"
+          "fingerprint": "cbe1752b7a6f3e90"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "a91e108c6ab2a665"
+          "fingerprint": "fc0997824a65538d"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "214d60b778b3acf2"
+          "fingerprint": "af563bc096327636"
         }
       ]
     },

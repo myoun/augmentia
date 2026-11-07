@@ -84,10 +84,9 @@ impl Engine {
                     cells.contains(square)
                         || state
                             .card_runtime
-                            .large_pieces
-                            .get(&piece.id)
-                            .is_some_and(|large| {
-                                large_piece_cells(large.anchor)
+                            .large_anchor(piece.id)
+                            .is_some_and(|anchor| {
+                                large_piece_cells(anchor)
                                     .iter()
                                     .any(|cell| cells.contains(cell))
                             })

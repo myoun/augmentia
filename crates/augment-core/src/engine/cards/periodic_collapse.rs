@@ -50,18 +50,14 @@ impl Engine {
                             || s.file() == 7 - depth
                             || s.rank() == depth
                             || s.rank() == 7 - depth
-                            || state
-                                .card_runtime
-                                .large_pieces
-                                .get(&p.id)
-                                .is_some_and(|large| {
-                                    large_piece_cells(large.anchor).iter().any(|s| {
-                                        s.file() == depth
-                                            || s.file() == 7 - depth
-                                            || s.rank() == depth
-                                            || s.rank() == 7 - depth
-                                    })
+                            || state.card_runtime.large_anchor(p.id).is_some_and(|anchor| {
+                                large_piece_cells(anchor).iter().any(|s| {
+                                    s.file() == depth
+                                        || s.file() == 7 - depth
+                                        || s.rank() == depth
+                                        || s.rank() == 7 - depth
                                 })
+                            })
                     })
                     .collect();
                 let memories = self.rule_capture_memories(

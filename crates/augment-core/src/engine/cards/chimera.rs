@@ -71,7 +71,7 @@ impl Engine {
             .card_runtime
             .herald_jump_locked_until
             .remove(&piece_id);
-        state.card_runtime.large_pieces.remove(&piece_id);
+        state.card_runtime.piece_status.remove(&piece_id);
         state.card_runtime.large_missing_cells.remove(&piece_id);
         state.card_runtime.trickster_move_kinds.remove(&piece_id);
         piece.kind = kind;

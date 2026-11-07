@@ -67,7 +67,7 @@ impl Engine {
             .enumerate()
             .map(|(i, s)| {
                 self.board_piece_at(state, *s).is_some_and(|p| {
-                    state.card_runtime.large_pieces.contains_key(&p.id)
+                    state.card_runtime.piece_status.contains_key(&p.id)
                         || p.kind == PieceKind::Slime
                         || (state.ruleset_id == crate::LATEST_RULESET_ID
                             && self.piece_has_ability(state, p, PieceKind::Slime))

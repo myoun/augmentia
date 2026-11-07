@@ -36,9 +36,8 @@ fn eligibility(_: &GameState, _: Player, _: AcquisitionContext) -> CardEligibili
 fn body_cells(state: &GameState, square: Square, piece: Piece) -> Vec<Square> {
     state
         .card_runtime
-        .large_pieces
-        .get(&piece.id)
-        .map_or_else(|| vec![square], |large| large_piece_cells(large.anchor))
+        .large_anchor(piece.id)
+        .map_or_else(|| vec![square], large_piece_cells)
 }
 
 /// Latest-contract major predicate: the catalog major family, minus a promoted

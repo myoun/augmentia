@@ -70,7 +70,7 @@ impl Engine {
                 .iter()
                 .filter(|(_, p)| p.owner == actor.opponent() && self.is_royal_piece(state, *p))
                 .flat_map(|(s, p)| {
-                    if state.card_runtime.large_pieces.contains_key(&p.id) {
+                    if state.card_runtime.piece_status.contains_key(&p.id) {
                         large_piece_cells(s)
                     } else {
                         vec![s]

@@ -314,7 +314,7 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
         maps_match!(id;
             fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
-            reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
+            reaper_souls, idol_used_turn, piece_origins, piece_status, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
             sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells, ice_king, vigilance_protection, scarecrow_reservations,
             poison_stun_turns, saturation_capture_counts, quantum_positions,
@@ -386,7 +386,7 @@ pub(super) fn restore_piece_runtime(
         restore_maps!(id;
             fresh_no_capture_until, disarmed, frozen, empty_lunchboxes,
             herald_jump_locked_until, windmill_modes, log_statuses, wizard_mana,
-            reaper_souls, idol_used_turn, piece_origins, large_pieces, calling_cards,
+            reaper_souls, idol_used_turn, piece_origins, piece_status, calling_cards,
             holdout_promotions, merchant_gold, ice_sheet, severed, imperial_moves,
             sacrifice_protection, last_resistance, coronation_protection, thief_turn_paths, large_missing_cells, ice_king, vigilance_protection, scarecrow_reservations,
             poison_stun_turns, saturation_capture_counts, quantum_positions,

@@ -22,7 +22,7 @@ fn actions(_: &Engine, state: &GameState, card: &CardInstance, out: &mut Vec<Act
     for (square, piece) in web_ordered_pieces(state) {
         if piece.owner == card.owner
             && piece.kind != PieceKind::Pawn
-            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+            && !state.card_runtime.piece_status.contains_key(&piece.id)
         {
             out.push(Action::UseCard {
                 instance_id: card.instance_id,

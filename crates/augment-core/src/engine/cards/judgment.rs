@@ -7,7 +7,7 @@ fn large(state: &GameState, piece: Piece) -> bool {
     matches!(
         piece.kind,
         PieceKind::BigRook | PieceKind::BigBishop | PieceKind::Colossus
-    ) || state.card_runtime.large_pieces.contains_key(&piece.id)
+    ) || state.card_runtime.piece_status.contains_key(&piece.id)
 }
 
 /// Every judged piece carrying the highest capture count, if that count is at
@@ -207,13 +207,10 @@ mod tests {
             ("d4", Player::Black, PieceKind::Colossus),
         ]);
         let defender = at(&s, "d4");
-        s.card_runtime.large_pieces.insert(
+        s.card_runtime.insert_large_body(
             defender.id,
-            LargePieceStatus {
-                anchor: "d4".parse().unwrap(),
-                hp: 1,
-                max_hp: 3,
-            },
+            "d4".parse().unwrap(),
+            PieceHealth::damaged(1, 3),
         );
         let attacker = at(&s, "a4");
         assert_eq!(attacker.capture_count, 0);
@@ -245,13 +242,10 @@ mod tests {
             ("d4", Player::Black, PieceKind::Colossus),
         ]);
         let defender = at(&s, "d4");
-        s.card_runtime.large_pieces.insert(
+        s.card_runtime.insert_large_body(
             defender.id,
-            LargePieceStatus {
-                anchor: "d4".parse().unwrap(),
-                hp: 1,
-                max_hp: 3,
-            },
+            "d4".parse().unwrap(),
+            PieceHealth::damaged(1, 3),
         );
         let attacker = at(&s, "a4");
         let mut after = engine.apply(&s, movement("a4", "d4")).unwrap().state;

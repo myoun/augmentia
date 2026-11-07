@@ -87,7 +87,7 @@ impl Engine {
         piece: Piece,
         to: Square,
     ) -> Option<RulePortalRoute> {
-        if !rule_active(state, ID) || state.card_runtime.large_pieces.contains_key(&piece.id) {
+        if !rule_active(state, ID) || state.card_runtime.piece_status.contains_key(&piece.id) {
             return None;
         }
         let pair = state.card_runtime.rule_portals?;
@@ -172,7 +172,7 @@ impl Engine {
         let Some(pair) = state.card_runtime.rule_portals else {
             return;
         };
-        if state.card_runtime.large_pieces.contains_key(&piece.id) {
+        if state.card_runtime.piece_status.contains_key(&piece.id) {
             return;
         }
         // Direct entry is represented by the clicked entry square; apply resolves its exit.

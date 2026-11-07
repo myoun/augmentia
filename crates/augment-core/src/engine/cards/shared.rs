@@ -14,8 +14,9 @@ impl Engine {
         {
             return None;
         }
-        let body = state.card_runtime.large_pieces.get(&piece.id).copied()?;
-        let index = large_piece_cells(body.anchor)
+        let body = state.card_runtime.piece_status.get(&piece.id).copied()?;
+        let anchor = body.large?.anchor;
+        let index = large_piece_cells(anchor)
             .iter()
             .position(|cell| *cell == square)? as u8;
         if state
@@ -29,16 +30,15 @@ impl Engine {
             .card_runtime
             .large_missing_cells
             .insert(piece.id, index);
-        state
-            .card_runtime
-            .large_pieces
-            .get_mut(&piece.id)
-            .unwrap()
-            .hp = 1;
+        // Losing a cell leaves the body alive but brittle: the footprint stays and
+        // durability drops to its last hit.
+        if let Some(health) = state.card_runtime.health_mut(piece.id) {
+            health.hp = 1;
+        }
         if let Some((storage, _)) = state.board.find_by_id(piece.id) {
             state.board.set(storage, None);
         }
-        let storage = large_piece_occupied_cells(state, piece.id, body.anchor)[0];
+        let storage = large_piece_occupied_cells(state, piece.id, anchor)[0];
         state.board.set(storage, Some(piece));
         Some(false)
     }
@@ -65,10 +65,9 @@ impl Engine {
                     || targets.contains(square)
                     || state
                         .card_runtime
-                        .large_pieces
-                        .get(&piece.id)
-                        .is_some_and(|large| {
-                            large_piece_cells(large.anchor)
+                        .large_anchor(piece.id)
+                        .is_some_and(|anchor| {
+                            large_piece_cells(anchor)
                                 .iter()
                                 .any(|cell| targets.contains(cell))
                         })
@@ -86,14 +85,9 @@ impl Engine {
             }
             // openingPassiveSkipsFreshCapture: London/BISHOP can capture immediately.
             if matches!(kind, PieceKind::BigBishop | PieceKind::BigRook) {
-                state.card_runtime.large_pieces.insert(
-                    piece.id,
-                    LargePieceStatus {
-                        anchor: square,
-                        hp: 2,
-                        max_hp: 2,
-                    },
-                );
+                state
+                    .card_runtime
+                    .insert_large_body(piece.id, square, PieceHealth::new(2));
             }
         }
         state.en_passant = None;
@@ -177,13 +171,16 @@ impl Engine {
                 }
                 return;
             }
-            // Reuse the current core's large-body hit abstraction. Cell fracture
-            // parity remains outside these scoped ports, as for other landings.
-            if let Some(large) = state.card_runtime.large_pieces.get_mut(&piece.id) {
-                large.hp = large.hp.saturating_sub(1);
-                if large.hp > 0 {
-                    return;
-                }
+            // Reuse the current core's durability abstraction. Cell fracture parity
+            // remains outside these scoped ports, as for other landings. A piece
+            // without durability is removed outright; one with durability survives
+            // until its last hit.
+            if state
+                .card_runtime
+                .health_mut(piece.id)
+                .is_some_and(|health| !health.take_hit())
+            {
+                return;
             }
             self.remove_piece_for_card(state, anchor, piece, owner, cause, events);
         }
@@ -222,7 +219,7 @@ impl Engine {
                             && self
                                 .checker_jump_capture(&probe, from, m.to, piece)
                                 .is_some_and(|(_, p)| p.id == royal.id))
-                        || (probe.card_runtime.large_pieces.contains_key(&piece.id)
+                        || (probe.card_runtime.piece_status.contains_key(&piece.id)
                             && self
                                 .large_landing_targets(&probe, piece, m.to)
                                 .iter()
@@ -313,7 +310,7 @@ impl Engine {
         {
             actions.retain(|action| match action {
                 Action::Move(m) => {
-                    let cells = if state.card_runtime.large_pieces.contains_key(&piece.id) {
+                    let cells = if state.card_runtime.is_large(piece.id) {
                         large_piece_occupied_cells(state, piece.id, m.to)
                     } else {
                         vec![m.to]

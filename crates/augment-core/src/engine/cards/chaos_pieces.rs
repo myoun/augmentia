@@ -333,7 +333,7 @@ impl Engine {
         {
             return None;
         }
-        if state.card_runtime.large_pieces.contains_key(&target.id) {
+        if state.card_runtime.piece_status.contains_key(&target.id) {
             let cells = large_piece_cells(to);
             if cells.len() != 4
                 || cells.iter().any(|s| {
@@ -374,9 +374,7 @@ impl Engine {
         next.board.set(anchor, None);
         next.board.set(to, Some(target));
         next.card_runtime.moved_piece_ids.insert(target.id);
-        if let Some(large) = next.card_runtime.large_pieces.get_mut(&target.id) {
-            large.anchor = to;
-        }
+        next.card_runtime.move_large_anchor(target.id, to);
         next.rule_runtime
             .grappler_bound
             .insert(caster.id, actor.opponent());

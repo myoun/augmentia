@@ -719,23 +719,17 @@ impl Engine {
                 state.card_runtime.moved_piece_ids.insert(piece.id);
                 match piece.kind {
                     PieceKind::Colossus => {
-                        state.card_runtime.large_pieces.insert(
+                        state.card_runtime.insert_large_body(
                             piece.id,
-                            LargePieceStatus {
-                                anchor: destination,
-                                hp: 3,
-                                max_hp: 3,
-                            },
+                            destination,
+                            PieceHealth::new(3),
                         );
                     }
                     PieceKind::BigRook => {
-                        state.card_runtime.large_pieces.insert(
+                        state.card_runtime.insert_large_body(
                             piece.id,
-                            LargePieceStatus {
-                                anchor: destination,
-                                hp: 2,
-                                max_hp: 2,
-                            },
+                            destination,
+                            PieceHealth::new(2),
                         );
                     }
                     PieceKind::Wizard => {
@@ -919,7 +913,7 @@ impl Engine {
             CLEANUP => {
                 for (square, piece) in state.board.iter() {
                     if piece.owner == actor
-                        && !state.card_runtime.large_pieces.contains_key(&piece.id)
+                        && !state.card_runtime.piece_status.contains_key(&piece.id)
                         && !matches!(
                             piece.kind,
                             PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football
@@ -956,7 +950,7 @@ impl Engine {
             | crate::MIRACLE => push_none(actions),
             SUSPICIOUS_POTION => {
                 for (square, piece) in state.board.iter() {
-                    if !state.card_runtime.large_pieces.contains_key(&piece.id)
+                    if !state.card_runtime.piece_status.contains_key(&piece.id)
                         && !matches!(
                             piece.kind,
                             PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football

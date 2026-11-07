@@ -128,11 +128,14 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
     for (square, piece) in state.board.iter() {
         cells.insert(square, (piece, true, square));
     }
-    for (piece_id, status) in &state.card_runtime.large_pieces {
+    for (piece_id, status) in &state.card_runtime.piece_status {
+        let Some(anchor) = status.large.map(|body| body.anchor) else {
+            continue;
+        };
         let Some((storage, piece)) = state.board.find_by_id(*piece_id) else {
             continue;
         };
-        for (index, square) in large_piece_cells(status.anchor).into_iter().enumerate() {
+        for (index, square) in large_piece_cells(anchor).into_iter().enumerate() {
             if state.card_runtime.large_missing_cells.get(piece_id) == Some(&(index as u8)) {
                 continue;
             }
@@ -328,8 +331,8 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     if let Some(square) = state.card_runtime.quantum_positions.get(&piece.id) {
         statuses.push(format!("양자 위치 {square}"));
     }
-    if let Some(status) = state.card_runtime.large_pieces.get(&piece.id) {
-        statuses.push(format!("HP {}/{}", status.hp, status.max_hp));
+    if let Some(health) = state.card_runtime.health(piece.id) {
+        statuses.push(format!("HP {}/{}", health.hp, health.max_hp));
     }
     if let Some(mana) = state.card_runtime.wizard_mana.get(&piece.id) {
         statuses.push(format!("마나 {mana}"));
@@ -1081,13 +1084,10 @@ mod tests {
                 .with_id(21);
         state.board.set("h8".parse().unwrap(), Some(big));
         state.board.set("g8".parse().unwrap(), Some(attacker));
-        state.card_runtime.large_pieces.insert(
+        state.card_runtime.insert_large_body(
             big.id,
-            augment_core::LargePieceStatus {
-                anchor: "g8".parse().unwrap(),
-                hp: 1,
-                max_hp: 2,
-            },
+            "g8".parse().unwrap(),
+            augment_core::PieceHealth::damaged(1, 2),
         );
         state.card_runtime.large_missing_cells.insert(big.id, 0);
         let cells = super::board_view(&state);

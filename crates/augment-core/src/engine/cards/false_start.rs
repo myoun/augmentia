@@ -40,9 +40,9 @@ impl Engine {
             .iter()
             .filter(|(_, p)| p.owner == owner)
             .map(|(square, piece)| {
-                let cells = state.card_runtime.large_pieces.get(&piece.id).map_or_else(
+                let cells = state.card_runtime.large_anchor(piece.id).map_or_else(
                     || vec![square],
-                    |large| large_piece_occupied_cells(state, piece.id, large.anchor),
+                    |anchor| large_piece_occupied_cells(state, piece.id, anchor),
                 );
                 (square, piece, cells)
             })
@@ -112,10 +112,10 @@ impl Engine {
                 .offset(0, direction * shifts[group])
                 .expect("checked false-start destination");
             state.board.set(to, Some(piece));
-            if let Some(large) = state.card_runtime.large_pieces.get_mut(&piece.id) {
-                large.anchor = large
-                    .anchor
-                    .offset(0, direction * shifts[group])
+            if state.card_runtime.is_large(piece.id) {
+                state
+                    .card_runtime
+                    .shift_large_anchor(piece.id, 0, direction * shifts[group])
                     .expect("checked large-body shift");
             }
         }
@@ -188,7 +188,7 @@ mod tests {
         );
         let large = next.board.get("f3".parse().unwrap()).unwrap();
         assert_eq!(
-            next.card_runtime.large_pieces[&large.id].anchor,
+            next.card_runtime.large_anchor(large.id).unwrap(),
             "f3".parse().unwrap()
         );
     }

@@ -118,7 +118,7 @@ fn large_piece_anchor_blocked(state: &GameState, piece_id: u32, cell: Square) ->
 /// is already large keeps its current body; it cannot slide onto a new one.
 fn large_anchors(state: &GameState, square: Square, piece: Piece) -> Vec<Square> {
     let candidates = if LARGE_OUTCOMES.contains(&piece.kind)
-        || state.card_runtime.large_pieces.contains_key(&piece.id)
+        || state.card_runtime.piece_status.contains_key(&piece.id)
     {
         vec![square]
     } else {
@@ -157,14 +157,9 @@ fn apply_transformed_runtime(
     match kind {
         PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop => {
             let hp = if kind == PieceKind::Colossus { 3 } else { 2 };
-            state.card_runtime.large_pieces.insert(
-                piece_id,
-                LargePieceStatus {
-                    anchor: square,
-                    hp,
-                    max_hp: hp,
-                },
-            );
+            state
+                .card_runtime
+                .insert_large_body(piece_id, square, PieceHealth::new(hp));
         }
         PieceKind::BabyBear => {
             state
@@ -416,10 +411,11 @@ mod tests {
                 .unwrap();
             let next = transition.state;
             let (square, piece) = next.board.find_by_id(rook_id).unwrap();
-            if let Some(status) = next.card_runtime.large_pieces.get(&rook_id).copied() {
+            if let Some(status) = next.card_runtime.piece_status.get(&rook_id).copied() {
                 saw_large = true;
-                assert_eq!(status.anchor, square);
-                let cells = large_piece_cells(status.anchor);
+                let anchor = status.large.expect("a rolled body has a footprint").anchor;
+                assert_eq!(anchor, square);
+                let cells = large_piece_cells(anchor);
                 assert_eq!(cells.len(), 4);
                 for cell in cells {
                     assert!(
@@ -434,8 +430,9 @@ mod tests {
                 } else {
                     2
                 };
-                assert_eq!(status.hp, expected_hp);
-                assert_eq!(status.max_hp, expected_hp);
+                let health = status.health.expect("a rolled body has health");
+                assert_eq!(health.hp, expected_hp);
+                assert_eq!(health.max_hp, expected_hp);
                 assert!(
                     transition.events.iter().any(|event| matches!(
                         event,
@@ -477,7 +474,7 @@ mod tests {
                 )
                 .unwrap()
                 .state;
-            saw_large |= next.card_runtime.large_pieces.contains_key(&rook_id);
+            saw_large |= next.card_runtime.piece_status.contains_key(&rook_id);
         }
         assert!(
             !saw_large,

@@ -240,11 +240,69 @@ pub struct PendingOtherworld {
     pub due_ply: u32,
 }
 
+/// A large body's footprint on the board.
+///
+/// This describes size only. Durability is `PieceHealth`, kept in a separate map
+/// because a large body can be fragile and a non-large piece (a bunkered king) can
+/// have health.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct LargePieceStatus {
+pub struct LargeBody {
     pub anchor: Square,
+}
+
+/// Remaining durability of a piece, independent of its size.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PieceHealth {
     pub hp: u8,
     pub max_hp: u8,
+}
+
+impl PieceHealth {
+    /// Full health for a fresh piece.
+    pub const fn new(hp: u8) -> Self {
+        Self { hp, max_hp: hp }
+    }
+
+    /// A piece that starts damaged, such as a fractured body.
+    pub const fn damaged(hp: u8, max_hp: u8) -> Self {
+        Self { hp, max_hp }
+    }
+
+    /// Apply one hit, returning true when this hit destroyed the piece.
+    pub fn take_hit(&mut self) -> bool {
+        self.hp = self.hp.saturating_sub(1);
+        self.hp == 0
+    }
+}
+
+/// One piece's special aspects.
+///
+/// Size and durability are independent: a large body may be one hit from
+/// collapse, and a king with a bunker has health without having a footprint. One
+/// map keyed by piece id keeps both aspects on the same entry, so they cannot
+/// drift apart.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PieceStatus {
+    /// Present only for multi-cell bodies.
+    pub large: Option<LargeBody>,
+    /// Present only for pieces that can absorb more than one hit.
+    pub health: Option<PieceHealth>,
+}
+
+impl PieceStatus {
+    pub const fn large_body(anchor: Square, health: PieceHealth) -> Self {
+        Self {
+            large: Some(LargeBody { anchor }),
+            health: Some(health),
+        }
+    }
+
+    pub const fn bunkered(health: PieceHealth) -> Self {
+        Self {
+            large: None,
+            health: Some(health),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -482,7 +540,8 @@ pub struct CardRuntimeState {
     pub delayed_hazards: Vec<DelayedHazard>,
     pub skip_turns: [bool; 2],
     pub piece_origins: BTreeMap<u32, Square>,
-    pub large_pieces: BTreeMap<u32, LargePieceStatus>,
+    /// Size and durability per piece, both optional and independent.
+    pub piece_status: BTreeMap<u32, PieceStatus>,
     pub loyalist_piece_ids: BTreeSet<u32>,
     pub royal_piece_ids: BTreeSet<u32>,
     pub calling_cards: BTreeMap<u32, Player>,
@@ -661,6 +720,94 @@ impl CardRuntimeState {
     pub(crate) fn remove_barricade(&mut self, square: Square) {
         self.barricades.remove(&square);
         self.blockade_walls.remove(&square);
+    }
+
+    /// Whether this piece occupies more than one cell.
+    pub fn is_large(&self, piece_id: u32) -> bool {
+        self.piece_status
+            .get(&piece_id)
+            .is_some_and(|status| status.large.is_some())
+    }
+
+    /// The anchor of a multi-cell piece's footprint.
+    pub fn large_anchor(&self, piece_id: u32) -> Option<Square> {
+        self.piece_status
+            .get(&piece_id)
+            .and_then(|status| status.large)
+            .map(|body| body.anchor)
+    }
+
+    /// Remaining durability, if the piece can take more than one hit.
+    pub fn health(&self, piece_id: u32) -> Option<PieceHealth> {
+        self.piece_status
+            .get(&piece_id)
+            .and_then(|status| status.health)
+    }
+
+    /// Mutable durability, if present.
+    pub fn health_mut(&mut self, piece_id: u32) -> Option<&mut PieceHealth> {
+        self.piece_status
+            .get_mut(&piece_id)
+            .and_then(|status| status.health.as_mut())
+    }
+
+    /// Grant durability without changing size.
+    pub fn set_health(&mut self, piece_id: u32, health: PieceHealth) {
+        self.piece_status
+            .entry(piece_id)
+            .or_insert(PieceStatus {
+                large: None,
+                health: None,
+            })
+            .health = Some(health);
+    }
+
+    /// Register a multi-cell body and its durability together.
+    pub fn insert_large_body(&mut self, piece_id: u32, anchor: Square, health: PieceHealth) {
+        self.piece_status
+            .insert(piece_id, PieceStatus::large_body(anchor, health));
+    }
+
+    /// Drop the footprint while keeping durability, for a body that collapses into
+    /// a normal piece without dying.
+    pub fn clear_large_body(&mut self, piece_id: u32) {
+        if let Some(status) = self.piece_status.get_mut(&piece_id) {
+            status.large = None;
+        }
+        self.piece_status
+            .retain(|_, status| status.large.is_some() || status.health.is_some());
+    }
+
+    /// Relocate a body's footprint. Does nothing for pieces without one.
+    pub fn move_large_anchor(&mut self, piece_id: u32, anchor: Square) {
+        if let Some(body) = self
+            .piece_status
+            .get_mut(&piece_id)
+            .and_then(|status| status.large.as_mut())
+        {
+            body.anchor = anchor;
+        }
+    }
+
+    /// Shift a body's footprint by a board offset, returning the new anchor.
+    pub fn shift_large_anchor(
+        &mut self,
+        piece_id: u32,
+        file_delta: i8,
+        rank_delta: i8,
+    ) -> Option<Square> {
+        let body = self
+            .piece_status
+            .get_mut(&piece_id)
+            .and_then(|status| status.large.as_mut())?;
+        let anchor = body.anchor.offset(file_delta, rank_delta)?;
+        body.anchor = anchor;
+        Some(anchor)
+    }
+
+    /// Drop every special aspect, for a piece that leaves the board.
+    pub fn clear_piece_status(&mut self, piece_id: u32) {
+        self.piece_status.remove(&piece_id);
     }
 
     pub(crate) fn remember_permanent_before_timed_protection(&mut self, piece_id: u32) {
@@ -1326,11 +1473,19 @@ impl GameState {
         for piece_id in &self.card_runtime.protected_piece_ids {
             hash.u32(*piece_id);
         }
-        for (piece_id, status) in &self.card_runtime.large_pieces {
+        for (piece_id, status) in &self.card_runtime.piece_status {
             hash.u32(*piece_id);
-            hash.u8(status.anchor.index() as u8);
-            hash.u8(status.hp);
-            hash.u8(status.max_hp);
+            // Encode which aspects are present, then each present aspect, so a
+            // body that loses its footprint while keeping health hashes
+            // differently from one that loses health.
+            hash.u8(u8::from(status.large.is_some()) | u8::from(status.health.is_some()) << 1);
+            if let Some(body) = status.large {
+                hash.u8(body.anchor.index() as u8);
+            }
+            if let Some(health) = status.health {
+                hash.u8(health.hp);
+                hash.u8(health.max_hp);
+            }
         }
         for piece_id in &self.card_runtime.loyalist_piece_ids {
             hash.u32(*piece_id);

@@ -42,14 +42,9 @@ pub(in crate::engine) fn acquire(
     }
     let colossus = Piece::new(actor, PieceKind::Colossus).with_id(state.allocate_piece_id());
     state.board.set(anchor, Some(colossus));
-    state.card_runtime.large_pieces.insert(
-        colossus.id,
-        LargePieceStatus {
-            anchor,
-            hp: 3,
-            max_hp: 3,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(colossus.id, anchor, PieceHealth::new(3));
     engine.register_spawned_piece(state, anchor, colossus, true);
     Ok(())
 }
@@ -120,6 +115,6 @@ mod tests {
             .find(|(_, piece)| piece.kind == PieceKind::Colossus)
             .expect("the colossus is summoned");
         assert_eq!(body.1.owner, Player::White);
-        assert_eq!(after.card_runtime.large_pieces[&body.1.id].hp, 3);
+        assert_eq!(after.card_runtime.health(body.1.id).unwrap().hp, 3);
     }
 }

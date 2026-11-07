@@ -17,7 +17,7 @@ fn chebyshev(a: Square, b: Square) -> u8 {
 /// `largeFootprint || colossus || big-rook || big-bishop`.
 fn chain_target(state: &GameState, actor: Player, piece: Piece) -> bool {
     piece.owner == actor.opponent()
-        && !state.card_runtime.large_pieces.contains_key(&piece.id)
+        && !state.card_runtime.piece_status.contains_key(&piece.id)
         && !matches!(
             piece.kind,
             PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop

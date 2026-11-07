@@ -68,7 +68,7 @@ impl Engine {
             return false;
         }
         let cells = if matches!(identity.kind, PieceKind::Colossus | PieceKind::BigRook)
-            || state.card_runtime.large_pieces.contains_key(&identity.id)
+            || state.card_runtime.piece_status.contains_key(&identity.id)
         {
             large_piece_cells(to)
         } else {

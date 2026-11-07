@@ -15,7 +15,7 @@ fn candidates(engine: &Engine, state: &GameState, owner: Player) -> Vec<(Square,
                         | PieceKind::BigBishop
                         | PieceKind::Football
                 )
-                && !state.card_runtime.large_pieces.contains_key(&p.id)
+                && !state.card_runtime.piece_status.contains_key(&p.id)
                 && !state
                     .card_runtime
                     .pending_panic

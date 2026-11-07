@@ -23,7 +23,7 @@ fn advance(
             piece.kind,
             PieceKind::Football | PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
         )
-        || state.card_runtime.large_pieces.contains_key(&piece.id)
+        || state.card_runtime.piece_status.contains_key(&piece.id)
         || (state.card_runtime.bunkers.contains_key(&piece.id)
             && engine.is_royal_piece(state, piece))
         || engine.board_piece_at(state, to).is_some()

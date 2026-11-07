@@ -91,14 +91,9 @@ impl Engine {
             let body =
                 Piece::new(owner, PieceKind::OmegaChesstron).with_id(state.allocate_piece_id());
             state.board.set(anchor, Some(body));
-            state.card_runtime.large_pieces.insert(
-                body.id,
-                LargePieceStatus {
-                    anchor,
-                    hp: 3,
-                    max_hp: 3,
-                },
-            );
+            state
+                .card_runtime
+                .insert_large_body(body.id, anchor, PieceHealth::new(3));
             self.register_spawned_piece(state, anchor, body, true);
             events.push(Event::EffectApplied {
                 source_card_instance: 0,

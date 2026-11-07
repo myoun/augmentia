@@ -1588,14 +1588,9 @@ fn mistake_card_applies_to_next_opponent_turn_and_never_reverses_large_body_capt
         Player::White,
     );
     let big = state.board.get("d4".parse().unwrap()).unwrap();
-    state.card_runtime.large_pieces.insert(
-        big.id,
-        LargePieceStatus {
-            anchor: "d4".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(big.id, "d4".parse().unwrap(), PieceHealth::new(2));
     state = engine
         .grant_card(&state, 1, crate::MISTAKE_CARD, Player::White)
         .unwrap()
@@ -1891,14 +1886,9 @@ fn blockade_prevents_large_body_overlap_not_only_anchor_landing() {
         Player::Black,
     );
     let large = state.board.get("g8".parse().unwrap()).unwrap();
-    state.card_runtime.large_pieces.insert(
-        large.id,
-        LargePieceStatus {
-            anchor: "g8".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(large.id, "g8".parse().unwrap(), PieceHealth::new(2));
     let wall = "h6".parse().unwrap();
     state.card_runtime.barricades.insert(wall);
     state

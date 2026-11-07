@@ -86,13 +86,13 @@ pub use state::{
     ChoiceContinuation, DeathmatchState, DelayedHazard, DelayedHazardKind, DiceLockStatus,
     DraftPhase, DraftState, DrawReason, EmptyLunchboxStatus, EnPassantState,
     FIELD_PROMOTION_CHOICE_PREFIX, FeudalContract, ForcedMoveContinuation, ForcedMoveSource,
-    FrozenStatus, GamePhase, GameState, GameStatus, InitiativeStatus, JudgmentExile,
-    LargePieceStatus, LogStatus, MIDDLE_EXTRA_MOVE_SOURCE, Mode, MoveReplayState, NecromancyRevert,
+    FrozenStatus, GamePhase, GameState, GameStatus, InitiativeStatus, JudgmentExile, LargeBody,
+    LogStatus, MIDDLE_EXTRA_MOVE_SOURCE, Mode, MoveReplayState, NecromancyRevert,
     ParrotMemoryStatus, PendingBombardment, PendingChoice, PendingIcbm, PendingLobster,
     PendingOmegaSummon, PendingOtherworld, PendingPanic, PendingPortal, PendingPremove,
-    PendingRecurrence, PendingRuleTicket, PendingScarecrow, PendingVip, PlatformRuleState,
-    ReplayCell, RepositionStatus, RoyalCommandStatus, TimedPieceStatus, TrolleyDilemma, TwinBond,
-    UndeadResurrection, WinReason, WindmillMode,
+    PendingRecurrence, PendingRuleTicket, PendingScarecrow, PendingVip, PieceHealth, PieceStatus,
+    PlatformRuleState, ReplayCell, RepositionStatus, RoyalCommandStatus, TimedPieceStatus,
+    TrolleyDilemma, TwinBond, UndeadResurrection, WinReason, WindmillMode,
 };
 pub use state::{CaptureTheFlagState, FlagOccupation};
 

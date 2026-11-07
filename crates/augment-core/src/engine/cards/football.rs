@@ -105,10 +105,9 @@ impl Engine {
                 if defeated {
                     self.remove_piece_for_card(&mut next, anchor, victim, actor, ID, &mut events);
                 }
-            } else if let Some(body) = next.card_runtime.large_pieces.get_mut(&victim.id) {
+            } else if let Some(health) = next.card_runtime.health_mut(victim.id) {
                 impact = true;
-                body.hp = body.hp.saturating_sub(1);
-                if body.hp == 0 {
+                if health.take_hit() {
                     self.remove_piece_for_card(&mut next, anchor, victim, actor, ID, &mut events);
                 }
             } else {

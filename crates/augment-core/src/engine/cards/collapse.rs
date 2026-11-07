@@ -154,9 +154,8 @@ impl Engine {
             }
             let occupied = state
                 .card_runtime
-                .large_pieces
-                .get(&piece.id)
-                .map_or_else(|| vec![square], |large| large_piece_cells(large.anchor));
+                .large_anchor(piece.id)
+                .map_or_else(|| vec![square], large_piece_cells);
             if occupied.iter().any(|cell| ring_set.contains(cell)) {
                 victims.push((square, piece));
             }

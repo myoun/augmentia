@@ -26,7 +26,7 @@ pub(super) fn actions(
     let actor = state.turn;
     for (square, piece) in state.board.iter() {
         if piece.owner == actor
-            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+            && !state.card_runtime.piece_status.contains_key(&piece.id)
             && !matches!(
                 piece.kind,
                 PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Football

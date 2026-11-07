@@ -24,15 +24,11 @@ impl Engine {
             .iter()
             .filter(|(s, p)| {
                 state.card_runtime.black_holes.contains(s)
-                    || state
-                        .card_runtime
-                        .large_pieces
-                        .get(&p.id)
-                        .is_some_and(|large| {
-                            large_piece_cells(large.anchor)
-                                .iter()
-                                .any(|s| state.card_runtime.black_holes.contains(s))
-                        })
+                    || state.card_runtime.large_anchor(p.id).is_some_and(|anchor| {
+                        large_piece_cells(anchor)
+                            .iter()
+                            .any(|s| state.card_runtime.black_holes.contains(s))
+                    })
             })
             .collect();
         let memories =

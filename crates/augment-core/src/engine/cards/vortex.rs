@@ -12,7 +12,7 @@ fn candidates(engine: &Engine, state: &GameState, owner: Player) -> Vec<(Square,
                     p.kind,
                     PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
                 )
-                && !state.card_runtime.large_pieces.contains_key(&p.id)
+                && !state.card_runtime.piece_status.contains_key(&p.id)
                 && !engine.is_royal_piece(state, *p)
                 && !engine.piece_has_ability(state, *p, PieceKind::Slime)
         })
@@ -63,7 +63,7 @@ fn eligibility(state: &GameState, owner: Player, _: AcquisitionContext) -> CardE
                     p.kind,
                     PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
                 )
-                && !state.card_runtime.large_pieces.contains_key(&p.id)
+                && !state.card_runtime.piece_status.contains_key(&p.id)
                 && !royal(state, *p)
                 && p.kind != PieceKind::Merchant
                 && p.kind != PieceKind::Slime

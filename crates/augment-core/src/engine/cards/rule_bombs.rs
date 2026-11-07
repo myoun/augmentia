@@ -48,10 +48,8 @@ impl Engine {
             .iter()
             .filter(|(s, p)| {
                 cells.contains(s)
-                    || state.card_runtime.large_pieces.get(&p.id).is_some_and(|l| {
-                        large_piece_cells(l.anchor)
-                            .iter()
-                            .any(|s| cells.contains(s))
+                    || state.card_runtime.large_anchor(p.id).is_some_and(|anchor| {
+                        large_piece_cells(anchor).iter().any(|s| cells.contains(s))
                     })
             })
             .collect();

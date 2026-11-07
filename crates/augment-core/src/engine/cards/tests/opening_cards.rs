@@ -338,7 +338,7 @@ fn horde_and_big_rook_install_layouts_without_fresh_capture_delay() {
         let anchor = if owner == Player::White { "g2" } else { "g8" };
         let rook = big.board.get(anchor.parse().unwrap()).unwrap();
         assert_eq!(rook.kind, PieceKind::BigRook);
-        assert_eq!(big.card_runtime.large_pieces[&rook.id].hp, 2);
+        assert_eq!(big.card_runtime.health(rook.id).unwrap().hp, 2);
         assert!(!big.card_runtime.moved_piece_ids.contains(&rook.id));
         assert!(
             !big.card_runtime
@@ -359,14 +359,9 @@ fn big_rook_loses_the_hit_cell_then_disappears_on_a_second_hit() {
         ("g8", Player::Black, PieceKind::BigRook),
     ]);
     let big = state.board.get("g8".parse().unwrap()).unwrap();
-    state.card_runtime.large_pieces.insert(
-        big.id,
-        LargePieceStatus {
-            anchor: "g8".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(big.id, "g8".parse().unwrap(), PieceHealth::new(2));
     let first = engine
         .apply(&state, acquisition::movement("g5", "g7"))
         .unwrap()
@@ -417,14 +412,9 @@ fn big_rook_fracture_matches_all_four_source_cell_indices() {
         ]);
         let big = state.board.get("g8".parse().unwrap()).unwrap();
         let anchor = "g8".parse().unwrap();
-        state.card_runtime.large_pieces.insert(
-            big.id,
-            LargePieceStatus {
-                anchor,
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(big.id, anchor, PieceHealth::new(2));
         let original = state.clone();
         assert_eq!(
             engine.fracture_large_cell(&mut state, big, hit.parse().unwrap()),
@@ -457,14 +447,9 @@ fn fractured_big_rook_can_move_when_its_original_storage_cell_was_hit() {
         ("g8", Player::Black, PieceKind::BigRook),
     ]);
     let big = state.board.get("g8".parse().unwrap()).unwrap();
-    state.card_runtime.large_pieces.insert(
-        big.id,
-        LargePieceStatus {
-            anchor: "g8".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(big.id, "g8".parse().unwrap(), PieceHealth::new(2));
     let first = engine
         .apply(&state, acquisition::movement("e7", "g8"))
         .unwrap()
@@ -482,7 +467,7 @@ fn fractured_big_rook_can_move_when_its_original_storage_cell_was_hit() {
         .unwrap()
         .state;
     assert_eq!(
-        moved.card_runtime.large_pieces[&big.id].anchor,
+        moved.card_runtime.large_anchor(big.id).unwrap(),
         "f8".parse().unwrap()
     );
     assert_eq!(
@@ -516,13 +501,10 @@ fn big_rook_landing_fractures_one_overlapping_cell_and_defeats_two() {
         let moving = state.board.get(origin.parse().unwrap()).unwrap();
         let target = state.board.get("f4".parse().unwrap()).unwrap();
         for (piece, square) in [(moving, origin), (target, "f4")] {
-            state.card_runtime.large_pieces.insert(
+            state.card_runtime.insert_large_body(
                 piece.id,
-                LargePieceStatus {
-                    anchor: square.parse().unwrap(),
-                    hp: 2,
-                    max_hp: 2,
-                },
+                square.parse().unwrap(),
+                PieceHealth::new(2),
             );
         }
         let after = engine
@@ -551,14 +533,9 @@ fn colossus_sector_counts_each_large_body_cell_in_the_same_attack() {
     ]);
     let colossus = state.board.get("c4".parse().unwrap()).unwrap();
     let target = state.board.get("f4".parse().unwrap()).unwrap();
-    state.card_runtime.large_pieces.insert(
-        target.id,
-        LargePieceStatus {
-            anchor: "f4".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    state
+        .card_runtime
+        .insert_large_body(target.id, "f4".parse().unwrap(), PieceHealth::new(2));
     let selection = ActionTarget::Squares(
         ["f4", "g4", "h4", "h3"]
             .into_iter()
@@ -593,14 +570,9 @@ fn wizard_area_damage_uses_every_occupied_large_body_cell() {
             ("f4", Player::Black, PieceKind::BigRook),
         ]);
         let big = state.board.get("f4".parse().unwrap()).unwrap();
-        state.card_runtime.large_pieces.insert(
-            big.id,
-            LargePieceStatus {
-                anchor: "f4".parse().unwrap(),
-                hp: 2,
-                max_hp: 2,
-            },
-        );
+        state
+            .card_runtime
+            .insert_large_body(big.id, "f4".parse().unwrap(), PieceHealth::new(2));
         state.card_runtime.delayed_hazards.push(DelayedHazard {
             kind: DelayedHazardKind::Meteor,
             owner: Player::White,
@@ -635,13 +607,10 @@ fn big_rook_castles_with_king_for_both_colors_and_replaces_allied_landing_pieces
         state.turn = owner;
         let rook = state.board.get(rook_from.parse().unwrap()).unwrap();
         let pawn = state.board.get(pawn_square.parse().unwrap()).unwrap();
-        state.card_runtime.large_pieces.insert(
+        state.card_runtime.insert_large_body(
             rook.id,
-            LargePieceStatus {
-                anchor: rook_from.parse().unwrap(),
-                hp: 2,
-                max_hp: 2,
-            },
+            rook_from.parse().unwrap(),
+            PieceHealth::new(2),
         );
         let action = acquisition::movement(king_from, king_to);
         assert!(
@@ -654,7 +623,7 @@ fn big_rook_castles_with_king_for_both_colors_and_replaces_allied_landing_pieces
             PieceKind::King
         );
         assert_eq!(
-            after.card_runtime.large_pieces[&rook.id].anchor,
+            after.card_runtime.large_anchor(rook.id).unwrap(),
             rook_to.parse().unwrap()
         );
         assert!(after.board.find_by_id(rook.id).is_some());
@@ -933,14 +902,9 @@ fn vanguard_respects_unique_front_pawn_and_large_body_occupancy() {
         ("c6", Player::White, PieceKind::BigRook),
     ]);
     let big = before.board.get("c6".parse().unwrap()).unwrap();
-    before.card_runtime.large_pieces.insert(
-        big.id,
-        LargePieceStatus {
-            anchor: "c6".parse().unwrap(),
-            hp: 2,
-            max_hp: 2,
-        },
-    );
+    before
+        .card_runtime
+        .insert_large_body(big.id, "c6".parse().unwrap(), PieceHealth::new(2));
     let mut state = engine
         .acquire_for_setup(&before, crate::VANGUARD, Player::White)
         .unwrap()

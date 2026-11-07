@@ -21,7 +21,7 @@ fn valid(engine: &Engine, state: &GameState, owner: Player, piece: Piece) -> boo
             piece.kind,
             PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
         )
-        && !state.card_runtime.large_pieces.contains_key(&piece.id)
+        && !state.card_runtime.piece_status.contains_key(&piece.id)
 }
 
 /// The 2026-10-27 balance pass turned Chameleon Mutation into an opening passive
@@ -80,7 +80,7 @@ pub(super) fn eligibility(
                 piece.kind,
                 PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
             )
-            && !state.card_runtime.large_pieces.contains_key(&piece.id)
+            && !state.card_runtime.piece_status.contains_key(&piece.id)
     });
     require(
         engine_agnostic,

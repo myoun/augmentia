@@ -116,7 +116,7 @@ pub(in crate::engine::cards) fn london_and_bishop_install_immediately_without_fr
         .state;
     let large = bishop.board.get("f2".parse().unwrap()).unwrap();
     assert_eq!(large.kind, PieceKind::BigBishop);
-    assert_eq!(bishop.card_runtime.large_pieces[&large.id].hp, 2);
+    assert_eq!(bishop.card_runtime.health(large.id).unwrap().hp, 2);
     assert!(
         engine
             .legal_actions(&bishop)
