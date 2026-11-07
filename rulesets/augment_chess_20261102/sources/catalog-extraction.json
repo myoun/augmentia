@@ -1,6 +1,5 @@
 {
   "bundle_sha256": "af362a64df02321edc00f225126c750b0ca41156c158d85930f273bbfad3f8b5",
-  "bundle_byte_length": 19199288,
   "catalog_hash": "VR0S31GY4azrMCXMEsXRTUkQuvHG-f-V-b2EIlXsavE",
   "catalog_metadata": {
     "novemberExpansionPolicy": 1,
@@ -46,25 +45,2072 @@
     "colossusCorePlacementPolicy": 2
   },
   "method": "pinned catalog declarations only; application entry not executed; VM is not a security sandbox",
-  "ruleset_id": "augment_chess_20261102",
-  "normalized_catalog_sha256": "87a466d9c2562b0327b22dbe3262aca6a3ce493da6cbd57fa032b050f2c1aece",
-  "normalized_card_count": 281,
-  "visible_card_count": 272,
-  "hidden_by_default_ids": [
-    "beacon",
-    "blue-jeans",
-    "chess-n-pow-30",
-    "democracy",
-    "martyrdom",
-    "monochrome-chess",
-    "qxe1",
-    "royal-shield",
-    "underground-bunker"
+  "declarations": [
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V19",
+      "offset": 7719175,
+      "sha256": "f2c22c84e24044fe1e3dcd5120d0773d43f39d3b9e6062930819acfbefabd354"
+    },
+    {
+      "name": "REFORM_CATALOG_HASH",
+      "offset": 7163714,
+      "sha256": "c34e4841757a4c9afa6cbea8b393637d926e2c92f1b705173b04e44b2d475f4a"
+    },
+    {
+      "name": "freeze$8",
+      "offset": 7708576,
+      "sha256": "e51145c757ade4209c803d5aae265c08093c544774ee0d418dbf1b4ebf2ac7d1"
+    },
+    {
+      "name": "CARD_CATALOG_V19_SCHEMA_VERSION",
+      "offset": 7708166,
+      "sha256": "f1ffe965290e72c6b453e354617967148563c1f495d7e0ffc2b47d425152d05f"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V19_VERSION$1",
+      "offset": 7708210,
+      "sha256": "cf146c449b6db3358a028aac1b7e79052d2a0ac2df4c53b5f9a5319fb3a244f6"
+    },
+    {
+      "name": "CARDS$1",
+      "offset": 7715877,
+      "sha256": "1536425fe95498d54a72cb82f37187d78451c684b88ec2a4fe52a5efe83c2afe"
+    },
+    {
+      "name": "CURRENT_PRE_EXPANSION_CARDS",
+      "offset": 7714782,
+      "sha256": "3b50a78c7c2a4134367e99319a7026f17af1bf063ee100eaf8a48c3c6c6d02a6"
+    },
+    {
+      "name": "PRE_SEPTEMBER26_CARDS",
+      "offset": 7714453,
+      "sha256": "13e4d18a3ca65302dea9a1015b8b36e313f65088b006f5e0756d1d1daea1a605"
+    },
+    {
+      "name": "PRE_SEPTEMBER18_CARDS",
+      "offset": 7714200,
+      "sha256": "65808c0b704692a5e48811116d69b788ecfa3a9b5ed8578228bc6ba64fc9d05f"
+    },
+    {
+      "name": "PRE_DISPLAY_STAR_CARDS",
+      "offset": 7711804,
+      "sha256": "2a5280c165d5b476c7f2d1cf73c8a38f2fd4053663b6c9f3b5e124b1d251ec90"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V18",
+      "offset": 7707438,
+      "sha256": "df7615171ced08ee485a238957a9a7a5313f9b018da7293948488236a22aec95"
+    },
+    {
+      "name": "freeze$9",
+      "offset": 7704612,
+      "sha256": "d1d215754b5c941612946f2e7dce5ebd87bf1cb63731af2056d66f225e8f7256"
+    },
+    {
+      "name": "CARD_CATALOG_V18_SCHEMA_VERSION",
+      "offset": 7704340,
+      "sha256": "e316a269f4d28ce6c11e9da8bd387d114f9cc8842c5d50505ccaf1a797398fcc"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V18_VERSION$1",
+      "offset": 7704384,
+      "sha256": "97bbfff163fbf40d73126b800bd2ae64c72950dd64171f4b7c8211063abf6fd8"
+    },
+    {
+      "name": "CARDS$2",
+      "offset": 7707168,
+      "sha256": "6f39f8f93abc1b70d6e5a6e7ee59ebb2e7500b5bcd344d1bfc9d0f547942bc98"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V17",
+      "offset": 7703612,
+      "sha256": "9d050bb9236555b573777b6efb73909d44eb20485cb7581db536669aedafdc37"
+    },
+    {
+      "name": "freeze$a",
+      "offset": 7700706,
+      "sha256": "6fd21527a95f7539b5a4736a39e77bd8fe10673e43e5519454d2f37a49d1052f"
+    },
+    {
+      "name": "CARD_CATALOG_V17_SCHEMA_VERSION",
+      "offset": 7700434,
+      "sha256": "241672e6edd702ddeea1cf55b04915f150080632182e73dfd1c024151e9cdf44"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V17_VERSION$1",
+      "offset": 7700478,
+      "sha256": "5c516885389ed2e5ad060181a4c34817551403fa2132c9bc31d80cc9d8b3683b"
+    },
+    {
+      "name": "CARDS$3",
+      "offset": 7703342,
+      "sha256": "c2f3b30af44314629bc78da8746fd2635b365e07ca4544e399477aac2beced8c"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V16",
+      "offset": 7699706,
+      "sha256": "39d8f44b66b559c9619bf283437fc1fa89da5f3c8b2fe13db0c3aa7ecde09a09"
+    },
+    {
+      "name": "freeze$b",
+      "offset": 7696747,
+      "sha256": "412728b9a02400761dde4b38736ce49ac0312bb094c91b212dd6e8787175d3cc"
+    },
+    {
+      "name": "CARD_CATALOG_V16_SCHEMA_VERSION",
+      "offset": 7696475,
+      "sha256": "1ebeca7fc56bdc1c8f6b9cc2d413513583d28662a559e48c40d83a7b33846bfd"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V16_VERSION$1",
+      "offset": 7696519,
+      "sha256": "00918822ef7ac8c9a449f64a8e9e0edc9ece909ffdce65504d3ff112d94c99b1"
+    },
+    {
+      "name": "CARDS$4",
+      "offset": 7699436,
+      "sha256": "2396c663b3e74887fb51f9185861c9733cd76fa1ebf08f32e34c3a9f25f3823e"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V15",
+      "offset": 7695747,
+      "sha256": "b5d56f7764861d3f8539f6d18ac78e47a58041272415bd5a28093d73ade448a6"
+    },
+    {
+      "name": "freeze$c",
+      "offset": 7693541,
+      "sha256": "026954a1aa949b751400e3ea17a19c11ab0cd30ed8d6e2fabbe8d3959edc2be1"
+    },
+    {
+      "name": "CARD_CATALOG_V15_SCHEMA_VERSION",
+      "offset": 7693269,
+      "sha256": "816377a7ed0d3a0736b3a0eb8af25ca4cbb6a76b7663120933903b653aabfbc0"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V15_VERSION$1",
+      "offset": 7693313,
+      "sha256": "f1e1fc4297d278bf50afe09cffc3afff9a1e6d3fb85b36358df907fba769aae2"
+    },
+    {
+      "name": "CARDS$5",
+      "offset": 7694353,
+      "sha256": "4cd20f1a4944fafe270279565f5241bdf7acbcead256f816f3adeda4d1fc68e8"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V14",
+      "offset": 7692555,
+      "sha256": "5f8bd1f79c034d19eb633432d3fd0467f50404053d0753d804d936f01b504d73"
+    },
+    {
+      "name": "freeze$d",
+      "offset": 7689091,
+      "sha256": "ca3dffc02878d4dd48502cbd7d0c6c10faa83e7cbf91a2987002a6f8306c4418"
+    },
+    {
+      "name": "CARD_CATALOG_V14_SCHEMA_VERSION",
+      "offset": 7688819,
+      "sha256": "825b4876d67d2842906075a196db13bab56feda5128b26d348cdd4e60bec313e"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V14_VERSION$1",
+      "offset": 7688863,
+      "sha256": "eab2831e493d69f32a9dc2b407299bed002d478b91eb2c541b6af397a7abb9f2"
+    },
+    {
+      "name": "CARDS$6",
+      "offset": 7692273,
+      "sha256": "5b9c1a78fe6280dd51e6dc6075120665d01d704765bc848442e7fc6db7a7788e"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V13",
+      "offset": 7688073,
+      "sha256": "8132f36b29905d26dc97e58ae4d7d0e1517187cd49fa46510aa1472d8f48ca00"
+    },
+    {
+      "name": "deepFreeze$F",
+      "offset": 7683081,
+      "sha256": "fed799ed8fec6bb846fb9d10457789eb5dfdc98ab9059c25fa487bcf31cdb357"
+    },
+    {
+      "name": "CARD_CATALOG_V13_SCHEMA_VERSION",
+      "offset": 7682400,
+      "sha256": "4a050632eb4311b6248eaf2ae6e8a8d26a301b09f88ba10a5101df477737da3a"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V13_VERSION$1",
+      "offset": 7682444,
+      "sha256": "8cf3721b1a3d8f8f0da5ffb7fc4ac10197275a0dba31a289b4bea02954e56e33"
+    },
+    {
+      "name": "CARDS$7",
+      "offset": 7687580,
+      "sha256": "63a29f35d3185d0be195e56d4bc3e021cd5455508dd42a515a2e11e79b8f588e"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V12",
+      "offset": 7681042,
+      "sha256": "b7a1ef34af65517dc8a686270041c6e490ac1ee2651ecaa3ea247c5e4ae98c6f"
+    },
+    {
+      "name": "deepFreeze$G",
+      "offset": 7676473,
+      "sha256": "08225d0d1d0e86e80ec7d4130c0018c8be99ca74c02c04319dda7eb1f490eee7"
+    },
+    {
+      "name": "CARD_CATALOG_V12_SCHEMA_VERSION",
+      "offset": 7675644,
+      "sha256": "23a3eea1ae191e64bfe19193371e457604764efd7e14c66f8d701fd2db021e7a"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V12_VERSION$1",
+      "offset": 7675688,
+      "sha256": "9ab97b2cabdad710776c8513438f6949ac0881f27f73613ae97b165dc8af752b"
+    },
+    {
+      "name": "CARDS$8",
+      "offset": 7680689,
+      "sha256": "cf67ab5d0caa0486f7ae14c709b591dff96d7dd5e88d2c67d8695ae044300bb4"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V11",
+      "offset": 7674912,
+      "sha256": "63196f0b8ac774af818f16712b435c09ed4b990acf1b77331b6c75515791f942"
+    },
+    {
+      "name": "deepFreeze$H",
+      "offset": 7671425,
+      "sha256": "e7833ec8280cf0ab4ef1186f5e990849e9744baecdcdaa3d54bf7b877ad4bdd2"
+    },
+    {
+      "name": "CARD_CATALOG_V11_SCHEMA_VERSION",
+      "offset": 7671060,
+      "sha256": "d563b7c22d608c0ed7fc7c8b655e77527e3d585daea2015c05ae9a9d653003e3"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V11_VERSION$1",
+      "offset": 7671104,
+      "sha256": "2d96d1105f4205d7598a8d5e0c7fbef461512d7b2ebdbdf4d2f881df06b70984"
+    },
+    {
+      "name": "CARDS$9",
+      "offset": 7674601,
+      "sha256": "b094ceb67a614d7a3ed795ce1445bbf97f751b4cb3081fae90885614f7275d93"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V10",
+      "offset": 7670328,
+      "sha256": "b6fe238e55ab920636ec7d5f0be24c1d9c21d7b79a5654c932269490d45383ac"
+    },
+    {
+      "name": "deepFreeze$I",
+      "offset": 7666282,
+      "sha256": "51cf15cac6de997af32464e6428fa652737f0156dc0676686261e49fe16680a8"
+    },
+    {
+      "name": "CARD_CATALOG_V10_SCHEMA_VERSION",
+      "offset": 7665917,
+      "sha256": "ba0dbfc5733fd159862e2871d199355db823100dac39dee865945b3adc7694d4"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V10_VERSION$1",
+      "offset": 7665961,
+      "sha256": "a8193a12b6acd3839b5926ca5826047c16f7a7d5b1496e59ae2f8a63e3baf58f"
+    },
+    {
+      "name": "CARDS$a",
+      "offset": 7670018,
+      "sha256": "39230ce3fb811b52ea4a8200b8633adf702f5447e0a58c1e8c40315eece3d30d"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V9",
+      "offset": 7665194,
+      "sha256": "dad40a3bf260145679e614725886056e7d28c43866512cac70d2f8f09d28764a"
+    },
+    {
+      "name": "deepFreeze$J",
+      "offset": 7660999,
+      "sha256": "9e20b09153ce00a0f08cfd7f041d15dc40719b1dc0bdcc3b3c1f8f4eed9ca16a"
+    },
+    {
+      "name": "CARD_CATALOG_V9_SCHEMA_VERSION",
+      "offset": 7660642,
+      "sha256": "3ff5ebe7898d5ac4a33e39d126c0300cb9e6db982466d21eb313e5a67c911634"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V9_VERSION$1",
+      "offset": 7660684,
+      "sha256": "ac9ef67443e3c462458e2e74d15461f46492758cd39d4056a4df9f85ca771cb7"
+    },
+    {
+      "name": "CARDS$b",
+      "offset": 7664886,
+      "sha256": "9eb67c93135c2fcc058d6321ca25f2bad06c2035202726d691f57b9ae4ed6f66"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V8",
+      "offset": 7659919,
+      "sha256": "b460dfdad17a9da502ccd61510ca5945a38706537a6b9cc4a91923f12d296092"
+    },
+    {
+      "name": "deepFreeze$K",
+      "offset": 7655554,
+      "sha256": "c8d735cd7a99324ab40f5a8597a157fdb85df106481053dcfa71794790b6d926"
+    },
+    {
+      "name": "CARD_CATALOG_V8_SCHEMA_VERSION",
+      "offset": 7655197,
+      "sha256": "9a7c4c0fbaa4364eb2b9b241e2a9176c7b64ac045e7dd909bb028e9d68554b38"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V8_VERSION$1",
+      "offset": 7655239,
+      "sha256": "518163538f6866bfce72e0af32992895a677b6383ac0cf487b0cd4ed5645e505"
+    },
+    {
+      "name": "CARDS$c",
+      "offset": 7659611,
+      "sha256": "be070d124c6e7299702df1257a6d0e70e8d0e688ead5c063580c66e3a3903095"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V7",
+      "offset": 7654474,
+      "sha256": "acf37c42b05384d788c4e11eee933cd2196e5f8e27c253dcfe3fd3f849d33104"
+    },
+    {
+      "name": "deepFreeze$L",
+      "offset": 7649097,
+      "sha256": "b59bd67a62913ebabbb4e92ff27f5c849eaa889c2d267942c44a84285d61e2a6"
+    },
+    {
+      "name": "CARD_CATALOG_V7_SCHEMA_VERSION",
+      "offset": 7648740,
+      "sha256": "97c58e1325c941844c168e2ab4bc316d0e525ed8c55e2bab21cc5a33ff5f9c3a"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V7_VERSION$1",
+      "offset": 7648782,
+      "sha256": "e80b1f21c4c1fb83b7c0b6ddf12a6cd145ec3183361df71c9342384b45d85425"
+    },
+    {
+      "name": "CARDS$d",
+      "offset": 7654166,
+      "sha256": "7dcc88c03b0e6a9d1578550458508dda976076c8e5fca479987ec619ad1b30e4"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V6",
+      "offset": 7648017,
+      "sha256": "75d98937b8ed794ae756715a685d9cbd20bf37ac3487989933e5b37a69463e07"
+    },
+    {
+      "name": "deepFreeze$M",
+      "offset": 7642505,
+      "sha256": "bb54ea360b83ea02e275b8c47bee26ebac9e1d233487ea9c1ee079a953d6eebe"
+    },
+    {
+      "name": "CARD_CATALOG_V6_SCHEMA_VERSION",
+      "offset": 7642148,
+      "sha256": "3388bf9dc1f64974f802bcf7ac427696454e5cf650bba0b14f20822f30af221e"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V6_VERSION$1",
+      "offset": 7642190,
+      "sha256": "c174abba2e42fbce98dbc71fb2c7f2d141de8fa36b03f476567059b4b338221d"
+    },
+    {
+      "name": "CARDS$e",
+      "offset": 7647709,
+      "sha256": "78daaeb20093da7370c5dc3468014575864e2b2220d961f412211f09408fdcb3"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V5",
+      "offset": 7641411,
+      "sha256": "8eee00ba1f3c32d7ed1a8e5c46f7356a6b3cff864ff1e931d9b81e4ebff10889"
+    },
+    {
+      "name": "deepFreeze$N",
+      "offset": 7633045,
+      "sha256": "2e7dab320b26a8866db5406e996b51d29e26e02a2233d28a78b661972ba6eb56"
+    },
+    {
+      "name": "CARD_CATALOG_V5_SCHEMA_VERSION",
+      "offset": 7632688,
+      "sha256": "a5e595342afc31e9a742737bd8d1b6197eaa6c15913ca48132c70cbfcd3cef24"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V5_VERSION$1",
+      "offset": 7632730,
+      "sha256": "1a541461b8cd7573abd82588075e8dbb96a6b131d074e5174da36a8c17295530"
+    },
+    {
+      "name": "CARDS$f",
+      "offset": 7641077,
+      "sha256": "12f13202bd3aee2986feb838a0840af00035aa31706803f5edc7e4aa4d61993b"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V4",
+      "offset": 7631951,
+      "sha256": "3cbb99f4c8432ddd74fc3c9774a6577436a5d5a5270b681f308306500c365d4d"
+    },
+    {
+      "name": "deepFreeze$O",
+      "offset": 7624109,
+      "sha256": "0cb074a9d93de1d8d013c016fd8df157a8427605f7fad0d91283345324ca99f4"
+    },
+    {
+      "name": "CARD_CATALOG_V4_SCHEMA_VERSION",
+      "offset": 7623416,
+      "sha256": "be1345a87e1ecdeee79f5abfa8efc6242add0526a9d11257c000f8dad6c90d1a"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V4_VERSION$1",
+      "offset": 7623458,
+      "sha256": "4e502442246055a5970bd01c73a3c6df4110fbe88348de50a83bce4529e943d4"
+    },
+    {
+      "name": "CARDS$g",
+      "offset": 7631525,
+      "sha256": "6146df5e4581a2dda0f98c442d579555b54d1108446743597910dfd1a63d946c"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V3",
+      "offset": 7622679,
+      "sha256": "b5f7d40a35566225070ec096a650ca36f85d98d4a0954aa1f8eee34dd7887e47"
+    },
+    {
+      "name": "deepFreeze$P",
+      "offset": 7614602,
+      "sha256": "18130b8d0aed55527bc286fa4bdcac869578876a203f46bb0e513ec2755fbfb6"
+    },
+    {
+      "name": "CARD_CATALOG_V3_SCHEMA_VERSION",
+      "offset": 7613909,
+      "sha256": "5807c1ecc8a981545026b32d4664c3215b18d8a2b042016513bd215d39ea860f"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V3_VERSION$1",
+      "offset": 7613951,
+      "sha256": "41705dcb95093773840a32bf38ad2f940072ddc285d42b3548281b0eb73a4741"
+    },
+    {
+      "name": "CARDS$h",
+      "offset": 7622253,
+      "sha256": "c22a22fca9db35c58056961f4b4e5be39b47f7284ad54b5546d77f09878405c7"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V2",
+      "offset": 7613172,
+      "sha256": "a4977483a78479fd731a224708aeeebad4f4eb0f1ee32fda01f95eb72d5712cb"
+    },
+    {
+      "name": "deepFreeze$Q",
+      "offset": 7606946,
+      "sha256": "02a4d56fcba4ceafd818721cf31890438761b7963d5c6a166876c06ea3aa36bd"
+    },
+    {
+      "name": "CARD_CATALOG_V2_SCHEMA_VERSION",
+      "offset": 7606253,
+      "sha256": "6941830a166f6ad41788297216b7341e88c4715df6d135d4635dfac835307312"
+    },
+    {
+      "name": "BETA_PUBLIC_CARD_CATALOG_V2_VERSION$1",
+      "offset": 7606295,
+      "sha256": "c5e4b69d46531e3a96b4eaac257b101f537fb36b458f3d1a8edbcd891f939d9d"
+    },
+    {
+      "name": "CARDS$i",
+      "offset": 7609096,
+      "sha256": "2b8c9de42ed9689b6749217ab781cd45348ae91efcb39e7322cf3dd6b1a883ce"
+    },
+    {
+      "name": "card$i",
+      "offset": 7607272,
+      "sha256": "8762fb9f08e68fc0730ddf1146c35f23d9eceb4fa6c9dfe90ef2ddf14151a11b"
+    },
+    {
+      "name": "draftWeightUnits$h",
+      "offset": 7607165,
+      "sha256": "6670392105ec63d8418507e256be2b3d9f5270652914b2922c9c33a1c93909f8"
+    },
+    {
+      "name": "publicCardAuthorityDefinition",
+      "offset": 7573261,
+      "sha256": "e5e3bafec149b5110c7360e3eb5461ba501826d9df69a1c10d28964210511fb9"
+    },
+    {
+      "name": "byId$1",
+      "offset": 7572291,
+      "sha256": "fa8ea555f3a404caae66c523b91665d1e322fb40ca3c7519fcbed7bc36c9faad"
+    },
+    {
+      "name": "cards$7",
+      "offset": 7570811,
+      "sha256": "c306e90183f4d60d7a426da776350f5e041a57ed00f533ea2923794f05a48387"
+    },
+    {
+      "name": "sourceEntries",
+      "offset": 7570278,
+      "sha256": "b151977bed97844b3f83c18a9127c3a358c34ad30e8019d4ad2c0ff6adbc60fd"
+    },
+    {
+      "name": "PUBLIC_CARD_SOURCE_ROWS",
+      "offset": 7554973,
+      "sha256": "57d1f45c47e9ef541f11cab1b5a970213bbf6045621d799215c86667657c144c"
+    },
+    {
+      "name": "RNG_IDS",
+      "offset": 7565254,
+      "sha256": "537d0b31dc3eec6b3c0c79264526c365709a972c9f52a108807633ae657f38bf"
+    },
+    {
+      "name": "HIDDEN_IDS",
+      "offset": 7565793,
+      "sha256": "d770828901902097f9b2b70eb0e2a6444e00af8b3ba933c04d2bd78872a1725f"
+    },
+    {
+      "name": "ACTION_WINDOW_IDS",
+      "offset": 7566041,
+      "sha256": "53f0a25627d0c9bf52d9227e89ba7f53ccc1a5ade997e939ac99c5e0964f5ea6"
+    },
+    {
+      "name": "TOPOLOGY_IDS",
+      "offset": 7566176,
+      "sha256": "5f58b566305b0d53ec38e8402b64ca1fb319878a5b6827e3d1238f2c9c029ad6"
+    },
+    {
+      "name": "VARIANT_PIECE_IDS",
+      "offset": 7566515,
+      "sha256": "a3e6630f20d94b7b8d9bda2c3d432ee7934765c7eb15b91faf7386f0e44d2d4c"
+    },
+    {
+      "name": "CURRENT_AUTHORITATIVE_IDS",
+      "offset": 7561641,
+      "sha256": "cadb5e3069c4d2e5c0ecbd78ae076b9e98637345983042732ce0181e4e117c1d"
+    },
+    {
+      "name": "deepFreeze$S",
+      "offset": 7567907,
+      "sha256": "eb4fdbd41f079548ae614c599cc7d08407d2292d59c0113e34659bebdbd94628"
+    },
+    {
+      "name": "rolloutWave",
+      "offset": 7569232,
+      "sha256": "db92952ede332718272d4e534aee6e541a79ac4990231508d59ee368fe7f419d"
+    },
+    {
+      "name": "commandShape",
+      "offset": 7568126,
+      "sha256": "f6e841ca34822f5ce0fbf2e5434d446c7d8cf21a83bde47579ba71013580d135"
+    },
+    {
+      "name": "CHOICE_COMMAND_IDS",
+      "offset": 7567829,
+      "sha256": "de67cbab1e6af707415b96f8fd2bb7be8603efc493a6d9bd436019ea13ab75c1"
+    },
+    {
+      "name": "statePrimitives",
+      "offset": 7569587,
+      "sha256": "51f53dbe1dbbf04ef3f2392b090902045554dee6cf8e72aa7a949c120f713d54"
+    },
+    {
+      "name": "TIMED_EFFECT_IDS",
+      "offset": 7567227,
+      "sha256": "e3bb23451de9a09ad6630df08e5a72853f6e595e133550c7c51490f4bebe5ef2"
+    },
+    {
+      "name": "END_CONDITION_IDS",
+      "offset": 7567651,
+      "sha256": "f1bd9798e2cb608afc41c5ec843c4afdf7fc5311abb4efd3a8c47c036afa14e7"
+    },
+    {
+      "name": "PILOT_IDS",
+      "offset": 7561792,
+      "sha256": "c598631deaf489ab8d8ce9123b02e6e0bb0b6c28d7d378853dd18a4d2199ad77"
+    },
+    {
+      "name": "V3_AUTHORITATIVE_IDS",
+      "offset": 7561882,
+      "sha256": "16a40f3fc8654636ff2ecc9293ae38a28b6605371f43ff09fc765acffa2076f0"
+    },
+    {
+      "name": "V4_AUTHORITATIVE_IDS",
+      "offset": 7562278,
+      "sha256": "7e6943bf130a894b7988ef93861061ce778decd0c2ca99a307d7499b4ec75aa7"
+    },
+    {
+      "name": "V5_AUTHORITATIVE_IDS",
+      "offset": 7562628,
+      "sha256": "0a480aa2f716b5bdcec35ce8ef7c1b4f53b4951250264d49d5dce011d043844f"
+    },
+    {
+      "name": "V6_AUTHORITATIVE_IDS",
+      "offset": 7563050,
+      "sha256": "85e2ef047199756c8cae6e360092fdfe7a66c68c865242fbe1ce01730e2807e3"
+    },
+    {
+      "name": "V7_AUTHORITATIVE_IDS",
+      "offset": 7563341,
+      "sha256": "1462f66967a34bba4124b883b140aff68f182b77783df1534087533621cdceb4"
+    },
+    {
+      "name": "V8_AUTHORITATIVE_IDS",
+      "offset": 7563844,
+      "sha256": "efc9faf5eb2a7e2b4eda3a738ac12ba61f4dd6b99b50a194fc45feaa13e66f30"
+    },
+    {
+      "name": "V9_AUTHORITATIVE_IDS",
+      "offset": 7564203,
+      "sha256": "d6491e7333b560761618a109b303c71b570780e542f0a1cb1589dd16f1b5a7f1"
+    },
+    {
+      "name": "V10_AUTHORITATIVE_IDS",
+      "offset": 7564551,
+      "sha256": "01c56db257a79af8dc3e852a0194664784a960557fd53fa46bb9dc13124499c1"
+    },
+    {
+      "name": "V11_AUTHORITATIVE_IDS",
+      "offset": 7564844,
+      "sha256": "40420848ef27fe05d4b02e234be6d1257940cf1587e259325bcb11edaa17fa36"
+    },
+    {
+      "name": "V12_AUTHORITATIVE_IDS",
+      "offset": 7565074,
+      "sha256": "217f77723b95c105d2634ec033c9c11e6dfbb3136930af78c72dc592a14b3983"
+    },
+    {
+      "name": "CATEGORIES$b",
+      "offset": 7606517,
+      "sha256": "d10fd70b1df588cb0f6d3b073901761aba2689ada082077d30959ec3059faf44"
+    },
+    {
+      "name": "ACTIVATIONS$4",
+      "offset": 7606610,
+      "sha256": "2e1504a8f9ea4683e144e2cef41c3149472fbbec594dd6806b899cce13d6057f"
+    },
+    {
+      "name": "PLAY_TIMINGS$4",
+      "offset": 7606680,
+      "sha256": "dfe3d9ec7a79c27d7140aae409f24bd0ed567b4dfaa9b95a9b6bbae0a06be11b"
+    },
+    {
+      "name": "TURN_POLICIES$4",
+      "offset": 7606756,
+      "sha256": "ca2607b81a2ba3c7ba4875f899b8bc3b9d74fb9484eaa5a9ba7ccfd1779c4cb5"
+    },
+    {
+      "name": "SELECTION_KINDS$4",
+      "offset": 7606842,
+      "sha256": "44e58415700b766112500e6c2293cab66a434793045195d6f8e6ec7118ce964e"
+    },
+    {
+      "name": "card$h",
+      "offset": 7614928,
+      "sha256": "5fba6901101ed8e2bf8cdf5e5c64d8c2984918fc0e573ed63da0fe21e556f0da"
+    },
+    {
+      "name": "draftWeightUnits$g",
+      "offset": 7614821,
+      "sha256": "dd21f715dfaab822f269b75d8281ddc02b93ed2b8d0a5f75c5e4d3e8af90f718"
+    },
+    {
+      "name": "CATEGORIES$a",
+      "offset": 7614173,
+      "sha256": "3f0c7b705de29b3ccab2ff84003a1060e31d78b98b2232bfad286f1db3d2fe2c"
+    },
+    {
+      "name": "ACTIVATIONS$3",
+      "offset": 7614266,
+      "sha256": "3506cce2a32b0fcaa04874ac31fc5b838f50674de9e5de837d5f41d51b2df42d"
+    },
+    {
+      "name": "PLAY_TIMINGS$3",
+      "offset": 7614336,
+      "sha256": "eba5aa77c80fb78addb9cdc9563291f9e70e02e1b50cdab10bfa6b2a04bceefe"
+    },
+    {
+      "name": "TURN_POLICIES$3",
+      "offset": 7614412,
+      "sha256": "1ee6d4fca6725a8e87af5c8b148da10c279cf4a4357980e617852cd6d47d8f14"
+    },
+    {
+      "name": "SELECTION_KINDS$3",
+      "offset": 7614498,
+      "sha256": "e933da48d3d2bfc33adaa5bbf48fffb845e996ee9f0b13b9a7fee717b46ddf2d"
+    },
+    {
+      "name": "V3_BATCH_CARDS",
+      "offset": 7617292,
+      "sha256": "e62f075cee8b900a858b288259c8c02f9bdfddd73a484f11c8ffe8405d94cbf7"
+    },
+    {
+      "name": "passive$7",
+      "offset": 7616752,
+      "sha256": "72f3e97dd213bb26187fc13fb0e92ac78df6b141e95f6fb38ce3786432b516f5"
+    },
+    {
+      "name": "activeRule",
+      "offset": 7616998,
+      "sha256": "71a6cb9bdf3d6035c874f7464d1a64c26f45c988a9937dcf2f44e4ffe547c06e"
+    },
+    {
+      "name": "card$g",
+      "offset": 7624435,
+      "sha256": "1af9bbbdf1ed2b3b6f646b842d296587f00b7ea3c67f0649307c27cdfbb65b44"
+    },
+    {
+      "name": "draftWeightUnits$f",
+      "offset": 7624328,
+      "sha256": "06f540490ecbe08b6a9f6a89843dcc76e0b5fba1dfbc91d8d6b85a576408025c"
+    },
+    {
+      "name": "CATEGORIES$9",
+      "offset": 7623680,
+      "sha256": "cf5d69410711416ca10dbcb1c2e809badb8095c54952e5dcd7b21194da747e8f"
+    },
+    {
+      "name": "ACTIVATIONS$2",
+      "offset": 7623773,
+      "sha256": "4191af59cad95237decac72c8277a56103509b3654c299a50a56d7e297cad09b"
+    },
+    {
+      "name": "PLAY_TIMINGS$2",
+      "offset": 7623843,
+      "sha256": "50364a1227c5039c5293f0b196233a7be791ee8bfa189042e715d4711d49be81"
+    },
+    {
+      "name": "TURN_POLICIES$2",
+      "offset": 7623919,
+      "sha256": "b2520357cd1736455b6209d91237c1796c79039aac8f4a2162e36186a2d4f552"
+    },
+    {
+      "name": "SELECTION_KINDS$2",
+      "offset": 7624005,
+      "sha256": "83c2d91f4ee98c9cf1827829716c14a9a3d206bcfe3e3b340807640404f57113"
+    },
+    {
+      "name": "V4_BATCH_CARDS",
+      "offset": 7626878,
+      "sha256": "08cfaf3d7ce1eb5bd269aa49e3940c1fe12eed54da9551b4c8468a2b31a838c8"
+    },
+    {
+      "name": "passive$6",
+      "offset": 7626259,
+      "sha256": "4a25f9ca54e140019690f995cdc46fa7854b8f733af7ff789d661c2af1c76924"
+    },
+    {
+      "name": "active$9",
+      "offset": 7626505,
+      "sha256": "13b3064b6205af7778bc894f4467d1fc3f87a2ae6678c2876a2d2b495cc363b8"
+    },
+    {
+      "name": "card$f",
+      "offset": 7633371,
+      "sha256": "2d90e1cac2b6a4da40d79170ba7b7c92cd14053c3718b484ea37aff9ae7986f8"
+    },
+    {
+      "name": "draftWeightUnits$e",
+      "offset": 7633264,
+      "sha256": "1211d54c936f54f374e2a9da50a896bf97ac64dd92c8e27c03da3e3153ecee9d"
+    },
+    {
+      "name": "CATEGORIES$8",
+      "offset": 7632952,
+      "sha256": "71b6dc494b22ccc342a079c699673b8962756fc5e980e3b44faa185a425daaf8"
+    },
+    {
+      "name": "V5_BATCH_CARDS",
+      "offset": 7634925,
+      "sha256": "488c65f173e0e704dfc5ce5d77bf01fd04a86eb8c2e774368da6b9ad0ea35996"
+    },
+    {
+      "name": "active$8",
+      "offset": 7634552,
+      "sha256": "cb99f3474b2ad0eae5e30842acd132b94cd30df0967c43dde33addd54c3f2baa"
+    },
+    {
+      "name": "passive$5",
+      "offset": 7634306,
+      "sha256": "e7dc9da3463735aa5a0fde237a01dd843a0cc1c02b0f928367724090817f6e9b"
+    },
+    {
+      "name": "card$e",
+      "offset": 7642831,
+      "sha256": "f9f255efd37974b09e481a1a9341d9b3d36d46dd8dfd56b6cb8ca33908f79b99"
+    },
+    {
+      "name": "draftWeightUnits$d",
+      "offset": 7642724,
+      "sha256": "a7ada383c210b262dca9f4b3ec0689cadeeacffbc0bea9902580211f43da6eb2"
+    },
+    {
+      "name": "CATEGORIES$7",
+      "offset": 7642412,
+      "sha256": "7de9ab5ace541ac4a42a616eb07269c0648e5fcccc98660daef39945fba3ffce"
+    },
+    {
+      "name": "V6_BATCH_CARDS",
+      "offset": 7644352,
+      "sha256": "d0a50edcfe3b12007a13adac70faf7d2d4850672b6efb49b65ec341b91bded42"
+    },
+    {
+      "name": "active$7",
+      "offset": 7643980,
+      "sha256": "ec31ac8db8af9c85312d0f763db6c3180610daf6ed61c3ca7c383c99b97090ca"
+    },
+    {
+      "name": "passive$4",
+      "offset": 7643756,
+      "sha256": "e651414f84bbaaf6a0b65688838dbf6ada3018763cdf776fa3f8da5406f4fb93"
+    },
+    {
+      "name": "card$d",
+      "offset": 7649423,
+      "sha256": "78bd49b88dd9ccab6b07030f79f34543791e1ead4c666b51767c49f72ce342c0"
+    },
+    {
+      "name": "draftWeightUnits$c",
+      "offset": 7649316,
+      "sha256": "4731bc99e12cb270410826297b84b46693bae2d3bda209f8677cc76c46c5bccd"
+    },
+    {
+      "name": "CATEGORIES$6",
+      "offset": 7649004,
+      "sha256": "2ec548eafd8858a539e55dd1c849f87461cf06fb5587a6883da17173f8750ed5"
+    },
+    {
+      "name": "V7_BATCH_CARDS",
+      "offset": 7651164,
+      "sha256": "633804503a4ae213768e2810e16af62157ceb76ee4f91d95221b51d95bb96fe1"
+    },
+    {
+      "name": "active$6",
+      "offset": 7650572,
+      "sha256": "d0621834ce352c44be52d1a1e13644eb77a86ffba0e76e49ca12d55318a6fde6"
+    },
+    {
+      "name": "base$5",
+      "offset": 7650944,
+      "sha256": "0d3a093e1474f83085703309f8792917ff559b1a0f27952be1522c2405ddf33d"
+    },
+    {
+      "name": "passive$3",
+      "offset": 7650348,
+      "sha256": "ead0aaac413c97ef5f8bb41f9b1b3fd02384d4790782993b727e452df1c37712"
+    },
+    {
+      "name": "card$c",
+      "offset": 7655880,
+      "sha256": "ffdf4fd2d5f1657b14a97db4b6bafc62b6bb59f20b6b51d5b0cd98852a5fdb5a"
+    },
+    {
+      "name": "draftWeightUnits$b",
+      "offset": 7655773,
+      "sha256": "acd63f4fc9afeb7581452e6bcfc59b73f49e92d80fe9c3f19da655d5f4ef2e8e"
+    },
+    {
+      "name": "CATEGORIES$5",
+      "offset": 7655461,
+      "sha256": "671e894b05349277ee3699192da234fb76bf91a9c8e3420a4467d5fb0f5106b5"
+    },
+    {
+      "name": "V8_BATCH_CARDS",
+      "offset": 7657397,
+      "sha256": "81e54e73a45ec7329d3d3944f841b67b183ad655ad0ca3e95a3269ba56f98a0f"
+    },
+    {
+      "name": "active$5",
+      "offset": 7656805,
+      "sha256": "f54f25add86dc2a851ffcd3fc96dbbf9477e4eebe6ee85df62d7bf5e3bb1ffab"
+    },
+    {
+      "name": "base$4",
+      "offset": 7657177,
+      "sha256": "a72a0f8cb3c95bbdbf2a9ac56ea3b2e2012558183e91b55ce1f4a59da84d4519"
+    },
+    {
+      "name": "card$b",
+      "offset": 7661325,
+      "sha256": "6c171f17d1c9631e1215d5d82c357194629c54d84c3caee7452988f476083664"
+    },
+    {
+      "name": "draftWeightUnits$a",
+      "offset": 7661218,
+      "sha256": "a5384db19efd75059d670ffd2405c5e35c64021793c5bb72a1a665888083ab45"
+    },
+    {
+      "name": "CATEGORIES$4",
+      "offset": 7660906,
+      "sha256": "ccde4497762e3a3fbb8e175af4d1fe40f806859b31d65989c43260c269e6718e"
+    },
+    {
+      "name": "V9_BATCH_CARDS",
+      "offset": 7662915,
+      "sha256": "8bdc9eb10c372db2fb423a23eb5fcb7e9813eb17e11021e06c02da3d386b207e"
+    },
+    {
+      "name": "active$4",
+      "offset": 7662250,
+      "sha256": "c3f8e5dc588dd3551a998ccde0402268bd38b4a947eaf78edbbe04070ea1f8c3"
+    },
+    {
+      "name": "base$3",
+      "offset": 7662695,
+      "sha256": "dae794817754472510fa4a625a482d02c92010af5f7ef5f67610a1e138f27b47"
+    },
+    {
+      "name": "card$a",
+      "offset": 7666608,
+      "sha256": "1995dcb0fed4dc836560f4a8e10c056719b5ce45dc863080a493b81d660ff53d"
+    },
+    {
+      "name": "draftWeightUnits$9",
+      "offset": 7666501,
+      "sha256": "e807c47c1fb1663b5c7c670a705f6209a5864a0a22382de68f6fbc6230b0c61b"
+    },
+    {
+      "name": "CATEGORIES$3",
+      "offset": 7666189,
+      "sha256": "59fb628c4dcd3f6ce745179c9a8b485819f19dba43ca425ee6fab9d0217de235"
+    },
+    {
+      "name": "V10_BATCH_CARDS",
+      "offset": 7668379,
+      "sha256": "b99aa754d753c482dbe17835d2fc80b6c2a63cd0986aec1f3599bcd0f5031ef8"
+    },
+    {
+      "name": "active$3",
+      "offset": 7667758,
+      "sha256": "e75c7bcd037bf044f89eb39296da44572629c94161ff8cc1630c669a2ba50fb0"
+    },
+    {
+      "name": "base$2",
+      "offset": 7668177,
+      "sha256": "44225b0e55abd9a020fc7a58a2787c6d316b7a1e96f8aa6caa83f15ecffcb3a5"
+    },
+    {
+      "name": "passive$2",
+      "offset": 7667534,
+      "sha256": "03c3e14d45bdbca15e6f001cfe06864c4b4b331d754ef36cba567d1fe86c92f7"
+    },
+    {
+      "name": "card$9",
+      "offset": 7671751,
+      "sha256": "5c69b17355b8951627d9ba18312f6da685cac6a830de86e101a89fca34a78d6e"
+    },
+    {
+      "name": "draftWeightUnits$8",
+      "offset": 7671644,
+      "sha256": "8c34824f62dc45b7a26d2b5938892467dbe10b4acdc952cedef7db1ce7bc1543"
+    },
+    {
+      "name": "CATEGORIES$2",
+      "offset": 7671332,
+      "sha256": "859d2f35e67ea9abaeea9afb6b199eb8ed046a2bf91915a891b28efc607fbbb5"
+    },
+    {
+      "name": "V11_BATCH_CARDS",
+      "offset": 7673273,
+      "sha256": "e790a6c7f10d15f0ae0aa94509ed963edb38b7e6c30d801df31abbe53fedf107"
+    },
+    {
+      "name": "active$2",
+      "offset": 7672677,
+      "sha256": "740810d4e5ed4f8687e3567f07955196434f0942de591671bc2f3e3eb6c86edc"
+    },
+    {
+      "name": "base$1",
+      "offset": 7673071,
+      "sha256": "4f824852c0ce1b482fb79956f4eb1ae5db7392d60dd58a35c77e3cdea5c3aad6"
+    },
+    {
+      "name": "card$8",
+      "offset": 7676799,
+      "sha256": "56caa28ab6d66dfebf4ea90d1be94953cd3cbf3446d6f9da8699f4f312a78086"
+    },
+    {
+      "name": "draftWeightUnits$7",
+      "offset": 7676692,
+      "sha256": "216331eda997978c0c441fd183cc827d052fade43de0b8de3fb0f083622db278"
+    },
+    {
+      "name": "CATEGORIES$1",
+      "offset": 7676005,
+      "sha256": "16f6200e9418a7d7277e78a2e5307e816a0e40b19e1ad293b8f21b7f60c6b402"
+    },
+    {
+      "name": "ACTIVATIONS$1",
+      "offset": 7676098,
+      "sha256": "d539eeb1d41d2bc30cf27c22afc961847eaec27a9a5d340429cd741af7b9f59c"
+    },
+    {
+      "name": "PLAY_TIMINGS$1",
+      "offset": 7676168,
+      "sha256": "1a92d63824eda9d9549d424ce31871d502b9a702066008f75fda7dad4a538b79"
+    },
+    {
+      "name": "TURN_POLICIES$1",
+      "offset": 7676244,
+      "sha256": "478b1562ab850dba59756f05ca68688f14720c1983fd703d969bf31312604184"
+    },
+    {
+      "name": "SELECTION_KINDS$1",
+      "offset": 7676342,
+      "sha256": "6d599c4e7656583f5a87a667bbd429c73ae4aef77c02696a8323f0a6df369345"
+    },
+    {
+      "name": "V12_BATCH_CARDS",
+      "offset": 7679632,
+      "sha256": "bee631963f4b461c641780433c0161f5d5ac37b21288e31f7a9c8eb1be6c4d51"
+    },
+    {
+      "name": "passive$1",
+      "offset": 7679170,
+      "sha256": "3645d07d85fea3752d80a13d8bcd79c4d4fed0c366c2fecd9acec3ea7b6ead2a"
+    },
+    {
+      "name": "base",
+      "offset": 7679416,
+      "sha256": "e8e1bfb0549fea1edd70c2e28a168eee180785efd1d46547498b3730bfa8074a"
+    },
+    {
+      "name": "active$1",
+      "offset": 7678752,
+      "sha256": "40043343e68a7c13978a46424f25868f709d225e4bb5a729eb5173d3b980e1ef"
+    },
+    {
+      "name": "V13_DEFINITION_OVERRIDES",
+      "offset": 7683879,
+      "sha256": "3c371399faff0198ed1e6db3c1e1a2a9fd40628cfe1c1ad035411b128ff0172b"
+    },
+    {
+      "name": "passiveFields",
+      "offset": 7683407,
+      "sha256": "0114e5adb6b050a5e3157d47c299343bca8d490c5a130932c190f0b3b826a885"
+    },
+    {
+      "name": "activeSelection",
+      "offset": 7683628,
+      "sha256": "3fd41ca4e08de9efc6a0e1fa745d96b87f4259721e788288d18648bf91334cb5"
+    },
+    {
+      "name": "card$7",
+      "offset": 7685634,
+      "sha256": "53383da400b6c0c1b96b4ab7f3b5d989ce00cf80306120ba1b49f82425f93a07"
+    },
+    {
+      "name": "draftWeightUnits$6",
+      "offset": 7683300,
+      "sha256": "3f6d002ea293ff6fef5c6e56ed9de9637595f4f59c8ee5bea17e49bb1bd38186"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV13",
+      "offset": 7575496,
+      "sha256": "ea1302c6f13189502054972f1200d12d7e893046c42e5b1a13775d48ea28acd1"
+    },
+    {
+      "name": "byId",
+      "offset": 7574957,
+      "sha256": "d52a7fbbda33248fbf27e4f81a4dc8ee8a6798c49ea65f34eaf2706346cd5143"
+    },
+    {
+      "name": "cards$6",
+      "offset": 7574372,
+      "sha256": "e9e964db1954b2605a4516e3176e6fde84b76e1484a7b4881e6e9671129be4d6"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST",
+      "offset": 7572358,
+      "sha256": "4fc634dbc10eea2bed581cfec28eba870ee41907b25bdac41a3dc19825c52250"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_SCHEMA_VERSION",
+      "offset": 7554850,
+      "sha256": "7f9c65f0445e7d8c6502d95e759d7d6d4fa1892c6793acca0aa7af1990da3b4b"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_VERSION",
+      "offset": 7554900,
+      "sha256": "8125aeba3f24aca13ad2062afa8c0ff5e5277b1c0dfb0f43c179bd19e0d3a216"
+    },
+    {
+      "name": "V13_OVERRIDES",
+      "offset": 7573732,
+      "sha256": "b16f3c0fed10ee13367f877122e9b1ce6876d4218245171303a8d539bb591842"
+    },
+    {
+      "name": "TWO_SQUARES",
+      "offset": 7573615,
+      "sha256": "d03e2a0139352d1f4b68d92cb8eea6eb99ee02e08b958fe8ae2504193ae14921"
+    },
+    {
+      "name": "NO_SQUARES",
+      "offset": 7573496,
+      "sha256": "fcdb9a858ac747b7330fc332c732db9b3e83b2e1a748e3e32ec9b0be9e01bf0b"
+    },
+    {
+      "name": "deepFreeze$R",
+      "offset": 7574153,
+      "sha256": "6cc5ea9b7d32578b623b64c717b09c9c5c5f440fc277aa3bb0f63e7343327573"
+    },
+    {
+      "name": "CATEGORIES",
+      "offset": 7682672,
+      "sha256": "acc2b974b35888358c71e465e2cc402a79635db073490f295377b19a11eaa300"
+    },
+    {
+      "name": "ACTIVATIONS",
+      "offset": 7682763,
+      "sha256": "39eb8a4ce089b83338755367e2cfb2e723b1fa5cd0557c641961b038617cc4be"
+    },
+    {
+      "name": "PLAY_TIMINGS",
+      "offset": 7682831,
+      "sha256": "1dfa98ee9f4c6ed68c5de3fc00d45f09a6f588baeecfafc49200d56ab6de631b"
+    },
+    {
+      "name": "TURN_POLICIES",
+      "offset": 7682905,
+      "sha256": "db5c8801be3fc39a78e2ce9ce75364dda5ef5cce0a3ae4dd95342d94270fcefe"
+    },
+    {
+      "name": "SELECTION_KINDS",
+      "offset": 7683001,
+      "sha256": "9cbb8308156b9b30fb3512373db9e5b95537712dd31d8853a994baea8b443a09"
+    },
+    {
+      "name": "card$6",
+      "offset": 7691779,
+      "sha256": "65782ed3e1efc3693af40ab0e0279e12f8f31c8c0ca6de3e82ad58ccdc6461a7"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV14",
+      "offset": 7579038,
+      "sha256": "3cb1aa2affde5695e9ccd8520e7f36c445334d4808b0b0b4ac646329ad8130fa"
+    },
+    {
+      "name": "BY_ID$b",
+      "offset": 7578955,
+      "sha256": "9ba2af952feaa65395af92c3d36ef84c11863bbd843155f679b702c66a1135c9"
+    },
+    {
+      "name": "cards$5",
+      "offset": 7578125,
+      "sha256": "1046c81178b19c97a5b3c147bdc0b738b9429f6b98df2e2f5db8246593641e89"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V13",
+      "offset": 7575087,
+      "sha256": "c5f633c18f06768603c87423d7367016c1f67fe69a95e4d1058bf0d61dc51141"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V13_SCHEMA_VERSION",
+      "offset": 7573363,
+      "sha256": "6e3e678e47453a09f154300fbcea440da5560c669379be17c6bf363532d6b68c"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V13_VERSION",
+      "offset": 7573418,
+      "sha256": "d5646c0334f734a5a881ca8effdf658419017c6a9ae5e9fbd08b892b4f37ef7a"
+    },
+    {
+      "name": "V14_CARDS",
+      "offset": 7577061,
+      "sha256": "00b6055f3a35ca3c596272566bfc44ce281c03f39b1df90ac50cd80382d29dd7"
+    },
+    {
+      "name": "card$j",
+      "offset": 7575943,
+      "sha256": "4878cc531250ef262e38a270a0b44b8fc470bbcf197058db73c71e86ef2486a9"
+    },
+    {
+      "name": "freeze$j",
+      "offset": 7575732,
+      "sha256": "346110e99abf250983af64fb4153a2facff8df853ddb825d4b278f011ed919c6"
+    },
+    {
+      "name": "draftWeightUnits$5",
+      "offset": 7689302,
+      "sha256": "2c5efc39321b4d1d9c5e7d3c82633b986a75ef3c1320d0acdcc41fe18c709ba6"
+    },
+    {
+      "name": "ADDED$4",
+      "offset": 7689962,
+      "sha256": "482b50d43bb706be27489e6dccf949f00e57c35e424a9c2d412e59f7737f0886"
+    },
+    {
+      "name": "passive",
+      "offset": 7689409,
+      "sha256": "074eefac6b8ad45b497459ad646e0c269e269a65a89e086f252d8e3c1869ad31"
+    },
+    {
+      "name": "active",
+      "offset": 7689624,
+      "sha256": "084593f2111f50745e67fe8e7d9fd72ab8cccc8e70c9af599540cd4985b06cdc"
+    },
+    {
+      "name": "card$5",
+      "offset": 7693859,
+      "sha256": "0809c938089be273467873bacdec39fbaf5a267181f61401530dfcfdff0a31bd"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV15",
+      "offset": 7580604,
+      "sha256": "994c329d0b5f332459b42964bada126fba7438a267ba4f7db52d045a8d005443"
+    },
+    {
+      "name": "BY_ID$a",
+      "offset": 7580521,
+      "sha256": "4f688ed2b8a83b9ee708b925f727bb617d82fe6a2283fb6e25a27efbf1571b00"
+    },
+    {
+      "name": "cards$4",
+      "offset": 7579488,
+      "sha256": "8b38e2b3fce8b438ee0bc6ac65b7aea2bd3b71e541b938b662c8b05ed51c585a"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V14",
+      "offset": 7578557,
+      "sha256": "af309880f41ead7f85f31d88f2c84d2a9ac12d9925fd2eff86ffdba45d5e4787"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V14_SCHEMA_VERSION",
+      "offset": 7575599,
+      "sha256": "70fc57f74c44d66bd456751c0ca3464492f3af7ba9e64c92ffe7c66440bc46cb"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V14_VERSION",
+      "offset": 7575654,
+      "sha256": "317c54ba480ea7215e26b8995765febfd60d5246b518ea948ab8d28458f0d0fa"
+    },
+    {
+      "name": "freeze$i",
+      "offset": 7579277,
+      "sha256": "bf411e72de5b5e15052b76ac1022f61b495b1fd4d0dea1eb8938965980dc7162"
+    },
+    {
+      "name": "draftWeightUnits$4",
+      "offset": 7693752,
+      "sha256": "2105257bff6d03746289f1b2ec0f9db6d8ed10c4156596aeb925ad671691ac27"
+    },
+    {
+      "name": "ADDED$3",
+      "offset": 7697559,
+      "sha256": "39d8d540b9dd6dba347e3998ce36e85cf506192b858261bfc5c5ca59fe2787e1"
+    },
+    {
+      "name": "card$4",
+      "offset": 7697065,
+      "sha256": "f1eae7db88a87eac61d1e33c8ce62c42d460ad4253cfc211c0dac3ebe66d1ac5"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV16",
+      "offset": 7584012,
+      "sha256": "cd01dd4e976117c4282c4072e26e42d8256b1ecf302328295a5b3b42a4404506"
+    },
+    {
+      "name": "BY_ID$9",
+      "offset": 7583929,
+      "sha256": "5db3c213a8c8a6e56f0dfe7e04bbc5ab02a19fac17bf188d74e9d81adf0f380c"
+    },
+    {
+      "name": "cards$3",
+      "offset": 7583251,
+      "sha256": "36deedc8d53df0bce09a2f68d779c56f86302013f4f473b9c8db4ef8dc1a95bb"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V15",
+      "offset": 7580161,
+      "sha256": "7f12b6336f729078bd4a4d48a520ce4cdab80d56d77006f443ac49cb6b601ff9"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V15_SCHEMA_VERSION",
+      "offset": 7579144,
+      "sha256": "4cc16899e1bd3bede115ec2a24ad9a88d5bbe7ef937b15430fb0c627681ad995"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V15_VERSION",
+      "offset": 7579199,
+      "sha256": "1d32052f486ada83f217b9422e320cf28e5060c212142500697ca30b3bdb3109"
+    },
+    {
+      "name": "V16_CARDS",
+      "offset": 7581817,
+      "sha256": "eb870ec5ddc395e77a328b4e76e562b07c18826c00d87e39251cd6e2b3e0e3dc"
+    },
+    {
+      "name": "authorityCard$3",
+      "offset": 7581054,
+      "sha256": "4aecda03214d8d506d57bb67c43a5c8a505b4b8bce872a3a11331920f9fef81b"
+    },
+    {
+      "name": "freeze$h",
+      "offset": 7580843,
+      "sha256": "c845dd7d8d7585f3a875ed77a6d8533b0683507625df5648113b8c5a959bce83"
+    },
+    {
+      "name": "draftWeightUnits$3",
+      "offset": 7696958,
+      "sha256": "0fcaa1f2c928e65b8f1e670f9c72260910c09c80565b52cd96dba48fedaf89e7"
+    },
+    {
+      "name": "ADDED$2",
+      "offset": 7701518,
+      "sha256": "78da81a14a550eb6434a00ec857b803ae7fe1358a208aef44327a56910256db5"
+    },
+    {
+      "name": "card$3",
+      "offset": 7701024,
+      "sha256": "0218ab59c6141500846a9a9f75b4bfad6982b0f555a6b70efabaaaa8f5b828fb"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV17",
+      "offset": 7587447,
+      "sha256": "57d088f3a90e4517f767a4bf50295291f0d4fdd4eee505e9048214d27d977756"
+    },
+    {
+      "name": "BY_ID$8",
+      "offset": 7587364,
+      "sha256": "b4aa71d0a3c7e083ae733fc5def0a6dfd36971e8fb43ed3ce286586801c74e5a"
+    },
+    {
+      "name": "cards$2",
+      "offset": 7586686,
+      "sha256": "dbf63c83d20096e94d08191c00edbb737d2fda8883145bcc245c5bd7dbc4ea6b"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V16",
+      "offset": 7583569,
+      "sha256": "34a51dfe04531a9e43fc047b8637e2b08950438b29434e37e135889bae28a5de"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V16_SCHEMA_VERSION",
+      "offset": 7580710,
+      "sha256": "f35b07be8cf2e052eceb606e98754e0188587684056e8ea4c17fbd038b84cb72"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V16_VERSION",
+      "offset": 7580765,
+      "sha256": "4d643da0945cfc65d006d220146a45bb32dc905c1fe5d34df6a54c714e0d0611"
+    },
+    {
+      "name": "V17_CARDS",
+      "offset": 7585225,
+      "sha256": "835a6d01e159623e2d9b9541b802d6a1d9ecae98108fd1bfa19b3c75f76842d6"
+    },
+    {
+      "name": "authorityCard$2",
+      "offset": 7584462,
+      "sha256": "609153c107bd06b6a197aa3d11a664ddcc037cdadbb0563e6f85190fd5db1822"
+    },
+    {
+      "name": "freeze$g",
+      "offset": 7584251,
+      "sha256": "18f9049d79c45475cc6b355a50b6ef6a0d586da4b95f558949bf7ab88ce21ea7"
+    },
+    {
+      "name": "draftWeightUnits$2",
+      "offset": 7700917,
+      "sha256": "3759947a138d41ae6f6f733ea3e355957556db12cfe7ef0d2bae1d56608b006e"
+    },
+    {
+      "name": "ADDED$1",
+      "offset": 7705424,
+      "sha256": "bba40cba642c85b4e73d903f4eb7dec4f6849b69c071f6d553e48f3de5db9d0f"
+    },
+    {
+      "name": "card$2",
+      "offset": 7704930,
+      "sha256": "81909515a1ccac316381f8c84efa9a97b0cbf8fe9f433f4c913acff503ec7a9e"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV18",
+      "offset": 7590882,
+      "sha256": "e0b4448cb404177f13c48b35b079d176cd37c4298982ef995e0021c7f5e9e31a"
+    },
+    {
+      "name": "BY_ID$7",
+      "offset": 7590799,
+      "sha256": "408c895d0ea9256a0235c4c1887d67b83a81c6fb983fe9c1a9f60db71da1792a"
+    },
+    {
+      "name": "cards$1",
+      "offset": 7590121,
+      "sha256": "7c030e9e6ea93b735ddbad1a84fa36d93d406340908bd65a98714daaa943d806"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V17",
+      "offset": 7587004,
+      "sha256": "21e6b81db48f0da2d47826fc61aff8ada2e95c8ffb60c99b8dd97a1f08444936"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V17_SCHEMA_VERSION",
+      "offset": 7584118,
+      "sha256": "46eb0168c45ebe62465af353a21b6869325ce7b5695648c177a5fd981722ce70"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V17_VERSION",
+      "offset": 7584173,
+      "sha256": "b84ec0e6b8c08b8fd6d86af28f5b449262141e2567577db79335bc25e6ca053a"
+    },
+    {
+      "name": "V18_CARDS",
+      "offset": 7588660,
+      "sha256": "6d40d93dbad6ad5d20d1549b7e5607b64b5742b4061ec95d7af4122f1ca3036b"
+    },
+    {
+      "name": "authorityCard$1",
+      "offset": 7587897,
+      "sha256": "6c027f227f8d4e25a0278a7e16805735a9d70375dabe5734e4be8bc59bd4142e"
+    },
+    {
+      "name": "freeze$f",
+      "offset": 7587686,
+      "sha256": "ec66edc4ec0fa43af835d56cf01ecd1e8c0e29fcf6bfd169c51ab33791a5c445"
+    },
+    {
+      "name": "draftWeightUnits$1",
+      "offset": 7704823,
+      "sha256": "91ece5e27cd79c1a9298b5f268e51bab540bdeaea65eea7933382fc7517a1ad8"
+    },
+    {
+      "name": "ADDED",
+      "offset": 7710168,
+      "sha256": "57cc23065875cac65626ad39bc6b5c740469cc14fa1e588865d308fe861458b1"
+    },
+    {
+      "name": "SEPTEMBER_ALL_DEFINITIONS",
+      "offset": 7369034,
+      "sha256": "f42498d2c55383f52de3c6b7f5e20674f5b1cb5f7cb1fb2b180a3ae15316eaa6"
+    },
+    {
+      "name": "SEPTEMBER_CARD_DEFINITIONS",
+      "offset": 7366781,
+      "sha256": "f5fdd92bc5c60ccae193c500e9072b5825beaf5e69aea6603b576c95a9978d36"
+    },
+    {
+      "name": "make",
+      "offset": 7366555,
+      "sha256": "53ec0f629abaead113ac43f0ce434d8d825871bc5119546c8521f067fef64f22"
+    },
+    {
+      "name": "SEPTEMBER_RULE_DEFINITION",
+      "offset": 7368857,
+      "sha256": "abe7262dca87f1d3aa81ac936cf0fc9fca0ffd66c015be9eb2c9d20cfb563d1a"
+    },
+    {
+      "name": "INTERNAL_EIGHT_CARDS",
+      "offset": 7525314,
+      "sha256": "65ed97f7ea0551ad4a0faf28cef10592b3aa747791da21015d4e5006a61533ce"
+    },
+    {
+      "name": "card$l",
+      "offset": 7525104,
+      "sha256": "3e8c94de0401ee3f0006127ab5cfec7a549448b9e3214c7c9b08f1ae1859f696"
+    },
+    {
+      "name": "INTERNAL_FIVE_CARDS",
+      "offset": 7535115,
+      "sha256": "e417b417707555d55a7c9cffb1d8c0b20b375a0232bb17ba0325069c610c5c16"
+    },
+    {
+      "name": "card$k",
+      "offset": 7534900,
+      "sha256": "fb45fa475d701f4efa44533413e047a0c6a23cdd8408b6df43b2b0b2e621cd98"
+    },
+    {
+      "name": "INTERNAL_THREE_CARDS",
+      "offset": 7514187,
+      "sha256": "550eaccf1798f73a60f2f30ea310b4aa65cfbabc47e168f8c45114fc862fea63"
+    },
+    {
+      "name": "card$1",
+      "offset": 7708945,
+      "sha256": "290348f28c4ea5f012026a6ffab777c8469340dd651835418b4615eaccd546b1"
+    },
+    {
+      "name": "PRE_BALANCE_BY_ID",
+      "offset": 7708892,
+      "sha256": "1145950d55ef3ea218c18ae26868ffbb8f449b94a5f902babf1c30a2e5b711f1"
+    },
+    {
+      "name": "draftWeightUnits",
+      "offset": 7708787,
+      "sha256": "a888c0f8e05c429920f09cd9225243a86b0df447e0eb0f11e9c0f2fb630cd52f"
+    },
+    {
+      "name": "internalBalanceCatalogCard",
+      "offset": 7338745,
+      "sha256": "09f47f9f10ba5c17eee69b182e5887b79809ff699aaa37fe58ca741acdfb08fa"
+    },
+    {
+      "name": "INTERNAL_BALANCE_UPDATES",
+      "offset": 7338437,
+      "sha256": "57e98dfb53d55c5b8a20635cbf31c9f1953363eb2252a4944c96dd4f9e7143b0"
+    },
+    {
+      "name": "PRE_THIEF_JUMP_BALANCE_UPDATES",
+      "offset": 7338318,
+      "sha256": "fa50c7276db0753aea146ade16fe2cc90f06e62be464d25b4734eb0b13993b35"
+    },
+    {
+      "name": "PRE_HIGHLANDER_BALANCE_UPDATES",
+      "offset": 7338144,
+      "sha256": "7e7a132b38271355f43ce3503f689dda672023a81ad7ae10311336c93f0a3b72"
+    },
+    {
+      "name": "PRE_OVERTAKE_BALANCE_UPDATES",
+      "offset": 7337915,
+      "sha256": "df7f33496c9cdd93eaeda4dd00fe111af2dafc7430419c9220ebb667ee7287bb"
+    },
+    {
+      "name": "PRE_VANGUARD_DIAGONAL_BALANCE_UPDATES",
+      "offset": 7337733,
+      "sha256": "208adf224130903bdca392be2093e82f905ed8a5e40fe3baa052559ea04b37f6"
+    },
+    {
+      "name": "PRE_CHAOS_OPENING_BALANCE_UPDATES",
+      "offset": 7337447,
+      "sha256": "57cd7bbb29c62a45fc992b856b3292064d227397a86532f17265a06fe6fa8b84"
+    },
+    {
+      "name": "PRE_THREE_BUFF_BALANCE_UPDATES",
+      "offset": 7337228,
+      "sha256": "8ec3966d081df33444ae51578b29132e3d6ed2ea20359b9a451184b589245ae4"
+    },
+    {
+      "name": "PRE_SELECTED_MIRACLE_BALANCE_UPDATES",
+      "offset": 7337043,
+      "sha256": "7ea2bde8b61b30de34c1e0d773947319edaa8447d3a55987b56b3e6f1bbda6ad"
+    },
+    {
+      "name": "PRE_GHOST_CANNON_BALANCE_UPDATES",
+      "offset": 7336876,
+      "sha256": "1de27510301eb0f3796ccd802ee90d90b43676f16d1071276f0b4c9f62074573"
+    },
+    {
+      "name": "PRE_CANNON_BALANCE_UPDATES",
+      "offset": 7336763,
+      "sha256": "b6397c220545cbd22087745552d1aabd8273fdd0019fb6825014cea3fa16d6c8"
+    },
+    {
+      "name": "PRE_DEMOCRACY_BALANCE_UPDATES",
+      "offset": 7336649,
+      "sha256": "b9f9ccf04d3f29bbb482fa366f35a57856aaad42b677d3449f7aa6e29152b8b6"
+    },
+    {
+      "name": "PRE_ZUGZWANG_BALANCE_UPDATES",
+      "offset": 7336534,
+      "sha256": "0c143251dffd305d0bea9436af89b6961a1acaf4d86fad6c60ef091b4e42b434"
+    },
+    {
+      "name": "PRE_PORTAL_BALANCE_UPDATES",
+      "offset": 7336213,
+      "sha256": "341114797bd90e314d11f7d4b71919beb488f9a7d315e7332fa8002dae167632"
+    },
+    {
+      "name": "PREVIOUS_INTERNAL_BALANCE_UPDATES",
+      "offset": 7335608,
+      "sha256": "98d3b448c2645acc7295c63f1117301a3c7a6b946e316174f61e9832d4cf2bc6"
+    },
+    {
+      "name": "publicCardAuthorityDefinitionV19",
+      "offset": 7600320,
+      "sha256": "64f3f14dbf1a89cbac229bb5816eedf3a029e485f393bcf747069dc3fd9c78ae"
+    },
+    {
+      "name": "OCTOBER13_CATALOG_HASH",
+      "offset": 7237245,
+      "sha256": "cd5f145bc0c0e10d7768b6cdbe0aae4735a58e0f298e1467fcfc08ce7921464d"
+    },
+    {
+      "name": "isOctober27RandomAcquisition",
+      "offset": 7254900,
+      "sha256": "db7f86b3b1668eae19bcf9c3252051bcb01aa0572d6a4ef4989e32945c995105"
+    },
+    {
+      "name": "isOctober27RandomTransform",
+      "offset": 7254759,
+      "sha256": "add345f9a98e8dca8c3024bb793f5ffb04da4e63e356f3124d566b4e575a3c49"
+    },
+    {
+      "name": "usesOctober27Balance",
+      "offset": 7250455,
+      "sha256": "de23c27f96610bd1c15c14aa06e1f984196bea6cf25ff30c74be299d02f88f27"
+    },
+    {
+      "name": "PRE_NOVEMBER01_EXPANSION_HASH",
+      "offset": 7163629,
+      "sha256": "7e4f932ce68c178b816e4c99c1023b8c0b2b46c24a4d13bb8fa497f17f97b881"
+    },
+    {
+      "name": "PRE_NOVEMBER01_HASH",
+      "offset": 7163554,
+      "sha256": "ee50f124cd8fccf12b67c10d2745c9ad4adeeb399246600b1bf6942687414c4c"
+    },
+    {
+      "name": "PRE_TROJAN_TURN_HASH",
+      "offset": 7163478,
+      "sha256": "7aa809cfc62740db8adf5f5d0d1372e65df144dfbb0f9822548905f9dcef7f3e"
+    },
+    {
+      "name": "PRE_OCTOBER27_BALANCE_HASH",
+      "offset": 7163396,
+      "sha256": "66656acb473b366153a4171e61dc7f34515f66f007eb87723d132090f06a35c6"
+    },
+    {
+      "name": "PRE_COLOSSUS_CORE_PLACEMENT_HASH",
+      "offset": 7163308,
+      "sha256": "55be0a8058eca0a9a040b94c9596730a585fb9bffdb1d189610b618d9657dc35"
+    },
+    {
+      "name": "PRE_CARDINAL_COLLAPSE_HASH",
+      "offset": 7163226,
+      "sha256": "e64e11037f7694347fbc868e6d2bdb3470dc7e7920dd33dcead9dd40ec75445e"
+    },
+    {
+      "name": "PRE_COLOSSUS_CORE_LINKS_HASH",
+      "offset": 7163142,
+      "sha256": "f50d1b79bb4193f3c33d5dfeb362a324810554a979665364b0a6b8127b000ed3"
+    },
+    {
+      "name": "PRE_PAWN_CHAIN_LAYOUT_HASH",
+      "offset": 7163060,
+      "sha256": "ecf4003f623d5659d52ae8f788bb6582b7a8827ccdcdca98756ba183026a1204"
+    },
+    {
+      "name": "PRE_OCTOBER18_REPORT_HASH",
+      "offset": 7160517,
+      "sha256": "67c22911ab44906cd0342e77385b697a1a33153e82c6525c61fe9add47ba3e09"
+    },
+    {
+      "name": "PRE_RANDOM_POOL_AUDIT_HASH",
+      "offset": 7160598,
+      "sha256": "0f418f383bfc23f0c1f426177fac132adecafc3ba04a883cffb7152f096368bc"
+    },
+    {
+      "name": "PRE_BARRIER_IMMUNITY_HASH",
+      "offset": 7160680,
+      "sha256": "7382918660a2175079096976c987db1e875ffde93bf12dbd2d013dd5a6b95c86"
+    },
+    {
+      "name": "PRE_TEMPORARY_HORSE_RIDING_HASH",
+      "offset": 7160761,
+      "sha256": "6e0a4e569b4b766e9d50f06312c9fc80fac9aace6880871f1e4ffd802807587d"
+    },
+    {
+      "name": "PRE_BLIZZARD_CATALOG_HASH",
+      "offset": 7160848,
+      "sha256": "390deb27ed0814375f9e625776f07836a2ce30ce4bfd481d7575ed6d486b00aa"
+    },
+    {
+      "name": "PRE_BEROLINA_CATALOG_HASH",
+      "offset": 7160929,
+      "sha256": "a28f25f1576d693fb1cf9f0b9def5cab1ac7711a68e351df566ba1cc6409e019"
+    },
+    {
+      "name": "PRE_FIXED_COLOSSUS_CORES_HASH",
+      "offset": 7161010,
+      "sha256": "2065f4891f9c8fc5eac60207a85665deb230e0d0207af6f60dd1fa2b634b68d1"
+    },
+    {
+      "name": "PRE_OCTOBER15_BALANCE_HASH",
+      "offset": 7161095,
+      "sha256": "467a1b8f0cfeb38ff3875a3262527b2c8ecb915710ed69c1835afdb928c836fa"
+    },
+    {
+      "name": "PRE_GRUDGE_HASH",
+      "offset": 7162989,
+      "sha256": "9223cbc08fe617211eabeed5e3bb7c4abcc1b8ed515dcc33bd9a47a181436b8a"
+    },
+    {
+      "name": "PRE_PARRY_RESTORE_HASH",
+      "offset": 7162911,
+      "sha256": "066e9e8a594084c465282eee2878c6f8fe28a9e886ff52e1ffcca6b253f6daf6"
+    },
+    {
+      "name": "PRE_UNDERGROUND_BUNKER_HASH",
+      "offset": 7162828,
+      "sha256": "ee4403caef4b7df82b7dc38534c93f236a2d9be60e065d44f9b569c980927722"
+    },
+    {
+      "name": "PRE_HORSE_RIDING_PIECE_HASH",
+      "offset": 7162745,
+      "sha256": "a278082532153d929234699e7f95ab3b55409a704c9e71e3f7860f52844d1026"
+    },
+    {
+      "name": "PRE_FOUR_RARITIES_HASH",
+      "offset": 7162667,
+      "sha256": "84a011f68b660cc07c3b2dac098a5b30130b46067ddcd2ecbc39c7680af9f8a7"
+    },
+    {
+      "name": "PRE_LARGE_MOVEMENT_HASH",
+      "offset": 7162588,
+      "sha256": "f97c043c9b4d44717cee692bad3c3afd783910dab42a1e27be154bdbfecb5e61"
+    },
+    {
+      "name": "PRE_LARGE_CELL_CAPTURE_HASH",
+      "offset": 7162505,
+      "sha256": "b3aa4d0ef72bfd9e0e6c6bfd333d093989b13feb40da001ce4457ec53a5cd955"
+    },
+    {
+      "name": "PRE_LARGE_BODY_HASH",
+      "offset": 7162430,
+      "sha256": "28fb0f1c53c9537fdbf1a9388dba83b9c039b7fd9e26112b2c8f81315b8b80fa"
+    },
+    {
+      "name": "PRE_COLOSSUS_CORE_HASH",
+      "offset": 7162352,
+      "sha256": "9b69e4991e07825d5bfaed36e1b82cea7bf6ae4f945f5a5914c663c6a0ea672b"
+    },
+    {
+      "name": "PRE_NATIVE_CLASSIFICATION_HASH",
+      "offset": 7162266,
+      "sha256": "14ce14e855076168b788137eb44d9b45feeee27cb92f836c1b02f56f3d9b6172"
+    },
+    {
+      "name": "PRE_KILLER_MAJOR_HASH",
+      "offset": 7162189,
+      "sha256": "770280104eeb08450bb0cf2cc59980705a684479a0186012e1c7938b5b86b4ea"
+    },
+    {
+      "name": "PRE_COMPOUND_KNIGHT_FAMILY_HASH",
+      "offset": 7162102,
+      "sha256": "d6a4c087cc64c5aa71e921addb9d70dabe26173c65cf795042806e836b24d539"
+    },
+    {
+      "name": "PRE_ALEKHINE_PROTECTION_HASH",
+      "offset": 7162018,
+      "sha256": "cad3ba0ac29c564973bc965cfa7d02de34ce1e740334b27df298a103915ff284"
+    },
+    {
+      "name": "PRE_REVELATION_MATERIAL_HASH",
+      "offset": 7161934,
+      "sha256": "d93d44c08b7f0cda9628c8d666c05a3011eae5cfb76692475fd31fbff92d59a0"
+    },
+    {
+      "name": "PRE_PIECE_AVAILABILITY_HASH",
+      "offset": 7161851,
+      "sha256": "2d81cce636899da088637dfcf94f6c10f45098555c8979775a4af9eba5069d50"
+    },
+    {
+      "name": "PRE_PROPHECY_CHECK_CATALOG_HASH",
+      "offset": 7161764,
+      "sha256": "13e968d0fecd5c8cda315243494c5668b9c768ee67c2ef3094e942f393e1801f"
+    },
+    {
+      "name": "PRE_OPENING_PASSIVE_CATALOG_HASH",
+      "offset": 7161676,
+      "sha256": "b25b1286dcbb3ff587315bd7715a40129062089c34d1227decdbd38cfc3124a1"
+    },
+    {
+      "name": "PRE_COMPOUND_WORDING_CATALOG_HASH",
+      "offset": 7161587,
+      "sha256": "17ba30f4562f9e98ebfc2b866a2660a1c23ab6868682e4c0f5efccf699aeadb7"
+    },
+    {
+      "name": "PRE_BEACON_SIX_CATALOG_HASH",
+      "offset": 7161504,
+      "sha256": "a7838b62ddd6e82ada7bb2c90899346c0865c80ca456c89c76da04599b42e110"
+    },
+    {
+      "name": "PRE_COMPOUND_CATALOG_HASH",
+      "offset": 7161423,
+      "sha256": "15c7ff26941815bd6d34102515ffdc1b6ca6f3f743f62610c2c829940b23f2eb"
+    },
+    {
+      "name": "PRE_OCTOBER14_CATALOG_HASH",
+      "offset": 7161341,
+      "sha256": "027e793dbb85127ebfb6ae8496146f1863b6009aa822028bebf9020df71fb3dd"
+    },
+    {
+      "name": "PRE_MUTATION_CATALOG_HASH",
+      "offset": 7161177,
+      "sha256": "71a58882ef3b2267aa776afad27bf9e67ba25fc09bd52173ca93011a3c50c08b"
+    },
+    {
+      "name": "PRE_THIRD_DRAFT_RARITY_HASH",
+      "offset": 7161258,
+      "sha256": "9bb96f362785eb4764b298221abb26990cb909ba56aa4edaadbf781a20608bac"
+    },
+    {
+      "name": "BASELINE_BY_ID",
+      "offset": 7599633,
+      "sha256": "7e9a85d8d8658096132fcacc4fd4cffe1c3aef947e4b104643e2701768a2e057"
+    },
+    {
+      "name": "baselineCards",
+      "offset": 7597440,
+      "sha256": "cfaa53ded437f6a5999a41209e37c17c20b6be5c938edf87178ad296cd3cdc38"
+    },
+    {
+      "name": "originalCards",
+      "offset": 7596260,
+      "sha256": "4d8cfd3fec403de091035c7053774178bf263dcab8c796a64cccaefc9f06b81c"
+    },
+    {
+      "name": "PUBLIC_CARD_AUTHORITY_MANIFEST_V18",
+      "offset": 7590439,
+      "sha256": "2a97ded435682dc1529ba49baf1eaf8138e0ebf277f7878124cacfdfa39e2e7b"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V18_SCHEMA_VERSION",
+      "offset": 7587553,
+      "sha256": "b64f0a8eafe1ee33db1522005a6623648d8b637575a3d24c49efac6e186cbef3"
+    },
+    {
+      "name": "CARD_AUTHORITY_MANIFEST_V18_VERSION",
+      "offset": 7587608,
+      "sha256": "9eb537c8db7e84097792b8a6d7d3053cc11c801cf32f42a3388b612575d7a18f"
+    },
+    {
+      "name": "freeze$e",
+      "offset": 7591121,
+      "sha256": "725527da458a4d7ac5d81d228d000d6d1eaba38025cab553e6c40414122c305f"
+    },
+    {
+      "name": "INTERNAL_CLEANUP_LIMIT",
+      "offset": 7338579,
+      "sha256": "ac8aa367eed6f1d1ed9427df7d4c33a4299ce330e23541bd23b43a08c5523949"
+    },
+    {
+      "name": "V19_CARDS",
+      "offset": 7592134,
+      "sha256": "40b003ad88cb0658530189145422f700922b6d76fc14a58afa9cb7bd6b289bff"
+    },
+    {
+      "name": "NOVEMBER_NEW_CARDS",
+      "offset": 7170729,
+      "sha256": "a19eaab185231d3a99b5d427696c58fa949bcf13149d322c22af96b016b28c89"
+    },
+    {
+      "name": "authorityCard",
+      "offset": 7591332,
+      "sha256": "3c90937d751cc20ce34848f57d2d6e6130b19c3a45b611a9a477e54d3982e508"
+    },
+    {
+      "name": "OCTOBER13_CARDS",
+      "offset": 7276024,
+      "sha256": "478bf59a221cbea46b2e18bff7d52bb63d27ad9a953f45ef22217ac33a0c42ba"
+    },
+    {
+      "name": "COMPOUND_CARDS",
+      "offset": 7273981,
+      "sha256": "d0cdd89538049f152ace052af4e7dbd6a6158ac8daad176482a77d7435db12a3"
+    },
+    {
+      "name": "OCTOBER27_NEW_CARDS",
+      "offset": 7274861,
+      "sha256": "47f4dc3fbe846512d57f36e5af0b459a8e465252cb7e1248210e7c20883543e7"
+    },
+    {
+      "name": "card$o",
+      "offset": 7274635,
+      "sha256": "bce059b54896f47667575899af64ad2ff3414878eadc37a88bf2f9e96f41ebc6"
+    },
+    {
+      "name": "card$n",
+      "offset": 7275798,
+      "sha256": "45af47016a75e064236cbe38d461b76caada070c4b55f946b33e27383a04f4cf"
+    },
+    {
+      "name": "october13Selection",
+      "offset": 7279348,
+      "sha256": "6cb8791f1b92aebbba6702b0af2aba80749836168e78e861507501f4bb2bb082"
+    },
+    {
+      "name": "SEPTEMBER26_CONFIRMED_CARDS",
+      "offset": 7291307,
+      "sha256": "fdd02bdc36ae048ebe72499c2479f4de0020b725b47a15d5cbaac4ead8ff4061"
+    },
+    {
+      "name": "card$m",
+      "offset": 7291097,
+      "sha256": "7e1ede574a3c9cd67a582f856c406b92b20b80535d630ca113b2c23160c73db9"
+    },
+    {
+      "name": "SEPTEMBER26_TRANSFORMS",
+      "offset": 7293717,
+      "sha256": "395d956b041df8a788b78f6360ad26c3bca402f3e02607510b22441b780bdc9a"
+    },
+    {
+      "name": "internalBalanceCard",
+      "offset": 7338643,
+      "sha256": "d73731fbe8c9a12cbe26e3dafd3288db11cd39385e49ca3f68eb892c7aabd625"
+    },
+    {
+      "name": "SEPTEMBER27_PASSIVE_IDS",
+      "offset": 7283186,
+      "sha256": "2e7b317fc4b1d2f96ebc8ced72d270d2a99871a01548c8c15633e5945c687df8"
+    },
+    {
+      "name": "usesOctober15CardBalance",
+      "offset": 7264854,
+      "sha256": "22ae3f521526eef95d17f4d34513862be21e20a0c6fcc52095dc7af4835b752d"
+    },
+    {
+      "name": "usesTemporaryHorseRiding",
+      "offset": 7263016,
+      "sha256": "e947c009034b185ee8a835ee1b1a315ce64ca970eb539a2db6b81cc56553c606"
+    },
+    {
+      "name": "displayCardRatingHalfStars",
+      "offset": 7341960,
+      "sha256": "fed6df64180d68e392000c158e85b4bb1e970730301e697fd6a3766b5bcb96bb"
+    },
+    {
+      "name": "CARD_DISPLAY_STAR_OVERRIDES",
+      "offset": 7339699,
+      "sha256": "79256908eb75d267e2e8c6f7861c0caca00b17447c6555d1cfb27f19d6e48a1a"
+    },
+    {
+      "name": "SEPTEMBER18_CARD_UPDATES",
+      "offset": 7316144,
+      "sha256": "f7f3d5d5951e1a880633a8e75ad54ad93cbe8b9b0b3f4ca1589bc8ec1100f7af"
+    },
+    {
+      "name": "OCTOBER27_RANDOM_TRANSFORMS",
+      "offset": 7251704,
+      "sha256": "0c88daacb855643ebc9d22f05052fcb02724384b8557abb51dfdb0eae7d4adfa"
+    },
+    {
+      "name": "BY_ID$6",
+      "offset": 7600239,
+      "sha256": "5d9b3e54b696ee70f32b9c441f93f96c2957fb21d1f4ba0fb4f3c94564f990bb"
+    },
+    {
+      "name": "cards",
+      "offset": 7599497,
+      "sha256": "bd31ece0a8c62c9513116c2aaf4a3e33edd6d503fe201571b6d26b120edfe437"
+    },
+    {
+      "name": "preHorseRidingPieceCards",
+      "offset": 7599136,
+      "sha256": "d0a7aa8342b4eb27188d0974e86463e484e24372501b418364c8da27da4e4586"
+    },
+    {
+      "name": "preCoreCards",
+      "offset": 7598741,
+      "sha256": "412c1577ee063a966246681f0125d0b215e0752f23b2cb80fe8c256e25d3838a"
+    },
+    {
+      "name": "preOpeningCards",
+      "offset": 7598285,
+      "sha256": "e622e2b14fe0e59655f10275b434c85801321d54d83bb8c392f7c05a61e6ec3c"
+    },
+    {
+      "name": "OPENING_CONVERTED_PASSIVE_IDS",
+      "offset": 7269382,
+      "sha256": "88c8e2f8f0276333727b723163c1759acd262ce801ec751966785c1742b4f0d6"
+    },
+    {
+      "name": "OCTOBER7_CARD_UPDATES",
+      "offset": 7244840,
+      "sha256": "caab6eed7083717a25b6f882e298b31c9ea3f00c5182c9e01fc032c3fcbf14f5"
+    },
+    {
+      "name": "REFORM_CARD_UPDATES",
+      "offset": 7167194,
+      "sha256": "6367f974be9d98e4b53addd937fed6fb68d516fd2cbde90bd0f3404c0e484d86"
+    },
+    {
+      "name": "OCTOBER14_CARD_UPDATES",
+      "offset": 7272088,
+      "sha256": "7b3d5877a0b49fa08342ce9e7aaf455dbac56a94caabf5d80e9d3af552dbc289"
+    },
+    {
+      "name": "OCTOBER15_CARD_UPDATES",
+      "offset": 7265602,
+      "sha256": "933e46b5fddf5dfb9788d796be08b544d914c7cc1153cd0d15704db0cbe0e5f6"
+    },
+    {
+      "name": "REFORM_DISABLED_CARD_IDS",
+      "offset": 7165434,
+      "sha256": "5cdbb3e3b9121dd8ad88e3238e580ed6f7a3ea49c1193bee8eb07df4d51575f6"
+    },
+    {
+      "name": "OCTOBER27_CARD_CATALOG_UPDATES",
+      "offset": 7261116,
+      "sha256": "6b8760710225b501a0b4bb44462e3039a5c12065b36c5f46b806c2f0423e7b00"
+    },
+    {
+      "name": "OCTOBER27_CARD_UPDATES",
+      "offset": 7260779,
+      "sha256": "ec62fba65e772b9ace1f4ddd4992e32756329dd24a6688bfdf0b8df23aae6b3d"
+    },
+    {
+      "name": "OCTOBER27_RARITIES",
+      "offset": 7251066,
+      "sha256": "c6c212e5104c19b70362d673a8a612ae02d396808c2eb2a328d26f54e3b6b467"
+    },
+    {
+      "name": "OCTOBER27_CARD_FIELD_UPDATES",
+      "offset": 7255651,
+      "sha256": "e213c14dec448d02457f58d1c730d8c92f97ca8607896f40908a1cdfd60f1e87"
+    },
+    {
+      "name": "PASSIVE",
+      "offset": 7255311,
+      "sha256": "ca4df683e2fd3fee8e654997d4b51481e592a9ba37856489504b0a4a8c1b98b3"
+    },
+    {
+      "name": "OCTOBER27_DISABLED_IDS",
+      "offset": 7255500,
+      "sha256": "e663b986c5c0d2fc359164a1f78308838e08a8068b5f2adc5c872d8630778831"
+    },
+    {
+      "name": "openingPassiveDefinition",
+      "offset": 7271355,
+      "sha256": "c742511e8a4485b855652ee7cf74ba4c277b64e0927483f576c06e62d5bc6116"
+    },
+    {
+      "name": "cardRarityWeightUnits",
+      "offset": 7273702,
+      "sha256": "2a0638645656b42cc02a7675cc87bbbabc3f5d3c581c2c1dc9c4cbd9bac35d1b"
+    },
+    {
+      "name": "CARD_RARITY_WEIGHTS",
+      "offset": 7273608,
+      "sha256": "5bcebdd724672bce77a957f7a9260b49e0d0500755c1dbef097ce819dc7aad72"
+    },
+    {
+      "name": "cardRarity",
+      "offset": 7272959,
+      "sha256": "0c768cf9f49ec537d245501c574378150b51d64234dc5c77d65902d0e3c3bdb9"
+    },
+    {
+      "name": "LEGENDARY_CARD_IDS",
+      "offset": 7272851,
+      "sha256": "ed1c2b1a418813cd9f4f8518c5d88d332968e1f10280b6c154803c25b597a72a"
+    },
+    {
+      "name": "NOVEMBER_CARD_UPDATES",
+      "offset": 7170201,
+      "sha256": "261762ec897f8c8b3a449d76a3547fee8aca6435de6e6521ad58551e136dc80e"
+    },
+    {
+      "name": "OPENING_PASSIVE_DESCRIPTIONS",
+      "offset": 7269736,
+      "sha256": "d25cf8dff699388885559d4f56adf36f59079eb11895a4bc3cc4239a501a7f6a"
+    },
+    {
+      "name": "TEMPORARY_HORSE_RIDING_CARD_UPDATE",
+      "offset": 7262875,
+      "sha256": "b0676bc5b3ed29f0a9cd9301703a09e6e347890a57ee27f76f9e92bba322b66a"
+    },
+    {
+      "name": "BEROLINA_PAWN_CARD_TEXT",
+      "offset": 7263609,
+      "sha256": "a8b5bbe7b9c8f1742b1f824b98646d5c5fdf70ed2852f9fa74ebc1e29d71fa9d"
+    },
+    {
+      "name": "COLOSSUS_CORE_CARD_UPDATE",
+      "offset": 7265897,
+      "sha256": "234fa39244d6134bfbe711cc56cebf222918b4cef0fdcad513bbbb0e471be84d"
+    },
+    {
+      "name": "MUTATION_PROMOTION_RANK_TEXT",
+      "offset": 7233516,
+      "sha256": "3fd485afcfaa19060d07c25551ad7bc22fa52337d8a48f44cc5212d3cc6b9ade"
+    }
   ],
-  "reviewed_on": "2026-11-07",
-  "review_notes": [
-    "Catalog declarations BETA_PUBLIC_CARD_CATALOG_V19 and REFORM_CATALOG_HASH found and contain no blocked capabilities.",
-    "Dependency closure resolved 413 declarations; the resolver enforces the same capability blocklist as the pinned 1017 extractor.",
-    "Card count rose from 275 to 281; every id is unique and the list is sorted."
-  ]
+  "normalized_catalog_sha256": "88117f20c6483a96b4252efe44ffcccfaff12b13c35444897074d23b60c24858"
 }

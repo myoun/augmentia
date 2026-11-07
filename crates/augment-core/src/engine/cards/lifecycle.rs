@@ -38,6 +38,7 @@ impl Engine {
             state.card_runtime.bishop_infiltration_due[owner.index()] = None;
         }
         self.settle_stake(state, owner);
+        self.tick_antichess_turn(state, owner);
         self.settle_palaces(state);
         state
             .card_runtime
@@ -94,6 +95,8 @@ impl Engine {
             return;
         }
         self.settle_rule_tickets(state, owner, events);
+        self.settle_bombardments(state, owner, events);
+        self.settle_omega_summons(state, owner, events);
         self.settle_icbm(state, owner, events);
         self.settle_seal(state, owner, events);
         self.settle_ascension(state, owner, events);

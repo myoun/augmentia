@@ -967,6 +967,11 @@ fn special_piece_meta(kind: PieceKind) -> (&'static str, &'static str, &'static 
         PieceKind::Beacon => ("beacon", "신호기", "BC"),
         PieceKind::TransmissionTower => ("transmission_tower", "전송탑", "TT"),
         PieceKind::Barrier => ("barrier", "배리어", "BA"),
+        // November expansion pieces. The bundle defines no notation code for these,
+        // so these are local display codes, like the other compound pieces.
+        PieceKind::Offering => ("offering", "제물", "OF"),
+        PieceKind::Wanderer => ("wanderer", "방랑자", "WD"),
+        PieceKind::OmegaChesstron => ("omega_chesstron", "오메가체스트론", "OX"),
         PieceKind::Assassin => ("assassin", "암살자", "AS"),
         PieceKind::Grasshopper => ("grasshopper", "그래스호퍼", "G"),
         PieceKind::Amazon => ("amazon", "아마존", "Z"),

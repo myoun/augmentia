@@ -17,6 +17,8 @@ pub struct RuleRuntime {
     pub acceleration_after: Option<u32>,
     pub collapse_depth: u8,
     pub collapse_next: Option<u32>,
+    /// Pending Bombardment file collapses, one entry per cast.
+    pub pending_bombardments: Vec<crate::state::PendingBombardment>,
     pub crown_id: Option<u32>,
     pub crown_square: Option<Square>,
     pub chaos_until_halfmove: Option<u32>,

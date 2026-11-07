@@ -8,15 +8,18 @@ pub use penta_check::PentaCheckProgress;
 pub use seal::PendingSeal;
 pub use taboo::PendingTaboo;
 mod alekhine_machine_gun;
+mod antichess;
 mod apprentice_knights;
 mod basic_training;
 mod big_rook;
 mod bishop_infiltration;
 mod blockade;
+mod bombardment;
 mod calling_card;
 mod castling;
 mod chameleon_mutation;
 mod chimera;
+mod citadel;
 mod counterattack;
 mod d4;
 mod dice;
@@ -47,6 +50,9 @@ mod last_stand;
 mod locust_swarm;
 mod loyalist;
 mod mad_horse;
+mod offering;
+mod omega_chesstron;
+mod wanderer;
 // Retained for the historical rulesets; not in the current profile.
 #[allow(dead_code)]
 mod martyrdom;
@@ -406,6 +412,7 @@ const CARDS: &[CardBehavior] = &[
     acceleration::BEHAVIOR,
     alekhine_machine_gun::BEHAVIOR,
     amazon::BEHAVIOR,
+    antichess::BEHAVIOR,
     apprentice_knights::BEHAVIOR,
     archbishop::BEHAVIOR,
     armistice::BEHAVIOR,
@@ -426,6 +433,7 @@ const CARDS: &[CardBehavior] = &[
     black_hole::BEHAVIOR,
     black_magic::BEHAVIOR,
     blockade::BEHAVIOR,
+    bombardment::BEHAVIOR,
     brainwash::BEHAVIOR,
     breakthrough_order::BEHAVIOR,
     bribe::BEHAVIOR,
@@ -444,6 +452,7 @@ const CARDS: &[CardBehavior] = &[
     chess_344200::BEHAVIOR,
     chess_960::BEHAVIOR,
     chimera::BEHAVIOR,
+    citadel::BEHAVIOR,
     cleanup::BEHAVIOR,
     cleanup_sacrifice::BEHAVIOR,
     clockwork::BEHAVIOR,
@@ -565,6 +574,8 @@ const CARDS: &[CardBehavior] = &[
     necromancy::BEHAVIOR,
     nullification::BEHAVIOR,
     octopus::BEHAVIOR,
+    offering::BEHAVIOR,
+    omega_chesstron::BEHAVIOR,
     ordination::BEHAVIOR,
     othello::BEHAVIOR,
     otherworld::BEHAVIOR,
@@ -659,6 +670,7 @@ const CARDS: &[CardBehavior] = &[
     vigilance::BEHAVIOR,
     vip::BEHAVIOR,
     vortex::BEHAVIOR,
+    wanderer::BEHAVIOR,
     wanted::BEHAVIOR,
     white_box::BEHAVIOR,
     windmill::BEHAVIOR,

@@ -203,6 +203,9 @@ pub enum PieceKind {
     Beacon,
     TransmissionTower,
     Barrier,
+    Offering,
+    Wanderer,
+    OmegaChesstron,
 }
 
 impl PieceKind {
@@ -287,6 +290,9 @@ impl PieceKind {
             Self::Beacon => 77,
             Self::TransmissionTower => 78,
             Self::Barrier => 79,
+            Self::Offering => 80,
+            Self::Wanderer => 81,
+            Self::OmegaChesstron => 82,
         }
     }
 

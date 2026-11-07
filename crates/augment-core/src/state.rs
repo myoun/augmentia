@@ -355,6 +355,28 @@ pub struct JudgmentExile {
     pub return_at_draft: DraftPhase,
 }
 
+/// Antichess loss streak for one side.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AntichessProgress {
+    pub count: u8,
+    pub last_turn: u32,
+}
+
+/// A pending Bombardment file collapse.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingBombardment {
+    pub by: Player,
+    pub file: u8,
+    pub due_turn: u32,
+}
+
+/// A pending Omega Chesstron summon after the sacrifice.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PendingOmegaSummon {
+    pub owner: Player,
+    pub due_turn: u32,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct UndeadResurrection {
     pub piece: Piece,
@@ -618,9 +640,13 @@ pub struct CardRuntimeState {
     pub mistake_rule: bool,
     pub monochrome_chess: bool,
     pub monster_rule: Option<u32>,
+    /// Antichess progress per owner: consecutive own turns on which the opponent
+    /// captured at least one of their pieces, plus the turn of the last such loss.
+    pub antichess: [Option<AntichessProgress>; 2],
     /// Allied monsters summoned by Black Magic. They belong to their summoner and
     /// advance at the shared monster cadence, unlike the neutral rule monster.
     pub allied_monster_ids: BTreeSet<u32>,
+    pub pending_omega_summons: Vec<PendingOmegaSummon>,
     pub periodic_collapse_next: Option<u32>,
     pub rule_portals: Option<[Square; 2]>,
     pub recycling: bool,

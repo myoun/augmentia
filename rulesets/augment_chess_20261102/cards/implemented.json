@@ -35,6 +35,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "antichess",
+      "name_ko": "안티체스",
+      "effect": "antichess",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "apprentice-knights",
       "name_ko": "견습 기사단",
       "effect": "apprenticeKnights",
@@ -235,6 +245,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "bombardment",
+      "name_ko": "폭격",
+      "effect": "bombardment",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "brainwash",
       "name_ko": "마인드 컨트롤",
       "effect": "brainwash",
@@ -411,6 +431,16 @@
       "phase": "MIDDLE",
       "half_stars": 8,
       "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "citadel",
+      "name_ko": "성채",
+      "effect": "citadel",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
       "ends_turn": false,
       "turn_exclusive": false
     },
@@ -1625,6 +1655,26 @@
       "turn_exclusive": false
     },
     {
+      "id": "offering",
+      "name_ko": "제물",
+      "effect": "offering",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "omega-chesstron",
+      "name_ko": "오메가체스트론",
+      "effect": "omegaChesstron",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "ordination",
       "name_ko": "서품",
       "effect": "ordination",
@@ -2565,6 +2615,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "wanderer",
+      "name_ko": "방랑자",
+      "effect": "wanderer",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "wanted",
       "name_ko": "수배",
       "effect": "wanted",
@@ -2637,10 +2697,6 @@
   ],
   "pending": [
     {
-      "id": "antichess",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "beacon",
       "reason": "disabled_upstream"
     },
@@ -2649,16 +2705,8 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "bombardment",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "chess-n-pow-30",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "citadel",
-      "reason": "new_card_not_ported"
     },
     {
       "id": "death-squad",
@@ -2680,14 +2728,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "offering",
-      "reason": "new_card_not_ported"
-    },
-    {
-      "id": "omega-chesstron",
-      "reason": "new_card_not_ported"
-    },
-    {
       "id": "qxe1",
       "reason": "disabled_upstream"
     },
@@ -2697,7 +2737,7 @@
     },
     {
       "id": "summon-colossus",
-      "reason": "new_card_not_ported"
+      "reason": "changed_contract_not_ported"
     },
     {
       "id": "trojan-horse",
@@ -2710,10 +2750,6 @@
     {
       "id": "underground-bunker",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "wanderer",
-      "reason": "new_card_not_ported"
     }
   ]
 }

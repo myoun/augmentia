@@ -279,6 +279,18 @@
       "mask": 0
     },
     {
+      "kind": "Offering",
+      "mask": 3
+    },
+    {
+      "kind": "Wanderer",
+      "mask": 3
+    },
+    {
+      "kind": "OmegaChesstron",
+      "mask": 3
+    },
+    {
       "kind": "Rook",
       "flags": {
         "reversal": true

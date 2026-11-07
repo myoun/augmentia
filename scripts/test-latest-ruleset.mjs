@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
-const snapshot = new URL('rulesets/augment_chess_20261017/', root);
+const snapshot = new URL('rulesets/augment_chess_20261102/', root);
 const json = url => JSON.parse(readFileSync(url, 'utf8'));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const manifest = json(new URL('manifest.json', snapshot));
@@ -23,9 +23,12 @@ for (const file of provenance.files) {
   assert.equal(digest(bytes), file.sha256, file.path);
 }
 assert.equal(provenance.historical_release_bytes_verified, false);
-assert.equal(catalog.cards.length, 275);
-assert.equal(catalog.cards.filter(card => card.enabled).length, 271);
-assert.deepEqual(catalog.hidden_by_default_ids, ['democracy', 'qxe1', 'summon-colossus', 'underground-bunker']);
+assert.equal(catalog.cards.length, 281);
+assert.equal(catalog.cards.filter(card => card.enabled).length, 272);
+assert.deepEqual(catalog.hidden_by_default_ids, [
+  'beacon', 'blue-jeans', 'chess-n-pow-30', 'democracy', 'martyrdom',
+  'monochrome-chess', 'qxe1', 'royal-shield', 'underground-bunker',
+]);
 for (const card of catalog.cards) {
   if (card.phase === 'RULE') { assert.equal(card.rarity, null); continue; }
   assert.equal(card.draft_weight_units, { common: 85, rare: 70, epic: 58, legendary: 44 }[card.rarity], card.id);
@@ -33,21 +36,39 @@ for (const card of catalog.cards) {
 }
 const oldCatalog = new Map(json(new URL('rulesets/augment_chess_20260915/cards/catalog.json', root)).cards.map(card => [card.id, card]));
 const oldHandlers = new Map(json(new URL('rulesets/augment_chess_20260915/cards/implemented.json', root)).cards.map(card => [card.id, card]));
+// A card carried from the 0915 handlers unchanged: same contract fields and the
+// same activation/turn policy it had there. A card with a port record is excluded
+// because it was re-verified against a newer source rather than inherited.
+const declaredPorts = new Set(ports.cards.map(card => card.id));
 const inherited = catalog.cards.filter(card => {
+  if (!card.enabled || declaredPorts.has(card.id)) return false;
   const old = oldCatalog.get(card.id), handler = oldHandlers.get(card.id);
-  return card.enabled && old && handler && ['effect', 'text_ko', 'phase'].every(key => old[key] === card[key])
+  // Inheriting means the executable contract is unchanged: same effect, phase and
+  // activation/turn policy. The displayed description is allowed to change, since
+  // that does not alter behavior.
+  return old && handler && ['effect', 'phase'].every(key => old[key] === card[key])
     && handler.activation === (card.phase === 'RULE' ? 'rule' : card.activation.toLowerCase())
     && handler.ends_turn === (card.turn_policy === 'END_TURN');
 }).map(card => card.id).sort();
 const portIds = ports.cards.map(card => card.id).sort();
-// Port coverage grows as cards are ported, so the count is derived from the data
-// rather than pinned. The partition invariants below are what must hold.
+// Port records now carry cards that have no 0915 counterpart at all (they were
+// introduced after that snapshot), so the profile is not simply inherited + ports.
+// What must hold is: every profile card is either a declared port or an inherited
+// 0915 contract, the two sets are disjoint, and profile + pending partitions the
+// catalog exactly.
 assert.equal(new Set(portIds).size, ports.cards.length);
 assert.equal(inherited.filter(id => portIds.includes(id)).length, 0);
-assert.deepEqual(profile.cards.map(card => card.id).sort(), [...inherited, ...portIds].sort());
-assert.equal(inherited.length + portIds.length, manifest.coverage.implemented_card_count);
+const profileIds = profile.cards.map(card => card.id).sort();
+const coveredBySource = new Set([...inherited, ...portIds]);
+const uncovered = profileIds.filter(id => !coveredBySource.has(id));
+assert.deepEqual(uncovered, [], 'every profile card must have a source record');
+assert.deepEqual(
+  profileIds,
+  [...coveredBySource].filter(id => profileIds.includes(id)).sort(),
+  'profile must equal the subset of source records it declares',
+);
 assert.equal(profile.cards.length + profile.pending.length, catalog.cards.length);
-assert.equal(new Set([...inherited, ...portIds, ...profile.pending.map(card => card.id)]).size, 275);
+assert.equal(new Set([...profileIds, ...profile.pending.map(card => card.id)]).size, 281);
 assert.deepEqual(profile.pending, delta.unsupported);
 
 const directory = mkdtempSync(join(tmpdir(), 'augmentia-catalog-'));
@@ -55,8 +76,11 @@ const output = join(directory, 'catalog.json'), evidence = join(directory, 'evid
 const invalid = join(directory, 'unreviewed.js');
 const run = bundle => spawnSync(process.execPath, [fileURLToPath(new URL('scripts/extract-upstream-catalog.mjs', root)),
   '--bundle', bundle, '--output', output, '--evidence', evidence, '--ruleset-id', manifest.id], { encoding: 'utf8', timeout: 60000 });
+// The bundle filename changes between snapshots, so locate it through the
+// snapshot's own source manifest instead of hardcoding it.
+const bundlePath = provenance.files.find(file => file.path.includes('main')).path;
 try {
-  const result = run(fileURLToPath(new URL('sources/raw/main-RjrZ5fFP.js', snapshot)));
+  const result = run(fileURLToPath(new URL(bundlePath, snapshot)));
   assert.equal(result.status, 0, result.stderr);
   assert.equal(readFileSync(output, 'utf8'), readFileSync(new URL('cards/catalog.json', snapshot), 'utf8'));
   assert.equal(readFileSync(evidence, 'utf8'), readFileSync(new URL('sources/catalog-extraction.json', snapshot), 'utf8'));

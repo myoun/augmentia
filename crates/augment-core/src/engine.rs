@@ -638,6 +638,7 @@ impl Engine {
     fn record_new_capture_reactions(&self, state: &mut GameState, captured: Piece) {
         self.grant_vigilance_after_loss(state, captured);
         self.current_rule_dependency_capture(state, captured);
+        self.record_antichess_loss(state, state.turn, captured.owner);
 
         state.card_runtime.magic_girl_surge[captured.owner.index()] = true;
         if captured.kind == PieceKind::Pawn && state.card_runtime.resolve[captured.owner.index()] {
@@ -7551,6 +7552,27 @@ impl Engine {
             | PieceKind::BabyBear
             | PieceKind::Crown
             | PieceKind::Football => {}
+            // Offering walks one diagonal step. Wanderer walks one orthogonal
+            // step; its free-move-per-turn rule is handled by the turn budget.
+            PieceKind::Offering => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                actions,
+            ),
+            PieceKind::Wanderer => self.generate_leaper_moves(
+                state,
+                from,
+                piece,
+                &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                actions,
+            ),
+            // Omega Chesstron is a 3x3 body that dashes along a rank or file and
+            // sweeps everything between (`omegaDashRoutes`, main bundle 452-475).
+            PieceKind::OmegaChesstron => {
+                self.generate_omega_dash_moves(state, from, piece, actions)
+            }
         }
         self.generate_loyalist_moves(state, from, piece, actions);
         self.augment_middle_moves(state, from, piece, actions);
@@ -8554,6 +8576,71 @@ impl Engine {
                 }
                 None => {}
                 Some(_) => {}
+            }
+        }
+    }
+
+    /// Omega Chesstron dash: a 3x3 body may slide any distance along a rank or
+    /// file, landing with its whole footprint on the board. Everything it sweeps
+    /// on the way is a legal capture.
+    ///
+    /// Mirrors `omegaDashRoutes` (main bundle 452-475), which enumerates each
+    /// step of a direction and records the swept cells for the move.
+    fn generate_omega_dash_moves(
+        &self,
+        state: &GameState,
+        from: Square,
+        piece: Piece,
+        actions: &mut Vec<Action>,
+    ) {
+        // The anchor is the body's top-left cell, so a 3x3 body needs two free
+        // files/ranks on either side to stay on the board.
+        if from.file() > 5 || from.rank() < 2 {
+            return;
+        }
+        for (file_delta, rank_delta) in [(-1_i8, 0_i8), (1, 0), (0, -1), (0, 1)] {
+            let mut cursor = from;
+            loop {
+                let Some(next) = cursor.offset(file_delta, rank_delta) else {
+                    break;
+                };
+                // Every cell the body would cover at the new anchor.
+                let mut blocked = false;
+                let mut capture = None;
+                for cell_file in 0..3_i8 {
+                    for cell_rank in 0..3_i8 {
+                        let Some(cell) = next.offset(cell_file, -cell_rank) else {
+                            blocked = true;
+                            break;
+                        };
+                        if cell == from {
+                            continue;
+                        }
+                        if let Some(occupant) = self.board_piece_at(state, cell)
+                            && occupant.id != piece.id
+                        {
+                            if self.can_capture(state, piece, occupant) {
+                                capture = Some(cell);
+                            } else {
+                                blocked = true;
+                            }
+                        }
+                    }
+                    if blocked {
+                        break;
+                    }
+                }
+                if blocked {
+                    break;
+                }
+                if let Some(target) = capture {
+                    actions.push(Action::Move(MoveAction::new(from, target, None)));
+                } else if !self.fianchetto_destination_blocked(state, piece, from, next)
+                    && !self.majesty_destination_blocked(state, piece, next)
+                {
+                    actions.push(Action::Move(MoveAction::new(from, next, None)));
+                }
+                cursor = next;
             }
         }
     }
@@ -9691,7 +9778,9 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         PieceKind::RevolvingDoor
         | PieceKind::Beacon
         | PieceKind::TransmissionTower
-        | PieceKind::Barrier => 5,
+        | PieceKind::Barrier
+        | PieceKind::Offering
+        | PieceKind::Wanderer => 5,
         PieceKind::DonQuixote => 7,
         PieceKind::Medium | PieceKind::Killer => 3,
         PieceKind::BerolinaPawn => 1,
@@ -9753,6 +9842,8 @@ fn merchant_cost(kind: PieceKind) -> u16 {
         PieceKind::Siren | PieceKind::Trickster | PieceKind::Undead | PieceKind::Hedgehog => 9,
         PieceKind::Monster | PieceKind::Scarecrow | PieceKind::Crown | PieceKind::Football => 0,
         PieceKind::Vip => 4,
+        // Omega Chesstron is a legendary END body; the merchant never sells it.
+        PieceKind::OmegaChesstron => 0,
     }
 }
 

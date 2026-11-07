@@ -1,0 +1,1682 @@
+{
+  "from": "augment_chess_20261017",
+  "to": "augment_chess_20261102",
+  "source_bundle_sha256": "af362a64df02321edc00f225126c750b0ca41156c158d85930f273bbfad3f8b5",
+  "added": [
+    {
+      "id": "antichess",
+      "after": {
+        "id": "antichess",
+        "name_ko": "안티체스",
+        "phase": "MIDDLE",
+        "half_stars": 7,
+        "effect": "antichess",
+        "text_ko": "3수 연속 적에게 아군 기물이 잡히면 승리합니다.",
+        "art": "antichess",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "bombardment",
+      "after": {
+        "id": "bombardment",
+        "name_ko": "폭격",
+        "phase": "END",
+        "half_stars": 10,
+        "effect": "bombardment",
+        "text_ko": "원하는 파일 하나를 지정합니다. 해당 파일은 2수 뒤 붕괴합니다.",
+        "art": "bombardment",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "citadel",
+      "after": {
+        "id": "citadel",
+        "name_ko": "성채",
+        "phase": "OPENING",
+        "half_stars": 5,
+        "effect": "citadel",
+        "text_ko": "아군 킹사이드 비숍을 룩으로 변경합니다.",
+        "art": "citadel",
+        "enabled": true,
+        "rarity": "common",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 85,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "offering",
+      "after": {
+        "id": "offering",
+        "name_ko": "제물",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "offering",
+        "text_ko": "획득 시 무작위 아군 룩 하나를 제물로 변경합니다.",
+        "art": "offering",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "omega-chesstron",
+      "after": {
+        "id": "omega-chesstron",
+        "name_ko": "오메가체스트론",
+        "phase": "END",
+        "half_stars": 10,
+        "effect": "omegaChesstron",
+        "text_ko": "킹을 제외한 모든 아군 기물을 제거하고 7수 뒤 오메가체스트론을 소환합니다.",
+        "art": "omega-chesstron",
+        "enabled": true,
+        "rarity": "legendary",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 44,
+        "draw_requirement": "ANY",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    },
+    {
+      "id": "wanderer",
+      "after": {
+        "id": "wanderer",
+        "name_ko": "방랑자",
+        "phase": "PIECE",
+        "half_stars": 7,
+        "effect": "wanderer",
+        "text_ko": "획득 시 무작위 아군 룩 하나를 방랑자로 변경합니다.",
+        "art": "wanderer",
+        "enabled": true,
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        }
+      }
+    }
+  ],
+  "changed": [
+    {
+      "id": "apprentice-knights",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "원래 b·g파일 폰을 종자로 바꿉니다."
+      },
+      "after": {
+        "text_ko": "획득시 아군 양쪽 끝 두 파일의 폰을 종자로 변경합니다."
+      }
+    },
+    {
+      "id": "ascension",
+      "fields": [
+        "phase",
+        "text_ko"
+      ],
+      "before": {
+        "phase": "MIDDLE",
+        "text_ko": "아군 퀸 하나와 착지할 빈칸을 선택합니다. 퀸을 하늘로 올려보내고, 3수 뒤 지정한 칸에 착지시킵니다."
+      },
+      "after": {
+        "phase": "END",
+        "text_ko": "아군 퀸 하나와 착지할 칸을 선택합니다. 퀸을 하늘로 올려보내고, 7수 뒤 지정한 칸에 착지시킵니다."
+      }
+    },
+    {
+      "id": "assassin",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "assembly",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "barrier",
+      "fields": [
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 룩 하나를 선택해 배리어로 변경합니다."
+      },
+      "after": {
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 무작위 아군 룩 하나를 배리어로 변경합니다."
+      }
+    },
+    {
+      "id": "beacon",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "berserker",
+      "fields": [
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 룩 하나를 버서커로 변경합니다."
+      },
+      "after": {
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 무작위 아군 룩 하나를 버서커로 변경합니다."
+      }
+    },
+    {
+      "id": "bina-mate",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "bishop-infiltration",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "사용시 3수동안 비숍이 기물을 뛰어넘어 이동할 수 있지만, 뛰어넘으며 동시에 기물을 잡을 순 없습니다."
+      },
+      "after": {
+        "text_ko": "사용시 4수동안 비숍이 기물을 뛰어넘어 이동할 수 있지만, 뛰어넘으며 동시에 기물을 잡을 순 없습니다."
+      }
+    },
+    {
+      "id": "blue-jeans",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "bribe",
+      "fields": [
+        "name_ko",
+        "text_ko"
+      ],
+      "before": {
+        "name_ko": "삼일천하",
+        "text_ko": "아군 나이트 하나를 세 번의 자기 수 동안 아마존으로 바꿉니다."
+      },
+      "after": {
+        "name_ko": "각성",
+        "text_ko": "나이트 하나를 선택해 2수동안 아마존으로 변경합니다. 시간이 지나면 다시 나이트가 됩니다."
+      }
+    },
+    {
+      "id": "canceling",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "캐슬링한 상대 킹을 원래 자리로 되돌립니다."
+      },
+      "after": {
+        "text_ko": "사용시 상대 킹의 시작위치가 비어있다면, 즉시 킹을 그곳으로 돌려보냅니다. 단, 상대가 캐슬링하지 않았다면 사용할 수 없습니다."
+      }
+    },
+    {
+      "id": "castling",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "chain",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "chameleon-mutation",
+      "fields": [
+        "phase",
+        "rarity",
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "draft_weight_units",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "phase": "MIDDLE",
+        "rarity": "common",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 85,
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 3,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 기물 1~3개가 잡은 기물의 종류로 변합니다."
+      },
+      "after": {
+        "phase": "OPENING",
+        "rarity": "rare",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 70,
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 킹을 제외한 무작위 아군 기물 최대 3개에게 카멜레온 효과를 부여합니다."
+      }
+    },
+    {
+      "id": "charge",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "chess-n-pow-30",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "선택한 아군 기물과 같은 종류의 무작위 상대 기물을 함께 제거합니다."
+      },
+      "after": {
+        "text_ko": "아군 기물 하나를 지정합니다. 턴 종료시 해당 기물을 희생하고, 그와 같은 종류의 무작위 상대 기물 하나를 처형합니다."
+      }
+    },
+    {
+      "id": "clockwork",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "text_ko": "마이너 피스 하나를 선택해 태엽인형으로 변경합니다."
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "text_ko": "아군 룩 하나를 선택해 태엽인형으로 변경합니다."
+      }
+    },
+    {
+      "id": "coronation",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "crown",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "중앙 한 칸에 왕관을 놓습니다. 왕관을 차지한 기물은 움직일 수 없으며, 10수 동안 지키면 승리합니다."
+      },
+      "after": {
+        "text_ko": "중앙 4칸 중 한 칸에 왕관을 추가합니다. 왕관을 보유하면 카운트다운 10이 시작되며, 보유자의 턴 시작마다 1 감소합니다. 0이 되면 승리합니다."
+      }
+    },
+    {
+      "id": "death-squad",
+      "fields": [
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "선택한 파일의 모든 아군 폰을 광신도로 바꿉니다."
+      },
+      "after": {
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 3,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 폰을 최대 3개까지 선택해 광신도로 변경합니다."
+      }
+    },
+    {
+      "id": "desperado",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "disarm",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대 비왕족 기물 하나는 다음 자기 수에 기물을 잡을 수 없습니다."
+      },
+      "after": {
+        "text_ko": "킹을 제외한 상대 기물 하나를 선택합니다. 해당 기물은 다음 내 턴까지 기물을 잡을 수 없습니다."
+      }
+    },
+    {
+      "id": "disassembly",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "사용한 턴에 퀸을 움직일 경우 아군 퀸을 룩과 비숍으로 분해합니다. 퀸이 이동한 위치에 비숍을, 원래 위치에 룩을 소환합니다."
+      },
+      "after": {
+        "text_ko": "사용한 턴에 아군 퀸이 이동하면 룩과 비숍으로 분해됩니다. 대각선 이동 시 비숍이 출발 칸에 남으며, 직선 이동 시에는 반대로 배치됩니다."
+      }
+    },
+    {
+      "id": "dutch",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "e4",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "emergency-evacuation",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 기물을 최대 3개 선택해 자기 진영 방향으로 1칸 후퇴시킵니다. 피난한 기물은 이번 턴에 기물을 잡을 수 없습니다."
+      },
+      "after": {
+        "text_ko": "아군 기물 최대 3개를 선택합니다. 턴 종료시 해당 기물의 바로 뒷칸이 비어있다면, 한 칸씩 후퇴시킵니다."
+      }
+    },
+    {
+      "id": "encouragement",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "exile",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대 기물 하나를 시작 위치로 되돌립니다. 해당 기물은 내 턴 종료 시까지 보호를 얻습니다."
+      },
+      "after": {
+        "text_ko": "킹을 제외한 상대방 기물 하나를 지정합니다. 턴 종료시 해당 기물의 시작위치가 비어있다면, 그곳으로 되돌립니다."
+      }
+    },
+    {
+      "id": "false-start",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "fanatical-ritual",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "왕실 기물을 제외한 무작위 상대 기물 하나를 광신도로 바꿉니다."
+      },
+      "after": {
+        "text_ko": "킹을 제외한 무작위 상대 기물 하나를 광신도로 변경합니다."
+      }
+    },
+    {
+      "id": "fianchetto",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 비숍이 피앙케토 대각선 안에 들어갈 경우, 상대 폰이 그 안에 진입할수 없습니다."
+      },
+      "after": {
+        "text_ko": "아군 비숍이 피앙케토 대각선 안에 들어갈 경우, 상대 폰 계열 기물이 그 안에 새로 진입할수 없습니다."
+      }
+    },
+    {
+      "id": "field-promotion",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "file-conveyor",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "원하는 파일 하나에 상대 진영 방향으로 진행되는 컨베이어를 설치합니다. 컨베이어는 다음 내 턴 종료시부터 작동합니다."
+      },
+      "after": {
+        "text_ko": "원하는 파일 하나에 상대 진영 방향으로 진행되는 컨베이어를 설치합니다. 컨베이어는 당장 이번 턴 종료시부터 작동합니다."
+      }
+    },
+    {
+      "id": "file-surge",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85,
+        "text_ko": "나이트가 양 끝 파일로 이동할 경우 한번 더 이동할 수 있습니다."
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "text_ko": "아군 나이트가 양 끝 파일로 이동할 경우 한번 더 이동합니다."
+      }
+    },
+    {
+      "id": "freeze",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "gale",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "text_ko": "3수 뒤, 주변 8칸에 다른 메이저 피스가 없는 모든 메이저 피스를 제거합니다."
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85,
+        "text_ko": "3수 뒤, 홀로 떨어져 있는 모든 기물이 제거됩니다."
+      }
+    },
+    {
+      "id": "geneva-convention",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대방 퀸이 아군 폰을 잡을 수 없습니다."
+      },
+      "after": {
+        "text_ko": "상대방 퀸이 아군 폰 계열 기물을 잡을 수 없습니다."
+      }
+    },
+    {
+      "id": "grasshopper",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "hedgehog",
+      "fields": [
+        "rarity",
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "draft_weight_units",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "rare",
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draft_weight_units": 70,
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "퀸을 고슴도치로 변경합니다."
+      },
+      "after": {
+        "rarity": "epic",
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draft_weight_units": 58,
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득시 아군 퀸 하나를 고슴도치로 변경합니다."
+      }
+    },
+    {
+      "id": "holdout",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "무작위 아군 폰 하나가 28수 뒤 살아 있다면 퀸으로 승진합니다."
+      },
+      "after": {
+        "text_ko": "획득시 아군 a파일 폰 하나가 지정됩니다. 해당 폰은 28수 뒤 퀸으로 승진합니다."
+      }
+    },
+    {
+      "id": "homecoming",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "idol",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "infiltration",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "initiative",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대는 첫 8수 동안 기물을 잡을 수 없습니다. 상대 기물이 잡히면 즉시 해제됩니다."
+      },
+      "after": {
+        "text_ko": "상대방이 게임 기준으로 첫 8수동안 기물을 잡을 수 없게 됩니다. 단, 기물이 잡히거나 체크시 제한이 해제됩니다."
+      }
+    },
+    {
+      "id": "judgment",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85,
+        "draw_requirement": "MAX_CAPTURE_PIECE",
+        "text_ko": "가장 많은 기물을 잡은 말 중 하나를 게임에서 제거합니다."
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "text_ko": "기물을 3개이상 잡은 상대 말 하나를 선택해 보드에서 추방합니다. 추방된 기물은 9수 뒤 상대 턴 시작시 똑같은 자리에 다시 나타납니다."
+      }
+    },
+    {
+      "id": "killer",
+      "fields": [
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 비숍 하나를 선택해 킬러로 변경합니다."
+      },
+      "after": {
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 무작위 아군 비숍 하나를 킬러로 변경합니다."
+      }
+    },
+    {
+      "id": "last-resistance",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "text_ko": "아군 킹이 세 번의 자기 수 동안 보호받습니다."
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58,
+        "text_ko": "아군 킹이 2수 동안 보호를 얻습니다."
+      }
+    },
+    {
+      "id": "loyalist",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "martyrdom",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "medium",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "metal",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 원거리기물 하나를 선택해 금속화시킵니다."
+      },
+      "after": {
+        "text_ko": "아군 원거리기물 하나를 선택해 금속화 효과를 부여합니다."
+      }
+    },
+    {
+      "id": "monochrome-chess",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "mutation",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 폰들이 마지막 랭크에 도달할 경우 한번에 괴물 2개로 프로모션할 수 있습니다. 해당 괴물은 아군으로 취급됩니다."
+      },
+      "after": {
+        "text_ko": "아군 폰들이 프로모션 랭크에 도달할 경우 한번에 괴물 2개로 승진할 수 있습니다. 해당 괴물은 아군으로 취급됩니다."
+      }
+    },
+    {
+      "id": "necromancy",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "선택한 아군 폰을 포획된 아군 기물 하나로 4턴 동안 되살립니다."
+      },
+      "after": {
+        "text_ko": "선택한 아군 폰을 포획된 아군 기물 하나로 3수 동안 되살립니다."
+      }
+    },
+    {
+      "id": "octopus",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "draw_requirement": "OWN_ROOK",
+        "text_ko": "룩 하나를 선택해 문어로 변경합니다."
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "text_ko": "아군 마이너 피스 하나를 선택해 문어로 변경합니다."
+      }
+    },
+    {
+      "id": "overwhelm",
+      "fields": [
+        "phase",
+        "text_ko"
+      ],
+      "before": {
+        "phase": "MIDDLE",
+        "text_ko": "상대 킹은 아군 퀸을 잡을 수 없습니다."
+      },
+      "after": {
+        "phase": "OPENING",
+        "text_ko": "모든 상대방 마이너 피스가 아군 퀸을 잡을 수 없습니다."
+      }
+    },
+    {
+      "id": "palace",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "pawn-storm",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 폰을 원하는 만큼 선택해 즉시 한 칸씩 전진시킵니다. 이렇게 움직인 폰은 이번 턴에 기물을 잡을 수 없습니다."
+      },
+      "after": {
+        "text_ko": "아군 폰을 원하는 만큼 선택해 즉시 한 칸씩 전진시킵니다. 이번 턴에는 더이상 기물을 잡을 수 없습니다."
+      }
+    },
+    {
+      "id": "poisoned-pawn",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "무작위 아군 폰 최대 3개에 독을 부여합니다. 해당 폰을 잡은 적 기물은 2수 동안 움직이지 못합니다."
+      },
+      "after": {
+        "text_ko": "무작위 아군 폰 최대 3개에 독을 부여합니다. 해당 폰을 잡은 적 기물은 독에 걸립니다."
+      }
+    },
+    {
+      "id": "princess",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "proficiency",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "내 폰이 프로모션 직전 랭크에 있다면 전진으로 적을 잡을 수 있습니다."
+      },
+      "after": {
+        "text_ko": "프로모션 직전 두 랭크에 있는 아군 폰은 전진으로 적을 잡을 수 있습니다."
+      }
+    },
+    {
+      "id": "prophecy",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "다음 3수 동안 체크 또는 기물 포획이 한 번도 발생하지 않으면 즉시 승리합니다."
+      },
+      "after": {
+        "text_ko": "다음 3수동안 체스보드 안의 그 어떤 기물도 잡히지 않으면 게임에서 즉시 승리합니다."
+      }
+    },
+    {
+      "id": "queens-gambit",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "무작위 아군 퀸 하나를 갬빗합니다. 이후 해당 퀸의 파일 및 무작위 파일의 아군 폰에 반영구적인 보호를 부여합니다."
+      },
+      "after": {
+        "text_ko": "아군 퀸을 갬빗합니다. 이후 퀸 파일 및 무작위 파일의 아군 폰에 보호를 부여합니다."
+      }
+    },
+    {
+      "id": "racing-king",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "reaper",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 퀸 하나를 사신으로 변경합니다. 킹과 알필을 합친것처럼 행마합니다. 주변 8칸에서 아군 기물이 적에게 총 2번 잡힐경우 승리합니다."
+      },
+      "after": {
+        "text_ko": "아군 퀸 하나를 선택해 사신으로 변경합니다."
+      }
+    },
+    {
+      "id": "resolve",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      }
+    },
+    {
+      "id": "retreat",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85,
+        "draw_requirement": "OWN_PAWN",
+        "text_ko": "아군 폰이 뒤로도 움직일 수 있습니다."
+      },
+      "after": {
+        "rarity": "epic",
+        "draft_weight_units": 58,
+        "draw_requirement": "ANY",
+        "text_ko": "아군 폰 계열 기물이 뒤로도 움직일 수 있습니다."
+      }
+    },
+    {
+      "id": "reverse-pawns",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대 폰의 전진 방향을 세 번의 이동 동안 반대로 바꿉니다."
+      },
+      "after": {
+        "text_ko": "상대방 폰의 이동방향을 3수동안 반대로 변경합니다."
+      }
+    },
+    {
+      "id": "revolving-door",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "royal-command",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "다음 자기 턴부터 두 번의 자기 수 동안 모든 아군 기물이 킹처럼도 움직입니다."
+      },
+      "after": {
+        "text_ko": "다음 자기 턴부터 2수동안 모든 아군 기물이 원래 행마를 잃고 킹처럼 행마합니다."
+      }
+    },
+    {
+      "id": "royal-shield",
+      "fields": [
+        "enabled"
+      ],
+      "before": {
+        "enabled": true
+      },
+      "after": {
+        "enabled": false
+      }
+    },
+    {
+      "id": "rule-ticket",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "원하는 규칙 하나를 추가합니다. 규칙은 다음 내 턴부터 반영됩니다."
+      },
+      "after": {
+        "text_ko": "사용시 무작위 규칙 4개 중 하나를 선택해 다음 내 턴부터 적용합니다."
+      }
+    },
+    {
+      "id": "sacrifice",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "첫 번째 아군 기물을 희생하고 더 약한 두 번째 아군 기물을 3턴 보호합니다."
+      },
+      "after": {
+        "text_ko": "아군 기물 하나를 처형하고, 그보다 가치가 낮은 기물 하나를 선택해 2수 동안 보호를 부여합니다."
+      }
+    },
+    {
+      "id": "seal",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "severance",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "siege-ram",
+      "fields": [
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "draw_requirement": "OWN_ROOK",
+        "text_ko": "아군 룩 하나를 공성추로 변경합니다."
+      },
+      "after": {
+        "draw_requirement": "ANY",
+        "text_ko": "아군 마이너 피스 하나를 선택해 공성추로 변경합니다."
+      }
+    },
+    {
+      "id": "siren",
+      "fields": [
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "draw_requirement",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "draw_requirement": "OWN_QUEEN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 퀸 하나를 세이렌으로 변경합니다."
+      },
+      "after": {
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "draw_requirement": "OWN_ROOK",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 무작위 아군 룩 하나를 세이렌으로 변경합니다."
+      }
+    },
+    {
+      "id": "socialism",
+      "fields": [
+        "rarity",
+        "draft_weight_units",
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "rarity": "epic",
+        "draft_weight_units": 58,
+        "draw_requirement": "OPPONENT_NONROYAL",
+        "text_ko": "다음 상대 턴에 왕족을 제외한 모든 상대 기물은 폰처럼만 움직입니다."
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70,
+        "draw_requirement": "ANY",
+        "text_ko": "다음 2수동안 보드 안 모든 기물이 원래 행마를 잃고 폰처럼 행마합니다."
+      }
+    },
+    {
+      "id": "solidarity",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      },
+      "after": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      }
+    },
+    {
+      "id": "spy",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "stake",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "아군 기물 하나는 네 번의 자기 수 동안 움직일 수 없고 이후 가호를 얻습니다."
+      },
+      "after": {
+        "text_ko": "킹을 제외한 아군 기물 하나를 지정해 4수동안 움직일 수 없게 만듭니다. 해당 기물은 4수 뒤 회피를 얻습니다."
+      }
+    },
+    {
+      "id": "summon-colossus",
+      "fields": [
+        "name_ko",
+        "enabled"
+      ],
+      "before": {
+        "name_ko": "거신병 소환",
+        "enabled": false
+      },
+      "after": {
+        "name_ko": "메가체스트론",
+        "enabled": true
+      }
+    },
+    {
+      "id": "transmission-tower",
+      "fields": [
+        "draw_requirement",
+        "text_ko"
+      ],
+      "before": {
+        "draw_requirement": "OWN_ROOK",
+        "text_ko": "아군 룩 하나를 선택해 전송탑으로 변경합니다."
+      },
+      "after": {
+        "draw_requirement": "ANY",
+        "text_ko": "아군 마이너 피스 하나를 선택해 전송탑으로 변경합니다."
+      }
+    },
+    {
+      "id": "trojan-horse",
+      "fields": [
+        "turn_policy",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "turn_policy": "PRESERVE_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 나이트 하나를 비밀리에 지정합니다. 해당 나이트가 잡힐 경우 공격한 기물을 즉시 되잡으며 아군 폰을 생성합니다."
+      },
+      "after": {
+        "turn_policy": "END_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 2,
+          "maxSquares": 2,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 나이트와 폰을 하나씩 지정합니다. 지정한 폰을 나이트에 넣고, 해당 나이트에 트로이 목마 효과를 부여합니다."
+      }
+    },
+    {
+      "id": "twins",
+      "fields": [
+        "rarity",
+        "draft_weight_units"
+      ],
+      "before": {
+        "rarity": "common",
+        "draft_weight_units": 85
+      },
+      "after": {
+        "rarity": "rare",
+        "draft_weight_units": 70
+      }
+    },
+    {
+      "id": "ultimatum",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "4수 뒤 그동안 움직이지 않은 모든 비킹 기물을 제거합니다."
+      },
+      "after": {
+        "text_ko": "3수 뒤, 폰 계열 기물과 킹을 제외하고 마지막 3수 동안 한 번도 움직이지 않은 모든 기물이 제거됩니다."
+      }
+    },
+    {
+      "id": "undead",
+      "fields": [
+        "activation",
+        "play_timing",
+        "turn_policy",
+        "selection",
+        "text_ko"
+      ],
+      "before": {
+        "activation": "ACTIVE",
+        "play_timing": "OWN_TURN",
+        "turn_policy": "PRESERVE_TURN",
+        "selection": {
+          "kind": "squares",
+          "minSquares": 1,
+          "maxSquares": 1,
+          "choiceRequired": false
+        },
+        "text_ko": "아군 퀸 하나를 언데드로 변경합니다."
+      },
+      "after": {
+        "activation": "PASSIVE",
+        "play_timing": "ON_ACQUIRE",
+        "turn_policy": "NOT_APPLICABLE",
+        "selection": {
+          "kind": "none",
+          "minSquares": 0,
+          "maxSquares": 0,
+          "choiceRequired": false
+        },
+        "text_ko": "획득 시 무작위 아군 퀸 하나를 언데드로 변경합니다."
+      }
+    },
+    {
+      "id": "underpromotion",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "폰이 마이너 피스로 승진한다면 승진한 기물을 즉시 움직일 수 있습니다."
+      },
+      "after": {
+        "text_ko": "폰이 룩 또는 마이너 피스로 승진한다면 승진한 기물을 즉시 움직일 수 있습니다."
+      }
+    },
+    {
+      "id": "vortex",
+      "fields": [
+        "text_ko"
+      ],
+      "before": {
+        "text_ko": "상대의 폰과 왕실 기물을 제외한 모든 기물 위치를 서로 섞습니다."
+      },
+      "after": {
+        "text_ko": "폰 계열 기물과 킹을 제외한 모든 적 기물의 위치를 서로 뒤섞습니다."
+      }
+    }
+  ],
+  "disabled": [],
+  "unsupported": [
+    {
+      "id": "beacon",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "blue-jeans",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "chess-n-pow-30",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "death-squad",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "selection"
+      ]
+    },
+    {
+      "id": "democracy",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "martyrdom",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "monochrome-chess",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "qxe1",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "royal-shield",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "summon-colossus",
+      "reason": "changed_contract_not_ported"
+    },
+    {
+      "id": "trojan-horse",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "turn_policy",
+        "selection"
+      ]
+    },
+    {
+      "id": "underground-bunker",
+      "reason": "disabled_upstream"
+    }
+  ],
+  "notes": []
+}
