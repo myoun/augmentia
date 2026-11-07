@@ -233,7 +233,14 @@ pub(super) fn eligibility(
     _context: AcquisitionContext,
 ) -> CardEligibility {
     require(
-        state.board.iter().any(|(_, piece)| !royal(state, piece)),
+        // ANY_POTION_PIECE checks `all`, which is both sides concatenated: any piece
+        // except the excluded types (main bundle 55898-55900). This core has no wall
+        // or black-hole piece kind, so football is the only exclusion that applies
+        // here. The ability itself still targets by its own rules, not this gate.
+        state
+            .board
+            .iter()
+            .any(|(_, piece)| piece.kind != PieceKind::Football),
         "물약을 적용할 기물이 필요합니다.",
     )
 }

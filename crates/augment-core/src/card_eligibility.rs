@@ -619,4 +619,43 @@ mod tests {
             }
         }
     }
+
+    /// Three requirements are hash-gated upstream, so which branch applies depends on
+    /// this snapshot's catalog hash rather than on preference. Pin the outcome each
+    /// time so a snapshot change re-opens the question instead of silently drifting.
+    #[test]
+    fn hash_gated_draw_requirements_take_the_branch_this_snapshot_selects() {
+        let state = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 7);
+
+        // missionary: usesThreeCardBuffs is false for this hash, so the spawn check does
+        // not apply and a plain bishop is enough. The standard position has bishops.
+        assert!(
+            check(&state, "missionary", AcquisitionContext::Draft).is_eligible(),
+            "missionary must be draftable while the plain-bishop branch applies"
+        );
+
+        // suspicious-potion: ANY_POTION_PIECE only excludes wall/football/black-hole.
+        // A board of nothing but excluded kinds must be the only rejection.
+        assert!(check(&state, "suspicious-potion", AcquisitionContext::Draft).is_eligible());
+        let mut only_footballs = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 7);
+        for (square, _) in only_footballs.board.iter().collect::<Vec<_>>() {
+            only_footballs.board.set(square, None);
+        }
+        let football = crate::Piece::new(Player::White, PieceKind::Football).with_id(900);
+        let square = "d4".parse().unwrap();
+        only_footballs.board.set(square, Some(football));
+        assert!(
+            !check(
+                &only_footballs,
+                "suspicious-potion",
+                AcquisitionContext::Draft
+            )
+            .is_eligible(),
+            "a board of only excluded kinds must not satisfy the potion requirement"
+        );
+
+        // injury: OPPONENT_KNIGHT_FAMILY uses the explicit kind list for this hash, and
+        // the standard position has an enemy knight, so it is draftable.
+        assert!(check(&state, "injury", AcquisitionContext::Draft).is_eligible());
+    }
 }

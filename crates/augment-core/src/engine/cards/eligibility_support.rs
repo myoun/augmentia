@@ -75,10 +75,12 @@ pub(super) fn has_non_royal(state: &GameState, owner: Player) -> bool {
         .any(|(_, piece)| piece.owner == owner && !royal(state, piece))
 }
 
-/// Whether `owner` has a plain bishop, excluding a previously converted piece.
+/// Whether `owner` has a plain bishop.
 ///
-/// Missionary additionally needs a spawn candidate upstream; where that is not
-/// modelled, requiring a plain bishop is the conservative subset.
+/// The `OWN_PLAIN_BISHOP` arm has a missionary-specific spawn check, but only under
+/// `usesThreeCardBuffs`, which compares the catalog hash against a list of internal
+/// hashes. This snapshot's hash is not in that list, so upstream takes the plain
+/// `ownType("bishop")` branch here (main bundle 55783-55785).
 pub(super) fn has_plain_bishop(state: &GameState, owner: Player) -> bool {
     has_kind(state, owner, PieceKind::Bishop)
 }
@@ -107,14 +109,24 @@ pub(super) fn has_matching_type(state: &GameState, owner: Player) -> bool {
 
 /// Whether the opponent holds a piece in the knight family.
 ///
-/// Upstream tests `hasNativeKnightFamily`, which includes compound movers. This core
-/// models the plain and named knight-family kinds it can represent.
+/// The upstream arm branches on `usesNativePieceClassification`, which is a catalog
+/// hash comparison. This snapshot's hash is not among those hashes, so upstream takes
+/// the explicit list at main bundle 55833-55843 plus any compound piece whose movement
+/// includes a knight. This core has no compound-knight spec table, so the explicit
+/// kinds are what can be matched; a future snapshot with a native-classification hash
+/// would need the compound form instead.
 pub(super) fn opponent_has_knight_family(state: &GameState, owner: Player) -> bool {
     state.board.iter().any(|(_, piece)| {
         piece.owner == owner.opponent()
             && matches!(
                 piece.kind,
-                PieceKind::Knight | PieceKind::Knightmaster | PieceKind::RoyalKnight
+                PieceKind::Knight
+                    | PieceKind::Knightmaster
+                    | PieceKind::RoyalKnight
+                    | PieceKind::Amazon
+                    | PieceKind::Cardinal
+                    | PieceKind::Camel
+                    | PieceKind::Unicorn
             )
     })
 }
