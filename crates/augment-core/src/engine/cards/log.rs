@@ -130,3 +130,45 @@ pub(super) fn eligibility(
 }
 
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::delayed::*;
+    use super::*;
+
+    /// A log roll that captures is a real capture, so the rolling log's capture
+    /// tally must grow. Upstream counts every capture in `applyV3MoveHistory`
+    /// (main-RjrZ5fFP.js:226376-226391) rather than only captures performed by
+    /// ordinary piece moves.
+    #[test]
+    fn a_log_roll_that_captures_raises_the_rolling_pieces_tally() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[
+            ("e1", Player::White, PieceKind::King),
+            ("d4", Player::White, PieceKind::Log),
+            ("d5", Player::Black, PieceKind::Rook),
+        ]);
+        let log = at(&s, "d4");
+        s.card_runtime.log_statuses.insert(
+            log.id,
+            LogStatus {
+                file_delta: 0,
+                rank_delta: 1,
+                roll_after_turn: 0,
+            },
+        );
+        s.turns_taken[0] = 1;
+        assert_eq!(log.capture_count, 0);
+        let mut events = Vec::new();
+        engine.advance_logs_after_turn(&mut s, Player::White, &mut events);
+        let rolled = s
+            .board
+            .find_by_id(log.id)
+            .map(|(_, piece)| piece)
+            .expect("the log must survive its own roll");
+        assert_eq!(
+            rolled.capture_count, 1,
+            "a capturing log roll must be tallied on the rolling piece"
+        );
+    }
+}

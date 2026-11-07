@@ -402,6 +402,7 @@ impl Engine {
             return;
         }
         self.settle_rule_monster(state, events);
+        self.settle_allied_monsters(state, events);
         self.current_rule_arrivals(state, events);
         self.resolve_missing_king(state, events);
         if state.status != GameStatus::Ongoing {

@@ -618,6 +618,9 @@ pub struct CardRuntimeState {
     pub mistake_rule: bool,
     pub monochrome_chess: bool,
     pub monster_rule: Option<u32>,
+    /// Allied monsters summoned by Black Magic. They belong to their summoner and
+    /// advance at the shared monster cadence, unlike the neutral rule monster.
+    pub allied_monster_ids: BTreeSet<u32>,
     pub periodic_collapse_next: Option<u32>,
     pub rule_portals: Option<[Square; 2]>,
     pub recycling: bool,
@@ -1072,6 +1075,7 @@ impl GameState {
                     .replace(", pending_rule_tickets: []", "")
                     .replace(", blockade_walls: {}", "")
                     .replace(", scarecrow_reservations: {}", "")
+                    .replace(", allied_monster_ids: {}", "")
                     .replace(", queens_gambit_previous_protection: {}", "")
                     .as_bytes(),
             );

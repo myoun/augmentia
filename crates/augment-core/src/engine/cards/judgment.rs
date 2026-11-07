@@ -191,4 +191,81 @@ mod tests {
             }
         );
     }
+
+    /// A lethal large-body hit is a real capture, so it must raise the attacker's
+    /// capture tally. Upstream counts every capture in `applyV3MoveHistory`
+    /// (main-RjrZ5fFP.js:226376-226391), not only captures that leave the attacker
+    /// standing on the victim's square, so a lethal hit on an HP body counts too.
+    #[test]
+    fn a_lethal_large_body_hit_counts_as_a_capture() {
+        let engine = Engine::bundled_latest().unwrap();
+        // A Colossus is an HP body that reaches the damage path under the current
+        // ruleset; big rooks and big bishops resolve earlier and never get here.
+        let mut s = position(&[
+            ("e1", Player::White, PieceKind::King),
+            ("a4", Player::White, PieceKind::Rook),
+            ("d4", Player::Black, PieceKind::Colossus),
+        ]);
+        let defender = at(&s, "d4");
+        s.card_runtime.large_pieces.insert(
+            defender.id,
+            LargePieceStatus {
+                anchor: "d4".parse().unwrap(),
+                hp: 1,
+                max_hp: 3,
+            },
+        );
+        let attacker = at(&s, "a4");
+        assert_eq!(attacker.capture_count, 0);
+
+        let after = engine.apply(&s, movement("a4", "d4")).unwrap().state;
+        assert!(
+            after.board.find_by_id(defender.id).is_none(),
+            "the lethal hit must remove the large body"
+        );
+        let attacker = after
+            .board
+            .find_by_id(attacker.id)
+            .map(|(_, piece)| piece)
+            .expect("the attacking rook must survive");
+        assert_eq!(
+            attacker.capture_count, 1,
+            "a lethal large-body hit must be tallied on the attacker"
+        );
+    }
+
+    /// Judgment reads that tally directly, so the same attacker becomes a legal
+    /// target once it reaches the two-capture threshold.
+    #[test]
+    fn judgment_reads_the_tally_from_a_lethal_large_body_hit() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut s = position(&[
+            ("e1", Player::White, PieceKind::King),
+            ("a4", Player::White, PieceKind::Rook),
+            ("d4", Player::Black, PieceKind::Colossus),
+        ]);
+        let defender = at(&s, "d4");
+        s.card_runtime.large_pieces.insert(
+            defender.id,
+            LargePieceStatus {
+                anchor: "d4".parse().unwrap(),
+                hp: 1,
+                max_hp: 3,
+            },
+        );
+        let attacker = at(&s, "a4");
+        let mut after = engine.apply(&s, movement("a4", "d4")).unwrap().state;
+        // Judgment needs two captures; the hit supplied one, so add a second to
+        // reach the threshold and confirm the card offers this exact attacker.
+        if let Some((square, mut piece)) = after.board.find_by_id(attacker.id) {
+            piece.capture_count = 2;
+            after.board.set(square, Some(piece));
+        }
+        assert!(
+            candidates(&after)
+                .iter()
+                .any(|(_, piece)| piece.id == attacker.id),
+            "a piece that captured via a lethal large-body hit must be judgeable"
+        );
+    }
 }

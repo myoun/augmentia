@@ -32,6 +32,7 @@ fn play(
     // The summoned monster is already moved and belongs to the summoner, which
     // is what separates it from the inert rule monster (`monster_rule`).
     engine.register_spawned_piece(state, square, monster, true);
+    state.card_runtime.allied_monster_ids.insert(monster.id);
     events.push(Event::EffectApplied {
         source_card_instance: 0,
         command: format!("black-magic-monster:{}:{}", monster.id, square),
@@ -74,6 +75,150 @@ fn eligibility(state: &GameState, owner: Player, _: AcquisitionContext) -> CardE
             })
     });
     require(has_ring, "킹 옆에 괴물을 소환할 빈칸이 필요합니다.")
+}
+
+impl Engine {
+    /// Advance every allied Black Magic monster one random queen-step.
+    ///
+    /// Upstream collects the `blackMagicMonster` attributes and moves them when
+    /// `monsterMoveDue` fires (main-RjrZ5fFP.js:210935-210960, cadence at 820-822),
+    /// picking one of eight queen directions uniformly. An allied monster only
+    /// captures enemies of ordinary kinds (main-RjrZ5fFP.js:4822-4833).
+    pub(in crate::engine) fn settle_allied_monsters(
+        &self,
+        state: &mut GameState,
+        events: &mut Vec<Event>,
+    ) {
+        if state.card_runtime.allied_monster_ids.is_empty() {
+            return;
+        }
+        // The shared monster cadence is one move every third half-move.
+        let halfmove = rule_halfmove(state);
+        if halfmove == 0
+            || halfmove % 3 != 0
+            || state.rule_runtime.monster_last_halfmove == halfmove
+        {
+            return;
+        }
+        state.rule_runtime.monster_last_halfmove = halfmove;
+
+        // Move in stable piece-id order so the RNG stream is reproducible.
+        let mut ids: Vec<u32> = state
+            .card_runtime
+            .allied_monster_ids
+            .iter()
+            .copied()
+            .filter(|id| state.board.find_by_id(*id).is_some())
+            .collect();
+        ids.sort_unstable();
+        for piece_id in ids {
+            let Some((from, monster)) = state.board.find_by_id(piece_id) else {
+                state.card_runtime.allied_monster_ids.remove(&piece_id);
+                continue;
+            };
+            if state.card_runtime.frozen.contains_key(&piece_id)
+                || state.rule_runtime.winter_frozen.contains(&piece_id)
+                || state.card_runtime.poison_stun_turns.contains_key(&piece_id)
+            {
+                continue;
+            }
+            let mut candidates = Vec::new();
+            for (df, dr) in [
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+                (-1, 0),
+                (1, 0),
+                (-1, -1),
+                (0, -1),
+                (1, -1),
+            ] {
+                let Some(to) = from.offset(df, dr) else {
+                    continue;
+                };
+                if self.collapsed_card_landing(state, to)
+                    || state.card_runtime.barricades.contains(&to)
+                    || state.card_runtime.black_holes.contains(&to)
+                    || state.card_runtime.crown_pos == Some(to)
+                    || self
+                        .card_runtime_portal_cells(state)
+                        .is_some_and(|cells| cells.contains(&to))
+                    || state
+                        .card_runtime
+                        .pending_lobsters
+                        .iter()
+                        .any(|pending| pending.square == to)
+                    || state
+                        .card_runtime
+                        .pending_scarecrows
+                        .iter()
+                        .any(|pending| pending.square == to)
+                {
+                    continue;
+                }
+                match self.board_piece_at(state, to) {
+                    None => {
+                        if self.card_landing_open(state, to) {
+                            candidates.push(to);
+                        }
+                    }
+                    Some(target) => {
+                        // Allied monsters capture ordinary enemy pieces only.
+                        let capturable = target.owner == monster.owner.opponent()
+                            && !self.is_royal_piece(state, target)
+                            && !matches!(
+                                target.kind,
+                                PieceKind::Monster
+                                    | PieceKind::Scarecrow
+                                    | PieceKind::Football
+                                    | PieceKind::DarkWizard
+                                    | PieceKind::Guard
+                            )
+                            && !state.card_runtime.shielded_piece_ids.contains(&target.id)
+                            && !state.card_runtime.protected_piece_ids.contains(&target.id)
+                            && !state
+                                .card_runtime
+                                .outpost_protected_piece_ids
+                                .contains(&target.id);
+                        if capturable {
+                            candidates.push(to);
+                        }
+                    }
+                }
+            }
+            if candidates.is_empty() {
+                continue;
+            }
+            let index = rule_random(
+                state,
+                events,
+                candidates.len(),
+                &format!("black-magic-monster.{piece_id}"),
+            )
+            .unwrap_or(0);
+            let to = candidates[index];
+            if let Some((anchor, victim)) = self.board_piece_entry_at(state, to) {
+                self.remove_piece_for_card(state, anchor, victim, monster.owner, ID, events);
+            }
+            state.board.set(from, None);
+            state.board.set(to, Some(monster));
+            events.push(Event::EffectApplied {
+                source_card_instance: 0,
+                command: format!("allied-monster:{piece_id}:{from}->{to}"),
+            });
+        }
+    }
+
+    fn card_runtime_portal_cells(&self, state: &GameState) -> Option<Vec<Square>> {
+        let mut cells = Vec::new();
+        if let Some(pair) = state.card_runtime.portals {
+            cells.extend(pair);
+        }
+        if let Some(pair) = state.card_runtime.rule_portals {
+            cells.extend(pair);
+        }
+        (!cells.is_empty()).then_some(cells)
+    }
 }
 
 #[cfg(test)]
@@ -225,5 +370,85 @@ mod tests {
         );
         assert!(out.is_empty());
         assert!(use_card(&engine, &mut state, Player::White).is_err());
+    }
+
+    /// An allied monster is registered as such and is therefore allowed to
+    /// generate moves, unlike the inert neutral rule monster.
+    #[test]
+    fn an_allied_monster_is_marked_and_can_move() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[]);
+        use_card(&engine, &mut state, Player::White).unwrap();
+        let (square, monster) = spawned_monsters(&state, Player::White)[0];
+        assert!(
+            state.card_runtime.allied_monster_ids.contains(&monster.id),
+            "the summoned monster must be registered as allied"
+        );
+        assert!(
+            state.card_runtime.october.bound_piece_ids.is_empty(),
+            "an allied monster must not be bound"
+        );
+        // The monster is the summoner's piece, so only its owner can move it, and
+        // only when it is that player's turn.
+        state.turn = Player::White;
+        let moves = engine.generate_piece_move_actions(&state, monster.id);
+        assert!(
+            !moves.is_empty(),
+            "an allied monster must expose at least one move from {square}"
+        );
+    }
+
+    /// The neutral rule monster stays immobile; only allied monsters move.
+    #[test]
+    fn the_neutral_rule_monster_stays_immobile() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[]);
+        let monster = Piece::new(Player::White, PieceKind::Monster).with_id(900);
+        state.board.set("d5".parse().unwrap(), Some(monster));
+        state.card_runtime.monster_rule = Some(monster.id);
+        state.turn = Player::White;
+        assert!(
+            engine
+                .generate_piece_move_actions(&state, monster.id)
+                .is_empty(),
+            "the neutral rule monster must not have legal moves"
+        );
+    }
+
+    /// The settlement advances an allied monster on the shared three-half-move
+    /// cadence, and leaves it alone on the intervening turns.
+    #[test]
+    fn allied_monsters_advance_on_the_shared_monster_cadence() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[]);
+        use_card(&engine, &mut state, Player::White).unwrap();
+        let (before_square, monster) = spawned_monsters(&state, Player::White)[0];
+
+        // The cadence is `rule_halfmove` non-zero and divisible by three. Halfmove
+        // counts black's completed turns, so advance the counter directly instead
+        // of playing out turns just to reach a due boundary.
+        state.rule_runtime.monster_last_halfmove = 0;
+        state.actions_remaining = 1;
+        state.turns_taken[Player::Black.index()] = 3;
+        state.turn = Player::White;
+        assert_eq!(rule_halfmove(&state) % 3, 0);
+        let mut events = Vec::new();
+        engine.settle_allied_monsters(&mut state, &mut events);
+        let after = state
+            .board
+            .find_by_id(monster.id)
+            .map(|(square, _)| square)
+            .expect("the monster must survive");
+        assert_ne!(
+            after, before_square,
+            "the allied monster must step on a due half-move"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, Event::EffectApplied { command, .. }
+                    if command.starts_with("allied-monster:"))),
+            "the move must be reported"
+        );
     }
 }

@@ -3599,6 +3599,17 @@ impl Engine {
                 next.card_runtime.large_pieces.remove(&target.id);
                 self.record_new_capture_reactions(&mut next, target);
                 self.clear_removed_piece_statuses(&mut next, target.id);
+                // A lethal large-body hit is a real capture, so the attacker's
+                // capture tally must grow like any other capture (upstream counts
+                // every capture through applyV3MoveHistory). This branch returns
+                // before the attacker is placed on its destination, so it still
+                // sits on `movement.from` and is updated there.
+                if let Some((attacker_square, mut attacker)) =
+                    next.board.find_by_id(moving_piece.id)
+                {
+                    attacker.capture_count = attacker.capture_count.saturating_add(1);
+                    next.board.set(attacker_square, Some(attacker));
+                }
                 events.push(Event::PieceCaptured {
                     actor,
                     piece: target,
@@ -6020,7 +6031,12 @@ impl Engine {
                         && !state.card_runtime.shielded_piece_ids.contains(&target.id) =>
                 {
                     state.board.set(from, None);
-                    state.board.set(to, Some(log_piece));
+                    // A log roll that captures counts like any other capture, so the
+                    // rolling piece's tally must grow (upstream counts every capture
+                    // through applyV3MoveHistory).
+                    let mut placed_log = log_piece;
+                    placed_log.capture_count = placed_log.capture_count.saturating_add(1);
+                    state.board.set(to, Some(placed_log));
                     self.record_new_capture_reactions(state, target);
                     self.clear_removed_piece_statuses(state, target.id);
                     events.push(Event::PieceCaptured {
@@ -6775,7 +6791,8 @@ impl Engine {
         }
 
         if state.ruleset_id == crate::LATEST_RULESET_ID
-            && (piece.kind == PieceKind::Monster
+            && ((piece.kind == PieceKind::Monster
+                && !state.card_runtime.allied_monster_ids.contains(&piece.id))
                 || state
                     .card_runtime
                     .october
@@ -7509,6 +7526,26 @@ impl Engine {
                 self.generate_king_step_moves(state, from, piece, actions)
             }
             PieceKind::Trickster => unreachable!("trickster dispatches through its ability kind"),
+            // An allied Black Magic monster advances one queen step; the neutral
+            // rule monster has no legal moves of its own.
+            PieceKind::Monster if state.card_runtime.allied_monster_ids.contains(&piece.id) => {
+                self.generate_leaper_moves(
+                    state,
+                    from,
+                    piece,
+                    &[
+                        (-1, -1),
+                        (-1, 1),
+                        (1, -1),
+                        (1, 1),
+                        (-1, 0),
+                        (1, 0),
+                        (0, -1),
+                        (0, 1),
+                    ],
+                    actions,
+                );
+            }
             PieceKind::Monster
             | PieceKind::Scarecrow
             | PieceKind::BabyBear
