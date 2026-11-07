@@ -1,0 +1,69 @@
+{
+  "ruleset_id": "augment_chess_20261102",
+  "upstream_release_id": "2026-11-01-independent-draft-expansion-v1",
+  "upstream_display_date": "2026.11.02",
+  "upstream_display_time": "08:10",
+  "captured_on": "2026-11-07",
+  "capture_timezone": "Asia/Seoul",
+  "historical_release_bytes_verified": false,
+  "source_catalog_hash": "VR0S31GY4azrMCXMEsXRTUkQuvHG-f-V-b2EIlXsavE",
+  "source_schema_version": 18,
+  "canonical_catalog_entries": 281,
+  "active_cards": 272,
+  "disabled_card_ids": [
+    "beacon",
+    "blue-jeans",
+    "chess-n-pow-30",
+    "democracy",
+    "martyrdom",
+    "monochrome-chess",
+    "qxe1",
+    "royal-shield",
+    "underground-bunker"
+  ],
+  "files": [
+    {
+      "path": "sources/raw/index.html",
+      "url": "https://augmentchess.org/",
+      "byte_length": 53540,
+      "sha256": "dd41fde061007aa64a4018ee020e1cf8bbad4971efc42ae6b63d939c8922809c"
+    },
+    {
+      "path": "sources/raw/updates.html",
+      "url": "https://augmentchess.org/updates/",
+      "byte_length": 69004,
+      "sha256": "3da3e1b4a0e5dbdff6658b4a749e0c854c39047ce2037591e9cddb356a976797"
+    },
+    {
+      "path": "sources/raw/rules.html",
+      "url": "https://augmentchess.org/rules/",
+      "byte_length": 8066,
+      "sha256": "ce07a58d45065967e7afb572c1b6136f9c30b45b60782e73f30e7d50156a3237"
+    },
+    {
+      "path": "sources/raw/main-COPLmLfz.js",
+      "url": "https://augmentchess.org/assets/main-COPLmLfz.js",
+      "byte_length": 19199288,
+      "sha256": "af362a64df02321edc00f225126c750b0ca41156c158d85930f273bbfad3f8b5"
+    },
+    {
+      "path": "sources/raw/release-info.json",
+      "url": "https://augmentchess.org/release-info.json",
+      "byte_length": 92,
+      "sha256": "59ed4859096fcb1ce655312ff72b6d2d0734cf06ec008f7bd7b66824ff6f7fe1"
+    },
+    {
+      "path": "sources/raw/releaseTimestamp-BRuVEi_Y.js",
+      "url": "https://augmentchess.org/assets/releaseTimestamp-BRuVEi_Y.js",
+      "byte_length": 2360,
+      "sha256": "47fba1d9b7a0962d37b9bc26267cfd828769fccb107293c313d815e998ba1ab0"
+    }
+  ],
+  "notes": [
+    "Current bytes observed on capture date; not an archived copy from publication time.",
+    "The release page announces 2026.11.02 while release-info.json reports 2026-11-01-independent-draft-expansion-v1.",
+    "This snapshot follows 2026-10-17, 2026-10-29 and 2026-10-31 without an intervening captured snapshot.",
+    "Canonical v19 catalog is authoritative for this snapshot; UI CARD_DEFS alone is insufficient.",
+    "Engine uses a conservative supported subset; metadata extraction does not establish behavior parity."
+  ]
+}

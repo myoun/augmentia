@@ -4,5 +4,7 @@
 *.json text eol=lf
 *.md text eol=lf
 *.html text eol=lf
-# Preserve captured upstream bytes for provenance hash verification.
-rulesets/augment_chess_20261017/sources/raw/** -text
+# Preserve captured upstream bytes for provenance hash verification. These files
+# are compared against the sha256 recorded in each source-manifest.json, so git
+# must never normalize their line endings.
+rulesets/*/sources/raw/** -text
