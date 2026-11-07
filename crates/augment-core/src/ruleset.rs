@@ -82,6 +82,11 @@ impl RulesetManifest {
                 "implemented_card_count cannot exceed target_card_count".to_owned(),
             ));
         }
+        if self.coverage.publicly_active_card_count > self.coverage.target_card_count {
+            return Err(RulesetError::InvalidManifest(
+                "publicly_active_card_count cannot exceed target_card_count".to_owned(),
+            ));
+        }
         if self.coverage.behavioral_slice_card_count < self.coverage.implemented_card_count
             || self.coverage.behavioral_slice_card_count > self.coverage.target_card_count
             || self.coverage.site_parity_verified_card_count > self.coverage.implemented_card_count
@@ -89,6 +94,19 @@ impl RulesetManifest {
             return Err(RulesetError::InvalidManifest(
                 "card coverage counters are inconsistent".to_owned(),
             ));
+        }
+        // `status` is a claim about the publicly active catalog, so it must agree with
+        // the counters rather than being trusted on its own.
+        let expected_status = if self.coverage.covers_all_public_cards() {
+            "publicly_active"
+        } else {
+            "partial"
+        };
+        if self.coverage.status != expected_status {
+            return Err(RulesetError::InvalidManifest(format!(
+                "coverage status must be {expected_status:?} for {} of {} active cards",
+                self.coverage.implemented_card_count, self.coverage.publicly_active_card_count
+            )));
         }
         if self.base_rules.repetition_count < 2 {
             return Err(RulesetError::InvalidManifest(
@@ -172,14 +190,39 @@ pub struct OpeningRuleConfig {
     pub chance_denominator: u64,
 }
 
+/// How far this snapshot's engine reaches, stated as separate claims.
+///
+/// Two questions get answered separately because they are different evidence:
+/// whether every publicly active card and rule has an executable implementation,
+/// and whether that implementation was confirmed to match the live site's behavior.
+/// A snapshot can complete the first without the second, and saying so is the point.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Coverage {
+    /// Coverage of the publicly active catalog, which is what the release gate asks
+    /// for: `publicly_active` or `partial`.
     pub status: String,
+    /// Cards the catalog lists, including ones upstream disabled.
     pub target_card_count: u32,
+    /// Cards the catalog enables, which is the denominator for `status`.
+    pub publicly_active_card_count: u32,
     pub implemented_card_count: u32,
     pub behavioral_slice_card_count: u32,
+    /// Cards confirmed against the live site. Zero means behavior parity is not
+    /// claimed, whatever `status` says.
     pub site_parity_verified_card_count: u32,
     pub notes: String,
+}
+
+impl Coverage {
+    /// Every publicly active card is executable. This is the release-gate condition.
+    pub fn covers_all_public_cards(&self) -> bool {
+        self.implemented_card_count >= self.publicly_active_card_count
+    }
+
+    /// Behavior parity with the live site was verified for every implemented card.
+    pub fn site_parity_is_complete(&self) -> bool {
+        self.site_parity_verified_card_count >= self.implemented_card_count
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -277,15 +320,43 @@ mod tests {
         assert_eq!(old.base_rules.repetition_tiebreak, "lower_half_star_total");
     }
 
+    /// The release gate asks for card coverage, not behavior parity. The current
+    /// snapshot meets the first and does not claim the second, and those two facts
+    /// must stay separately visible.
+    #[test]
+    fn latest_covers_every_public_card_without_claiming_site_parity() {
+        let latest = RulesetManifest::bundled_latest().unwrap();
+        assert!(
+            latest.coverage.covers_all_public_cards(),
+            "every publicly active card must be executable"
+        );
+        assert_eq!(latest.coverage.status, "publicly_active");
+        assert!(
+            !latest.coverage.site_parity_is_complete(),
+            "behavior parity must not be implied by card coverage"
+        );
+        // The disabled cards are catalogued but not public, so the two counts differ.
+        assert!(latest.coverage.target_card_count > latest.coverage.publicly_active_card_count);
+        assert_eq!(
+            latest.coverage.implemented_card_count,
+            latest.coverage.publicly_active_card_count
+        );
+    }
+
     #[test]
     fn bundled_manifest_is_valid_and_explicitly_incomplete() {
         let manifest = RulesetManifest::bundled_20260807().unwrap();
         assert_eq!(manifest.id, BUNDLED_RULESET_ID);
         assert_eq!(manifest.snapshot_date, "2026-08-18");
-        assert_eq!(manifest.coverage.status, "partial");
+        // Every publicly active card is executable, which is the card-coverage claim.
+        assert_eq!(manifest.coverage.status, "publicly_active");
+        assert!(manifest.coverage.covers_all_public_cards());
         assert_eq!(manifest.coverage.target_card_count, 208);
+        assert_eq!(manifest.coverage.publicly_active_card_count, 208);
         assert_eq!(manifest.coverage.implemented_card_count, 208);
         assert_eq!(manifest.coverage.behavioral_slice_card_count, 208);
+        // ...but behavior parity with the live site is still not claimed.
+        assert!(!manifest.coverage.site_parity_is_complete());
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
         assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);
@@ -312,7 +383,11 @@ mod tests {
         assert_eq!(latest.id, "augment_chess_20260915");
         assert_eq!(latest.snapshot_date, "2026-09-15");
         assert_eq!(latest.coverage.target_card_count, 240);
-        assert_eq!(latest.coverage.status, "partial");
+        assert_eq!(latest.coverage.publicly_active_card_count, 240);
+        assert!(latest.coverage.covers_all_public_cards());
+        // Card coverage is complete; site behavior parity remains unverified.
+        assert_eq!(latest.coverage.status, "publicly_active");
+        assert!(!latest.coverage.site_parity_is_complete());
         assert_eq!(latest.coverage.site_parity_verified_card_count, 0);
         let implemented: serde_json::Value = serde_json::from_str(include_str!(
             "../../../rulesets/augment_chess_20260915/cards/implemented.json"

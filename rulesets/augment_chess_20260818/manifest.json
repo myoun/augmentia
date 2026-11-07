@@ -16,8 +16,9 @@
     "notation_raw": "sources/raw/notation-legend.html"
   },
   "coverage": {
-    "status": "partial",
+    "status": "publicly_active",
     "target_card_count": 208,
+    "publicly_active_card_count": 208,
     "implemented_card_count": 208,
     "behavioral_slice_card_count": 208,
     "site_parity_verified_card_count": 0,

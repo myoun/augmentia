@@ -18,6 +18,7 @@
   "coverage": {
     "status": "partial",
     "target_card_count": 192,
+    "publicly_active_card_count": 192,
     "implemented_card_count": 124,
     "behavioral_slice_card_count": 124,
     "site_parity_verified_card_count": 0,

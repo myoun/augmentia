@@ -71,6 +71,22 @@ assert.equal(profile.cards.length + profile.pending.length, catalog.cards.length
 assert.equal(new Set([...profileIds, ...profile.pending.map(card => card.id)]).size, 281);
 assert.deepEqual(profile.pending, delta.unsupported);
 
+// Release gate condition on card coverage: every publicly active card and rule is
+// executable. This is separate from site behavior parity, which the manifest reports
+// through site_parity_verified_card_count and which stays unverified.
+const activeCards = catalog.cards.filter(card => card.enabled).length;
+assert.equal(manifest.coverage.publicly_active_card_count, activeCards, 'active count must match the catalog');
+assert.equal(manifest.coverage.implemented_card_count, profile.cards.length, 'implemented count must match the profile');
+assert.equal(
+  manifest.coverage.status,
+  profile.cards.length >= activeCards ? 'publicly_active' : 'partial',
+  'status must follow from implemented vs active',
+);
+assert.ok(
+  profile.pending.every(entry => entry.reason === 'disabled_upstream'),
+  'nothing executable may remain pending',
+);
+
 const directory = mkdtempSync(join(tmpdir(), 'augmentia-catalog-'));
 const output = join(directory, 'catalog.json'), evidence = join(directory, 'evidence.json');
 const invalid = join(directory, 'unreviewed.js');

@@ -108,8 +108,43 @@ fingerprint에 룰셋 ID가 포함된다. 엔진 대상을 바꾸면 전부 달�
 
 ## 남은 작업
 
-없다. 원본 활성 카드는 전부 실행된다.
+원본 활성 카드는 전부 실행되므로 **릴리스 게이트의 카드 coverage 조건은 충족**한다.
 
-다만 **사이트 전체 동작 일치**는 주장하지 않는다. `manifest.coverage.site_parity_verified_card_count`
-가 0이고 `status`는 `partial`이다. 카드별 상호작용·원본 동작 일치 검증은 별도
-작업이며, 상세 조사 항목은 [후속 조사 항목](remaining-card-ports-followup.md)에 있다.
+게이트 7개를 실제로 확인한 결과는 이렇다.
+
+| # | 조건 | 결과 |
+|---|---|---|
+| 1 | 번들 SHA-256 기록·재검증 | 통과 |
+| 2 | 공개 카드·RULE coverage 100% | **통과** (272/272) |
+| 3 | 모든 effect에 handler 연결 | 통과 |
+| 4 | 게임 로직 버그 golden regression | 프로젝트 관행상 `known_quirks` 미사용 |
+| 5 | replay 동일 fingerprint | 통과 |
+| 6 | fmt·test·clippy | 통과 |
+| 7 | manifest에 Git commit·revision 기록 | **미충족** |
+
+### coverage를 두 축으로 분리
+
+게이트 2는 "공개 카드의 coverage 100%"이고, "사이트 동작 일치"가 아니다. 이 둘을
+한 필드에 섞으면 게이트 판정이 불가능해지므로 `Coverage`를 분리했다.
+
+- `publicly_active_card_count`: 게이트의 분모. 원본이 활성화한 카드 수(272).
+- `status`: `publicly_active` 또는 `partial`. 이제 카운터에서 **유도**하며, 카운터와
+  어긋나면 매니페스트 검증이 실패한다.
+- `site_parity_verified_card_count`: 별도 축. 현재 0이며, 이 값이 0이라는 사실이
+  "동작 일치를 주장하지 않는다"는 뜻이다.
+
+`Coverage::covers_all_public_cards()`가 게이트 조건이고,
+`Coverage::site_parity_is_complete()`가 별도 주장이다. 카드 coverage가 완전해도
+사이트 일치가 따라오지 않는다는 점을 테스트로 고정했다.
+
+`site_parity_verified_card_count`가 1017 스냅숏에서도 0이었다는 사실이 이 해석의
+근거다. 그 값이 게이트 조건이라면 1017도 통과할 수 없었을 것이다.
+
+### 남은 것
+
+게이트 7뿐이다. `manifest`에 `git_commit`과 `release_revision`을 넣어야 하는데,
+이 값은 태그 대상 커밋이 확정된 뒤에 써야 하므로 태그 직전에 기록한다.
+
+사이트 전체 동작 일치는 여전히 주장하지 않는다. 카드별 상호작용·원본 동작 일치
+검증은 별도 작업이며, 상세 조사 항목은
+[후속 조사 항목](remaining-card-ports-followup.md)에 있다.

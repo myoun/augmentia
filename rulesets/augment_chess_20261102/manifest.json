@@ -16,12 +16,13 @@
     "notation_raw": "sources/raw/index.html"
   },
   "coverage": {
-    "status": "partial",
+    "status": "publicly_active",
     "target_card_count": 281,
+    "publicly_active_card_count": 272,
     "implemented_card_count": 272,
     "behavioral_slice_card_count": 272,
     "site_parity_verified_card_count": 0,
-    "notes": "All 272 upstream-enabled cards are executable. 189 have scoped source port records and 83 inherit an unchanged 0915 contract. The 9 upstream-disabled cards are rejected. Full source parity is not claimed."
+    "notes": "All 272 publicly active cards are executable, so the release-gate condition on card coverage holds. 189 have scoped source port records and 83 inherit an unchanged 0915 contract; the 9 upstream-disabled cards are rejected. Site behavior parity is NOT verified: site_parity_verified_card_count is 0, and the behavioral evidence is local replay plus pinned fixtures, not a comparison against the live site."
   },
   "base_rules": {
     "king_capture_wins": true,

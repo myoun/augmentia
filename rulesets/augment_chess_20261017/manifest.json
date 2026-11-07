@@ -16,8 +16,9 @@
     "notation_raw": "sources/raw/index.html"
   },
   "coverage": {
-    "status": "partial",
+    "status": "publicly_active",
     "target_card_count": 275,
+    "publicly_active_card_count": 271,
     "implemented_card_count": 271,
     "behavioral_slice_card_count": 271,
     "site_parity_verified_card_count": 0,
