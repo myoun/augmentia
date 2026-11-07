@@ -63,12 +63,41 @@ golden test를 고치지 않고 새 스냅숏을 만든다.
 태그를 만들려면 다음 조건을 만족해야 한다.
 
 1. 원본 번들 SHA-256이 기록되고 다시 다운로드해 검증 가능하다.
-2. 공개 카드와 RULE의 coverage가 100%다.
+2. 공개 카드와 RULE의 coverage가 100%다. 여기서 "공개"는 원본이 활성화한 카드이며,
+   원본이 비활성으로 숨긴 카드는 분모에서 빠진다. 이 조건은 **카드 실행 가능성**이고
+   사이트 동작 일치와는 다른 주장이다.
 3. 모든 effect가 handler와 연결되어 있다.
 4. 알려진 게임 로직 버그에 golden regression test가 있다.
 5. replay가 동일한 최종 fingerprint를 만든다.
 6. formatter, test, clippy가 모두 통과한다.
 7. manifest가 현재 Git commit과 release revision을 기록한다.
+
+### gate 7: 릴리스 증언
+
+manifest는 자기를 포함한 커밋의 해시를 담을 수 없다. 값을 쓰면 그 커밋 해시가
+달라지기 때문이다. 그래서 릴리스는 두 커밋으로 나눈다.
+
+1. **엔진 커밋**: 릴리스할 코드와 프로필. `release.engine_commit`은 `null`.
+2. **증언 커밋**: manifest의 `engine_commit` 한 필드만 바꾼다.
+3. **태그**: 2번 커밋을 가리키는 annotated tag.
+
+manifest의 `release` 블록은 이렇게 생겼다.
+
+```json
+"release": {
+  "revision": "r1",
+  "ruleset_tag": "ruleset/augment_chess_20261102-r1",
+  "engine_commit": "75e1d18397acaf35b993b361ca7a390a685077a5"
+}
+```
+
+`scripts/verify-release-attestation.mjs`가 이 구조를 검증한다. 태그 이름이 스냅숏과
+리비전에 맞는지, `engine_commit`이 저장소에 실재하는 전체 해시인지, 태그가 annotated
+인지, 태그 대상 커밋이 manifest 하나만 바꿨는지, `engine_commit`이 그 커밋의
+부모인지, 그리고 두 커밋 사이에 `engine_commit` 외에 달라진 필드가 없는지를 확인한다.
+
+`engine_commit`이 `null`이면 검증기는 실패한다. 자리표시자를 증언으로 받아들이지
+않는다.
 
 ## 커밋 단위
 

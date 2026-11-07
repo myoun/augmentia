@@ -120,7 +120,7 @@ fingerprint에 룰셋 ID가 포함된다. 엔진 대상을 바꾸면 전부 달�
 | 4 | 게임 로직 버그 golden regression | 프로젝트 관행상 `known_quirks` 미사용 |
 | 5 | replay 동일 fingerprint | 통과 |
 | 6 | fmt·test·clippy | 통과 |
-| 7 | manifest에 Git commit·revision 기록 | **미충족** |
+| 7 | manifest에 Git commit·revision 기록 | **통과** (`release` 블록 + 검증기) |
 
 ### coverage를 두 축으로 분리
 
@@ -142,9 +142,40 @@ fingerprint에 룰셋 ID가 포함된다. 엔진 대상을 바꾸면 전부 달�
 
 ### 남은 것
 
-게이트 7뿐이다. `manifest`에 `git_commit`과 `release_revision`을 넣어야 하는데,
-이 값은 태그 대상 커밋이 확정된 뒤에 써야 하므로 태그 직전에 기록한다.
+없다. 게이트 7을 채우고 `ruleset/augment_chess_20261102-r1` 태그를 붙였다.
 
-사이트 전체 동작 일치는 여전히 주장하지 않는다. 카드별 상호작용·원본 동작 일치
-검증은 별도 작업이며, 상세 조사 항목은
+### 게이트 7: 자기 참조 문제와 해법
+
+manifest에 자기 커밋 해시를 쓰면 그 해시가 달라진다. 순진하게 하면 영원히 불일치한다.
+그래서 릴리스를 **두 커밋으로 나눴다**.
+
+1. 엔진 커밋: 릴리스할 코드와 프로필 전체. `release.engine_commit`은 `null`.
+2. 증언 커밋: manifest의 `engine_commit` **한 필드만** 바꾼다.
+3. 태그는 2번 커밋을 가리킨다.
+
+이 구조는 `scripts/verify-release-attestation.mjs`가 검증한다.
+
+- 태그가 자기 스냅숏·리비전과 일치하는가
+- `engine_commit`이 저장소에 실재하는 40자 해시인가
+- 태그가 lightweight가 아니라 annotated인가
+- 태그 대상 커밋이 manifest **하나만** 바꿨는가
+- `engine_commit`이 태그 대상 커밋의 **부모**인가
+- 두 커밋 사이에서 `engine_commit` 외에 달라진 필드가 없는가
+
+`engine_commit`이 `null`일 때는 검증기가 통과시키지 않는다. 자리표시자를 증언으로
+받아들이지 않기 위해서다.
+
+### 릴리스 요약
+
+| 항목 | 값 |
+|---|---|
+| 태그 | `ruleset/augment_chess_20261102-r1` |
+| 엔진 커밋 | `75e1d18` |
+| 증언 커밋 | `d1358ab` |
+| 번들 SHA-256 | `af362a64…fad3f8b5` |
+| 카드 coverage | 272 / 272 (`publicly_active`) |
+
+사이트 전체 동작 일치는 여전히 주장하지 않는다. `site_parity_verified_card_count`가
+0이고, 태그 메시지에도 그 사실을 적었다. 카드별 상호작용·원본 동작 일치 검증은
+별도 작업이며, 상세 조사 항목은
 [후속 조사 항목](remaining-card-ports-followup.md)에 있다.
