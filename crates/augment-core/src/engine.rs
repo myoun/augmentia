@@ -9528,7 +9528,15 @@ impl Engine {
             && !state.card_runtime.ice_king.contains_key(&target.id)
             && !self.middle_submerged_protects(state, target)
             && !(state.card_runtime.overwhelm[target.owner.index()]
-                && self.is_royal_piece(state, attacker)
+                && (if state.ruleset_id == crate::LATEST_RULESET_ID {
+                    // The November expansion widened Overwhelm from "the enemy
+                    // king cannot capture our queen" to "no enemy minor piece
+                    // can capture our queen" (isOverwhelmCaptureBlocked, main
+                    // bundle 6042-6045).
+                    crate::latest::latest_minor_kind(attacker.kind)
+                } else {
+                    self.is_royal_piece(state, attacker)
+                })
                 && (target.kind == PieceKind::Queen
                     || (state.ruleset_id != crate::LATEST_RULESET_ID
                         && self.is_royal_piece(state, target))))

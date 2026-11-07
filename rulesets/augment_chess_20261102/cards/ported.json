@@ -108,6 +108,18 @@
       "notes": "Eight owner turns; check/capture releases restriction."
     },
     {
+      "id": "overwhelm",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          4222,
+          4231
+        ]
+      ],
+      "notes": "Enemy royal attackers are blocked against queens only."
+    },
+    {
       "id": "rook-lift",
       "stage": 2,
       "scope": "scoped latest rule port",
@@ -534,6 +546,26 @@
         ]
       ],
       "notes": "Nonroyal bishop sacrifice without capture; current enemy royal neighborhoods are evaluated at the end of the actor turn."
+    },
+    {
+      "id": "ascension",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          203645,
+          203654
+        ],
+        [
+          203708,
+          203724
+        ],
+        [
+          214904,
+          215024
+        ]
+      ],
+      "notes": "Nonroyal queen and open landing; suspend identity/statuses; return on third owner start, crush landing occupancy, restore original metadata with no new fresh delay. Core large-body HP abstraction retained; cell-fracture parity unverified."
     },
     {
       "id": "taboo",
@@ -1100,6 +1132,18 @@
       "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
     },
     {
+      "id": "transmission-tower",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
       "id": "windmill",
       "stage": 10,
       "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
@@ -1629,6 +1673,26 @@
     },
     {
       "id": "snipe",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "socialism",
       "stage": 12,
       "scope": "turn effect activation and movement constraints",
       "source_ranges": [
@@ -2614,6 +2678,26 @@
         ]
       ],
       "notes": "Reserve a friendly queen, then detonate around the target queen at the next owner turn start."
+    },
+    {
+      "id": "judgment",
+      "stage": 12,
+      "scope": "current most-captures removal",
+      "source_ranges": [
+        [
+          198394,
+          198434
+        ],
+        [
+          202857,
+          202866
+        ],
+        [
+          348669,
+          348713
+        ]
+      ],
+      "notes": "Remove one of the pieces with the highest capture count; royal excluded."
     },
     {
       "id": "leap",

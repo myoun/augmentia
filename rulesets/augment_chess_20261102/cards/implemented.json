@@ -65,6 +65,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "ascension",
+      "name_ko": "강림",
+      "effect": "ascension",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "assassin",
       "name_ko": "암살자",
       "effect": "assassin",
@@ -420,6 +430,16 @@
       "effect": "cleanupSacrifice",
       "phase": "END",
       "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "clockwork",
+      "name_ko": "태엽인형",
+      "effect": "clockwork",
+      "phase": "PIECE",
+      "half_stars": 8,
       "activation": "active",
       "ends_turn": false,
       "turn_exclusive": false
@@ -1255,6 +1275,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "judgment",
+      "name_ko": "레드카드",
+      "effect": "judgment",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "killer",
       "name_ko": "킬러",
       "effect": "killer",
@@ -1585,6 +1615,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "octopus",
+      "name_ko": "문어",
+      "effect": "octopus",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "ordination",
       "name_ko": "서품",
       "effect": "ordination",
@@ -1631,6 +1671,16 @@
       "phase": "MIDDLE",
       "half_stars": 8,
       "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "overwhelm",
+      "name_ko": "압도",
+      "effect": "overwhelm",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
       "ends_turn": false,
       "turn_exclusive": false
     },
@@ -1995,6 +2045,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "retreat",
+      "name_ko": "퇴각",
+      "effect": "retreat",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "revelation",
       "name_ko": "계시",
       "effect": "revelation",
@@ -2155,6 +2215,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "siege-ram",
+      "name_ko": "공성추",
+      "effect": "siegeRam",
+      "phase": "PIECE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "siren",
       "name_ko": "세이렌",
       "effect": "siren",
@@ -2178,6 +2248,16 @@
       "id": "snipe",
       "name_ko": "저격",
       "effect": "bishopSnipe",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "socialism",
+      "name_ko": "사회주의",
+      "effect": "socialism",
       "phase": "MIDDLE",
       "half_stars": 8,
       "activation": "active",
@@ -2361,6 +2441,16 @@
       "phase": "RULE",
       "half_stars": 0,
       "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "transmission-tower",
+      "name_ko": "전송탑",
+      "effect": "transmissionTower",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
       "ends_turn": false,
       "turn_exclusive": false
     },
@@ -2551,13 +2641,6 @@
       "reason": "new_card_not_ported"
     },
     {
-      "id": "ascension",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "phase"
-      ]
-    },
-    {
       "id": "beacon",
       "reason": "disabled_upstream"
     },
@@ -2578,13 +2661,6 @@
       "reason": "new_card_not_ported"
     },
     {
-      "id": "clockwork",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
-    },
-    {
       "id": "death-squad",
       "reason": "changed_contract_not_ported",
       "fields": [
@@ -2596,26 +2672,12 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "judgment",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
-    },
-    {
       "id": "martyrdom",
       "reason": "disabled_upstream"
     },
     {
       "id": "monochrome-chess",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "octopus",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
     },
     {
       "id": "offering",
@@ -2626,51 +2688,16 @@
       "reason": "new_card_not_ported"
     },
     {
-      "id": "overwhelm",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "phase"
-      ]
-    },
-    {
       "id": "qxe1",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "retreat",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
     },
     {
       "id": "royal-shield",
       "reason": "disabled_upstream"
     },
     {
-      "id": "siege-ram",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
-    },
-    {
-      "id": "socialism",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
-    },
-    {
       "id": "summon-colossus",
       "reason": "new_card_not_ported"
-    },
-    {
-      "id": "transmission-tower",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "draw_requirement"
-      ]
     },
     {
       "id": "trojan-horse",

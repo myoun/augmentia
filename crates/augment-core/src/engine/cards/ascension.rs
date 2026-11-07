@@ -1,5 +1,10 @@
 use super::*;
 pub(super) const ID: &str = crate::ASCENSION;
+
+/// The October 27 balance pass moved Ascension to END and lengthened the flight
+/// from three owner starts to seven (main bundle 49208).
+const RETURN_TURNS: u32 = 7;
+
 pub(super) fn play(
     engine: &Engine,
     state: &mut GameState,
@@ -24,7 +29,7 @@ pub(super) fn play(
         .push(PendingAscension {
             piece,
             square: landing,
-            due_turn: state.turns_taken[actor.index()].saturating_add(3),
+            due_turn: state.turns_taken[actor.index()].saturating_add(RETURN_TURNS),
             runtime: Box::new(saved),
         });
     engine.resolve_gomoku_victory(state);
@@ -43,8 +48,27 @@ pub(super) fn actions(
         {
             for index in 0..64 {
                 let landing = Square::from_index(index).unwrap();
-                if engine.card_landing_open(state, landing)
-                    && !engine.d4_restricts(state, piece.owner, false, landing)
+                // The current contract no longer requires the landing square to be
+                // empty: the return clears whatever occupies it, so only the hard
+                // restrictions (d4, collapsed cells, pending spawns) apply
+                // (ascensionLandingAllowed, main bundle 49123-49125).
+                if !engine.d4_restricts(state, piece.owner, false, landing)
+                    && !engine.collapsed_card_landing(state, landing)
+                    && !state
+                        .card_runtime
+                        .pending_lobsters
+                        .iter()
+                        .any(|pending| pending.square == landing)
+                    && !state
+                        .card_runtime
+                        .pending_scarecrows
+                        .iter()
+                        .any(|pending| pending.square == landing)
+                    && !state
+                        .card_runtime
+                        .pending_portals
+                        .iter()
+                        .any(|pending| pending.squares.contains(&landing))
                 {
                     actions.push(Action::UseCard {
                         instance_id: card.instance_id,
@@ -161,7 +185,7 @@ mod tests {
             .state;
         let blocker = Piece::new(Player::Black, PieceKind::Pawn).with_id(100);
         pending.board.set("d5".parse().unwrap(), Some(blocker));
-        pending.turns_taken[Player::White.index()] = 3;
+        pending.turns_taken[Player::White.index()] = 7;
         engine.settle_ascension(&mut pending, Player::White, &mut Vec::new());
         assert_eq!(pending.board.get("d5".parse().unwrap()), Some(blocker));
         assert!(pending.board.find_by_id(queen.id).is_none());
@@ -188,18 +212,21 @@ mod tests {
         assert!(!s.card_runtime.shielded_piece_ids.contains(&queen.id));
         let pending = &s.card_runtime.october.pending_ascensions[0];
         assert!(pending.runtime.october.pending_ascensions.is_empty());
-        assert_eq!(pending.due_turn, 3);
-        for _ in 0..4 {
-            handoff(&engine, &mut s);
-            assert!(s.board.find_by_id(queen.id).is_none());
-        }
+        assert_eq!(pending.due_turn, 7);
+        // Place an occupant on the landing square before the return is due: the
+        // current contract allows a non-empty landing and clears it on return.
         s.board.set(
             "e5".parse().unwrap(),
             Some(Piece::new(Player::Black, PieceKind::Pawn).with_id(100)),
         );
         s.card_runtime.shielded_piece_ids.insert(100);
-        handoff(&engine, &mut s);
-        handoff(&engine, &mut s);
+        for _ in 0..14 {
+            handoff(&engine, &mut s);
+            if s.card_runtime.october.pending_ascensions.is_empty() {
+                break;
+            }
+            assert!(s.board.find_by_id(queen.id).is_none());
+        }
         assert_eq!(at(&s, "e5"), queen);
         assert!(s.card_runtime.recurrence_piece_ids.contains(&queen.id));
         assert!(s.card_runtime.october.pending_ascensions.is_empty());
@@ -221,12 +248,15 @@ mod tests {
         s = engine.apply(&s, movement("a1", "b2")).unwrap().state;
         assert_eq!(s.turn, Player::White);
         assert_eq!(s.turns_taken[0], 0);
-        assert_eq!(s.card_runtime.october.pending_ascensions[0].due_turn, 3);
+        assert_eq!(s.card_runtime.october.pending_ascensions[0].due_turn, 7);
         let black = at(&s, "h8");
         s.board.set("h8".parse().unwrap(), None);
         s.board.set("g7".parse().unwrap(), Some(black));
         s.card_runtime.collapsed_files_ranks = true;
-        three_owner_starts(&engine, &mut s);
+        // Seven owner starts, matching the current flight length.
+        for _ in 0..14 {
+            handoff(&engine, &mut s);
+        }
         assert!(s.card_runtime.october.pending_ascensions.is_empty());
         assert!(s.board.get("a5".parse().unwrap()).is_none());
     }

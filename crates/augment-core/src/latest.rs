@@ -408,8 +408,8 @@ mod tests {
     #[test]
     fn canonical_profile_is_explicit_and_fail_closed() {
         let catalog = latest_catalog();
-        assert_eq!(catalog.len(), 275);
-        assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 271);
+        assert_eq!(catalog.len(), 281);
+        assert_eq!(catalog.iter().filter(|c| c.enabled).count(), 272);
         // The supported count grows as cards are ported, so it is checked against
         // the execution profile itself instead of a pinned snapshot.
         let profile = crate::latest::execution_profile().len();
@@ -421,8 +421,22 @@ mod tests {
             );
         }
         // Upstream-disabled cards stay rejected regardless of port progress.
-        for disabled in ["qxe1", "democracy", "summon-colossus", "underground-bunker"] {
-            assert!(ruleset_card(LATEST_RULESET_ID, disabled).is_none());
+        for disabled in [
+            "qxe1",
+            "democracy",
+            "summon-colossus",
+            "underground-bunker",
+            "beacon",
+            "blue-jeans",
+            "chess-n-pow-30",
+            "martyrdom",
+            "monochrome-chess",
+            "royal-shield",
+        ] {
+            assert!(
+                ruleset_card(LATEST_RULESET_ID, disabled).is_none(),
+                "{disabled} must stay rejected"
+            );
         }
         assert!(ruleset_card("augment_chess_20260915", "qxe1").is_some());
         // A card still queued in `pending` must not be executable.
