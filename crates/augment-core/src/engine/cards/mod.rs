@@ -9,6 +9,7 @@ pub use seal::PendingSeal;
 pub use taboo::PendingTaboo;
 mod alekhine_machine_gun;
 mod antichess;
+// Retained for the historical rulesets; not in the current profile.
 mod apprentice_knights;
 mod basic_training;
 mod big_rook;
@@ -53,6 +54,8 @@ mod mad_horse;
 mod offering;
 mod omega_chesstron;
 pub(in crate::engine) mod summon_colossus;
+#[allow(dead_code)]
+mod underground_bunker;
 mod wanderer;
 // Retained for the historical rulesets; not in the current profile.
 #[allow(dead_code)]

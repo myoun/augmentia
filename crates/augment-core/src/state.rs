@@ -287,6 +287,8 @@ pub struct PieceStatus {
     pub large: Option<LargeBody>,
     /// Present only for pieces that can absorb more than one hit.
     pub health: Option<PieceHealth>,
+    /// Set when the piece may no longer move, as for a bunkered king.
+    pub immobile: bool,
 }
 
 impl PieceStatus {
@@ -294,6 +296,7 @@ impl PieceStatus {
         Self {
             large: Some(LargeBody { anchor }),
             health: Some(health),
+            immobile: false,
         }
     }
 
@@ -301,6 +304,8 @@ impl PieceStatus {
         Self {
             large: None,
             health: Some(health),
+            // A bunkered king keeps its durability but can never move again.
+            immobile: true,
         }
     }
 }
@@ -758,6 +763,7 @@ impl CardRuntimeState {
             .or_insert(PieceStatus {
                 large: None,
                 health: None,
+                immobile: false,
             })
             .health = Some(health);
     }
@@ -766,6 +772,34 @@ impl CardRuntimeState {
     pub fn insert_large_body(&mut self, piece_id: u32, anchor: Square, health: PieceHealth) {
         self.piece_status
             .insert(piece_id, PieceStatus::large_body(anchor, health));
+    }
+
+    /// Whether this piece is barred from moving.
+    pub fn is_immobile(&self, piece_id: u32) -> bool {
+        self.piece_status
+            .get(&piece_id)
+            .is_some_and(|status| status.immobile)
+    }
+
+    /// Refill durability for every piece, for the piece itself. Used when a card
+    /// grants health without a footprint.
+    pub fn grant_health(&mut self, piece_id: u32, health: PieceHealth, immobile: bool) {
+        match self.piece_status.get_mut(&piece_id) {
+            Some(status) => {
+                status.health = Some(health);
+                status.immobile = immobile;
+            }
+            None => {
+                self.piece_status.insert(
+                    piece_id,
+                    PieceStatus {
+                        large: None,
+                        health: Some(health),
+                        immobile,
+                    },
+                );
+            }
+        }
     }
 
     /// Drop the footprint while keeping durability, for a body that collapses into
@@ -1486,6 +1520,7 @@ impl GameState {
                 hash.u8(health.hp);
                 hash.u8(health.max_hp);
             }
+            hash.u8(u8::from(status.immobile));
         }
         for piece_id in &self.card_runtime.loyalist_piece_ids {
             hash.u32(*piece_id);

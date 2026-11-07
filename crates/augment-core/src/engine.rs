@@ -6748,6 +6748,8 @@ impl Engine {
             // Stake pins the piece for its duration; the expiry pass in
             // settle_card_turn_start grants the follow-up protection.
             || state.card_runtime.stake_statuses.contains_key(&piece.id)
+            // A bunkered king never moves again.
+            || state.card_runtime.is_immobile(piece.id)
         {
             return;
         }
