@@ -18,10 +18,10 @@
   "coverage": {
     "status": "partial",
     "target_card_count": 281,
-    "implemented_card_count": 269,
-    "behavioral_slice_card_count": 269,
+    "implemented_card_count": 272,
+    "behavioral_slice_card_count": 272,
     "site_parity_verified_card_count": 0,
-    "notes": "272 active upstream cards. 83 inherited unchanged-contract handlers plus 186 scoped source ports. The 9 upstream-disabled cards and the 3 not-yet-ported contract changes are rejected. Full source parity is not claimed."
+    "notes": "All 272 upstream-enabled cards are executable. 189 have scoped source port records and 83 inherit an unchanged 0915 contract. The 9 upstream-disabled cards are rejected. Full source parity is not claimed."
   },
   "base_rules": {
     "king_capture_wins": true,

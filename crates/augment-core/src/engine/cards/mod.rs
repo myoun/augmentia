@@ -52,6 +52,7 @@ mod loyalist;
 mod mad_horse;
 mod offering;
 mod omega_chesstron;
+pub(in crate::engine) mod summon_colossus;
 mod wanderer;
 // Retained for the historical rulesets; not in the current profile.
 #[allow(dead_code)]
@@ -650,6 +651,7 @@ const CARDS: &[CardBehavior] = &[
     submerge::BEHAVIOR,
     substitution::BEHAVIOR,
     suicide_bomber::BEHAVIOR,
+    summon_colossus::BEHAVIOR,
     suspicious_potion::BEHAVIOR,
     switcheroo::BEHAVIOR,
     symmetry::BEHAVIOR,

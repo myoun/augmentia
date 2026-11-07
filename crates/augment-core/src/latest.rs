@@ -340,7 +340,7 @@ mod tests {
         state = engine.apply(&state, movement("g1", "f3")).unwrap().state;
         assert!(state.deathmatch.is_none());
         // Upstream-disabled cards stay rejected no matter how far porting gets.
-        for disabled in ["qxe1", "democracy", "summon-colossus", "underground-bunker"] {
+        for disabled in ["qxe1", "democracy", "underground-bunker"] {
             assert!(
                 engine
                     .grant_card(&state, 1, disabled, Player::White)
@@ -424,7 +424,6 @@ mod tests {
         for disabled in [
             "qxe1",
             "democracy",
-            "summon-colossus",
             "underground-bunker",
             "beacon",
             "blue-jeans",

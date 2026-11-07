@@ -1655,10 +1655,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "summon-colossus",
-      "reason": "changed_contract_not_ported"
-    },
-    {
       "id": "underground-bunker",
       "reason": "disabled_upstream"
     }

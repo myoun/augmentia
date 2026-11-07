@@ -1128,7 +1128,9 @@ impl Engine {
             }
             SUMMON_COLOSSUS => {
                 none()?;
-                self.apply_summon_colossus(state, actor, events)?;
+                // The behavior now lives with the card so the registry and this
+                // legacy path share one implementation.
+                crate::engine::cards::summon_colossus::acquire(self, state, actor, events)?;
             }
             BIG_ROOK => {
                 none()?;

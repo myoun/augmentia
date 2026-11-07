@@ -2748,6 +2748,22 @@
       "notes": "Current suicide bomber targeting and explosion."
     },
     {
+      "id": "summon-colossus",
+      "stage": 12,
+      "scope": "current opening placement of the colossus body",
+      "source_ranges": [
+        [
+          5052,
+          5101
+        ],
+        [
+          183228,
+          183267
+        ]
+      ],
+      "notes": "Re-enabled upstream and renamed to 메가체스트론; the effect is unchanged."
+    },
+    {
       "id": "switcheroo",
       "stage": 12,
       "scope": "royal-pawn exchange and turn consumption",

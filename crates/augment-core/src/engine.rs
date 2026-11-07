@@ -867,62 +867,6 @@ impl Engine {
         Ok(())
     }
 
-    fn apply_summon_colossus(
-        &self,
-        state: &mut GameState,
-        actor: Player,
-        events: &mut Vec<Event>,
-    ) -> Result<(), EngineError> {
-        let anchor = opening_square(actor, "d3", "d7");
-        let pawns = web_ordered_pieces(state)
-            .into_iter()
-            .filter(|(square, piece)| {
-                piece.owner == actor
-                    && piece.kind == PieceKind::Pawn
-                    && !matches!(square.file(), 0 | 7)
-            })
-            .collect::<Vec<_>>();
-        if pawns.len() != 6 {
-            return Err(EngineError::Invariant(
-                "summon colossus requires the six non-rook-file pawns".to_owned(),
-            ));
-        }
-        let sacrifice_ids: BTreeSet<_> = pawns.iter().map(|(_, piece)| piece.id).collect();
-        for cell in large_piece_cells(anchor) {
-            if state
-                .board
-                .get(cell)
-                .is_some_and(|piece| !sacrifice_ids.contains(&piece.id))
-            {
-                return Err(EngineError::Invariant(
-                    "colossus footprint is blocked".to_owned(),
-                ));
-            }
-        }
-        for (square, pawn) in pawns {
-            self.remove_piece_for_card(
-                state,
-                square,
-                pawn,
-                actor.opponent(),
-                SUMMON_COLOSSUS,
-                events,
-            );
-        }
-        let colossus = Piece::new(actor, PieceKind::Colossus).with_id(state.allocate_piece_id());
-        state.board.set(anchor, Some(colossus));
-        state.card_runtime.large_pieces.insert(
-            colossus.id,
-            LargePieceStatus {
-                anchor,
-                hp: 3,
-                max_hp: 3,
-            },
-        );
-        self.register_spawned_piece(state, anchor, colossus, true);
-        Ok(())
-    }
-
     fn apply_big_rook_layout(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         let anchor = opening_square(actor, "g2", "g8");
         let placements: &[(&str, PieceKind)] = if actor == Player::White {

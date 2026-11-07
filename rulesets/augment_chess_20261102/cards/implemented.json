@@ -2415,6 +2415,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "summon-colossus",
+      "name_ko": "메가체스트론",
+      "effect": "summonColossus",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "suspicious-potion",
       "name_ko": "수상한 물약",
       "effect": "suspiciousPotion",
@@ -2747,10 +2757,6 @@
     {
       "id": "royal-shield",
       "reason": "disabled_upstream"
-    },
-    {
-      "id": "summon-colossus",
-      "reason": "changed_contract_not_ported"
     },
     {
       "id": "underground-bunker",
