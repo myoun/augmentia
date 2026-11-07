@@ -37,7 +37,19 @@ pub(super) fn eligibility(
     if let Some(result) = enabled(rt.relay[i]) {
         return result;
     }
-    CardEligibility::Eligible
+    // TWO_ALIGNED_ALLIES: two own pieces sharing a rank or a file (bundle 55874-55875).
+    let own: Vec<_> = state
+        .board
+        .iter()
+        .filter(|(_, piece)| piece.owner == player)
+        .map(|(square, _)| square)
+        .collect();
+    let aligned = own.iter().enumerate().any(|(index, left)| {
+        own.iter()
+            .skip(index + 1)
+            .any(|right| left.rank() == right.rank() || left.file() == right.file())
+    });
+    require(aligned, "같은 줄에 있는 아군 기물 2개가 필요합니다.")
 }
 
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);

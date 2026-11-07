@@ -658,4 +658,52 @@ mod tests {
         // the standard position has an enemy knight, so it is draftable.
         assert!(check(&state, "injury", AcquisitionContext::Draft).is_eligible());
     }
+
+    /// Every draftable active card must honor its catalog `draw_requirement`: either it
+    /// gates on a real predicate, delegates to a helper that does, or its requirement is
+    /// one upstream resolves to `default: true`.
+    ///
+    /// This is the audit that found four cards still ignoring a real requirement after the
+    /// layer-1 work covered the original forty-six, so it stays as a guard.
+    #[test]
+    fn delegation_cards_never_refuse_on_an_unmapped_predicate() {
+        // Cards that delegate eligibility to a shared helper which applies the predicate.
+        const DELEGATES: &[&str] = &[
+            "disarm",
+            "barrier",
+            "berserker",
+            "don-quixote",
+            "hedgehog",
+            "idol",
+            "killer",
+            "offering",
+            "revolving-door",
+            "siren",
+            "undead",
+            "wanderer",
+            "evasion",
+            "fanatical-ritual",
+            "en-passant-bang",
+            "royal-command",
+            "snipe",
+            "switcheroo",
+            "taunt",
+        ];
+        let state = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 7);
+        let mut refused = Vec::new();
+        for id in DELEGATES {
+            if let Some(reason) =
+                check_card_eligibility(&state, id, Player::White, AcquisitionContext::Draft)
+                    .reason()
+            {
+                if reason.code == EligibilityReasonCode::UnsupportedPredicate {
+                    refused.push(*id);
+                }
+            }
+        }
+        assert!(
+            refused.is_empty(),
+            "delegation cards still refusing on an unmapped predicate: {refused:?}"
+        );
+    }
 }

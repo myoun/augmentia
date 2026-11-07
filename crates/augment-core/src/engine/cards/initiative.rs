@@ -20,11 +20,18 @@ pub(super) fn acquire(
 }
 
 pub(super) fn eligibility(
-    _state: &GameState,
-    _player: Player,
+    state: &GameState,
+    player: Player,
     _context: AcquisitionContext,
 ) -> CardEligibility {
-    CardEligibility::Eligible
+    // OPPONENT_PIECE: upstream requires at least one opposing piece (bundle 55815-55816).
+    require(
+        state
+            .board
+            .iter()
+            .any(|(_, piece)| piece.owner == player.opponent()),
+        "상대 기물이 필요합니다.",
+    )
 }
 
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::passive(ID, Some(acquire), eligibility);
