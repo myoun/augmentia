@@ -19,6 +19,21 @@ impl Engine {
         if !rule_active(state, ID) {
             return;
         }
+        // Upstream skips the periodic apply when a card collapse already resolved
+        // in the same turn boundary (main-RjrZ5fFP.js:213178), so one boundary can
+        // never remove two rings. The card settles earlier in the boundary and
+        // advances the shared depth, which is the signal used here.
+        let card_collapsed = events.iter().any(|event| {
+            matches!(event, Event::EffectApplied { command, .. }
+                if command.starts_with("collapse:"))
+        });
+        if card_collapsed {
+            state.rule_runtime.collapse_next = state
+                .rule_runtime
+                .collapse_next
+                .map(|n| n.saturating_add(20));
+            return;
+        }
         while state
             .rule_runtime
             .collapse_next

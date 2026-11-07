@@ -542,4 +542,55 @@ mod tests {
         engine.settle_collapse(&mut state, Player::White, &mut Vec::new());
         assert_eq!(state.rule_runtime.collapse_depth, 1);
     }
+
+    /// The collapse card and the Periodic Collapse RULE share one board depth, so
+    /// when both are due on the same turn boundary the ring must collapse once,
+    /// not twice. Upstream guards this by skipping the periodic apply when a
+    /// pending collapse already resolved in the same boundary
+    /// (main-RjrZ5fFP.js:213178).
+    #[test]
+    fn a_card_collapse_and_a_periodic_collapse_on_the_same_boundary_collapse_once() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = grant(&position(&[("c3", Player::White, PieceKind::Knight)]));
+        // Start one ring in: at depth 0 the outer ring holds both kings and the
+        // periodic pass would end the game before the card could settle.
+        state.rule_runtime.collapse_depth = 1;
+        state.card_runtime.collapsed_files_ranks = true;
+        state = arm(&engine, &state);
+        // Arm stamps `turns_taken + 1`; advance the counter so the card is due at
+        // this boundary, alongside the periodic schedule.
+        state.turns_taken[Player::White.index()] += 1;
+        state
+            .rule_runtime
+            .enabled
+            .insert(crate::PERIODIC_COLLAPSE.to_owned());
+        state.rule_runtime.collapse_next = Some(state.turns_taken[1]);
+
+        // Both settlements run at the same turn boundary, in engine order:
+        // `settle_delayed_turn_end` then `current_rule_turn`.
+        let mut events = Vec::new();
+        engine.settle_collapse(&mut state, Player::White, &mut events);
+        let card_events: Vec<String> = events
+            .iter()
+            .filter_map(|event| match event {
+                Event::EffectApplied { command, .. } if command.starts_with("collapse:") => {
+                    Some(command.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        let after_card = state.rule_runtime.collapse_depth;
+        engine.settle_periodic_collapse(&mut state, &mut events);
+
+        assert_eq!(
+            card_events.len(),
+            1,
+            "the card must collapse one ring; depth after card {after_card}, events {card_events:?}"
+        );
+        assert_eq!(after_card, 2, "the card advanced the depth to 2");
+        assert_eq!(
+            state.rule_runtime.collapse_depth, 2,
+            "one boundary must collapse exactly one ring, not two"
+        );
+    }
 }
