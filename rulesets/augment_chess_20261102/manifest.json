@@ -92,6 +92,6 @@
   "release": {
     "revision": "r1",
     "ruleset_tag": "ruleset/augment_chess_20261102-r1",
-    "engine_commit": null
+    "engine_commit": "75e1d18397acaf35b993b361ca7a390a685077a5"
   }
 }
