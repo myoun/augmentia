@@ -959,16 +959,17 @@ fn promotion_rush_adds_queen_moves_blocks_capture_and_expires_on_move_or_turn_en
     );
 }
 
+/// Chameleon Mutation is an OPENING passive from the 2026-10-27 balance pass: it
+/// marks up to three random own pieces on acquisition, and a marked piece adopts
+/// the kind of whatever it captures.
 #[test]
-fn chameleon_selects_up_to_three_and_adopts_the_captured_type() {
+fn chameleon_marks_on_pickup_and_the_marked_piece_adopts_the_captured_type() {
     let engine = Engine::bundled_latest().unwrap();
     let mut state = position(
         &[
             ("a1", Player::White, PieceKind::King),
             ("h8", Player::Black, PieceKind::King),
             ("d4", Player::White, PieceKind::Rook),
-            ("b2", Player::White, PieceKind::Knight),
-            ("c2", Player::White, PieceKind::Pawn),
             ("d6", Player::Black, PieceKind::Bishop),
         ],
         Player::White,
@@ -977,17 +978,16 @@ fn chameleon_selects_up_to_three_and_adopts_the_captured_type() {
         .grant_card(&state, 1, crate::CHAMELEON_MUTATION, Player::White)
         .unwrap()
         .state;
-    let squares = [
-        "d4".parse().unwrap(),
-        "b2".parse().unwrap(),
-        "c2".parse().unwrap(),
-    ];
-    let action = engine.legal_actions(&state).unwrap().into_iter().find(|a| matches!(a, Action::UseCard { target: ActionTarget::Squares(selected), .. } if selected.len() == 3 && squares.iter().all(|s| selected.contains(s)))).unwrap();
-    state = engine.apply(&state, action).unwrap().state;
+    let rook = state.board.get("d4".parse().unwrap()).unwrap();
+    assert!(
+        state.card_runtime.chameleon_piece_ids.contains(&rook.id),
+        "the only non-royal candidate must be marked"
+    );
     state = engine.apply(&state, movement("d4", "d6")).unwrap().state;
     assert_eq!(
         state.board.get("d6".parse().unwrap()).unwrap().kind,
-        PieceKind::Bishop
+        PieceKind::Bishop,
+        "the marked piece adopts the captured kind"
     );
 }
 
@@ -1194,7 +1194,7 @@ fn ranged_classification_counts_allied_monsters_for_berserker() {
 #[test]
 fn random_middle_effects_consume_one_roll_and_apply_to_the_only_candidate() {
     let engine = Engine::bundled_latest().unwrap();
-    for id in [crate::EVASION, crate::ROYAL_SHIELD, crate::FANATICAL_RITUAL] {
+    for id in [crate::EVASION, crate::FANATICAL_RITUAL] {
         let mut state = position(
             &[
                 ("a1", Player::White, PieceKind::King),

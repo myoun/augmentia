@@ -47,6 +47,8 @@ mod last_stand;
 mod locust_swarm;
 mod loyalist;
 mod mad_horse;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod martyrdom;
 mod merchant_guild;
 mod metal;
@@ -63,11 +65,15 @@ mod reposition;
 mod rocket;
 mod roller;
 mod royal_command;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod royal_shield;
 mod sacrifice;
 mod scarecrow;
 mod severance;
 mod snipe;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod socialism;
 mod solidarity;
 mod suicide_bomber;
@@ -85,6 +91,8 @@ mod wanted;
 
 use shared::*;
 mod barrier;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod beacon;
 mod campfire;
 mod constitutional_monarchy;
@@ -103,6 +111,8 @@ mod revolving_door;
 mod runtime;
 mod shared;
 mod transform_support;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod transmission_tower;
 mod windmill;
 mod wizard;
@@ -120,6 +130,8 @@ pub(crate) use grudge::grudge_kind_allowed;
 mod amazon;
 mod archbishop;
 mod armistice;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod ascension;
 mod assassin;
 mod assembly;
@@ -128,6 +140,8 @@ mod backward_knight;
 mod berserker;
 mod big_bishop;
 mod bina_mate;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod blue_jeans;
 mod breakthrough_order;
 mod brutus;
@@ -137,6 +151,8 @@ mod chancellor;
 mod chaos_pieces;
 mod checker;
 mod cleanup;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod clockwork;
 mod clone;
 mod conversion;
@@ -194,11 +210,15 @@ mod missionary;
 mod mongolian_gambit;
 mod moving;
 mod nullification;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod octopus;
 mod ordination;
 mod otherworld;
 mod outpost;
 mod overtake;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod overwhelm;
 mod paladin;
 mod parrot;
@@ -221,6 +241,8 @@ mod recycling;
 mod relay;
 mod religious_victory;
 mod replay;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod retreat;
 mod reversal;
 mod reverse_pawns;
@@ -229,6 +251,8 @@ mod rule_support;
 mod saturation;
 mod schrodinger_pawns;
 mod seal;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod siege_ram;
 mod siren;
 mod slime;
@@ -243,6 +267,8 @@ mod symmetry;
 mod taboo;
 mod transcendence;
 mod trickster;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod trojan_horse;
 mod undead;
 mod underpromotion;
@@ -262,12 +288,16 @@ mod chain;
 mod charge;
 mod chess_344200;
 mod chess_960;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 pub(in crate::engine) mod chess_n_pow_30;
 mod cleanup_sacrifice;
 mod collapse;
 mod conscription;
 mod conveyor;
 mod crown;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod death_squad;
 mod diagonal_chess;
 mod exile;
@@ -277,11 +307,15 @@ mod gale;
 mod high_ground;
 mod highway;
 mod icbm;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod judgment;
 mod last_resistance;
 mod leap;
 mod lobster;
 mod mistake;
+// Retained for the historical rulesets; not in the current profile.
+#[allow(dead_code)]
 mod monochrome_chess;
 mod monster;
 mod mutation;

@@ -59,11 +59,6 @@ pub(in crate::engine::cards) fn handoff(engine: &Engine, s: &mut GameState) {
     let actor = s.turn;
     engine.finish_turn(s, actor, &mut Vec::new()).unwrap();
 }
-pub(in crate::engine::cards) fn three_owner_starts(engine: &Engine, s: &mut GameState) {
-    for _ in 0..6 {
-        handoff(engine, s);
-    }
-}
 pub(in crate::engine::cards) fn has_move(engine: &Engine, s: &GameState, a: &str, b: &str) -> bool {
     engine.legal_actions(s).unwrap().contains(&movement(a, b))
 }
@@ -94,6 +89,9 @@ pub(in crate::engine::cards) fn reservations_affect_repetition_and_reject_reserv
         .grant_card(&base, 1, crate::ASCENSION, Player::White)
         .unwrap()
         .state;
+    // A barricade on the landing square no longer blocks the selection: the 1102
+    // contract allows a non-empty landing and clears it on return
+    // (ascensionLandingAllowed, main bundle 49123-49125).
     s.card_runtime.barricades.insert("e5".parse().unwrap());
     assert!(
         engine
@@ -104,7 +102,8 @@ pub(in crate::engine::cards) fn reservations_affect_repetition_and_reject_reserv
                     target: pair("d1", "e5")
                 }
             )
-            .is_err()
+            .is_ok(),
+        "a reserved landing must now be selectable"
     );
     let royal = at(&s, "d1");
     s.card_runtime.royal_piece_ids.insert(royal.id);

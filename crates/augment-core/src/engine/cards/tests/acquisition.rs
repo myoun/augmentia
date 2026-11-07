@@ -189,7 +189,7 @@ pub(in crate::engine::cards) fn end_passive_waits_for_unlock_then_installs_witho
     let mut state = game();
     state.phase = GamePhase::Draft(DraftState {
         phase: DraftPhase::End,
-        offers: vec![crate::BLUE_JEANS.into()],
+        offers: vec![crate::FINAL_WEAPON.into()],
         resume_turn: Player::White,
     });
     state = engine
@@ -205,23 +205,25 @@ pub(in crate::engine::cards) fn end_passive_waits_for_unlock_then_installs_witho
         .apply(&state, Action::DraftPick { offer_index: 0 })
         .unwrap()
         .state;
-    assert!(state.board.get("d1".parse().unwrap()).is_some());
+    // The END passive is owned but not yet armed; both players must finish their
+    // unlock turn before it installs.
+    assert!(!state.card_runtime.final_weapon[Player::White.index()]);
     state = engine.apply(&state, movement("g1", "f3")).unwrap().state;
-    assert!(state.board.get("d1".parse().unwrap()).is_some());
+    assert!(!state.card_runtime.final_weapon[Player::White.index()]);
     let transition = engine.apply(&state, movement("g8", "f6")).unwrap();
-    assert!(transition.state.board.get("d1".parse().unwrap()).is_none());
+    assert!(transition.state.card_runtime.final_weapon[Player::White.index()]);
     assert!(
         transition
             .state
             .cards
             .iter()
-            .find(|c| c.definition_id == crate::BLUE_JEANS)
+            .find(|c| c.definition_id == crate::FINAL_WEAPON)
             .unwrap()
             .available_after_turn
             .is_none()
     );
     assert!(!transition.events.iter().any(
-        |e| matches!(e, Event::CardUsed { definition_id, .. } if definition_id == crate::BLUE_JEANS)
+        |e| matches!(e, Event::CardUsed { definition_id, .. } if definition_id == crate::FINAL_WEAPON)
     ));
 }
 

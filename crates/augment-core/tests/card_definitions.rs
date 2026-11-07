@@ -6,11 +6,11 @@ use serde_json::Value;
 fn current_definitions_use_their_own_catalog_and_execution_profile() {
     let engine = Engine::bundled_latest().unwrap();
     let catalog: Value = serde_json::from_str(include_str!(
-        "../../../rulesets/augment_chess_20261017/cards/catalog.json"
+        "../../../rulesets/augment_chess_20261102/cards/catalog.json"
     ))
     .unwrap();
     let profile: Value = serde_json::from_str(include_str!(
-        "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+        "../../../rulesets/augment_chess_20261102/cards/implemented.json"
     ))
     .unwrap();
     let entries = profile["cards"].as_array().unwrap();

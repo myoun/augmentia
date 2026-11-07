@@ -81,7 +81,17 @@ fn moves(engine: &Engine, state: &GameState, from: &str) -> BTreeSet<String> {
 #[test]
 fn all_single_target_cards_match_952_pinned_selection_contracts() {
     let engine = Engine::bundled_latest().unwrap();
+    // The fixture is pinned to the 2026-10-17 bundle. Three of its cards no longer
+    // expose an active selection contract in 2026-11-02: barrier and killer became
+    // on-acquire passives, and beacon is upstream-disabled. Their new contracts are
+    // covered by `acquired_random_transform_cards_convert_on_pickup_and_keep_status`
+    // and `upstream_disabled_rules_are_rejected_by_the_current_profile`.
+    const NO_LONGER_ACTIVE: [&str; 3] = ["barrier", "killer", "beacon"];
     for case in fixtures()["selected"].as_array().unwrap() {
+        let card = case["card"].as_str().unwrap();
+        if NO_LONGER_ACTIVE.contains(&card) {
+            continue;
+        }
         let color = if case["color"] == "white" {
             Player::White
         } else {
@@ -98,7 +108,7 @@ fn all_single_target_cards_match_952_pinned_selection_contracts() {
             let id = state.board.get("d4".parse().unwrap()).unwrap().id;
             state.card_runtime.royal_piece_ids.insert(id);
         }
-        let state = acquire(&engine, &state, case["card"].as_str().unwrap());
+        let state = acquire(&engine, &state, card);
         assert_eq!(
             engine
                 .legal_actions(&state)
@@ -266,8 +276,8 @@ fn chameleon_mutation_marks_up_to_three_random_non_royal_pieces_on_pickup() {
         3,
         "the acquisition marks at most three pieces"
     );
-    // The king is never marked.
-    let king = state.board.get("a1".parse().unwrap()).unwrap();
+    // The king is never marked. `position` places it on h1.
+    let king = state.board.get("h1".parse().unwrap()).unwrap();
     assert!(!state.card_runtime.chameleon_piece_ids.contains(&king.id));
 }
 
