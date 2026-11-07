@@ -115,7 +115,6 @@ fn every_rule_installs_is_registered_and_rejects_duplicate_installation_atomical
         crate::BLACK_HOLE,
         crate::CHESS_344200,
         crate::CHESS_960,
-        crate::CHESS_N_POW_30,
         crate::CONVEYOR,
         crate::CROWN,
         crate::DIAGONAL_CHESS,
@@ -123,7 +122,6 @@ fn every_rule_installs_is_registered_and_rejects_duplicate_installation_atomical
         crate::HIGH_GROUND,
         crate::HIGHWAY,
         crate::MISTAKE,
-        crate::MONOCHROME_CHESS,
         crate::MONSTER_RULE,
         crate::PERIODIC_COLLAPSE,
         crate::PORTAL,
@@ -141,6 +139,29 @@ fn every_rule_installs_is_registered_and_rejects_duplicate_installation_atomical
         assert!(next.state.applied_rules.iter().any(|r| r == id));
         assert!(engine.apply_rule(&next.state, id).is_err());
         engine.legal_actions(&next.state).unwrap();
+    }
+}
+
+/// `chess-n-pow-30` and `monochrome-chess` were disabled upstream in the
+/// 2026-11-02 snapshot, so the current profile must refuse to install them while
+/// the historical rulesets keep executing their handlers.
+#[test]
+fn upstream_disabled_rules_are_rejected_by_the_current_profile() {
+    let engine = Engine::bundled_latest().unwrap();
+    for id in [crate::CHESS_N_POW_30, crate::MONOCHROME_CHESS] {
+        let mut base = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 31);
+        base.completed_drafts = [true; 3];
+        let before = base.fingerprint();
+        let rejected = engine.apply_rule(&base, id);
+        assert!(
+            rejected.is_err(),
+            "{id} is upstream-disabled and must not install"
+        );
+        assert_eq!(
+            base.fingerprint(),
+            before,
+            "{id} must leave state untouched"
+        );
     }
 }
 
@@ -197,22 +218,12 @@ fn high_ground_highway_and_monochrome_change_legal_moves() {
             .contains(&movement("b3", "b6"))
     );
     let base = position(&[("d4", Player::White, PieceKind::Knight)]);
+    // Monochrome Chess was disabled upstream in the 2026-11-02 snapshot, so its
+    // normalizer only applies to the historical rulesets that still install it.
     let mono = engine
         .apply_rule(&base, crate::MONOCHROME_CHESS)
-        .unwrap()
-        .state;
-    assert_eq!(
-        mono.board.get("d4".parse().unwrap()).unwrap().kind,
-        PieceKind::Camel
-    );
-    for action in engine.legal_actions(&mono).unwrap() {
-        if let Action::Move(m) = action {
-            assert_eq!(
-                (m.from.file() + m.from.rank()) % 2,
-                (m.to.file() + m.to.rank()) % 2
-            );
-        }
-    }
+        .expect_err("monochrome chess is upstream-disabled in the current profile");
+    let _ = mono;
 }
 
 #[test]

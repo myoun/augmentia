@@ -170,18 +170,32 @@ fn knightmate_retains_royal_identity_and_martyrdom_is_a_sacrifice() {
         after.board.get("b1".parse().unwrap()).unwrap().kind,
         PieceKind::Man
     );
-    let after = engine
-        .acquire_for_setup(&before, crate::MARTYRDOM, Player::White)
+}
+
+/// Martyrdom is upstream-disabled from the 2026-11-02 snapshot. Its sacrifice and
+/// shield behavior is retained for the historical rulesets, so the effect itself
+/// is still exercised here directly rather than through a card grant.
+#[test]
+fn martyrdom_sacrifices_bishops_and_shields_pawns_without_capture_credit() {
+    let engine = Engine::bundled_latest().unwrap();
+    let before = position(&[
+        ("a1", Player::White, PieceKind::King),
+        ("h8", Player::Black, PieceKind::King),
+        ("c3", Player::White, PieceKind::Bishop),
+        ("f3", Player::White, PieceKind::Bishop),
+        ("d2", Player::White, PieceKind::Pawn),
+    ]);
+    let mut state = before.clone();
+    let mut events = Vec::new();
+    crate::engine::cards::martyrdom::acquire(&engine, &mut state, Player::White, &mut events)
         .unwrap();
     assert!(
-        !after
-            .events
+        !events
             .iter()
             .any(|e| matches!(e, Event::PieceCaptured { .. }))
     );
     assert_eq!(
-        after
-            .state
+        state
             .board
             .iter()
             .filter(|(_, p)| p.owner == Player::White && p.kind == PieceKind::Bishop)
@@ -189,15 +203,21 @@ fn knightmate_retains_royal_identity_and_martyrdom_is_a_sacrifice() {
         0
     );
     assert_eq!(
-        after
-            .state
+        state
             .board
             .iter()
             .filter(|(_, p)| p.owner == Player::White
                 && p.kind == PieceKind::Pawn
-                && after.state.card_runtime.shielded_piece_ids.contains(&p.id))
+                && state.card_runtime.shielded_piece_ids.contains(&p.id))
             .count(),
-        8
+        1
+    );
+    // And the card itself is refused by the current profile.
+    assert!(
+        engine
+            .acquire_for_setup(&before, crate::MARTYRDOM, Player::White)
+            .is_err(),
+        "an upstream-disabled card must not be granted"
     );
 }
 
