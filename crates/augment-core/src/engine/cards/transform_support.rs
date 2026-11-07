@@ -59,6 +59,63 @@ pub(super) fn eligibility(
     )
 }
 
+/// Candidates for an on-acquire random transformation.
+///
+/// Upstream resolves the October 27 passive transforms by collecting every own
+/// piece of the card's source type and drawing one of them when there is more
+/// than one candidate (`OCTOBER27_RANDOM_TRANSFORMS`, main bundle 1768, resolved
+/// at 41613-41630). It never draws for a single candidate.
+pub(super) fn acquisition_candidates(
+    state: &GameState,
+    owner: Player,
+    spec: TransformSpec,
+) -> Vec<(Square, Piece)> {
+    state
+        .board
+        .iter()
+        .filter(|(_, p)| spec.accepts(state, owner, *p))
+        .collect()
+}
+
+/// Apply the on-acquire random transformation of `spec`, returning the
+/// transformed piece so callers can initialise card-specific runtime state.
+///
+/// `purpose` names the draw so the event stream distinguishes the cards. The
+/// transformation preserves piece identity, matching the active-card path.
+pub(super) fn acquire_random_transform(
+    engine: &Engine,
+    state: &mut GameState,
+    owner: Player,
+    spec: TransformSpec,
+    purpose: &str,
+    events: &mut Vec<Event>,
+) -> Result<Option<Piece>, EngineError> {
+    let candidates = acquisition_candidates(state, owner, spec);
+    if candidates.is_empty() {
+        // A draft pick with no applicable target is a no-op upstream rather than
+        // an acquisition failure, because the card is already owned by then.
+        if matches!(state.phase, GamePhase::Draft(_)) {
+            return Ok(None);
+        }
+        return Err(EngineError::Invariant(
+            "no applicable transform target".into(),
+        ));
+    }
+    let index = if candidates.len() == 1 {
+        0
+    } else {
+        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
+        events.push(Event::RandomSample {
+            purpose: purpose.to_owned(),
+            roll_53: roll,
+        });
+        index.expect("nonempty candidate set")
+    };
+    let (square, _) = candidates[index];
+    let piece = engine.transform_current_piece(state, square, spec.kind, true)?;
+    Ok(Some(piece))
+}
+
 impl Engine {
     pub(in crate::engine) fn transform_current_piece(
         &self,

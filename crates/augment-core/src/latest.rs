@@ -110,7 +110,7 @@ pub fn latest_catalog() -> &'static [LatestCard] {
     &CATALOG
         .get_or_init(|| {
             serde_json::from_str(include_str!(
-                "../../../rulesets/augment_chess_20261017/cards/catalog.json"
+                "../../../rulesets/augment_chess_20261102/cards/catalog.json"
             ))
             .expect("bundled canonical catalog")
         })
@@ -133,7 +133,7 @@ fn execution_profile() -> &'static BTreeMap<String, bool> {
     static PROFILE: OnceLock<BTreeMap<String, bool>> = OnceLock::new();
     PROFILE.get_or_init(|| {
         let profile: ExecutionProfile = serde_json::from_str(include_str!(
-            "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+            "../../../rulesets/augment_chess_20261102/cards/implemented.json"
         ))
         .expect("bundled executable card profile with explicit turn policies");
         let mut policies = BTreeMap::new();
@@ -159,7 +159,7 @@ fn pending_ids() -> Vec<String> {
         pending: Vec<Pending>,
     }
     serde_json::from_str::<Profile>(include_str!(
-        "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+        "../../../rulesets/augment_chess_20261102/cards/implemented.json"
     ))
     .expect("bundled executable card profile")
     .pending
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn execution_profile_requires_an_explicit_turn_policy_for_every_card() {
         let mut profile: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../rulesets/augment_chess_20261017/cards/implemented.json"
+            "../../../rulesets/augment_chess_20261102/cards/implemented.json"
         ))
         .unwrap();
         profile["cards"][0]

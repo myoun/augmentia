@@ -6,30 +6,25 @@ const SPEC: TransformSpec = TransformSpec {
     kind: PieceKind::Barrier,
     allow_royal: false,
 };
-pub(super) fn play(
+/// The 2026-10-27 balance pass turned the explicit-target piece cards into
+/// passives that transform a random own piece on acquisition. Upstream keeps the
+/// behavior in `OCTOBER27_RANDOM_TRANSFORMS` (main bundle 1768) and resolves it
+/// at acquisition time (41613-41630).
+pub(super) fn acquire(
     engine: &Engine,
     state: &mut GameState,
-    actor: Player,
-    _instance: u32,
-    target: &ActionTarget,
-    _events: &mut Vec<Event>,
+    owner: Player,
+    events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    let (square, piece) = piece_target(state, target)?;
-    if !SPEC.accepts(state, actor, piece) {
-        return Err(EngineError::Invariant(
-            "invalid piece transformation target".into(),
-        ));
-    }
-    engine.transform_current_piece(state, square, SPEC.kind, true)?;
+    transform_support::acquire_random_transform(
+        engine,
+        state,
+        owner,
+        SPEC,
+        "acquire.barrier.target",
+        events,
+    )?;
     Ok(())
-}
-pub(super) fn actions(
-    engine: &Engine,
-    state: &GameState,
-    card: &CardInstance,
-    out: &mut Vec<Action>,
-) {
-    transform_support::actions(engine, state, card, SPEC, out);
 }
 pub(super) fn eligibility(
     state: &GameState,
@@ -38,4 +33,4 @@ pub(super) fn eligibility(
 ) -> CardEligibility {
     transform_support::eligibility(state, owner, SPEC)
 }
-pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
+pub(super) const BEHAVIOR: CardBehavior = CardBehavior::passive(ID, Some(acquire), eligibility);

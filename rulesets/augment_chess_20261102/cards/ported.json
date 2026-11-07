@@ -1,0 +1,2855 @@
+{
+  "ruleset_id": "augment_chess_20261102",
+  "source_bundle_sha256": "af362a64df02321edc00f225126c750b0ca41156c158d85930f273bbfad3f8b5",
+  "whole_card_site_parity_verified": false,
+  "cards": [
+    {
+      "id": "assassin",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "dragon",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "knightmaster",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "local-conscription",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Local Conscription resets capturesMade; regression verifies capture counter reset."
+    },
+    {
+      "id": "log",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "standard-bearer",
+      "stage": 1,
+      "scope": "selected transform contract; inherited movement handler; not full interaction parity",
+      "source_ranges": [
+        [
+          199174,
+          199270
+        ]
+      ],
+      "notes": "Own-piece typed selection, moved identity, and unchanged transformation contract."
+    },
+    {
+      "id": "highlander",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          182804,
+          182807
+        ]
+      ],
+      "notes": "Unique types, at least four, including a literal king."
+    },
+    {
+      "id": "initiative",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          496,
+          503
+        ],
+        [
+          196679,
+          196686
+        ],
+        [
+          203988,
+          203992
+        ]
+      ],
+      "notes": "Eight owner turns; check/capture releases restriction."
+    },
+    {
+      "id": "rook-lift",
+      "stage": 2,
+      "scope": "scoped latest rule port",
+      "source_ranges": [
+        [
+          208927,
+          208945
+        ]
+      ],
+      "notes": "Non-capture corner arrival; at most three retained moves per chain."
+    },
+    {
+      "id": "assembly",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          196595,
+          196596
+        ],
+        [
+          213320,
+          213324
+        ]
+      ],
+      "notes": "Passive; actual enemy bishop/rook captures promote surviving rook/bishop respectively."
+    },
+    {
+      "id": "hope",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          203874,
+          203880
+        ]
+      ],
+      "notes": "At own turn start, win with at most two allied pieces; no acquisition-time win."
+    },
+    {
+      "id": "iqp",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          203631,
+          203632
+        ],
+        [
+          203868,
+          203871
+        ]
+      ],
+      "notes": "Removal of enemy pawns currently in c/e files; defer until draft completes."
+    },
+    {
+      "id": "man",
+      "stage": 3,
+      "scope": "scoped new-card port",
+      "source_ranges": [
+        [
+          1030,
+          1087
+        ],
+        [
+          203638,
+          203672
+        ]
+      ],
+      "notes": "Either side native non-royal minor transforms to Man; retained identity."
+    },
+    {
+      "id": "big-bishop",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          1598,
+          1600
+        ],
+        [
+          196031,
+          196081
+        ]
+      ],
+      "notes": "Immediate passive layout; HP2 and footprint, unmoved anchor, no fresh-capture delay; existing large-body movement remains a partial inherited handler."
+    },
+    {
+      "id": "false-start",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          182855,
+          182878
+        ],
+        [
+          221237,
+          221268
+        ]
+      ],
+      "notes": "Immediate passive two-step file-group displacement; connected large footprints, occupied/reserved-square blockers; preserve piece identity and moved flags."
+    },
+    {
+      "id": "fast-growth",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive promotion rank/major exclusion, including field-promotion choices."
+    },
+    {
+      "id": "fianchetto",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          4780,
+          4782
+        ],
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive flag; existing pawn-only entry restriction applies before first move."
+    },
+    {
+      "id": "field-promotion",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196554,
+          196583
+        ]
+      ],
+      "notes": "Immediate passive flag; second actual pawn capture requests promotion, no manual card action."
+    },
+    {
+      "id": "gomoku",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          216507,
+          216520
+        ]
+      ],
+      "notes": "END passive; check victory at acquisition/unlock and after moves; simultaneous five-in-file is a draw."
+    },
+    {
+      "id": "london-system",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          195880,
+          196008
+        ],
+        [
+          196616,
+          196617
+        ]
+      ],
+      "notes": "Immediate passive fixed layout; replaces identities, preserves unmoved home pawns/king/rooks, no fresh-capture window."
+    },
+    {
+      "id": "otherworld",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          196418,
+          196477
+        ],
+        [
+          201631,
+          201660
+        ]
+      ],
+      "notes": "Immediate acquisition; deterministic web-order targets, zero/one candidate uses no RNG; disappear now, wizard returns after 28 counted moves."
+    },
+    {
+      "id": "recurrence",
+      "stage": 4,
+      "scope": "acquisition/activation timing and scoped behavior",
+      "source_ranges": [
+        [
+          204116,
+          204128
+        ],
+        [
+          204249,
+          204252
+        ],
+        [
+          205940,
+          205959
+        ]
+      ],
+      "notes": "Reverse conversion: END active; grant/draft gives a charge without applying effect; explicit use rolls once and excludes royal/pawn/neutral targets."
+    },
+    {
+      "id": "checker",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          172332,
+          172337
+        ],
+        [
+          200675,
+          200680
+        ],
+        [
+          200737,
+          200741
+        ],
+        [
+          221993,
+          222013
+        ]
+      ],
+      "notes": "Passive acquisition summons four allied checkers at a/b/g/h third rank; all-or-nothing if prescribed cells occupied/reserved; original pawns remain. Inherits existing checker movement and capture chain."
+    },
+    {
+      "id": "horse-riding",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          470,
+          477
+        ],
+        [
+          204009,
+          204016
+        ],
+        [
+          207332,
+          207335
+        ],
+        [
+          211156,
+          211169
+        ]
+      ],
+      "notes": "Active temporary king knight-move augmentation; keeps king identity and allied knights; expires at own turn end."
+    },
+    {
+      "id": "ordination",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          199197,
+          199205
+        ],
+        [
+          199237,
+          199269
+        ]
+      ],
+      "notes": "One own bishop transforms to cardinal; no second-bishop requirement or sacrifice. Cardinal movement remains inherited pending wider parity audit."
+    },
+    {
+      "id": "pegasus",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          199225,
+          199237
+        ],
+        [
+          199245,
+          199269
+        ]
+      ],
+      "notes": "END active transforms an own rook (not knight) to Unicorn/Pegasus with same identity; inherits existing Unicorn movement."
+    },
+    {
+      "id": "poisoned-pawn",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          197376,
+          197398
+        ],
+        [
+          204823,
+          204863
+        ],
+        [
+          205950,
+          205955
+        ]
+      ],
+      "notes": "Untargeted random sample without replacement, max three unpoisoned own pawns; one draw per selected pawn, including singleton. Actual enemy capture stuns movement/abilities for two future own turns without granting immunity."
+    },
+    {
+      "id": "reversal",
+      "stage": 5,
+      "scope": "target/procedure changes and scoped effect regressions",
+      "source_ranges": [
+        [
+          204104,
+          204114
+        ],
+        [
+          204150,
+          204160
+        ]
+      ],
+      "notes": "Select and sacrifice one own non-royal native minor without capture credit; rook/bishop movement swap lasts through own turn."
+    },
+    {
+      "id": "archbishop",
+      "stage": 6,
+      "scope": "Nonroyal own knight + native bishop/rook; stable-identity transformation and compound ray/leap movement. Canonical actions follow the knight-first UI prefix; not full interaction parity.",
+      "source_ranges": [
+        [
+          161453,
+          161458
+        ],
+        [
+          199329,
+          199369
+        ],
+        [
+          203739,
+          203755
+        ],
+        [
+          207340,
+          207349
+        ],
+        [
+          231692,
+          231695
+        ]
+      ],
+      "notes": "Knight sacrifice is noncapture; base identity, capture count and statuses survive, moved is set without a fresh-capture delay. Native major and ranged classifications; historical random pools unchanged."
+    },
+    {
+      "id": "chancellor",
+      "stage": 6,
+      "scope": "Nonroyal own knight + native bishop/rook; stable-identity transformation and compound ray/leap movement. Canonical actions follow the knight-first UI prefix; not full interaction parity.",
+      "source_ranges": [
+        [
+          161453,
+          161458
+        ],
+        [
+          199329,
+          199369
+        ],
+        [
+          203739,
+          203755
+        ],
+        [
+          207340,
+          207349
+        ],
+        [
+          231692,
+          231695
+        ]
+      ],
+      "notes": "Knight sacrifice is noncapture; base identity, capture count and statuses survive, moved is set without a fresh-capture delay. Native major and ranged classifications; historical random pools unchanged."
+    },
+    {
+      "id": "seal",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          203639,
+          203646
+        ],
+        [
+          203700,
+          203707
+        ],
+        [
+          203862,
+          203867
+        ],
+        [
+          208519,
+          208525
+        ]
+      ],
+      "notes": "Nonroyal enemy identity; next owner start applies bound; another surviving ally relocation releases bound."
+    },
+    {
+      "id": "greek-gift",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          1383,
+          1405
+        ],
+        [
+          203593,
+          203599
+        ],
+        [
+          204076,
+          204082
+        ],
+        [
+          221576,
+          221581
+        ]
+      ],
+      "notes": "Nonroyal bishop sacrifice without capture; current enemy royal neighborhoods are evaluated at the end of the actor turn."
+    },
+    {
+      "id": "taboo",
+      "stage": 7,
+      "scope": "Delayed transition and identity lifetime; not full interaction parity",
+      "source_ranges": [
+        [
+          221818,
+          221846
+        ],
+        [
+          221864,
+          221890
+        ]
+      ],
+      "notes": "Reserve queen identity and open destination; sacrifice current owned identity at turn end; crush each distinct landing and spawn neutral monsters. Movable walls cleared, pending spawns and portals retained. Full large-cell fracture parity unverified."
+    },
+    {
+      "id": "grudge",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          516,
+          569
+        ],
+        [
+          203611,
+          203618
+        ],
+        [
+          206844,
+          206848
+        ],
+        [
+          208478,
+          208490
+        ]
+      ],
+      "notes": "Acquisition chooses one eligible own nonpawn nonroyal (singleton consumes no RNG); actual enemy capture loses victim movement components permanently, preserving losses through transformations. Scoped native geometry and captured metadata, not all copied/portal/large-cell interactions."
+    },
+    {
+      "id": "pawn-chain",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          191699,
+          191765
+        ],
+        [
+          203619,
+          203631
+        ],
+        [
+          207122,
+          207131
+        ],
+        [
+          216265,
+          216289
+        ]
+      ],
+      "notes": "Spatial degree-two minimum-cost forest, horde row snake layout; links constrain living identities to Chebyshev distance <=2. Removal or relocation beyond range breaks links. Simultaneous friendly swaps use both destinations."
+    },
+    {
+      "id": "penta-check",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          203633,
+          203635
+        ],
+        [
+          203823,
+          203837
+        ],
+        [
+          203875,
+          203885
+        ],
+        [
+          213928,
+          214018
+        ],
+        [
+          216492,
+          216505
+        ]
+      ],
+      "notes": "Counts unchecked-to-checked transitions from direct current board attacks (no unused active threats); sustained check adds no count. Initial check grants no retroactive count. Victory at next owner turn start after five checks. Full exotic royal-footprint and automatic sequence parity unverified."
+    },
+    {
+      "id": "prophecy",
+      "stage": 8,
+      "scope": "Stateful movement/check/victory contracts; not full interaction parity",
+      "source_ranges": [
+        [
+          201670,
+          201683
+        ],
+        [
+          203803,
+          203837
+        ],
+        [
+          215382,
+          215436
+        ]
+      ],
+      "notes": "Royal-required active, six completed player turns; extra actions do not tick. Either king checked or any piece removal cancels both prophecies; final boundary check cancels before a timer win. Historical prophecy remains unchanged."
+    },
+    {
+      "id": "acceleration",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          193622,
+          193624
+        ],
+        [
+          204376,
+          204427
+        ]
+      ],
+      "notes": "Source delayed activation formula from completed Black turns; two actions per turn after activation; extra actions do not settle a turn boundary."
+    },
+    {
+      "id": "black-hole",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200805,
+          200817
+        ],
+        [
+          212556,
+          212560
+        ]
+      ],
+      "notes": "Central four holes remove initial occupants and arrivals, including forced placements through the common arrival hook."
+    },
+    {
+      "id": "chess-344200",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200057,
+          200083
+        ]
+      ],
+      "notes": "Shuffle within each army home two ranks; keep royal pieces on its back rank and preserve piece identities and moved flags."
+    },
+    {
+      "id": "chess-960",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200016,
+          200046
+        ],
+        [
+          191875,
+          191898
+        ]
+      ],
+      "notes": "All 960 source back ranks compared; symmetric armies preserve IDs. Source standard e-file/corner-rook castling checks are retained."
+    },
+    {
+      "id": "conveyor",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212608,
+          212797
+        ]
+      ],
+      "notes": "Clockwise simultaneous perimeter movement after completed Black turns; fixed-body/Slime blocking, walls/football, reservations and arrival settlement."
+    },
+    {
+      "id": "crown",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200999,
+          201023
+        ],
+        [
+          213022,
+          213087
+        ]
+      ],
+      "notes": "Central crown placement; immobile transformation preserves royal status; capture transfer/drop, color-reset counter and ten completed fullmoves to victory."
+    },
+    {
+      "id": "diagonal-chess",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200828,
+          200860
+        ]
+      ],
+      "notes": "Source fixed 30-piece layout (15 per army), with source coordinates rather than a reconstructed 32-piece arrangement."
+    },
+    {
+      "id": "football",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200939,
+          200948
+        ],
+        [
+          217609,
+          217638
+        ]
+      ],
+      "notes": "Neutral installation movement originates at ball square; behind-adjacent kicker, queen rays, corner escape, capture, shield and aggregate-HP contact."
+    },
+    {
+      "id": "high-ground",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          201058,
+          201076
+        ],
+        [
+          2012,
+          2018
+        ]
+      ],
+      "notes": "Fixed central 2x4 area and capture elevation checks; portal exit uses exit elevation. Existing aggregate large-body representation is retained."
+    },
+    {
+      "id": "highway",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          204335,
+          204346
+        ],
+        [
+          347635,
+          347639
+        ]
+      ],
+      "notes": "Additional vertical rook movement on b/g files, with ordinary movement/capture restrictions."
+    },
+    {
+      "id": "mistake",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          199964,
+          199976
+        ],
+        [
+          3308,
+          3317
+        ],
+        [
+          234062,
+          234125
+        ]
+      ],
+      "notes": "20-percent reversal with source immobile exclusions; direct/en-passant/checker/portal-first capture candidates, counter relocation and retained additional actions."
+    },
+    {
+      "id": "monster",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212903,
+          212944
+        ]
+      ],
+      "notes": "Neutral uncontrollable and normally uncapturable center spawn; adjacent movement every three completed halfmoves with protection, terrain and reserved-square exclusions."
+    },
+    {
+      "id": "periodic-collapse",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212393,
+          212432
+        ],
+        [
+          3990,
+          3994
+        ]
+      ],
+      "notes": "Next absolute multiple of twenty completed fullmoves; successive inner rings remove pieces, installations, pending spawns and quantum shadows."
+    },
+    {
+      "id": "portal",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          200818,
+          200827
+        ],
+        [
+          193995,
+          194025
+        ]
+      ],
+      "notes": "Fixed c3/f6 pair; clicked entry resolves to exit, two captures, slider continuation, mandatory ray diversion and ally-blocked exit fallback. Large-body portal geometry remains outside this scoped port."
+    },
+    {
+      "id": "revelation",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          4839,
+          4852
+        ]
+      ],
+      "notes": "After sixty completed fullmoves compare source encyclopedia combat values, excluding neutral Monster; ties draw. No historical shortened deathmatch."
+    },
+    {
+      "id": "rule-bombs",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          201035,
+          201057
+        ],
+        [
+          212569,
+          212588
+        ]
+      ],
+      "notes": "Three distinct rank-4/5 cells excluding e-file; empty-first sampling, initial occupant ignore ID and rank/file blast on arrival or portal traversal."
+    },
+    {
+      "id": "winter-kingdom",
+      "stage": 9,
+      "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
+      "source_ranges": [
+        [
+          212956,
+          213021
+        ]
+      ],
+      "notes": "White-end preview, Black-end application every three fullmoves; up to three nonroyals per army; replace frozen set and permanently disable at army size four or less."
+    },
+    {
+      "id": "barrier",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "campfire",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "constitutional-monarchy",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "don-quixote",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "eagle",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          200553,
+          200604
+        ]
+      ],
+      "notes": "Preserve and transform every own Knight; spawn at most one extra per Knight in the globally nearest safe open cells, algebraic tie ordering; no unsafe fallback; no draw if no safe cell."
+    },
+    {
+      "id": "eastern-policy",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "grappler",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203600,
+          203606
+        ],
+        [
+          204044,
+          204059
+        ]
+      ],
+      "notes": "Queen first, nonroyal native minor second; sacrifice is a noncapture; preserve queen identity and generic statuses."
+    },
+    {
+      "id": "idol",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201083,
+          201110
+        ],
+        [
+          204296,
+          204320
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "jester",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "killer",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          203638,
+          203680
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "medium",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ],
+        [
+          183024,
+          183230
+        ],
+        [
+          221498,
+          221528
+        ]
+      ],
+      "notes": "Native-minor transform; global last-capture movement tracked before the card or Medium exists; preserve captured Windmill mode and Trickster actual movement; 320 pinned base-memory geometry cases, borrowed Checker jump and Dragon swap transitions. Full copied ability/state propagation is outside this slice."
+    },
+    {
+      "id": "reaper",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ],
+        [
+          4287,
+          4291
+        ],
+        [
+          211645,
+          211738
+        ],
+        [
+          207895,
+          207895
+        ]
+      ],
+      "notes": "King+Alfil movement; two adjacent allied losses captured by opponent execute the enemy royal. Sacrifices, hazards and environmental removals do not count."
+    },
+    {
+      "id": "reformation",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199269,
+          199287
+        ],
+        [
+          199535,
+          199540
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "revolving-door",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199214,
+          199268
+        ]
+      ],
+      "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "windmill",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          199288,
+          199330
+        ],
+        [
+          199556,
+          199556
+        ]
+      ],
+      "notes": "Authority requires one selected Bishop/Rook pair despite mass wording in catalog; both orders valid; moved flags preserved; initial mode Bishop."
+    },
+    {
+      "id": "wizard",
+      "stage": 10,
+      "scope": "current PIECE selection, identity-preserving transform and native behavior slice; pinned source selection and geometry fixtures; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201083,
+          201110
+        ],
+        [
+          204296,
+          204320
+        ],
+        [
+          217981,
+          218080
+        ]
+      ],
+      "notes": "Zero initial mana; costs 1/2/3/5, max 5; preserve statuses; source 2x2 meteor orientation and delayed boundary; time stop retains the turn."
+    },
+    {
+      "id": "apprentice-knights",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222027
+        ],
+        [
+          210048,
+          210054
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "dutch",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196704,
+          196728
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "last-stand",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222027
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "pawn-conversion",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196729,
+          196739
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "guard",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196428,
+          196430
+        ],
+        [
+          199403,
+          199418
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "queen-cavalry",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196432,
+          196434
+        ],
+        [
+          199419,
+          199434
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "knightmate",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          201196,
+          201213
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "elephant-escape",
+      "stage": 11,
+      "scope": "current opening acquisition, eligibility, identity-preserving transform or summon; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          221993,
+          222013
+        ]
+      ],
+      "notes": "Latest opening behavior; converted opening passives and Dutch skip fresh-capture delay, others retain current fresh-transform rules."
+    },
+    {
+      "id": "herald",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196444,
+          196490
+        ],
+        [
+          199220,
+          199258
+        ]
+      ],
+      "notes": "Opening random choice consumes no RNG for a single target."
+    },
+    {
+      "id": "princess",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          196444,
+          196490
+        ],
+        [
+          199220,
+          199258
+        ]
+      ],
+      "notes": "Opening random choice consumes no RNG for a single target."
+    },
+    {
+      "id": "vanguard",
+      "stage": 11,
+      "scope": "current opening acquisition and native movement slice; full cross-card and large-body parity not claimed",
+      "source_ranges": [
+        [
+          207130,
+          207160
+        ]
+      ],
+      "notes": "Unique foremost pawn gains quiet diagonal moves."
+    },
+    {
+      "id": "locust-swarm",
+      "stage": 11,
+      "scope": "current opening acquisition and movement slice; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          182878,
+          182884
+        ],
+        [
+          221270,
+          221271
+        ]
+      ],
+      "notes": "Unmoved native minor or rook receives first grasshopper move."
+    },
+    {
+      "id": "rocket",
+      "stage": 11,
+      "scope": "current opening acquisition and movement slice; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          207150,
+          207158
+        ]
+      ],
+      "notes": "Unmoved rook gains knight movement while the passive is held."
+    },
+    {
+      "id": "big-rook",
+      "stage": 11,
+      "scope": "current opening layout using core large-body abstraction; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          196031,
+          196080
+        ],
+        [
+          196631,
+          196636
+        ]
+      ],
+      "notes": "Native layout and color-specific acquisition; source large-body fracture is outside core abstraction."
+    },
+    {
+      "id": "horde",
+      "stage": 11,
+      "scope": "current opening layout using core large-body abstraction; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          196165,
+          196245
+        ],
+        [
+          199462,
+          199533
+        ]
+      ],
+      "notes": "Native layout and color-specific acquisition; source large-body fracture is outside core abstraction."
+    },
+    {
+      "id": "holdout",
+      "stage": 11,
+      "scope": "random acquisition and owner-aligned 28-fullmove promotion; full cross-card parity not claimed",
+      "source_ranges": [
+        [
+          806,
+          810
+        ],
+        [
+          198919,
+          198930
+        ],
+        [
+          211265,
+          211285
+        ]
+      ],
+      "notes": "Target ID and normalized deadline survive movement and type changes; singleton selection consumes no RNG."
+    },
+    {
+      "id": "queens-gambit",
+      "stage": 11,
+      "scope": "random selection, sacrifice and file protection; full overlapping protection parity not claimed",
+      "source_ranges": [
+        [
+          2546,
+          2557
+        ],
+        [
+          198036,
+          198100
+        ],
+        [
+          196459,
+          196469
+        ]
+      ],
+      "notes": "Pick queen then a separated file, preferring files containing allied pawns; singleton choices do not consume RNG."
+    },
+    {
+      "id": "d4",
+      "stage": 11,
+      "scope": "ordinary movement, large-footprint destination and implemented spawn restrictions; full forced-placement parity not claimed",
+      "source_ranges": [
+        [
+          221898,
+          221913
+        ]
+      ],
+      "notes": "White d4 or Black d5 is forbidden to opposing pieces and own royal; ordinary checker, alfil and eagle placements honor the same restriction."
+    },
+    {
+      "id": "calling-card",
+      "stage": 11,
+      "scope": "random acquisition and ordinary capture reaction; full simultaneous capture parity not claimed",
+      "source_ranges": [
+        [
+          199948,
+          199962
+        ],
+        [
+          206308,
+          206319
+        ],
+        [
+          212102,
+          212121
+        ]
+      ],
+      "notes": "Singleton acquisition skips RNG; capture reserves one 64-way draw even with no follow-up candidate."
+    },
+    {
+      "id": "wanted",
+      "stage": 11,
+      "scope": "random ranged target, submerged and wanted state, exposed arrest at owner turn end",
+      "source_ranges": [
+        [
+          198831,
+          198879
+        ],
+        [
+          204058,
+          204065
+        ],
+        [
+          221563,
+          221570
+        ],
+        [
+          221816,
+          221818
+        ]
+      ],
+      "notes": "Singleton acquisition skips RNG. Wanted status survives movement and is part of repetition state."
+    },
+    {
+      "id": "iron-monarch",
+      "stage": 11,
+      "scope": "opening acquisition and optional same-piece extra movement; full concurrent action ordering not claimed",
+      "source_ranges": [
+        [
+          208900,
+          208940
+        ],
+        [
+          209185,
+          209215
+        ]
+      ],
+      "notes": "Extra move can be skipped; thief quiet jumps cannot capture through a hurdle."
+    },
+    {
+      "id": "thief",
+      "stage": 11,
+      "scope": "opening acquisition and optional same-piece extra movement; full concurrent action ordering not claimed",
+      "source_ranges": [
+        [
+          182814,
+          182830
+        ],
+        [
+          208900,
+          208908
+        ],
+        [
+          221277,
+          221299
+        ]
+      ],
+      "notes": "Extra move can be skipped; thief quiet jumps cannot capture through a hurdle."
+    },
+    {
+      "id": "merchant-guild",
+      "stage": 11,
+      "scope": "opening king transformation, gold and purchase with core combat values; full large-body and cross-card parity not claimed",
+      "source_ranges": [
+        [
+          4796,
+          4807
+        ],
+        [
+          201417,
+          201441
+        ],
+        [
+          218209,
+          218296
+        ]
+      ],
+      "notes": "Moves king two ranks, starts with one gold, purchases are selected as moves but merchant stays and nonroyal targets convert in place."
+    },
+    {
+      "id": "disarm",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "inertia",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "severance",
+      "stage": 12,
+      "scope": "current selected target and timed status; full interaction parity unverified",
+      "source_ranges": [
+        [
+          198973,
+          199029
+        ],
+        [
+          207050,
+          207080
+        ]
+      ],
+      "notes": "Enemy target selection and status duration from v19 authoritative implementation."
+    },
+    {
+      "id": "evasion",
+      "stage": 12,
+      "scope": "current random target and effect; full interaction parity unverified",
+      "source_ranges": [
+        [
+          199866,
+          199942
+        ]
+      ],
+      "notes": "V19 candidate selection, one random draw, and target effect."
+    },
+    {
+      "id": "fanatical-ritual",
+      "stage": 12,
+      "scope": "current random target and effect; full interaction parity unverified",
+      "source_ranges": [
+        [
+          199866,
+          199942
+        ]
+      ],
+      "notes": "V19 candidate selection, one random draw, and target effect."
+    },
+    {
+      "id": "freeze",
+      "stage": 12,
+      "scope": "current enemy-army eligibility, random targets and duration",
+      "source_ranges": [
+        [
+          199877,
+          199905
+        ],
+        [
+          212945,
+          212951
+        ]
+      ],
+      "notes": "V19 samples up to three eligible nonroyals after checking enemy army size."
+    },
+    {
+      "id": "en-passant-bang",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "royal-command",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "snipe",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "taunt",
+      "stage": 12,
+      "scope": "turn effect activation and movement constraints",
+      "source_ranges": [
+        [
+          204437,
+          204444
+        ],
+        [
+          205151,
+          205160
+        ],
+        [
+          207968,
+          207990
+        ]
+      ],
+      "notes": "Current color, duration and movement contracts."
+    },
+    {
+      "id": "frontline-response",
+      "stage": 12,
+      "scope": "rook identity and own-half frontal capture restriction",
+      "source_ranges": [
+        [
+          4509,
+          4520
+        ],
+        [
+          196610,
+          196614
+        ]
+      ],
+      "notes": "Only rooks present when the card is acquired receive frontline."
+    },
+    {
+      "id": "ice-king",
+      "stage": 12,
+      "scope": "current turn-bound effect and timing",
+      "source_ranges": [
+        [
+          199855,
+          199865
+        ],
+        [
+          203650,
+          203700
+        ],
+        [
+          217280,
+          217292
+        ]
+      ],
+      "notes": "Current blizzard and mistake-card contracts."
+    },
+    {
+      "id": "mistake-card",
+      "stage": 12,
+      "scope": "current turn-bound effect and timing",
+      "source_ranges": [
+        [
+          199855,
+          199865
+        ],
+        [
+          203650,
+          203700
+        ],
+        [
+          217280,
+          217292
+        ]
+      ],
+      "notes": "Current blizzard and mistake-card contracts."
+    },
+    {
+      "id": "ice-sheet",
+      "stage": 12,
+      "scope": "enemy target classification and directional longest movement",
+      "source_ranges": [
+        [
+          198861,
+          198883
+        ],
+        [
+          200861,
+          200869
+        ]
+      ],
+      "notes": "Current target and three-owner-turn duration."
+    },
+    {
+      "id": "counterattack",
+      "stage": 12,
+      "scope": "pawn selection, one-shot counterattack and turn lock",
+      "source_ranges": [
+        [
+          203640,
+          203674
+        ],
+        [
+          206852,
+          206852
+        ],
+        [
+          210810,
+          210900
+        ]
+      ],
+      "notes": "Scoped counterattack port; complex capture and cross-card interactions remain separately auditable."
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "stage": 12,
+      "scope": "same-file formation and permanent protection",
+      "source_ranges": [
+        [
+          197927,
+          197959
+        ]
+      ],
+      "notes": "Scoped port; transformed queen identity interactions remain separately auditable."
+    },
+    {
+      "id": "chameleon-mutation",
+      "stage": 12,
+      "scope": "selection and capture transformation",
+      "source_ranges": [
+        [
+          201443,
+          201456
+        ],
+        [
+          213305,
+          213323
+        ]
+      ],
+      "notes": "Scoped port; special piece interactions remain separately auditable."
+    },
+    {
+      "id": "promotion-rush",
+      "stage": 12,
+      "scope": "selection, queen movement and capture restriction",
+      "source_ranges": [
+        [
+          198992,
+          199019
+        ],
+        [
+          207064,
+          207064
+        ],
+        [
+          211348,
+          211356
+        ]
+      ],
+      "notes": "Current timed effect and capture restriction."
+    },
+    {
+      "id": "metal",
+      "stage": 12,
+      "scope": "ranged target, protection and cooldown",
+      "source_ranges": [
+        [
+          221913,
+          221946
+        ],
+        [
+          182677,
+          182711
+        ]
+      ],
+      "notes": "Scoped current metal contract."
+    },
+    {
+      "id": "basic-training",
+      "stage": 12,
+      "scope": "target selection and pawn movement",
+      "source_ranges": [
+        [
+          195795,
+          195809
+        ],
+        [
+          198011,
+          198030
+        ],
+        [
+          205682,
+          205689
+        ],
+        [
+          208010,
+          208014
+        ]
+      ],
+      "notes": "Scoped current training contract."
+    },
+    {
+      "id": "encouragement",
+      "stage": 12,
+      "scope": "orthogonal royal aura and protection contact",
+      "source_ranges": [
+        [
+          204966,
+          204990
+        ],
+        [
+          209232,
+          209275
+        ]
+      ],
+      "notes": "Current encouragement protection contract."
+    },
+    {
+      "id": "vigilance",
+      "stage": 12,
+      "scope": "loss-triggered royal protection and enemy-turn expiry",
+      "source_ranges": [
+        [
+          211850,
+          211860
+        ],
+        [
+          221580,
+          221586
+        ]
+      ],
+      "notes": "Current vigilance timing and protection."
+    },
+    {
+      "id": "suicide-bomber",
+      "stage": 12,
+      "scope": "pawn-family selection and capture-triggered explosion",
+      "source_ranges": [
+        [
+          752,
+          755
+        ],
+        [
+          201458,
+          201470
+        ],
+        [
+          213346,
+          213375
+        ]
+      ],
+      "notes": "Current suicide bomber targeting and explosion."
+    },
+    {
+      "id": "dice",
+      "stage": 12,
+      "scope": "six-kind roll and two-enemy-turn lock",
+      "source_ranges": [
+        [
+          199934,
+          199947
+        ],
+        [
+          212004,
+          212008
+        ]
+      ],
+      "notes": "Current dice sampling and duration."
+    },
+    {
+      "id": "switcheroo",
+      "stage": 12,
+      "scope": "royal-pawn exchange and turn consumption",
+      "source_ranges": [
+        [
+          217074,
+          217138
+        ]
+      ],
+      "notes": "Current switcheroo contract."
+    },
+    {
+      "id": "bishop-infiltration",
+      "stage": 12,
+      "scope": "bishop quiet jump and owner-start expiry",
+      "source_ranges": [
+        [
+          203850,
+          203859
+        ],
+        [
+          204071,
+          204075
+        ],
+        [
+          221465,
+          221471
+        ]
+      ],
+      "notes": "Current bishop infiltration timing and movement."
+    },
+    {
+      "id": "loyalist",
+      "stage": 12,
+      "scope": "own nonroyal target and royal-adjacent relocation",
+      "source_ranges": [
+        [
+          202495,
+          202508
+        ],
+        [
+          207854,
+          207857
+        ]
+      ],
+      "notes": "Current loyalist selection and movement."
+    },
+    {
+      "id": "vortex",
+      "stage": 12,
+      "scope": "enemy target set and ordered shuffle",
+      "source_ranges": [
+        [
+          200047,
+          200055
+        ],
+        [
+          200301,
+          200319
+        ]
+      ],
+      "notes": "Current vortex selection and shuffle."
+    },
+    {
+      "id": "emergency-evacuation",
+      "stage": 12,
+      "scope": "ordered selection and one-turn capture restriction",
+      "source_ranges": [
+        [
+          201965,
+          202070
+        ]
+      ],
+      "notes": "Current sequential evacuation and moved-piece restriction."
+    },
+    {
+      "id": "castling",
+      "stage": 12,
+      "scope": "aligned rook selection and immediate free castling",
+      "source_ranges": [
+        [
+          198435,
+          198515
+        ]
+      ],
+      "notes": "Current free castling target and placement contract."
+    },
+    {
+      "id": "scarecrow",
+      "stage": 12,
+      "scope": "sacrifice, protected reservation and activation timing",
+      "source_ranges": [
+        [
+          200869,
+          200898
+        ],
+        [
+          212447,
+          212480
+        ]
+      ],
+      "notes": "Current scarecrow reservation and owner-start expiry."
+    },
+    {
+      "id": "sacrifice",
+      "stage": 12,
+      "scope": "ordered value comparison and three-turn protection",
+      "source_ranges": [
+        [
+          200523,
+          200551
+        ],
+        [
+          212021,
+          212028
+        ]
+      ],
+      "notes": "Current sacrifice and protection contract."
+    },
+    {
+      "id": "reposition",
+      "stage": 12,
+      "scope": "first-mover forced follow-up with no capture",
+      "source_ranges": [
+        [
+          204379,
+          204383
+        ],
+        [
+          206874,
+          206902
+        ],
+        [
+          209004,
+          209075
+        ]
+      ],
+      "notes": "Current reposition readiness and forced move."
+    },
+    {
+      "id": "mad-horse",
+      "stage": 12,
+      "scope": "friendly capture and forced continuation",
+      "source_ranges": [
+        [
+          218131,
+          218166
+        ],
+        [
+          208915,
+          208950
+        ]
+      ],
+      "notes": "Current mad horse targeting and chained extra movement."
+    },
+    {
+      "id": "e4",
+      "stage": 12,
+      "scope": "color-specific e4/e5 teleport and turn expiry",
+      "source_ranges": [
+        [
+          204071,
+          204075
+        ],
+        [
+          221463,
+          221477
+        ]
+      ],
+      "notes": "Current e4 movement target and turn timing."
+    },
+    {
+      "id": "twins",
+      "stage": 12,
+      "scope": "twin identity selection and post-move exchange",
+      "source_ranges": [
+        [
+          198366,
+          198393
+        ],
+        [
+          210547,
+          210625
+        ],
+        [
+          220667,
+          220680
+        ]
+      ],
+      "notes": "Current twin bond and deferred exchange."
+    },
+    {
+      "id": "feudal-contract",
+      "stage": 12,
+      "scope": "feudal identity selection and immediate counterstrike",
+      "source_ranges": [
+        [
+          198132,
+          198163
+        ],
+        [
+          210466,
+          210528
+        ]
+      ],
+      "notes": "Current contract replacement and counterstrike."
+    },
+    {
+      "id": "solidarity",
+      "stage": 12,
+      "scope": "friendly nonroyal minor exchange for the current turn",
+      "source_ranges": [
+        [
+          204071,
+          204075
+        ],
+        [
+          217206,
+          217245
+        ],
+        [
+          221567,
+          221575
+        ]
+      ],
+      "notes": "Current solidarity exchange and turn expiry."
+    },
+    {
+      "id": "panic",
+      "stage": 12,
+      "scope": "ordered enemy reservation and random legal movement at turn boundary",
+      "source_ranges": [
+        [
+          200342,
+          200365
+        ],
+        [
+          211969,
+          211997
+        ],
+        [
+          212123,
+          212140
+        ]
+      ],
+      "notes": "Current panic selection and bounded random movement."
+    },
+    {
+      "id": "blockade",
+      "stage": 12,
+      "scope": "timed blocking walls adjacent to the first allied royal",
+      "source_ranges": [
+        [
+          203646,
+          203656
+        ],
+        [
+          203685,
+          203693
+        ],
+        [
+          203845,
+          203854
+        ]
+      ],
+      "notes": "Current blockade placement and owner-turn expiry."
+    },
+    {
+      "id": "roller",
+      "stage": 12,
+      "scope": "rook travel deposits continuous persistent highway terrain",
+      "source_ranges": [
+        [
+          193103,
+          193124
+        ],
+        [
+          221525,
+          221550
+        ],
+        [
+          347631,
+          347664
+        ]
+      ],
+      "notes": "Current roller trail and highway movement."
+    },
+    {
+      "id": "chimera",
+      "stage": 12,
+      "scope": "major-piece chimera status and ordered random transformation",
+      "source_ranges": [
+        [
+          197026,
+          197030
+        ],
+        [
+          197058,
+          197068
+        ],
+        [
+          204307,
+          204315
+        ],
+        [
+          213326,
+          213344
+        ]
+      ],
+      "notes": "Current major target, ordered pool and ability defaults."
+    },
+    {
+      "id": "file-conveyor",
+      "stage": 12,
+      "scope": "delayed directional linear file conveyor",
+      "source_ranges": [
+        [
+          203675,
+          203685
+        ],
+        [
+          203859,
+          203861
+        ],
+        [
+          203941,
+          203945
+        ],
+        [
+          212608,
+          212700
+        ]
+      ],
+      "notes": "Current file ownership, delayed activation and linear movement."
+    },
+    {
+      "id": "trolley",
+      "stage": 12,
+      "scope": "seeded balanced trolley bundles and delayed opponent response",
+      "source_ranges": [
+        [
+          191832,
+          191857
+        ],
+        [
+          202079,
+          202153
+        ],
+        [
+          202171,
+          202191
+        ],
+        [
+          202232,
+          202260
+        ],
+        [
+          215292,
+          215315
+        ],
+        [
+          215495,
+          215565
+        ]
+      ],
+      "notes": "Current source score ranking, seed timing and mixed-color removal."
+    },
+    {
+      "id": "rule-ticket",
+      "stage": 12,
+      "scope": "current ordered rule choice, deferred installation by owner turn and recorded random replay",
+      "source_ranges": [
+        [
+          201766,
+          201771
+        ],
+        [
+          201793,
+          201796
+        ],
+        [
+          201806,
+          201851
+        ],
+        [
+          202307,
+          202310
+        ],
+        [
+          205993,
+          206010
+        ],
+        [
+          210031,
+          210034
+        ]
+      ],
+      "notes": "Candidate pool is ACTIVE RULE cards minus the fixed layout rules, already active, installed or pending; the delay is two plies and the random values are captured at play time."
+    },
+    {
+      "id": "stake",
+      "stage": 12,
+      "scope": "current four-turn immobilization then protection",
+      "source_ranges": [
+        [
+          354733,
+          354744
+        ]
+      ],
+      "notes": "Target cannot move for four owner turns, then gains protection."
+    },
+    {
+      "id": "conscription",
+      "stage": 12,
+      "scope": "current second-rank pawn summon",
+      "source_ranges": [
+        [
+          197980,
+          198010
+        ],
+        [
+          354511,
+          354514
+        ]
+      ],
+      "notes": "Summon friendly pawns on the four central files of the second rank."
+    },
+    {
+      "id": "canceling",
+      "stage": 12,
+      "scope": "current castling undo",
+      "source_ranges": [
+        [
+          198522,
+          198566
+        ],
+        [
+          354690,
+          354729
+        ]
+      ],
+      "notes": "Return a castled enemy king to its original square."
+    },
+    {
+      "id": "barricade",
+      "stage": 12,
+      "scope": "current wall placement contract",
+      "source_ranges": [
+        [
+          200753,
+          200761
+        ],
+        [
+          200762,
+          200770
+        ],
+        [
+          354527,
+          354537
+        ]
+      ],
+      "notes": "Three-cell wall selection and expiry."
+    },
+    {
+      "id": "black-magic",
+      "stage": 12,
+      "scope": "current friendly monster summon next to the king",
+      "source_ranges": [
+        [
+          348952,
+          348966
+        ]
+      ],
+      "notes": "Friendly-owned monster with random movement and non-capturable-by-pawns behavior."
+    },
+    {
+      "id": "brainwash",
+      "stage": 12,
+      "scope": "current sacrifice and score-gated conversion",
+      "source_ranges": [
+        [
+          1434,
+          1434
+        ],
+        [
+          198320,
+          198336
+        ]
+      ],
+      "notes": "Sacrifice a friendly piece, then convert a lower-value enemy; royal excluded."
+    },
+    {
+      "id": "bribe",
+      "stage": 12,
+      "scope": "current knight-to-amazon timed override",
+      "source_ranges": [
+        [
+          198930,
+          198939
+        ],
+        [
+          354774,
+          354790
+        ]
+      ],
+      "notes": "Three owner turns as an amazon, then restore the original kind."
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "stage": 12,
+      "scope": "current same-kind exchange with random opponent pick",
+      "source_ranges": [
+        [
+          200321,
+          200331
+        ],
+        [
+          200332,
+          200341
+        ],
+        [
+          352881,
+          352907
+        ]
+      ],
+      "notes": "Remove a friendly piece and a random enemy of the same kind."
+    },
+    {
+      "id": "collapse",
+      "stage": 12,
+      "scope": "current border collapse after the next owner move",
+      "source_ranges": [
+        [
+          200787,
+          200799
+        ],
+        [
+          355167,
+          355171
+        ]
+      ],
+      "notes": "Outer border removal deferred one owner turn."
+    },
+    {
+      "id": "last-resistance",
+      "stage": 12,
+      "scope": "current three-turn king protection",
+      "source_ranges": [
+        [
+          199027,
+          199037
+        ],
+        [
+          352722,
+          352733
+        ]
+      ],
+      "notes": "King protection for three owner turns."
+    },
+    {
+      "id": "witch-trial",
+      "stage": 12,
+      "scope": "current suspicion and trial outcome",
+      "source_ranges": [
+        [
+          352642,
+          352649
+        ]
+      ],
+      "notes": "Suspect one non-king enemy piece and resolve the trial outcome."
+    },
+    {
+      "id": "final-weapon",
+      "stage": 12,
+      "scope": "current amazon promotion and final promotion rank",
+      "source_ranges": [
+        [
+          354634,
+          354638
+        ]
+      ],
+      "notes": "Adds amazon to promotion choices and locks the promotion rank."
+    },
+    {
+      "id": "black-box",
+      "stage": 12,
+      "scope": "current active-card recursion guard and random invocation",
+      "source_ranges": [
+        [
+          201772,
+          201781
+        ],
+        [
+          202261,
+          202272
+        ],
+        [
+          202387,
+          202413
+        ],
+        [
+          354094,
+          354097
+        ]
+      ],
+      "notes": "Active-card pool minus the recursion exclusion set, single random draw."
+    },
+    {
+      "id": "chain",
+      "stage": 12,
+      "scope": "current two-target distance constraint",
+      "source_ranges": [
+        [
+          198102,
+          198117
+        ],
+        [
+          198118,
+          198131
+        ],
+        [
+          355027,
+          355056
+        ]
+      ],
+      "notes": "Two enemy pieces may not separate beyond two squares."
+    },
+    {
+      "id": "charge",
+      "stage": 12,
+      "scope": "current three-square pawn advance with death fallback",
+      "source_ranges": [
+        [
+          198940,
+          198947
+        ],
+        [
+          352598,
+          352607
+        ]
+      ],
+      "notes": "Advance up to three squares; dies if it does not promote."
+    },
+    {
+      "id": "exile",
+      "stage": 12,
+      "scope": "current return-to-start with timed protection",
+      "source_ranges": [
+        [
+          198164,
+          198173
+        ],
+        [
+          198174,
+          198202
+        ],
+        [
+          352961,
+          352979
+        ]
+      ],
+      "notes": "Enemy piece returns to its starting square and is protected until the caster turn ends."
+    },
+    {
+      "id": "gale",
+      "stage": 12,
+      "scope": "current isolated-major removal after three turns",
+      "source_ranges": [
+        [
+          200289,
+          200300
+        ],
+        [
+          348197,
+          348207
+        ]
+      ],
+      "notes": "Remove majors with no other major in the surrounding eight squares."
+    },
+    {
+      "id": "icbm",
+      "stage": 12,
+      "scope": "current queen sacrifice and 3x3 detonation",
+      "source_ranges": [
+        [
+          199038,
+          199046
+        ],
+        [
+          199047,
+          199065
+        ],
+        [
+          353547,
+          353565
+        ]
+      ],
+      "notes": "Reserve a friendly queen, then detonate around the target queen at the next owner turn start."
+    },
+    {
+      "id": "leap",
+      "stage": 12,
+      "scope": "current pawn leap over a blocker without capture",
+      "source_ranges": [
+        [
+          353298,
+          353303
+        ]
+      ],
+      "notes": "Pawn may advance over an occupied square but may not capture that way."
+    },
+    {
+      "id": "lobster",
+      "stage": 12,
+      "scope": "current delayed lobster spawn on an empty square",
+      "source_ranges": [
+        [
+          200910,
+          200914
+        ],
+        [
+          200915,
+          200938
+        ],
+        [
+          348722,
+          348739
+        ]
+      ],
+      "notes": "Reserve an empty destination, then spawn the lobster after the delay."
+    },
+    {
+      "id": "mutation",
+      "stage": 12,
+      "scope": "current double-monster promotion",
+      "source_ranges": [
+        [
+          208832,
+          208832
+        ],
+        [
+          214158,
+          214158
+        ]
+      ],
+      "notes": "A promoted pawn may become two friendly monsters when space allows."
+    },
+    {
+      "id": "necromancy",
+      "stage": 12,
+      "scope": "current four-turn revival of a captured piece",
+      "source_ranges": [
+        [
+          200413,
+          200422
+        ],
+        [
+          200423,
+          200454
+        ],
+        [
+          354398,
+          354437
+        ]
+      ],
+      "notes": "Revive a captured friendly piece on a chosen friendly pawn for four plies."
+    },
+    {
+      "id": "palace",
+      "stage": 12,
+      "scope": "current 3x3 royal zone around the enemy king",
+      "source_ranges": [
+        [
+          200771,
+          200786
+        ],
+        [
+          355127,
+          355142
+        ]
+      ],
+      "notes": "Mark the 3x3 around the enemy king as the palace zone."
+    },
+    {
+      "id": "premove",
+      "stage": 12,
+      "scope": "current ordered deferred move declaration",
+      "source_ranges": [
+        [
+          353830,
+          353875
+        ],
+        [
+          201851,
+          201868
+        ]
+      ],
+      "notes": "Up to three ordered moves resolved after the opponent's next move, with no captures."
+    },
+    {
+      "id": "random-roulette",
+      "stage": 12,
+      "scope": "current non-royal major transformation",
+      "source_ranges": [
+        [
+          200210,
+          200262
+        ],
+        [
+          200263,
+          200288
+        ],
+        [
+          353647,
+          353718
+        ]
+      ],
+      "notes": "Convert a chosen non-royal major into a random transformed piece."
+    },
+    {
+      "id": "resolve",
+      "stage": 12,
+      "scope": "current first-moved pawn turn refund",
+      "source_ranges": [
+        [
+          352900,
+          352920
+        ]
+      ],
+      "notes": "The first friendly pawn to move after a pawn is captured does not spend the turn."
+    },
+    {
+      "id": "synchronization",
+      "stage": 12,
+      "scope": "current opposite-colour arrival ban",
+      "source_ranges": [
+        [
+          1351,
+          1351
+        ]
+      ],
+      "notes": "While all friendly pieces share one square colour, enemies may not land on the other colour."
+    },
+    {
+      "id": "traitor",
+      "stage": 12,
+      "scope": "current weakest-moved-enemy conversion",
+      "source_ranges": [
+        [
+          200484,
+          200524
+        ],
+        [
+          354254,
+          354293
+        ]
+      ],
+      "notes": "Convert the weakest enemy piece that has already moved."
+    },
+    {
+      "id": "ultimatum",
+      "stage": 12,
+      "scope": "current four-turn inactivity purge",
+      "source_ranges": [
+        [
+          199066,
+          199078
+        ],
+        [
+          355175,
+          355184
+        ]
+      ],
+      "notes": "After four turns remove every non-king piece that did not move."
+    },
+    {
+      "id": "vanish",
+      "stage": 12,
+      "scope": "current per-turn-end random removal from both sides",
+      "source_ranges": [
+        [
+          200455,
+          200467
+        ],
+        [
+          353542,
+          353546
+        ]
+      ],
+      "notes": "At every turn end remove one random piece per side."
+    },
+    {
+      "id": "zugzwang",
+      "stage": 12,
+      "scope": "current forced enemy king move",
+      "source_ranges": [
+        [
+          348808,
+          348814
+        ]
+      ],
+      "notes": "The opponent's next move must move the king."
+    },
+    {
+      "id": "othello",
+      "stage": 12,
+      "scope": "current turn-end trapped-piece conversion",
+      "source_ranges": [
+        [
+          198282,
+          198336
+        ],
+        [
+          354378,
+          354397
+        ]
+      ],
+      "notes": "At turn end convert enemy pieces caught between two friendly pieces."
+    },
+    {
+      "id": "vip",
+      "stage": 12,
+      "scope": "current three-turn pawn conversion to vip",
+      "source_ranges": [
+        [
+          198948,
+          198957
+        ],
+        [
+          348815,
+          348824
+        ]
+      ],
+      "notes": "Convert a chosen pawn into a vip after three owner turns if it survives."
+    }
+  ]
+}

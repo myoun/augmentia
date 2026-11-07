@@ -10,6 +10,8 @@ const BUNDLED_20260915: &str =
     include_str!("../../../rulesets/augment_chess_20260915/manifest.json");
 const BUNDLED_20261017: &str =
     include_str!("../../../rulesets/augment_chess_20261017/manifest.json");
+const BUNDLED_20261102: &str =
+    include_str!("../../../rulesets/augment_chess_20261102/manifest.json");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct RulesetManifest {
@@ -27,6 +29,12 @@ pub struct RulesetManifest {
 
 impl RulesetManifest {
     pub fn bundled_latest() -> Result<Self, RulesetError> {
+        Self::from_json(BUNDLED_20261102)
+    }
+
+    /// The previous snapshot, kept for the transition tests that pin historical
+    /// behavior while the current profile catches up.
+    pub fn bundled_20261017() -> Result<Self, RulesetError> {
         Self::from_json(BUNDLED_20261017)
     }
 

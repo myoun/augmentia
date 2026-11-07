@@ -1,128 +1,39 @@
+use super::transform_support::{self, TransformSource, TransformSpec};
 use super::*;
 pub(super) const ID: &str = crate::HEDGEHOG;
-pub(super) fn play(
+const SPEC: TransformSpec = TransformSpec {
+    source: TransformSource::Kind(PieceKind::Queen),
+    kind: PieceKind::Hedgehog,
+    allow_royal: false,
+};
+/// The 2026-10-27 balance pass turned the explicit-target piece cards into
+/// passives that transform a random own piece on acquisition. Upstream keeps the
+/// behavior in `OCTOBER27_RANDOM_TRANSFORMS` (main bundle 1768) and resolves it
+/// at acquisition time (41613-41630), where a hedgehog also receives its
+/// counter-attack budget (41627).
+pub(super) fn acquire(
     engine: &Engine,
     state: &mut GameState,
-    actor: Player,
-    _instance_id: u32,
-    target: &ActionTarget,
+    owner: Player,
     events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    let definition_id = ID.to_owned();
-    let target = target.clone();
-    let (target_square, mut target_piece) = piece_target(&*state, &target)?;
-    if definition_id == MISSIONARY {
-        let candidates = engine.missionary_spawn_candidates(&*state, target_square);
-        let (roll, index) = state.rng_mut().web_choice_index(candidates.len());
-        let square = candidates[index.ok_or_else(|| {
-            EngineError::Invariant("legal missionary card has no spawn square".to_owned())
-        })?];
-        events.push(Event::RandomSample {
-            purpose: "missionary-second-spawn".to_owned(),
-            roll_53: roll,
-        });
-        let summoned = Piece::new(actor, PieceKind::Missionary).with_id(state.allocate_piece_id());
-        state.board.set(square, Some(summoned));
-        engine.register_spawned_piece(state, square, summoned, true);
-        engine.clear_queens_gambit_protection(state, target_piece.id);
-    }
-    engine.clear_queens_gambit_protection(state, target_piece.id);
-    target_piece.kind = match definition_id.as_str() {
-        CONSTITUTIONAL_MONARCHY => PieceKind::PrimeMinister,
-        DRAGON => PieceKind::Dragon,
-        EASTERN_POLICY => PieceKind::Cannon,
-        HERALD => PieceKind::Herald,
-        KNIGHTMASTER => PieceKind::Knightmaster,
-        PEGASUS => PieceKind::Unicorn,
-        IDOL => PieceKind::Idol,
-        JESTER => PieceKind::Jester,
-        LOCAL_CONSCRIPTION => PieceKind::Recruiter,
-        REAPER => PieceKind::Reaper,
-        WIZARD => PieceKind::Wizard,
-        LOG => PieceKind::Log,
-        MISSIONARY => PieceKind::Missionary,
-        STANDARD_BEARER => PieceKind::StandardBearer,
-        BERSERKER => PieceKind::Berserker,
-        MAGIC_GIRL => PieceKind::MagicGirl,
-        SIEGE_RAM => PieceKind::SiegeRam,
-        SIREN => PieceKind::Siren,
-        SLIME => PieceKind::Slime,
-        TRICKSTER => PieceKind::Trickster,
-        UNDEAD => PieceKind::Undead,
-        crate::CLOCKWORK => PieceKind::Clockwork,
-        crate::PARROT => PieceKind::Parrot,
-        crate::PALADIN => PieceKind::Paladin,
-        crate::PRINCESS => PieceKind::Princess,
-        crate::OCTOPUS => PieceKind::Octopus,
-        crate::HEDGEHOG => PieceKind::Hedgehog,
-        crate::CAMPFIRE => PieceKind::Campfire,
-        _ => unreachable!(),
-    };
-    state.board.set(target_square, Some(target_piece));
-    state.card_runtime.moved_piece_ids.insert(target_piece.id);
-    engine.mark_fresh_no_capture(state, target_piece);
-    match target_piece.kind {
-        PieceKind::Recruiter if state.ruleset_id == crate::LATEST_RULESET_ID => {
-            target_piece.capture_count = 0;
-            state.board.set(target_square, Some(target_piece));
-        }
-        PieceKind::Hedgehog => {
-            state
-                .card_runtime
-                .bear_retaliations
-                .insert(target_piece.id, 2);
-        }
-        PieceKind::Herald if state.shared_turn_count() >= 2 => {
-            state.card_runtime.herald_jump_locked_until.insert(
-                target_piece.id,
-                state.turns_taken[actor.index()].saturating_add(1),
-            );
-        }
-        PieceKind::Wizard => {
-            state.card_runtime.wizard_mana.insert(target_piece.id, 0);
-        }
-        PieceKind::Reaper => {
-            state.card_runtime.reaper_souls.insert(target_piece.id, 0);
-        }
-        PieceKind::Trickster => {
-            let kind = engine.choose_trickster_kind(state, events);
-            state
-                .card_runtime
-                .trickster_move_kinds
-                .insert(target_piece.id, kind);
-        }
-        _ => {}
+    if let Some(piece) = transform_support::acquire_random_transform(
+        engine,
+        state,
+        owner,
+        SPEC,
+        "acquire.hedgehog.target",
+        events,
+    )? {
+        state.card_runtime.bear_retaliations.insert(piece.id, 2);
     }
     Ok(())
 }
-
-pub(super) fn actions(
-    _engine: &Engine,
-    state: &GameState,
-    card: &CardInstance,
-    actions: &mut Vec<Action>,
-) {
-    for (square, piece) in state.board.iter() {
-        if piece.owner == state.turn && piece.kind == PieceKind::Queen {
-            actions.push(Action::UseCard {
-                instance_id: card.instance_id,
-                target: ActionTarget::PieceAt(square),
-            });
-        }
-    }
-}
-
 pub(super) fn eligibility(
-    _state: &GameState,
-    _player: Player,
-    _context: AcquisitionContext,
+    state: &GameState,
+    owner: Player,
+    _: AcquisitionContext,
 ) -> CardEligibility {
-    let id = ID;
-    denied(
-        EligibilityReasonCode::UnsupportedPredicate,
-        id,
-        "공식 획득 조건의 런타임 매핑이 아직 검증되지 않아 획득을 허용하지 않습니다.",
-    )
+    transform_support::eligibility(state, owner, SPEC)
 }
-
-pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
+pub(super) const BEHAVIOR: CardBehavior = CardBehavior::passive(ID, Some(acquire), eligibility);

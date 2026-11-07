@@ -97,6 +97,6 @@ pub use state::{CaptureTheFlagState, FlagOccupation};
 /// Ruleset bundled into this build and used by the first engine milestone.
 pub const BUNDLED_RULESET_ID: &str = "augment_chess_20260818";
 /// Latest captured rules, with an explicitly limited executable card profile.
-pub const LATEST_RULESET_ID: &str = "augment_chess_20261017";
+pub const LATEST_RULESET_ID: &str = "augment_chess_20261102";
 pub const SUPPORTED_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_ENGINE_API_VERSION: u32 = 1;

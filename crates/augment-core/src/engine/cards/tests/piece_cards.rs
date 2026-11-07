@@ -143,9 +143,11 @@ fn grappler_and_windmill_pair_order_and_royal_contracts_match_source() {
 #[test]
 fn transformations_keep_identity_capture_count_generic_status_and_the_same_turn() {
     let engine = Engine::bundled_latest().unwrap();
+    // Barrier and Killer became on-acquire passives in the 2026-10-27 balance
+    // pass, so they no longer expose a card action; their acquisition path is
+    // covered by `acquired_random_transform_cards_convert_on_pickup_and_keep_status`
+    // below. Beacon is upstream-disabled from 2026-11-02.
     for (card, from, to) in [
-        (crate::BARRIER, PieceKind::Rook, PieceKind::Barrier),
-        (crate::BEACON, PieceKind::Rook, PieceKind::Beacon),
         (crate::CAMPFIRE, PieceKind::Knight, PieceKind::Campfire),
         (
             crate::CONSTITUTIONAL_MONARCHY,
@@ -156,7 +158,6 @@ fn transformations_keep_identity_capture_count_generic_status_and_the_same_turn(
         (crate::EASTERN_POLICY, PieceKind::Camel, PieceKind::Cannon),
         (crate::IDOL, PieceKind::Queen, PieceKind::Idol),
         (crate::JESTER, PieceKind::Queen, PieceKind::Jester),
-        (crate::KILLER, PieceKind::Bishop, PieceKind::Killer),
         (crate::MEDIUM, PieceKind::Knight, PieceKind::Medium),
         (crate::REAPER, PieceKind::Queen, PieceKind::Reaper),
         (
@@ -201,6 +202,73 @@ fn transformations_keep_identity_capture_count_generic_status_and_the_same_turn(
         );
         assert_eq!(next.state.cards[0].charges, 0);
     }
+}
+
+/// The 2026-10-27 balance pass converted these explicit-target piece cards into
+/// on-acquire passives that transform a random own piece of a fixed source kind.
+/// Upstream keeps the mapping in `OCTOBER27_RANDOM_TRANSFORMS` and resolves it
+/// when the card is acquired, so the piece changes without any card action.
+#[test]
+fn acquired_random_transform_cards_convert_on_pickup_and_keep_status() {
+    let engine = Engine::bundled_latest().unwrap();
+    for (card, from, to) in [
+        (crate::BARRIER, PieceKind::Rook, PieceKind::Barrier),
+        (crate::BERSERKER, PieceKind::Rook, PieceKind::Berserker),
+        (crate::KILLER, PieceKind::Bishop, PieceKind::Killer),
+        (crate::SIREN, PieceKind::Rook, PieceKind::Siren),
+        (crate::UNDEAD, PieceKind::Queen, PieceKind::Undead),
+        (crate::HEDGEHOG, PieceKind::Queen, PieceKind::Hedgehog),
+    ] {
+        let mut state = position(&[("d4", Player::White, from)]);
+        let mut p = state.board.get("d4".parse().unwrap()).unwrap();
+        p.capture_count = 7;
+        state.board.set("d4".parse().unwrap(), Some(p));
+        state.card_runtime.shielded_piece_ids.insert(p.id);
+        let state = acquire(&engine, &state, card);
+        // Acquisition itself performs the transformation: no card action needed.
+        assert!(
+            !state
+                .cards
+                .iter()
+                .any(|instance| instance.definition_id == card && instance.charges > 0),
+            "{card} must not expose a usable charge"
+        );
+        let changed = state.board.get("d4".parse().unwrap()).unwrap();
+        assert_eq!(
+            (changed.id, changed.capture_count, changed.kind),
+            (p.id, 7, to),
+            "{card}"
+        );
+        assert!(
+            state.card_runtime.shielded_piece_ids.contains(&p.id),
+            "{card} must keep generic status"
+        );
+        assert!(
+            state.card_runtime.moved_piece_ids.contains(&p.id),
+            "{card} must mark the transformed piece moved"
+        );
+    }
+}
+
+#[test]
+fn chameleon_mutation_marks_up_to_three_random_non_royal_pieces_on_pickup() {
+    let engine = Engine::bundled_latest().unwrap();
+    let state = position(&[
+        ("b2", Player::White, PieceKind::Queen),
+        ("b3", Player::White, PieceKind::Rook),
+        ("c2", Player::White, PieceKind::Bishop),
+        ("c3", Player::White, PieceKind::Knight),
+        ("e4", Player::White, PieceKind::Pawn),
+    ]);
+    let state = acquire(&engine, &state, crate::CHAMELEON_MUTATION);
+    assert_eq!(
+        state.card_runtime.chameleon_piece_ids.len(),
+        3,
+        "the acquisition marks at most three pieces"
+    );
+    // The king is never marked.
+    let king = state.board.get("a1".parse().unwrap()).unwrap();
+    assert!(!state.card_runtime.chameleon_piece_ids.contains(&king.id));
 }
 
 #[test]

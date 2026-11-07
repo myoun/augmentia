@@ -1,0 +1,2692 @@
+{
+  "ruleset_id": "augment_chess_20261102",
+  "schema_version": 1,
+  "source_catalog_hash": "VR0S31GY4azrMCXMEsXRTUkQuvHG-f-V-b2EIlXsavE",
+  "source_bundle_sha256": "af362a64df02321edc00f225126c750b0ca41156c158d85930f273bbfad3f8b5",
+  "cards": [
+    {
+      "id": "acceleration",
+      "name_ko": "가속",
+      "effect": "acceleration",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "alekhine-machine-gun",
+      "name_ko": "알레킨의 머신건",
+      "effect": "alekhineMachineGun",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "amazon",
+      "name_ko": "아마존",
+      "effect": "amazon",
+      "phase": "PIECE",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "apprentice-knights",
+      "name_ko": "견습 기사단",
+      "effect": "apprenticeKnights",
+      "phase": "OPENING",
+      "half_stars": 3,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "archbishop",
+      "name_ko": "아치비숍",
+      "effect": "archbishop",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "armistice",
+      "name_ko": "휴전",
+      "effect": "armistice",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "assassin",
+      "name_ko": "암살자",
+      "effect": "assassin",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "assembly",
+      "name_ko": "조립",
+      "effect": "assembly",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "baby-bear",
+      "name_ko": "아기곰",
+      "effect": "babyBear",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "backward-knight",
+      "name_ko": "뒤로 가는 나이트",
+      "effect": "backwardKnight",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "barricade",
+      "name_ko": "바리케이드",
+      "effect": "barricade",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "barrier",
+      "name_ko": "배리어",
+      "effect": "barrier",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "basic-training",
+      "name_ko": "기초 훈련",
+      "effect": "basicTraining",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "berserker",
+      "name_ko": "버서커",
+      "effect": "berserker",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "big-bishop",
+      "name_ko": "BISHOP",
+      "effect": "bigBishop",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "big-rook",
+      "name_ko": "ROOK",
+      "effect": "bigRook",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "bina-mate",
+      "name_ko": "더블 체크",
+      "effect": "binaMate",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "bishop-infiltration",
+      "name_ko": "길리 슈트",
+      "effect": "bishopInfiltration",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "black-box",
+      "name_ko": "검은 상자",
+      "effect": "blackBox",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "black-hole",
+      "name_ko": "블랙홀",
+      "effect": "blackHole",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "black-magic",
+      "name_ko": "흑마법",
+      "effect": "blackMagic",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "blockade",
+      "name_ko": "봉쇄",
+      "effect": "blockade",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "brainwash",
+      "name_ko": "마인드 컨트롤",
+      "effect": "brainwash",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false
+    },
+    {
+      "id": "breakthrough-order",
+      "name_ko": "돌파",
+      "effect": "breakthroughOrder",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "bribe",
+      "name_ko": "각성",
+      "effect": "bribe",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "brutus",
+      "name_ko": "브루투스",
+      "effect": "brutus",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "calling-card",
+      "name_ko": "예고장",
+      "effect": "callingCard",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "camouflage-color",
+      "name_ko": "위장색",
+      "effect": "camouflageRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "campfire",
+      "name_ko": "캠프파이어",
+      "effect": "campfire",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "canceling",
+      "name_ko": "캔슬링",
+      "effect": "canceling",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "capture-the-flag",
+      "name_ko": "깃발 뽑기",
+      "effect": "captureTheFlag",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "castling",
+      "name_ko": "캐슬링",
+      "effect": "freeCastling",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chain",
+      "name_ko": "사슬",
+      "effect": "chain",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chameleon-mutation",
+      "name_ko": "카멜레온 변이",
+      "effect": "chameleonMutation",
+      "phase": "OPENING",
+      "half_stars": 3,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chancellor",
+      "name_ko": "챈슬러",
+      "effect": "chancellor",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "charge",
+      "name_ko": "마지막 질주",
+      "effect": "charge",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "checker",
+      "name_ko": "체커",
+      "effect": "checker",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chess-344200",
+      "name_ko": "체스 32432400",
+      "effect": "chess344200",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chess-960",
+      "name_ko": "960 체스",
+      "effect": "chess960",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "chimera",
+      "name_ko": "키메라",
+      "effect": "chimera",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "cleanup",
+      "name_ko": "클린업",
+      "effect": "cleanupPieces",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "cleanup-sacrifice",
+      "name_ko": "강제 교환",
+      "effect": "cleanupSacrifice",
+      "phase": "END",
+      "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "clone",
+      "name_ko": "복제",
+      "effect": "clonePassive",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "collapse",
+      "name_ko": "붕괴",
+      "effect": "collapse",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "conscription",
+      "name_ko": "징집",
+      "effect": "conscription",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "constitutional-monarchy",
+      "name_ko": "입헌군주제",
+      "effect": "constitutionalMonarchy",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "conversion",
+      "name_ko": "기도",
+      "effect": "conversion",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "conveyor",
+      "name_ko": "컨베이어",
+      "effect": "conveyorRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "cool-guy",
+      "name_ko": "매너",
+      "effect": "coolGuy",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "corner-kick",
+      "name_ko": "코너킥",
+      "effect": "cornerKick",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "coronation",
+      "name_ko": "대관식",
+      "effect": "coronation",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "counterattack",
+      "name_ko": "반격",
+      "effect": "counterattack",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "crown",
+      "name_ko": "왕관",
+      "effect": "crownRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "d4",
+      "name_ko": "d4",
+      "effect": "d4",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "desperado",
+      "name_ko": "데스페라도",
+      "effect": "desperado",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "diagonal-chess",
+      "name_ko": "대각선 체스",
+      "effect": "diagonalChess",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "dice",
+      "name_ko": "주사위",
+      "effect": "dice",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "disarm",
+      "name_ko": "무장해제",
+      "effect": "disarm",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "disassembly",
+      "name_ko": "분해",
+      "effect": "disassembly",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "don-quixote",
+      "name_ko": "돈 키호테",
+      "effect": "donQuixote",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "dragon",
+      "name_ko": "드래곤",
+      "effect": "dragon",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "dutch",
+      "name_ko": "네덜란드",
+      "effect": "dutch",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "e4",
+      "name_ko": "e4",
+      "effect": "e4",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "eagle",
+      "name_ko": "알리바바",
+      "effect": "eagle",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "early-promotion",
+      "name_ko": "조기 진급",
+      "effect": "earlyPromotion",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "eastern-policy",
+      "name_ko": "동방견문록",
+      "effect": "easternPolicy",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "elephant-escape",
+      "name_ko": "코끼리 탈출",
+      "effect": "elephantEscape",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "emergency-evacuation",
+      "name_ko": "긴급 피난",
+      "effect": "emergencyEvacuation",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "empty-lunchbox",
+      "name_ko": "빈 찬합",
+      "effect": "emptyLunchbox",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "en-passant-bang",
+      "name_ko": "앙파상",
+      "effect": "enPassantBang",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "encouragement",
+      "name_ko": "독려",
+      "effect": "encouragement",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "evasion",
+      "name_ko": "회피",
+      "effect": "evasion",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "exhaustion",
+      "name_ko": "탈진",
+      "effect": "exhaustion",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "exile",
+      "name_ko": "추방",
+      "effect": "exile",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "extinction",
+      "name_ko": "멸종",
+      "effect": "extinction",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "false-start",
+      "name_ko": "부정출발",
+      "effect": "falseStart",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "fanatical-ritual",
+      "name_ko": "광신의 의식",
+      "effect": "fanaticalRitual",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "fast-growth",
+      "name_ko": "성급한 승진",
+      "effect": "fastGrowth",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "feudal-contract",
+      "name_ko": "봉건 계약",
+      "effect": "feudalContract",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "fianchetto",
+      "name_ko": "피앙케토",
+      "effect": "fianchetto",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "field-promotion",
+      "name_ko": "특진",
+      "effect": "fieldPromotion",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "file-conveyor",
+      "name_ko": "컨베이어",
+      "effect": "fileConveyor",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "file-surge",
+      "name_ko": "급수",
+      "effect": "fileSurge",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "final-weapon",
+      "name_ko": "최종병기",
+      "effect": "finalWeapon",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "fleeting-dream",
+      "name_ko": "일장춘몽",
+      "effect": "fleetingDream",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "football",
+      "name_ko": "축구공",
+      "effect": "football",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "freeze",
+      "name_ko": "빙결",
+      "effect": "freeze",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "frenzy",
+      "name_ko": "광란",
+      "effect": "frenzy",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "frontline-response",
+      "name_ko": "철벽",
+      "effect": "frontlineResponse",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "gale",
+      "name_ko": "강풍",
+      "effect": "gale",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "geneva-convention",
+      "name_ko": "제네바 협약",
+      "effect": "genevaConvention",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "ghost",
+      "name_ko": "고스트",
+      "effect": "ghost",
+      "phase": "MIDDLE",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "gomoku",
+      "name_ko": "오목",
+      "effect": "gomoku",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "grappler",
+      "name_ko": "그래플러",
+      "effect": "grappler",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "grasshopper",
+      "name_ko": "그래스호퍼",
+      "effect": "grasshopper",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "greek-gift",
+      "name_ko": "그릭 기프트",
+      "effect": "greekGift",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "grudge",
+      "name_ko": "원한",
+      "effect": "grudge",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "guard",
+      "name_ko": "근위병",
+      "effect": "guard",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "hallucination",
+      "name_ko": "환각",
+      "effect": "hallucination",
+      "phase": "END",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "hedgehog",
+      "name_ko": "고슴도치",
+      "effect": "hedgehog",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "herald",
+      "name_ko": "전령",
+      "effect": "herald",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "high-ground",
+      "name_ko": "고지대",
+      "effect": "highGround",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "highlander",
+      "name_ko": "하이랜더",
+      "effect": "highlander",
+      "phase": "END",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "highway",
+      "name_ko": "고속도로",
+      "effect": "highway",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "holdout",
+      "name_ko": "존버",
+      "effect": "holdout",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "homecoming",
+      "name_ko": "귀환",
+      "effect": "homecoming",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "hook",
+      "name_ko": "구행",
+      "effect": "hook",
+      "phase": "PIECE",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "hope",
+      "name_ko": "희망",
+      "effect": "hope",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "horde",
+      "name_ko": "호드",
+      "effect": "horde",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "horse-riding",
+      "name_ko": "승마",
+      "effect": "horseRiding",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "hypocrisy",
+      "name_ko": "위선",
+      "effect": "hypocrisy",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "icbm",
+      "name_ko": "ICBM",
+      "effect": "icbm",
+      "phase": "END",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "ice-king",
+      "name_ko": "블리자드",
+      "effect": "iceKing",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "ice-sheet",
+      "name_ko": "빙판",
+      "effect": "iceSheet",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "idol",
+      "name_ko": "아이돌",
+      "effect": "idol",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "imperial-studies",
+      "name_ko": "제왕학",
+      "effect": "imperialStudies",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "inertia",
+      "name_ko": "관성",
+      "effect": "inertia",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "infiltration",
+      "name_ko": "잠입",
+      "effect": "infiltration",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "initiative",
+      "name_ko": "선공권",
+      "effect": "initiative",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "injury",
+      "name_ko": "부상",
+      "effect": "injury",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "insight",
+      "name_ko": "통찰",
+      "effect": "insight",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "iqp",
+      "name_ko": "IQP",
+      "effect": "iqp",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "iron-monarch",
+      "name_ko": "친정",
+      "effect": "ironMonarch",
+      "phase": "OPENING",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "jester",
+      "name_ko": "광대",
+      "effect": "jester",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "joker",
+      "name_ko": "조커",
+      "effect": "joker",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "killer",
+      "name_ko": "킬러",
+      "effect": "killer",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "killer-king",
+      "name_ko": "킬러 킹",
+      "effect": "killerKing",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "king-of-the-hill",
+      "name_ko": "언덕의 왕",
+      "effect": "kingOfTheHill",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "knightmaster",
+      "name_ko": "기사단장",
+      "effect": "knightmaster",
+      "phase": "PIECE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "knightmate",
+      "name_ko": "나이트메이트",
+      "effect": "knightmate",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "last-resistance",
+      "name_ko": "마지막 저항",
+      "effect": "lastResistance",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "last-stand",
+      "name_ko": "집단 광기",
+      "effect": "lastStand",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "leap",
+      "name_ko": "도약",
+      "effect": "pawnLeap",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "lobster",
+      "name_ko": "랍스터",
+      "effect": "lobster",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "local-conscription",
+      "name_ko": "현지군 징병",
+      "effect": "localConscription",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "locust-swarm",
+      "name_ko": "메뚜기 창궐",
+      "effect": "locustSwarm",
+      "phase": "OPENING",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "log",
+      "name_ko": "통나무",
+      "effect": "log",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "london-system",
+      "name_ko": "런던 시스템",
+      "effect": "londonSystem",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "long-en-passant",
+      "name_ko": "롱파상",
+      "effect": "longEnPassant",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "loyalist",
+      "name_ko": "충신",
+      "effect": "loyalist",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "macho-chess",
+      "name_ko": "상남자 체스",
+      "effect": "machoChess",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "mad-horse",
+      "name_ko": "광마",
+      "effect": "madHorse",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "magic-girl",
+      "name_ko": "마법소녀",
+      "effect": "magicGirl",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "majesty",
+      "name_ko": "위엄",
+      "effect": "majesty",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "man",
+      "name_ko": "만",
+      "effect": "manConversion",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "medium",
+      "name_ko": "무덤",
+      "effect": "medium",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "merchant-guild",
+      "name_ko": "상인 조합",
+      "effect": "merchantGuild",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "metal",
+      "name_ko": "메탈",
+      "effect": "metal",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "miracle",
+      "name_ko": "기적",
+      "effect": "miracle",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false
+    },
+    {
+      "id": "missionary",
+      "name_ko": "선교사",
+      "effect": "missionary",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "mistake",
+      "name_ko": "실수",
+      "effect": "mistake",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "mistake-card",
+      "name_ko": "실수",
+      "effect": "mistakeCard",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "mongolian-gambit",
+      "name_ko": "몽골리안 갬빗",
+      "effect": "mongolianGambit",
+      "phase": "MIDDLE",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "monster",
+      "name_ko": "괴물",
+      "effect": "monsterRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "moving",
+      "name_ko": "무빙",
+      "effect": "moving",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "mutation",
+      "name_ko": "변이",
+      "effect": "mutation",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "necromancy",
+      "name_ko": "빙의",
+      "effect": "necromancy",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "nullification",
+      "name_ko": "상쇄",
+      "effect": "nullification",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "ordination",
+      "name_ko": "서품",
+      "effect": "ordination",
+      "phase": "PIECE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "othello",
+      "name_ko": "오셀로",
+      "effect": "othello",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "otherworld",
+      "name_ko": "이세계",
+      "effect": "otherworld",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "outpost",
+      "name_ko": "전초기지",
+      "effect": "outpost",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "overtake",
+      "name_ko": "추월",
+      "effect": "overtake",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "palace",
+      "name_ko": "궁성",
+      "effect": "palace",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "paladin",
+      "name_ko": "팔라딘",
+      "effect": "paladin",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "panic",
+      "name_ko": "패닉",
+      "effect": "panic",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "parrot",
+      "name_ko": "앵무새",
+      "effect": "parrot",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "parry",
+      "name_ko": "패링",
+      "effect": "parry",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "pawn-chain",
+      "name_ko": "폰 체인",
+      "effect": "pawnChain",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "pawn-conversion",
+      "name_ko": "전환",
+      "effect": "pawnConversion",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "pawn-storm",
+      "name_ko": "폰 스톰",
+      "effect": "pawnStorm",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "pegasus",
+      "name_ko": "유니콘",
+      "effect": "pegasus",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "penta-check",
+      "name_ko": "펜타 체크",
+      "effect": "pentaCheck",
+      "phase": "OPENING",
+      "half_stars": 10,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "periodic-collapse",
+      "name_ko": "주기적 붕괴",
+      "effect": "periodicCollapse",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "platform",
+      "name_ko": "발판",
+      "effect": "platformRule",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "poisoned-pawn",
+      "name_ko": "독이 든 폰",
+      "effect": "poisonedPawn",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "portal",
+      "name_ko": "포탈",
+      "effect": "portal",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "portal-gun",
+      "name_ko": "포탈 건",
+      "effect": "portalGun",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "premove",
+      "name_ko": "프리 무브",
+      "effect": "freeMove",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "princess",
+      "name_ko": "프린세스",
+      "effect": "princess",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "proficiency",
+      "name_ko": "숙련",
+      "effect": "proficiency",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "promotion-rush",
+      "name_ko": "승진 체험",
+      "effect": "promotionRush",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "prophecy",
+      "name_ko": "종전",
+      "effect": "prophecy",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "quantum-mechanics",
+      "name_ko": "양자 역학",
+      "effect": "quantumMechanics",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "queen-afterimage",
+      "name_ko": "잔상",
+      "effect": "queenAfterimage",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "queen-cavalry",
+      "name_ko": "퀸의 기병대",
+      "effect": "queenCavalry",
+      "phase": "OPENING",
+      "half_stars": 4,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "queens-gambit",
+      "name_ko": "퀸즈 갬빗",
+      "effect": "queensGambit",
+      "phase": "OPENING",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "racing-king",
+      "name_ko": "레이싱 킹",
+      "effect": "racingKing",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "radical-charge",
+      "name_ko": "난폭한 돌진",
+      "effect": "radicalCharge",
+      "phase": "MIDDLE",
+      "half_stars": 9,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "random-roulette",
+      "name_ko": "랜덤룰렛",
+      "effect": "randomRoulette",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "reaper",
+      "name_ko": "사신",
+      "effect": "reaper",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "recurrence",
+      "name_ko": "회귀",
+      "effect": "recurrence",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "recycling",
+      "name_ko": "재활용",
+      "effect": "recycling",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "reformation",
+      "name_ko": "몬시뇰",
+      "effect": "reformation",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "relay",
+      "name_ko": "교대",
+      "effect": "relay",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "religious-victory",
+      "name_ko": "종교 승리",
+      "effect": "religiousVictory",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "replay",
+      "name_ko": "리플레이",
+      "effect": "replayMove",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "reposition",
+      "name_ko": "재배치",
+      "effect": "reposition",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "resolve",
+      "name_ko": "결의",
+      "effect": "resolve",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "revelation",
+      "name_ko": "계시",
+      "effect": "revelation",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "reversal",
+      "name_ko": "반전",
+      "effect": "reversal",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "reverse-pawns",
+      "name_ko": "폰 방향 반전",
+      "effect": "reversePawns",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "revolving-door",
+      "name_ko": "회전문",
+      "effect": "revolvingDoor",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "rocket",
+      "name_ko": "로켓",
+      "effect": "rocket",
+      "phase": "OPENING",
+      "half_stars": 5,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "roller",
+      "name_ko": "롤러",
+      "effect": "roller",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "rook-lift",
+      "name_ko": "룩 리프트",
+      "effect": "rookLift",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "royal-command",
+      "name_ko": "왕명",
+      "effect": "royalCommand",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "rule-bombs",
+      "name_ko": "룰 폭탄",
+      "effect": "ruleBombs",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "rule-ticket",
+      "name_ko": "규칙 티켓",
+      "effect": "ruleTicket",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "sacrifice",
+      "name_ko": "희생",
+      "effect": "sacrifice",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "saturation",
+      "name_ko": "포화",
+      "effect": "saturation",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "scarecrow",
+      "name_ko": "허수아비",
+      "effect": "scarecrow",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "schrodinger-pawns",
+      "name_ko": "슈뢰딩거의 폰",
+      "effect": "schrodingerPawns",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "seal",
+      "name_ko": "봉인",
+      "effect": "seal",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "severance",
+      "name_ko": "절단",
+      "effect": "severance",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "siren",
+      "name_ko": "세이렌",
+      "effect": "siren",
+      "phase": "PIECE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "slime",
+      "name_ko": "슬라임",
+      "effect": "slime",
+      "phase": "PIECE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "snipe",
+      "name_ko": "저격",
+      "effect": "bishopSnipe",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "solidarity",
+      "name_ko": "연대",
+      "effect": "solidarity",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "sprint",
+      "name_ko": "질주",
+      "effect": "pawnSprint",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "spy",
+      "name_ko": "스파이",
+      "effect": "spy",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "stake",
+      "name_ko": "말뚝",
+      "effect": "stake",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "standard-bearer",
+      "name_ko": "기수",
+      "effect": "standardBearer",
+      "phase": "PIECE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "stealth",
+      "name_ko": "은신",
+      "effect": "stealth",
+      "phase": "MIDDLE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "submerge",
+      "name_ko": "잠복",
+      "effect": "submerge",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "substitution",
+      "name_ko": "치환",
+      "effect": "substitution",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "suicide-bomber",
+      "name_ko": "자폭병",
+      "effect": "suicideBomber",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "suspicious-potion",
+      "name_ko": "수상한 물약",
+      "effect": "suspiciousPotion",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "switcheroo",
+      "name_ko": "바꿔치기",
+      "effect": "switcheroo",
+      "phase": "MIDDLE",
+      "half_stars": 4,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "symmetry",
+      "name_ko": "대칭",
+      "effect": "symmetry",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "synchronization",
+      "name_ko": "동기화",
+      "effect": "synchronization",
+      "phase": "END",
+      "half_stars": 7,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "taboo",
+      "name_ko": "뒤틀린 소환",
+      "effect": "taboo",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "taunt",
+      "name_ko": "도발",
+      "effect": "taunt",
+      "phase": "MIDDLE",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "thief",
+      "name_ko": "도적",
+      "effect": "thief",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "traitor",
+      "name_ko": "변절자",
+      "effect": "traitor",
+      "phase": "END",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "transcendence",
+      "name_ko": "초월",
+      "effect": "transcendence",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "trickster",
+      "name_ko": "트릭스터",
+      "effect": "trickster",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "trolley",
+      "name_ko": "트롤리",
+      "effect": "trolley",
+      "phase": "MIDDLE",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "twins",
+      "name_ko": "환상의 콤비",
+      "effect": "twins",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "ultimatum",
+      "name_ko": "최후 통첩",
+      "effect": "ultimatum",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "undead",
+      "name_ko": "언데드",
+      "effect": "undead",
+      "phase": "PIECE",
+      "half_stars": 8,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "underpromotion",
+      "name_ko": "언더프로모션",
+      "effect": "underpromotion",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "vanguard",
+      "name_ko": "선봉",
+      "effect": "vanguard",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "vanish",
+      "name_ko": "소멸",
+      "effect": "vanish",
+      "phase": "END",
+      "half_stars": 9,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "vigilance",
+      "name_ko": "경계",
+      "effect": "vigilance",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "vip",
+      "name_ko": "귀빈",
+      "effect": "vip",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "vortex",
+      "name_ko": "소용돌이",
+      "effect": "vortex",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "wanted",
+      "name_ko": "수배",
+      "effect": "wanted",
+      "phase": "OPENING",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "white-box",
+      "name_ko": "하얀 상자",
+      "effect": "whiteBox",
+      "phase": "MIDDLE",
+      "half_stars": 6,
+      "activation": "passive",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "windmill",
+      "name_ko": "풍차",
+      "effect": "windmill",
+      "phase": "PIECE",
+      "half_stars": 3,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "winter-kingdom",
+      "name_ko": "겨울 왕국",
+      "effect": "winterKingdom",
+      "phase": "RULE",
+      "half_stars": 0,
+      "activation": "rule",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "witch-trial",
+      "name_ko": "마녀재판",
+      "effect": "witchTrial",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "wizard",
+      "name_ko": "마법사",
+      "effect": "wizard",
+      "phase": "PIECE",
+      "half_stars": 10,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
+      "id": "zugzwang",
+      "name_ko": "추크츠방",
+      "effect": "zugzwang",
+      "phase": "END",
+      "half_stars": 6,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false
+    }
+  ],
+  "pending": [
+    {
+      "id": "antichess",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "ascension",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "phase"
+      ]
+    },
+    {
+      "id": "beacon",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "blue-jeans",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "bombardment",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "chess-n-pow-30",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "citadel",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "clockwork",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "death-squad",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "selection"
+      ]
+    },
+    {
+      "id": "democracy",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "judgment",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "martyrdom",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "monochrome-chess",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "octopus",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "offering",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "omega-chesstron",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "overwhelm",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "phase"
+      ]
+    },
+    {
+      "id": "qxe1",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "retreat",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "royal-shield",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "siege-ram",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "socialism",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "summon-colossus",
+      "reason": "new_card_not_ported"
+    },
+    {
+      "id": "transmission-tower",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "draw_requirement"
+      ]
+    },
+    {
+      "id": "trojan-horse",
+      "reason": "changed_contract_not_ported",
+      "fields": [
+        "turn_policy",
+        "selection"
+      ]
+    },
+    {
+      "id": "underground-bunker",
+      "reason": "disabled_upstream"
+    },
+    {
+      "id": "wanderer",
+      "reason": "new_card_not_ported"
+    }
+  ]
+}
