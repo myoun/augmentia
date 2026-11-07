@@ -88,5 +88,10 @@
     "chaos",
     "grand",
     "ultra"
-  ]
+  ],
+  "release": {
+    "revision": "r1",
+    "ruleset_tag": "ruleset/augment_chess_20261102-r1",
+    "engine_commit": null
+  }
 }

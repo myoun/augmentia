@@ -25,6 +25,46 @@ pub struct RulesetManifest {
     pub base_rules: BaseRules,
     pub opening_rule: OpeningRuleConfig,
     pub modes: Vec<ModeConfig>,
+    /// Present once the snapshot is released. Absent while it is still in progress,
+    /// so earlier snapshots keep parsing unchanged.
+    #[serde(default)]
+    pub release: Option<Release>,
+}
+
+/// Identifies the exact code state of a released snapshot.
+///
+/// A manifest cannot record the hash of the commit that contains it, because writing
+/// that hash changes it. So `engine_commit` names the commit that carries the engine
+/// and profile being released, while the tag points at a later commit whose only
+/// change is this attestation. `scripts/verify-release-attestation.mjs` checks that
+/// the two commits differ by nothing else.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Release {
+    /// Release revision within this snapshot, such as `r1`.
+    pub revision: String,
+    /// Annotated tag that marks the release.
+    pub ruleset_tag: String,
+    /// Commit holding the released engine state: 40 lowercase hex characters.
+    #[serde(default)]
+    pub engine_commit: Option<String>,
+}
+
+impl Release {
+    /// Whether the engine commit is a full, well-formed hash.
+    pub fn engine_commit_is_recorded(&self) -> bool {
+        self.engine_commit.as_ref().is_some_and(|commit| {
+            commit.len() == 40
+                && commit
+                    .bytes()
+                    .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+        })
+    }
+
+    /// The tag must be named for this snapshot and revision, so a tag cannot be
+    /// retargeted to a manifest that does not describe it.
+    pub fn tag_matches(&self, ruleset_id: &str) -> bool {
+        self.ruleset_tag == format!("ruleset/{ruleset_id}-{}", self.revision)
+    }
 }
 
 impl RulesetManifest {
@@ -107,6 +147,27 @@ impl RulesetManifest {
                 "coverage status must be {expected_status:?} for {} of {} active cards",
                 self.coverage.implemented_card_count, self.coverage.publicly_active_card_count
             )));
+        }
+        if let Some(release) = &self.release {
+            if release.revision.is_empty() {
+                return Err(RulesetError::InvalidManifest(
+                    "release revision must not be empty".to_owned(),
+                ));
+            }
+            if !release.tag_matches(&self.id) {
+                return Err(RulesetError::InvalidManifest(format!(
+                    "release tag {:?} must be \"ruleset/{}-{}\"",
+                    release.ruleset_tag, self.id, release.revision
+                )));
+            }
+            // A recorded hash must be complete; a placeholder is not an attestation.
+            if let Some(commit) = &release.engine_commit
+                && !release.engine_commit_is_recorded()
+            {
+                return Err(RulesetError::InvalidManifest(format!(
+                    "engine_commit must be 40 lowercase hex characters, got {commit:?}"
+                )));
+            }
         }
         if self.base_rules.repetition_count < 2 {
             return Err(RulesetError::InvalidManifest(
@@ -341,6 +402,48 @@ mod tests {
             latest.coverage.implemented_card_count,
             latest.coverage.publicly_active_card_count
         );
+    }
+
+    /// The release block names the tag for this snapshot and, once attested, a full
+    /// engine commit. `scripts/verify-release-attestation.mjs` proves the hash is real.
+    #[test]
+    fn the_latest_snapshot_declares_a_release_for_itself() {
+        let latest = RulesetManifest::bundled_latest().unwrap();
+        let release = latest
+            .release
+            .as_ref()
+            .expect("the latest snapshot must declare a release");
+        assert!(
+            release.tag_matches(&latest.id),
+            "tag must name this snapshot"
+        );
+        assert_eq!(
+            release.ruleset_tag,
+            format!("ruleset/{}-{}", latest.id, release.revision)
+        );
+        if let Some(commit) = &release.engine_commit {
+            assert!(
+                release.engine_commit_is_recorded(),
+                "a recorded engine commit must be a full hash, got {commit:?}"
+            );
+        }
+    }
+
+    /// Earlier snapshots predate the release block and must keep loading.
+    #[test]
+    fn snapshots_without_a_release_block_still_parse() {
+        for manifest in [
+            RulesetManifest::bundled_20260807().unwrap(),
+            RulesetManifest::bundled_20260818().unwrap(),
+            RulesetManifest::bundled_20260915().unwrap(),
+            RulesetManifest::bundled_20261017().unwrap(),
+        ] {
+            assert!(
+                manifest.release.is_none(),
+                "{} predates releases",
+                manifest.id
+            );
+        }
     }
 
     #[test]
