@@ -1635,13 +1635,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "death-squad",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "selection"
-      ]
-    },
-    {
       "id": "democracy",
       "reason": "disabled_upstream"
     },
@@ -1664,14 +1657,6 @@
     {
       "id": "summon-colossus",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "trojan-horse",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "turn_policy",
-        "selection"
-      ]
     },
     {
       "id": "underground-bunker",

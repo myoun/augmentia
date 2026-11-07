@@ -595,6 +595,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "death-squad",
+      "name_ko": "결사대",
+      "effect": "deathSquad",
+      "phase": "END",
+      "half_stars": 5,
+      "activation": "active",
+      "ends_turn": false,
+      "turn_exclusive": false
+    },
+    {
       "id": "desperado",
       "name_ko": "데스페라도",
       "effect": "desperado",
@@ -2515,6 +2525,16 @@
       "turn_exclusive": false
     },
     {
+      "id": "trojan-horse",
+      "name_ko": "트로이 목마",
+      "effect": "trojanHorse",
+      "phase": "MIDDLE",
+      "half_stars": 7,
+      "activation": "active",
+      "ends_turn": true,
+      "turn_exclusive": false
+    },
+    {
       "id": "trolley",
       "name_ko": "트롤리",
       "effect": "trolley",
@@ -2709,13 +2729,6 @@
       "reason": "disabled_upstream"
     },
     {
-      "id": "death-squad",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "selection"
-      ]
-    },
-    {
       "id": "democracy",
       "reason": "disabled_upstream"
     },
@@ -2738,14 +2751,6 @@
     {
       "id": "summon-colossus",
       "reason": "changed_contract_not_ported"
-    },
-    {
-      "id": "trojan-horse",
-      "reason": "changed_contract_not_ported",
-      "fields": [
-        "turn_policy",
-        "selection"
-      ]
     },
     {
       "id": "underground-bunker",

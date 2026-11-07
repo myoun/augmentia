@@ -744,6 +744,26 @@
       "notes": "White d4 or Black d5 is forbidden to opposing pieces and own royal; ordinary checker, alfil and eagle placements honor the same restriction."
     },
     {
+      "id": "death-squad",
+      "stage": 12,
+      "scope": "current file-wide pawn conversion",
+      "source_ranges": [
+        [
+          198337,
+          198343
+        ],
+        [
+          198344,
+          198365
+        ],
+        [
+          354184,
+          354197
+        ]
+      ],
+      "notes": "All friendly pawns on the chosen file become fanatics."
+    },
+    {
       "id": "diagonal-chess",
       "stage": 9,
       "scope": "current RULE setup, movement and lifecycle slice; pinned source fixtures and Engine transition tests; large-body and full interaction parity not claimed",
@@ -2834,6 +2854,22 @@
         ]
       ],
       "notes": "Pinned own-piece/native-minor selection and editor-royal contract; preserve identity/capture count/generic statuses, clear former type state, initialize type defaults and apply completed-turn fresh-capture delay."
+    },
+    {
+      "id": "trojan-horse",
+      "stage": 12,
+      "scope": "current knight-plus-pawn pairing that ends the turn",
+      "source_ranges": [
+        [
+          1870,
+          1870
+        ],
+        [
+          47063,
+          47082
+        ]
+      ],
+      "notes": "Now selects an own knight and own pawn, consumes the pawn, and ends the turn."
     },
     {
       "id": "trolley",

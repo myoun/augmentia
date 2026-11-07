@@ -1,15 +1,50 @@
 use super::*;
 pub(super) const ID: &str = crate::TROJAN_HORSE;
+
+/// Trojan Horse selects an allied knight and an allied pawn, removes the pawn into
+/// the knight, and marks the knight. It now consumes the turn.
+///
+/// Mirrors `trojanSelectionContract` / `applyTrojanHorseV11` (main bundle
+/// 47063-47082): the knight must be an unmarked own knight, the pawn an own
+/// non-royal pawn, and the pawn is removed without being a capture.
 pub(super) fn play(
-    _engine: &Engine,
+    engine: &Engine,
     state: &mut GameState,
-    _actor: Player,
-    _instance_id: u32,
+    actor: Player,
+    _: u32,
     target: &ActionTarget,
-    _events: &mut Vec<Event>,
+    events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    let (_, piece) = piece_target(state, target)?;
-    state.card_runtime.trojan_piece_ids.insert(piece.id);
+    let [knight_square, pawn_square] = two_square_target(target)?;
+    let knight = state
+        .board
+        .get(knight_square)
+        .ok_or_else(|| EngineError::Invariant("missing trojan knight".into()))?;
+    if knight.owner != actor
+        || knight.kind != PieceKind::Knight
+        || state.card_runtime.trojan_piece_ids.contains(&knight.id)
+    {
+        return Err(EngineError::Invariant(
+            "trojan horse needs an unmarked allied knight".into(),
+        ));
+    }
+    let pawn = state
+        .board
+        .get(pawn_square)
+        .ok_or_else(|| EngineError::Invariant("missing trojan pawn".into()))?;
+    if pawn.owner != actor || pawn.kind != PieceKind::Pawn || engine.is_royal_piece(state, pawn) {
+        return Err(EngineError::Invariant(
+            "trojan horse needs an allied non-royal pawn".into(),
+        ));
+    }
+    state.card_runtime.trojan_piece_ids.insert(knight.id);
+    // The pawn is consumed into the knight. Upstream removes it through the
+    // entry-removal path, so this is not a capture and grants no capture credit.
+    engine.delete_piece_for_card(state, pawn_square, pawn, actor, ID, events);
+    events.push(Event::EffectApplied {
+        source_card_instance: 0,
+        command: format!("trojan-horse:{}:{}", knight.id, pawn_square),
+    });
     Ok(())
 }
 
@@ -17,21 +52,36 @@ pub(super) fn actions(
     _engine: &Engine,
     state: &GameState,
     card: &CardInstance,
-    actions: &mut Vec<Action>,
+    out: &mut Vec<Action>,
 ) {
     let actor = state.turn;
-    let push_piece = |actions: &mut Vec<Action>, square| {
-        actions.push(Action::UseCard {
-            instance_id: card.instance_id,
-            target: ActionTarget::PieceAt(square),
+    let knights = web_ordered_pieces(state)
+        .into_iter()
+        .filter(|(_, piece)| {
+            piece.owner == actor
+                && piece.kind == PieceKind::Knight
+                && !state.card_runtime.trojan_piece_ids.contains(&piece.id)
         })
-    };
-    for (square, piece) in state.board.iter() {
-        if piece.owner == actor
-            && piece.kind == PieceKind::Knight
-            && !state.card_runtime.trojan_piece_ids.contains(&piece.id)
-        {
-            push_piece(actions, square);
+        .map(|(square, _)| square)
+        .collect::<Vec<_>>();
+    let pawns = web_ordered_pieces(state)
+        .into_iter()
+        .filter(|(_, piece)| {
+            piece.owner == actor
+                && piece.kind == PieceKind::Pawn
+                && !_engine.is_royal_piece(state, *piece)
+        })
+        .map(|(square, _)| square)
+        .collect::<Vec<_>>();
+    for knight in &knights {
+        for pawn in &pawns {
+            if knight == pawn {
+                continue;
+            }
+            out.push(Action::UseCard {
+                instance_id: card.instance_id,
+                target: ActionTarget::Squares(vec![*knight, *pawn]),
+            });
         }
     }
 }
@@ -39,9 +89,8 @@ pub(super) fn actions(
 pub(super) fn eligibility(
     state: &GameState,
     player: Player,
-    _context: AcquisitionContext,
+    _: AcquisitionContext,
 ) -> CardEligibility {
-    use PieceKind::*;
     let rt = &state.card_runtime;
     let has_own = |predicate: &dyn Fn(Piece) -> bool| {
         state
@@ -50,9 +99,82 @@ pub(super) fn eligibility(
             .any(|(_, p)| p.owner == player && predicate(p))
     };
     require(
-        has_own(&|p| p.kind == Knight && !rt.trojan_piece_ids.contains(&p.id)),
-        "트로이 목마 효과가 없는 아군 나이트가 필요합니다.",
+        has_own(&|p| p.kind == PieceKind::Knight && !rt.trojan_piece_ids.contains(&p.id))
+            && has_own(&|p| p.kind == PieceKind::Pawn),
+        "아군 나이트와 폰이 하나씩 필요합니다.",
     )
 }
 
 pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions, eligibility);
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::delayed::{at, position};
+    use super::*;
+
+    fn use_card(
+        engine: &Engine,
+        state: &mut GameState,
+        actor: Player,
+        target: ActionTarget,
+    ) -> Result<(), EngineError> {
+        play(engine, state, actor, 1, &target, &mut Vec::new())
+    }
+
+    fn pair(a: &str, b: &str) -> ActionTarget {
+        ActionTarget::Squares(vec![a.parse().unwrap(), b.parse().unwrap()])
+    }
+
+    #[test]
+    fn trojan_horse_marks_the_knight_and_consumes_the_pawn_without_capture_credit() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("b1", Player::White, PieceKind::Knight),
+            ("d2", Player::White, PieceKind::Pawn),
+        ]);
+        let knight = at(&state, "b1");
+        let pawn = at(&state, "d2");
+        use_card(&engine, &mut state, Player::White, pair("b1", "d2")).unwrap();
+        assert!(state.card_runtime.trojan_piece_ids.contains(&knight.id));
+        assert!(
+            state.board.get("d2".parse().unwrap()).is_none(),
+            "the pawn is consumed"
+        );
+        assert!(
+            state.board.get("b1".parse().unwrap()).is_some(),
+            "the knight stays put"
+        );
+        debug_assert_ne!(knight.id, pawn.id);
+    }
+
+    #[test]
+    fn trojan_horse_rejects_a_marked_knight_a_foreign_pawn_or_one_target() {
+        let engine = Engine::bundled_latest().unwrap();
+        let base = position(&[
+            ("b1", Player::White, PieceKind::Knight),
+            ("g1", Player::White, PieceKind::Knight),
+            ("d2", Player::White, PieceKind::Pawn),
+            ("d7", Player::Black, PieceKind::Pawn),
+        ]);
+        // Mark the first knight so it can no longer be chosen.
+        let marked = at(&base, "b1");
+        let mut marked_state = base.clone();
+        marked_state.card_runtime.trojan_piece_ids.insert(marked.id);
+        for (state, target) in [
+            (marked_state, pair("b1", "d2")),
+            (base.clone(), pair("g1", "d7")),
+            (
+                base.clone(),
+                ActionTarget::Squares(vec!["g1".parse().unwrap()]),
+            ),
+        ] {
+            let mut state = state;
+            let before = state.clone();
+            assert!(
+                use_card(&engine, &mut state, Player::White, target.clone()).is_err(),
+                "{target:?} must be rejected"
+            );
+            assert_eq!(state, before, "{target:?} mutated state");
+        }
+    }
+}
