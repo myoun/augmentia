@@ -14,6 +14,14 @@ const WIN: f64 = 100_000.0;
 // Abort rather than score a truncated action chain as a completed turn.
 const MAX_ACTION_PATH: u16 = 64;
 
+/// Cards whose generator accepts targets it does not enumerate.
+///
+/// `cleanup` and `hypocrisy` were here because they emitted one target instead of every
+/// valid combination. Both now enumerate fully, and their card tests assert it, so the
+/// list is empty. A card belongs here only after a test shows a valid target is missing
+/// from the enumeration; being listed makes search results weaker, not stronger.
+const DYNAMIC_TARGET_CARDS: &[&str] = &[];
+
 // Keep the large engine transition off each recursive search frame.
 #[inline(never)]
 fn apply_search_transition(
@@ -73,7 +81,12 @@ pub struct SearchStats {
     pub apply_calls: u64,
     pub chance_samples: u64,
     pub evaluations: u64,
-    /// Detected dynamic target cards whose generator omits valid combinations.
+    /// Cards whose action generator is known to accept targets it does not enumerate,
+    /// so a missing target must not be read as "that move is unavailable".
+    ///
+    /// Empty as of the 2026-11-02 snapshot: cleanup and hypocrisy now enumerate every
+    /// valid combination. Entries are added only when a generator is re-verified as
+    /// incomplete, and every entry narrows what a search result may claim.
     pub known_omitted_target_cards: Vec<String>,
     pub cutoffs: u64,
     /// Maximum action edges on a visited path, including unfinished iterations.
@@ -268,8 +281,7 @@ impl Context<'_> {
         for card in &state.cards {
             if card.owner == state.turn
                 && card.charges > 0
-                && [augment_core::CLEANUP, augment_core::HYPOCRISY]
-                    .contains(&card.definition_id.as_str())
+                && DYNAMIC_TARGET_CARDS.contains(&card.definition_id.as_str())
                 && !self
                     .stats
                     .known_omitted_target_cards
@@ -884,29 +896,68 @@ mod tests {
         assert_eq!(ctx.stats.nodes, 2);
         assert_eq!(ctx.stats.chance_samples, 2);
     }
+    /// The omission counter exists to narrow a claim when a generator is incomplete.
+    /// For the current snapshot nothing is incomplete, so the counter must stay empty
+    /// and the report must not warn about a card it can enumerate.
     #[test]
-    fn reports_dynamic_targets_as_omitted_instead_of_claiming_full_coverage() {
-        let (engine, state) = fixture();
+    fn current_snapshot_reports_no_omitted_target_cards() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut board = Board::empty();
+        for (sq, owner, kind) in [
+            ("a1", Player::White, PieceKind::King),
+            ("h8", Player::Black, PieceKind::King),
+            ("h1", Player::White, PieceKind::Rook),
+            ("b2", Player::White, PieceKind::Bishop),
+        ] {
+            board.set(sq.parse::<Square>().unwrap(), Some(Piece::new(owner, kind)));
+        }
+        let state = GameState::from_board(
+            engine.ruleset().id.clone(),
+            Mode::Standard,
+            board,
+            Player::White,
+            1,
+        );
         let state = engine
             .grant_card(&state, 31, augment_core::CLEANUP, Player::White)
             .unwrap()
             .state;
-        let target = Action::UseCard {
-            instance_id: 31,
-            target: augment_core::ActionTarget::Squares(vec![
-                "a1".parse().unwrap(),
-                "h1".parse().unwrap(),
-            ]),
-        };
-        assert!(!engine.legal_actions(&state).unwrap().contains(&target));
-        assert!(engine.apply(&state, target).is_ok());
+        // Both multi-target forms are enumerated now, so a search over this state
+        // must not report a known omission. Target order follows the generator's web
+        // ordering, so compare as a set rather than a sequence.
+        let two_target_forms: Vec<Vec<Square>> = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .filter_map(|action| match action {
+                Action::UseCard {
+                    instance_id: 31,
+                    target: augment_core::ActionTarget::Squares(squares),
+                } if squares.len() == 2 => Some(squares),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            two_target_forms.len(),
+            1,
+            "the only two-target form is h1 plus b2: {two_target_forms:?}"
+        );
+        let pair: std::collections::BTreeSet<Square> =
+            two_target_forms[0].iter().copied().collect();
+        assert_eq!(
+            pair,
+            [
+                "h1".parse::<Square>().unwrap(),
+                "b2".parse::<Square>().unwrap()
+            ]
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>()
+        );
         let report = search(&engine, &state, config(1)).unwrap();
-        assert_eq!(report.action_space, "engine-enumerated-subset");
         assert!(
-            report
-                .stats
-                .known_omitted_target_cards
-                .contains(&augment_core::CLEANUP.to_owned())
+            report.stats.known_omitted_target_cards.is_empty(),
+            "no card should be reported as omitting targets: {:?}",
+            report.stats.known_omitted_target_cards
         );
     }
     #[test]
