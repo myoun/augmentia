@@ -113,14 +113,16 @@ Horde 상태의 원본 행별 지그재그 연결도 별도 함수로 대조하�
 상실 행마 행렬 25개, 폰 연결 배치 8개는 `test-check-objectives.mjs`에서 재생하고
 Rust 결과와 비교한다. 전체 복사·포털·대형 기물·동시 승리 순서의 원본 대조는 후속 범위다.
 
-현재 신규 카드 2개, 설명/효과/분류 변경 34개, upstream 비활성 4개를
-차단한다. `democracy`, `qxe1`, `underground-bunker` 외에 원본에서 `summon-colossus`도
-비활성이다. 비활성 데이터는 삭제하지 않고 상태를 보존한다.
+현재 차단하는 카드는 **upstream 비활성 4개뿐**이다. `democracy`, `qxe1`,
+`underground-bunker` 외에 원본에서 `summon-colossus`도 비활성이다. 비활성 데이터는
+삭제하지 않고 상태를 보존한다.
 지원하지 않는 카드를 setup·draft·직접 grant·이미 주입된 상태에서 실행하려 하면 거부한다.
 
-후속 작업의 카드별 목록과 차이는 `sources/0915-delta.json`의 `unsupported`와
-`cards/implemented.json`의 `pending`에 있다. 남은 OPENING·MIDDLE·END 카드를
-원본 전이 fixture와 함께 이식한다. 임의의 옛 handler를 새 ID에 연결하지 않는다.
+카드별 이식 범위와 남은 차이는 `cards/ported.json`, 미지원 4개는
+`cards/implemented.json`의 `pending`과 `sources/0915-delta.json`의 `unsupported`에 있다.
+기존 271장의 전체 상호작용·원본 동작 일치 검증은 별도 작업이며,
+확인 과제는 [카드 이식 후속 조사 항목](../../docs/remaining-card-ports-followup.md)에 정리했다.
+임의의 옛 handler를 새 ID에 연결하지 않는다.
 
 ## 재현
 
