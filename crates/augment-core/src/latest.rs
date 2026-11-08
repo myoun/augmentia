@@ -180,29 +180,38 @@ pub(crate) fn card_definition(id: &str) -> Option<ImplementedCardDefinition> {
     let card = latest_catalog()
         .iter()
         .find(|card| card.id == id && card.supported())?;
+    let phase = match card.phase.as_str() {
+        "OPENING" => CardPhase::Opening,
+        "MIDDLE" => CardPhase::Middle,
+        "END" => CardPhase::End,
+        "PIECE" => CardPhase::Piece,
+        "RULE" => CardPhase::Rule,
+        _ => return None,
+    };
+    let activation = if card.phase == "RULE" {
+        CardActivation::Rule
+    } else {
+        match card.activation.as_str() {
+            "PASSIVE" => CardActivation::Passive,
+            "ACTIVE" => CardActivation::Active,
+            _ => return None,
+        }
+    };
     Some(ImplementedCardDefinition {
         id: &card.id,
         name_ko: &card.name_ko,
         effect: &card.effect,
         half_stars: card.half_stars,
-        phase: match card.phase.as_str() {
-            "OPENING" => CardPhase::Opening,
-            "MIDDLE" => CardPhase::Middle,
-            "END" => CardPhase::End,
-            "PIECE" => CardPhase::Piece,
-            "RULE" => CardPhase::Rule,
-            _ => return None,
-        },
-        activation: if card.phase == "RULE" {
-            CardActivation::Rule
-        } else {
-            match card.activation.as_str() {
-                "PASSIVE" => CardActivation::Passive,
-                "ACTIVE" => CardActivation::Active,
-                _ => return None,
-            }
-        },
-        ends_turn: card.turn_policy == "END_TURN",
+        phase,
+        activation,
+        // Only a card that spends a charge can end a turn, and a passive never has one.
+        //
+        // The catalog cannot be trusted for this field alone: its canonical source
+        // (`factoryDefinitions`) records `turn_policy: PRESERVE_TURN` for eighteen passive cards,
+        // while the bundle's own v2 builder rejects that pair as `Inconsistent v2 card activation`.
+        // The source disagrees with itself, so the executable rule is derived from the activation
+        // instead of copied. `passive_cards_never_end_a_turn` pins the normalisation.
+        ends_turn: activation == CardActivation::Active && card.turn_policy == "END_TURN",
         turn_exclusive,
     })
 }
@@ -445,5 +454,38 @@ mod tests {
                 "{pending} is pending but executable"
             );
         }
+    }
+
+    /// The catalog's canonical source records `turn_policy: PRESERVE_TURN` for eighteen passive
+    /// cards, while the bundle's v2 builder rejects that pair. The field is inert for a passive, so
+    /// the engine derives `ends_turn` from the activation instead of copying the policy.
+    ///
+    /// This pins both sides: no passive may end a turn, and the catalog really does still contain
+    /// those eighteen entries, so the normalisation stays necessary rather than becoming dead code
+    /// if the source is ever corrected.
+    #[test]
+    fn passive_cards_never_end_a_turn() {
+        let mut passive_with_policy = 0;
+        for card in latest_catalog() {
+            let Some(definition) = card_definition(&card.id) else {
+                continue;
+            };
+            if definition.activation == CardActivation::Passive
+                || definition.activation == CardActivation::Rule
+            {
+                assert!(
+                    !definition.ends_turn,
+                    "{} is {:?} and must not end a turn",
+                    card.id, definition.activation
+                );
+            }
+            if card.activation == "PASSIVE" && card.turn_policy != "NOT_APPLICABLE" {
+                passive_with_policy += 1;
+            }
+        }
+        assert_eq!(
+            passive_with_policy, 18,
+            "the catalog's passive-with-policy set changed; re-check whether the normalisation is still needed"
+        );
     }
 }
