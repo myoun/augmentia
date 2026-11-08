@@ -1,6 +1,7 @@
 //! Model-free diagnostic baseline. Engine-enumerated action subset, approximate material evaluation.
 //! Depth counts completed player turns by default; actions within a turn share a depth.
 //! Chance is sampled, not a forced-win proof.
+pub mod arena;
 pub mod tactics;
 
 use augment_core::{

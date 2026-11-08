@@ -1,6 +1,7 @@
 use augment_core::{
     Action, Board, Engine, GameState, GameStatus, Mode, Piece, PieceKind, Player, Square,
 };
+use augment_search::arena::{self, ArenaConfig};
 use augment_search::tactics::{TacticalConfig, find_tactical_win};
 use augment_search::{DepthUnit, Evaluation, SearchConfig, search};
 use serde_json::{Value, json};
@@ -164,14 +165,72 @@ fn tactical_diagnostics(args: &[String]) -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
+/// Play self-play games and report every outcome separately.
+///
+/// The arena exists so playing strength can be measured reproducibly. Colour is exchanged so the
+/// first-move advantage cancels, both sides share one configuration so the only difference is the
+/// position, and unfinished or errored games are counted apart from decided ones so the score rate
+/// stays an estimate over games that actually finished.
+fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    let mut config = SearchConfig::default();
+    let mut arena = ArenaConfig::default();
+    let mut it = args.iter().skip(1);
+    while let Some(flag) = it.next() {
+        let value = it.next().ok_or("Missing flag value")?;
+        match flag.as_str() {
+            "--time-ms" => config.time_limit = Duration::from_millis(value.parse()?),
+            "--depth" => config.max_depth = value.parse()?,
+            "--nodes" => config.max_nodes = value.parse()?,
+            "--chance-samples" => config.chance_samples = value.parse()?,
+            "--evaluation" => {
+                config.evaluation = match value.as_str() {
+                    "material" => Evaluation::Material,
+                    "positional" => Evaluation::Positional,
+                    _ => return Err("Expected --evaluation material or positional".into()),
+                }
+            }
+            "--games" => arena.games_per_pairing = value.parse()?,
+            "--max-actions" => arena.max_actions = value.parse()?,
+            "--seed" => arena.seed = value.parse()?,
+            _ => return Err(format!("Unknown flag {flag}").into()),
+        }
+    }
+    arena.search = config;
+    let engine = Engine::bundled_latest()?;
+    let (records, summary) = arena::run(&engine, arena);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "ruleset": engine.ruleset().id,
+            "site_parity_verified": false,
+            "build": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "config": {
+                "time_ms": arena.search.time_limit.as_millis(),
+                "depth": arena.search.max_depth,
+                "evaluation": arena.search.evaluation.label(),
+                "games_per_pairing": arena.games_per_pairing,
+                "max_actions": arena.max_actions,
+            },
+            "summary": summary,
+            "games": records,
+        }))?
+    );
+    Ok(())
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str).unwrap_or("bench");
     if command == "tactics" {
         return tactical_diagnostics(&args);
     }
+    if command == "arena" {
+        return arena_games(&args);
+    }
     if !["bench", "play", "cannon-fixtures", "transition-trace"].contains(&command) {
-        return Err("Expected bench, play, tactics, cannon-fixtures, or transition-trace".into());
+        return Err(
+            "Expected bench, play, tactics, arena, cannon-fixtures, or transition-trace".into(),
+        );
     }
     let mut config = SearchConfig::default();
     let mut seed = 1u64;
