@@ -6691,6 +6691,22 @@ impl Engine {
     }
 
     fn generate_piece_move_actions(&self, state: &GameState, piece_id: u32) -> Vec<Action> {
+        let mut actions = self.collect_piece_move_actions(state, piece_id);
+        actions.sort();
+        actions.dedup();
+        actions
+    }
+
+    /// One piece's legal moves without sorting or deduplicating.
+    ///
+    /// Callers that only need the set of destinations should use this: the premove
+    /// enumeration folds results into a map, so the sort and dedup here were pure overhead
+    /// on a path that runs thousands of times per position.
+    pub(in crate::engine) fn collect_piece_move_actions(
+        &self,
+        state: &GameState,
+        piece_id: u32,
+    ) -> Vec<Action> {
         let mut actions = Vec::new();
         if let Some((from, piece)) = state.board.find_by_id(piece_id)
             && piece.owner == state.turn
@@ -6700,8 +6716,6 @@ impl Engine {
                 self.generate_moves_for_piece(state, *shadow_square, piece, &mut actions);
             }
         }
-        actions.sort();
-        actions.dedup();
         actions
     }
 

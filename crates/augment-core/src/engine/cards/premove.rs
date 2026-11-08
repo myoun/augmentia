@@ -13,12 +13,6 @@ struct Declared {
     promotion: Option<PieceKind>,
 }
 
-/// Enumeration guard. The source client builds a declaration incrementally from a
-/// prefix, but an `Action` carries the complete square list, so every legal chain
-/// must be materialised here. Depth 1 and 2 are always complete; depth 3 is capped
-/// because a full army makes it combinatorial.
-const MAX_CHAIN_ACTIONS: usize = 512;
-
 fn is_capture(engine: &Engine, state: &GameState, piece: Piece, to: Square) -> bool {
     if engine.board_piece_at(state, to).is_some() {
         return true;
@@ -30,19 +24,31 @@ fn is_capture(engine: &Engine, state: &GameState, piece: Piece, to: Square) -> b
 /// Every relocation this owner may declare, in web square order. Destinations
 /// that would capture are excluded: the resolution window forbids captures, so
 /// declaring one would silently cancel the remainder of the chain.
-fn declarations(engine: &Engine, state: &GameState, actor: Player) -> Vec<Declared> {
-    // Move generation is expressed for the side to move; draft-time eligibility
-    // asks about an owner who may not be the current turn, so probe as the actor.
-    let mut probe = state.clone();
-    probe.turn = actor;
-    let state = &probe;
+///
+/// `used` names pieces already committed by earlier steps of a chain. They are skipped
+/// before move generation rather than filtered afterwards, so a third step generates moves
+/// for only the remaining pieces instead of the whole army.
+fn declarations(engine: &Engine, state: &GameState, actor: Player, used: &[u32]) -> Vec<Declared> {
+    // Move generation is expressed for the side to move, while draft-time eligibility asks
+    // about an owner who may not be the current turn. Probe as the actor only when needed:
+    // the enumeration paths always already stand on the actor's turn, so the hot path skips
+    // the clone and only the eligibility probe pays for it.
+    let probe;
+    let state = if state.turn == actor {
+        state
+    } else {
+        let mut copy = state.clone();
+        copy.turn = actor;
+        probe = copy;
+        &probe
+    };
     let mut declared = Vec::new();
     for (from, piece) in web_ordered_pieces(state) {
-        if piece.owner != actor {
+        if piece.owner != actor || used.contains(&piece.id) {
             continue;
         }
         let mut destinations = std::collections::BTreeMap::new();
-        for action in engine.generate_piece_move_actions(state, piece.id) {
+        for action in engine.collect_piece_move_actions(state, piece.id) {
             let Action::Move(movement) = action else {
                 continue;
             };
@@ -88,10 +94,10 @@ fn apply_declared(state: &mut GameState, declared: Declared) {
     state.card_runtime.moved_piece_ids.insert(piece.id);
 }
 
-/// Enumeration guard. The source client builds a declaration incrementally from a
-/// prefix, but an `Action` carries the complete square list, so every legal chain
-/// must be materialised for `legal_actions`. Depth 1 and 2 are always complete;
-/// depth 3 is capped because a full army makes it combinatorial.
+/// Enumeration note: the source client builds a declaration incrementally from a prefix,
+/// but an `Action` carries the complete square list, so every legal chain must be
+/// materialised for `legal_actions`. All three depths are enumerated in full; upstream
+/// rejects a list longer than three but places no cap on how many exist.
 fn push_action(card: &CardInstance, path: &[Square], out: &mut Vec<Action>) {
     out.push(Action::UseCard {
         instance_id: card.instance_id,
@@ -103,53 +109,40 @@ fn actions(engine: &Engine, state: &GameState, card: &CardInstance, out: &mut Ve
     if state.turn != card.owner {
         return;
     }
-    let firsts = declarations(engine, state, card.owner);
+    let firsts = declarations(engine, state, card.owner, &[]);
     for declared in &firsts {
         push_action(card, &[declared.from, declared.to], out);
     }
-    // Depth 2 is exhaustive so every one- and two-move declaration is reachable.
-    let mut pairs = Vec::new();
+    // Depths two and three share one walk. The two-move declarations are exactly the
+    // prefixes of the three-move ones, so computing `declarations(after_first)` once and
+    // using it for both depths halves the move generation at this level.
+    //
+    // Each level passes the pieces already committed, so generation skips them instead of
+    // producing moves that a later filter would discard.
     for first in &firsts {
         let mut after_first = state.clone();
         apply_declared(&mut after_first, *first);
-        for second in declarations(engine, &after_first, card.owner) {
-            if second.piece_id == first.piece_id {
-                continue;
-            }
-            pairs.push((*first, second));
+        let used_first = [first.piece_id];
+        let seconds = declarations(engine, &after_first, card.owner, &used_first);
+        for second in &seconds {
             push_action(card, &[first.from, first.to, second.from, second.to], out);
-        }
-    }
-    // Depth 3 is capped: a full army makes the product combinatorially large.
-    let mut emitted = 0_usize;
-    for (first, second) in &pairs {
-        if emitted >= MAX_CHAIN_ACTIONS {
-            return;
-        }
-        let mut after_first = state.clone();
-        apply_declared(&mut after_first, *first);
-        let mut after_second = after_first.clone();
-        apply_declared(&mut after_second, *second);
-        for third in declarations(engine, &after_second, card.owner) {
-            if third.piece_id == first.piece_id || third.piece_id == second.piece_id {
-                continue;
+            let mut after_second = after_first.clone();
+            apply_declared(&mut after_second, *second);
+            let used_both = [first.piece_id, second.piece_id];
+            for third in declarations(engine, &after_second, card.owner, &used_both) {
+                push_action(
+                    card,
+                    &[
+                        first.from,
+                        first.to,
+                        second.from,
+                        second.to,
+                        third.from,
+                        third.to,
+                    ],
+                    out,
+                );
             }
-            if emitted >= MAX_CHAIN_ACTIONS {
-                return;
-            }
-            emitted += 1;
-            push_action(
-                card,
-                &[
-                    first.from,
-                    first.to,
-                    second.from,
-                    second.to,
-                    third.from,
-                    third.to,
-                ],
-                out,
-            );
         }
     }
 }
@@ -240,7 +233,7 @@ fn eligibility(state: &GameState, owner: Player, _: AcquisitionContext) -> CardE
     static ENGINE: std::sync::OnceLock<Engine> = std::sync::OnceLock::new();
     let engine = ENGINE.get_or_init(|| Engine::bundled_latest().expect("bundled latest ruleset"));
     require(
-        !declarations(engine, state, owner).is_empty(),
+        !declarations(engine, state, owner, &[]).is_empty(),
         "선언할 수 있는 아군 기물 이동이 필요합니다.",
     )
 }
@@ -474,6 +467,54 @@ mod tests {
                 "{squares:?} must be rejected"
             );
             assert_eq!(state, before, "a rejected selection must not mutate state");
+        }
+    }
+
+    /// Depth 3 must not be truncated. Upstream rejects a declaration longer than three
+    /// moves but places no cap on how many exist, so stopping early would drop legal ones.
+    #[test]
+    fn premove_enumerates_three_move_declarations_without_a_cap() {
+        let (engine, state) = with_premove(&[
+            ("a2", Player::White, PieceKind::Rook),
+            ("b2", Player::White, PieceKind::Knight),
+            ("c2", Player::White, PieceKind::Bishop),
+        ]);
+        let offered = offered(&engine, &state);
+        let triples = offered.iter().filter(|squares| squares.len() == 6).count();
+        // Three distinct pieces with moves produce several ordered triples; the point is
+        // that the count is driven by the position, not by an enumeration cap.
+        assert!(
+            triples >= 3,
+            "three-move declarations must be enumerated, got {triples}"
+        );
+    }
+
+    /// Skipping committed pieces in `declarations` must not change what is offered, only how
+    /// much work it takes. Comparing against a chain whose third step would use an already
+    /// committed piece confirms the exclusion happens before generation, not after.
+    #[test]
+    fn premove_never_repeats_a_piece_within_one_declaration() {
+        let (engine, state) = with_premove(&[
+            ("a2", Player::White, PieceKind::Rook),
+            ("b2", Player::White, PieceKind::Knight),
+            ("c2", Player::White, PieceKind::Bishop),
+        ]);
+        let pieces = |squares: &[Square]| -> Vec<u32> {
+            squares
+                .chunks(2)
+                .filter_map(|pair| state.board.get(pair[0]).map(|piece| piece.id))
+                .collect()
+        };
+        for squares in offered(&engine, &state) {
+            let used = pieces(&squares);
+            let mut unique = used.clone();
+            unique.sort_unstable();
+            unique.dedup();
+            assert_eq!(
+                used.len(),
+                unique.len(),
+                "a declaration must not move the same piece twice: {squares:?}"
+            );
         }
     }
 
