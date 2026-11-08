@@ -3340,7 +3340,12 @@ impl Engine {
             } else {
                 next.quiet_ply.saturating_add(1)
             };
-            next.mark_deathmatch_progress();
+            // The extension gauge resets on pawn moves and captures, which is what `irreversible`
+            // already encodes for the quiet-move counter. Resetting on every move disabled the gauge
+            // entirely, so the extension could never end a game.
+            if irreversible {
+                next.mark_deathmatch_progress();
+            }
             self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             self.record_completed_piece_move(
@@ -3724,7 +3729,11 @@ impl Engine {
             } else {
                 next.quiet_ply.saturating_add(1)
             };
-            next.mark_deathmatch_progress();
+            // Only a capture counts as extension progress here; a quiet move does not reset the
+            // gauge. See the matching note on the ordinary move path.
+            if defeated {
+                next.mark_deathmatch_progress();
+            }
             self.note_middle_piece_moved(&mut next, moving_piece);
             self.resolve_after_counted_move(&mut next, &mut events);
             self.record_completed_piece_move(
@@ -4584,9 +4593,9 @@ impl Engine {
                         return Err(EngineError::UnknownCard(id.clone()));
                     }
                 }
-                if state.deathmatch.is_some() {
+                if state.deathmatch.is_some() && !self.ruleset.base_rules.deathmatch_enabled {
                     return Err(EngineError::Invariant(
-                        "최신 룰셋에는 데스매치가 없습니다.".into(),
+                        "연장전이 비활성인 룰셋에는 데스매치 상태가 있을 수 없습니다.".into(),
                     ));
                 }
                 if state.automatic_draw.is_none() {

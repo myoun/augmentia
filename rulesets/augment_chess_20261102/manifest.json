@@ -28,10 +28,10 @@
     "king_capture_wins": true,
     "immobility_loses": true,
     "repetition_count": 3,
-    "repetition_tiebreak": "draw",
-    "deathmatch_enabled": false,
-    "deathmatch_starts_at_move_count": 0,
-    "deathmatch_quiet_move_count": 0,
+    "repetition_tiebreak": "lower_half_star_total",
+    "deathmatch_enabled": true,
+    "deathmatch_starts_at_move_count": 45,
+    "deathmatch_quiet_move_count": 10,
     "fifty_move_completed_turns": 100
   },
   "opening_rule": {

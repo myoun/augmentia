@@ -257,7 +257,7 @@ mod tests {
     use super::*;
     use crate::{
         Action, Board, DrawReason, Engine, GameState, GameStatus, LATEST_RULESET_ID, Mode,
-        MoveAction, Piece, PieceKind, Player, ruleset_card,
+        MoveAction, Piece, PieceKind, Player, WinReason, ruleset_card,
     };
 
     #[test]
@@ -289,27 +289,49 @@ mod tests {
         ))
     }
 
+    /// Threefold repetition resolves by star count, and the fewer-star side wins.
+    ///
+    /// The source's `starWinner` returns the side with fewer stars, with equal totals drawing. This
+    /// test previously asserted a plain draw regardless of stars, which was the disabled-tiebreak
+    /// behaviour rather than the rule.
     #[test]
-    fn latest_repetition_draws_regardless_of_stars_and_has_priority_over_fifty_moves() {
+    fn latest_repetition_resolves_by_star_count() {
         let engine = Engine::bundled_latest().unwrap();
         let mut state = state();
+        // White holds fewer stars, so White must win the star tiebreak.
         state.half_star_totals = [2, 10];
         state.finalize_initial_setup();
-        for round in 0..2 {
-            for (i, (from, to)) in [("g1", "f3"), ("g8", "f6"), ("f3", "g1"), ("f6", "g8")]
-                .into_iter()
-                .enumerate()
-            {
-                if round == 1 && i == 3 {
-                    state.automatic_draw.as_mut().unwrap().quiet_turns = 99;
-                }
+        // Three repetitions need the cycle played twice more after the first pass.
+        for _ in 0..2 {
+            for (from, to) in [("g1", "f3"), ("g8", "f6"), ("f3", "g1"), ("f6", "g8")] {
+                state = engine.apply(&state, movement(from, to)).unwrap().state;
+            }
+        }
+        assert_eq!(
+            state.status,
+            GameStatus::Won {
+                winner: Player::White,
+                reason: WinReason::LowerStarsOnRepetition,
+            }
+        );
+    }
+
+    /// Equal star totals on repetition draw, since there is no fewer-star side.
+    #[test]
+    fn latest_repetition_draws_when_stars_are_equal() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = state();
+        state.half_star_totals = [4, 4];
+        state.finalize_initial_setup();
+        for _ in 0..2 {
+            for (from, to) in [("g1", "f3"), ("g8", "f6"), ("f3", "g1"), ("f6", "g8")] {
                 state = engine.apply(&state, movement(from, to)).unwrap().state;
             }
         }
         assert_eq!(
             state.status,
             GameStatus::Draw {
-                reason: DrawReason::ThreefoldRepetition
+                reason: DrawReason::EqualStarsOnRepetition
             }
         );
     }
@@ -377,13 +399,26 @@ mod tests {
         assert_eq!(captured.automatic_draw.as_ref().unwrap().quiet_turns, 0);
     }
 
+    /// The extension rule is enabled in this snapshot, so reaching the star limit starts it.
+    ///
+    /// It used to be disabled here, which this test asserted. The source enables it by default
+    /// (`localRuleOptions` defaults `deathmatchEnabled` to true) and starts it at 45 shared turns,
+    /// so the old assertion recorded a bug rather than a rule.
     #[test]
-    fn latest_never_starts_deathmatch_and_rejects_injected_unsupported_cards() {
+    fn latest_starts_the_extension_at_the_star_limit() {
         let engine = Engine::bundled_latest().unwrap();
         let mut state = state();
+        // The extension starts once both sides have completed the star limit, since the shared turn
+        // count is the smaller of the two.
         state.turns_taken = [45; 2];
         state = engine.apply(&state, movement("g1", "f3")).unwrap().state;
-        assert!(state.deathmatch.is_none());
+        let deathmatch = state
+            .deathmatch
+            .as_ref()
+            .expect("the extension must start at the star limit");
+        assert!(deathmatch.started_at_shared_turn >= 45);
+        // The interval defaults to the manifest value.
+        assert_eq!(deathmatch.interval_full_turns, 10);
         // Upstream-disabled cards stay rejected no matter how far porting gets.
         for disabled in ["qxe1", "democracy", "underground-bunker"] {
             assert!(
@@ -522,6 +557,60 @@ mod tests {
         assert_eq!(
             passive_with_policy, 18,
             "the catalog's passive-with-policy set changed; re-check whether the normalisation is still needed"
+        );
+    }
+
+    /// The extension ends the game after a full interval without irreversible progress, and the
+    /// fewer-star side wins, matching the source's `deathmatch_inactivity` result.
+    #[test]
+    fn extension_ends_after_a_quiet_interval_and_the_fewer_star_side_wins() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = state();
+        state.turns_taken = [45; 2];
+        state.half_star_totals = [3, 9];
+        // Backdating the turn counter skips setup; re-run it so the opening has resolved.
+        state.finalize_initial_setup();
+        // Find a legal opening move rather than hard-coding one, since setup resolution and the
+        // backdated turn counter can leave different pieces available.
+        let first_move = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| matches!(action, Action::Move(_)))
+            .expect("the position must have a legal move");
+        state = engine.apply(&state, first_move).unwrap().state;
+        let starting = state.deathmatch.expect("the extension must be running");
+        assert_eq!(starting.interval_full_turns, 10);
+
+        // Set the gauge one tick short of the interval, then let a quiet turn finish it. Setting the
+        // gauge directly isolates the ending rule from the several quiet turns needed to reach it,
+        // which this test is not about.
+        state.deathmatch.as_mut().unwrap().quiet_full_turns = starting.interval_full_turns - 1;
+        // Pawn moves and captures reset the gauge by rule, so pick a quiet non-pawn move.
+        let quiet = engine
+            .legal_actions(&state)
+            .unwrap()
+            .into_iter()
+            .find(|action| match action {
+                Action::Move(movement) => {
+                    !matches!(
+                        state.board.get(movement.from).map(|piece| piece.kind),
+                        Some(PieceKind::Pawn | PieceKind::BerolinaPawn)
+                    ) && state.board.get(movement.to).is_none()
+                }
+                _ => false,
+            })
+            .expect("a quiet move must exist");
+        state = engine.apply(&state, quiet).unwrap().state;
+
+        assert_eq!(
+            state.status,
+            GameStatus::Won {
+                winner: Player::White,
+                reason: WinReason::LowerStarsAfterDeathmatch,
+            },
+            "the fewer-star side must win when the extension ends: {:?}",
+            state.deathmatch
         );
     }
 }

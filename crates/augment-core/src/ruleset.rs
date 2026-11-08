@@ -366,15 +366,26 @@ mod tests {
     use super::*;
     use crate::BUNDLED_RULESET_ID;
 
+    /// The current snapshot keeps the star tiebreak and the extension rule enabled.
+    ///
+    /// This test previously asserted the opposite, that the latest rules removed both. The source
+    /// enables the extension by default and resolves repetition and the star limit by star count,
+    /// with the fewer-star side winning, so the old assertions recorded a rule that was missing.
     #[test]
-    fn latest_rules_remove_star_tiebreak_and_deathmatch_without_rewriting_history() {
+    fn latest_rules_keep_the_star_tiebreak_and_extension() {
         let latest = RulesetManifest::bundled_latest().unwrap();
         assert_eq!(latest.id, crate::LATEST_RULESET_ID);
-        assert_eq!(latest.base_rules.repetition_tiebreak, "draw");
-        assert!(!latest.base_rules.deathmatch_enabled);
+        assert_eq!(
+            latest.base_rules.repetition_tiebreak,
+            "lower_half_star_total"
+        );
+        assert!(latest.base_rules.deathmatch_enabled);
+        assert_eq!(latest.base_rules.deathmatch_starts_at_move_count, 45);
+        assert_eq!(latest.base_rules.deathmatch_quiet_move_count, 10);
         assert_eq!(latest.base_rules.fifty_move_completed_turns, Some(100));
         assert_eq!(latest.opening_rule.chance_numerator, 1);
         assert_eq!(latest.opening_rule.chance_denominator, 5);
+        // The older snapshot keeps the same policy, so history still parses.
         let old = RulesetManifest::bundled_20260915().unwrap();
         assert!(old.base_rules.deathmatch_enabled);
         assert_eq!(old.base_rules.fifty_move_completed_turns, None);

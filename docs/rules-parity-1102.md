@@ -25,24 +25,23 @@
 | 킹 포획 | 승리 (`king_capture_wins`) | `WinReason::KingCaptured` | 일치 |
 | 합법 행동 없음 | 패배 (`immobility_loses`) | `WinReason::NoLegalActions` | 일치 |
 | 카드 승리 조건 | 카드/RULE 우선 | `WinReason::CardEffect` | 일치 |
-| 3회 반복 | 별 비교 → 적은 쪽 승리 | `repetition_tiebreak: "draw"` → 무승부 | **불일치** |
-| 45수 도달 | 연장전 시작 | **없음** | **불일치** |
-| 연장전 무진전 종료 | 별 적은 쪽 승리 | **없음** | **불일치** |
+| 3회 반복 | 별 비교 → 적은 쪽 승리 | `LowerStarsOnRepetition` | **일치 (수정됨)** |
+| 45수 도달 | 연장전 시작 | `deathmatch_starts_at_move_count: 45` | **일치 (수정됨)** |
+| 연장전 무진전 종료 | 별 적은 쪽 승리 | `LowerStarsAfterDeathmatch` | **일치 (수정됨)** |
 
 ### 별 판정 방향
 
 원본 `starWinner`: `totals.white < totals.black ? "white" : "black"` — **별이 적은 쪽이 승리**하고
-동률이면 `null`(무승부)이다.
-
-우리 `repetition_tiebreak: "draw"`는 별을 아예 비교하지 않는다.
+동률이면 `null`(무승부)이다. 우리 `resolve_lower_stars_*`가 같은 방향이며 `EqualStars*`가 동률을
+무승부로 처리한다.
 
 ## 무승부 조건
 
 | 항목 | 원본 | 우리 | 판정 |
 |---|---|---|---|
-| 3회 반복 | 별 판정으로 종료 | `DrawReason::ThreefoldRepetition` | **불일치** |
+| 3회 반복 | 별 판정으로 종료 | 별 판정으로 종료 | 일치 |
 | 50수 규칙 | `quietTurns / 100`, 상한 100 | `fifty_move_completed_turns: 100` | 일치 |
-| 동률 별 | 무승부 | 미구현 | **불일치** |
+| 동률 별 | 무승부 | `EqualStarsOnRepetition` / `EqualStarsAfterDeathmatch` | 일치 |
 
 50수 규칙의 단위를 확인했다. 원본 표시 코드가 `state.fiftyMoveQuietTurns / 100`으로 진행률을
 계산하므로 상한은 **100 완료 턴**이고, 우리 `fifty_move_completed_turns: 100`과 같다.
@@ -51,28 +50,25 @@
 
 | 항목 | 원본 | 우리 | 판정 |
 |---|---|---|---|
-| 시작 시점 | sharedTurn ≥ 45 | `deathmatch_enabled: false` | **불일치** |
-| 판정 주기 | 10 하프턴 (`intervalHalfTurns`) | `deathmatch_quiet_move_count: 0` | **불일치** |
-| 게이지 초기화 | 폰 이동, 기물 포획, 액티브 카드 사용 | `mark_deathmatch_progress` 구현됨 | 구현 있음 |
-| 경고 | 종료 2 하프턴 전 | 미구현 | **불일치** |
-| 종료 판정 | 별 적은 쪽 승리 | 미구현 | **불일치** |
-| `revelation` 카드 | 주기 10 → 5 | 미구현 | **불일치** |
+| 활성 여부 | 기본 활성 | `deathmatch_enabled: true` | **일치 (수정됨)** |
+| 시작 시점 | sharedTurn ≥ 45 | `deathmatch_starts_at_move_count: 45` | **일치 (수정됨)** |
+| 판정 주기 | 10 하프턴 | `deathmatch_quiet_move_count: 10` | **일치 (수정됨)** |
+| 게이지 초기화 | 폰 이동, 기물 포획, 액티브 카드 사용 | `irreversible`(폰·포획) + 카드 경로 | **일치 (수정됨)** |
+| 종료 판정 | 별 적은 쪽 승리 | `resolve_lower_stars_after_deathmatch` | **일치 (수정됨)** |
+| 경고 (종료 2 하프턴 전) | UI 알림 | 미구현 | 표시 전용, 규칙 아님 |
+| `revelation` 카드 | 주기 10 → 5 | `card_runtime.revelation` → 5 | 일치 |
 
-### 중요한 발견: 구현체는 있는데 설정으로 꺼져 있다
+### 수정 이력
 
-`DeathmatchState { started_at_shared_turn, quiet_full_turns, interval_full_turns,
-progress_this_round }`가 `state.rs`에 있고, `mark_deathmatch_progress()`가 폰 이동·기물 포획·
-카드 사용에서 게이지를 초기화한다. 전이 경로 곳곳에 `mark_deathmatch_progress()` 호출이 있다.
+연장전은 **구현돼 있었지만 설정으로 꺼져 있었다.** `DeathmatchState`,
+`tick_deathmatch_after_turn`, `start_deathmatch_if_due`, `resolve_lower_stars_after_deathmatch`가
+모두 존재했고 전이 경로에 `mark_deathmatch_progress()` 호출도 있었다. 막은 것은 세 가지였다:
 
-즉 **연장전 로직의 상당 부분이 이미 구현돼 있고**, `deathmatch_enabled: false` 설정과
-`deathmatch_starts_at_move_count: 0`, `deathmatch_quiet_move_count: 0` 때문에 실행되지 않는다.
-
-게다가 `engine.rs`의 `ensure_ruleset`에 이런 가드가 있다:
-
-> `if state.deathmatch.is_some() { return Err(... "최신 룰셋에는 데스매치가 없습니다." ...) }`
-
-이 가드는 **"1102에는 연장전이 없다"는 잘못된 전제**를 담고 있다. 원본은 연장전을 기본
-활성(`localRuleOptions` 기본값 `{ deathmatchEnabled: true }`)으로 두고 45수부터 적용한다.
+1. `deathmatch_enabled: false`, 시작·주기 0 → 실제 값으로 수정
+2. `ensure_ruleset`이 "최신 룰셋에는 데스매치가 없습니다"로 상태를 거부 → 비활성 룰셋에서만
+   거부하도록 수정
+3. 일반 이동 경로가 **모든 수**에서 게이지를 초기화 → 폰 이동·포획만 초기화하도록 수정.
+   이것이 실제 버그였고, 고치기 전에는 연장전이 시작돼도 절대 끝나지 않았다.
 
 ## 종료 사유 이름
 
@@ -85,7 +81,18 @@ progress_this_round }`가 `state.rs`에 있고, `mark_deathmatch_progress()`가 
 
 ## 결론
 
-**규칙 동질성은 확보되지 않았다.** 승리·무승부의 기본 축(킹 포획·합법 행동·카드)은 맞지만,
-**연장전 전체가 빠져 있고 3회 반복이 별 판정이 아니라 무승부로 처리된다.**
+**승리·무승부·연장전 축은 일치한다.** 킹 포획·합법 행동·카드 승리, 3회 반복과 45수 별 판정,
+50수 무승부, 연장전 시작·주기·종료 판정이 모두 원본과 같다.
 
-이 두 축은 게임 종료 방식을 바꾸므로 전이·탐색·아레나 결과에 직접 영향을 준다.
+남은 항목:
+
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| 연장전 경고 표시 | 미구현 | UI 알림이며 규칙 판정에 영향 없음 |
+| 종료 사유 이름 (`deathmatch_inactivity`, `star_limit`, `revelation`) | 이름 미대응 | 우리는 `WinReason`/`DrawReason`으로 표현하며 판정 결과는 같음 |
+| 레거시 모드 (별 합산 즉시 종료) | 미구현 | 범위에서 제외 |
+| 드래프트 체크포인트 | `game_start`/`10`/`20`, 3장 중 1장 | 사이트 문서와 일치 |
+| 턴 구조 | 행동 후 턴 종료, `END_TURN` 카드 | P0-2에서 대조 완료 |
+
+**규칙 판정은 원본과 동일하다.** 종료 사유의 이름 체계만 다르며, 그것은 결과에 영향을 주지 않는
+표현 차이다.
