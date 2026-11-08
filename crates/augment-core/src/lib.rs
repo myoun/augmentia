@@ -71,7 +71,7 @@ pub use effect::{
 };
 pub use engine::{Engine, EngineError, LegalActionBatch, SearchChanceContext, SearchTransition};
 pub use event::{Event, Transition};
-pub use latest::{LatestCard, latest_catalog};
+pub use latest::{LatestCard, latest_catalog, latest_identity};
 pub use model::{Board, Piece, PieceKind, Player, Square, SquareParseError};
 pub use notation::{
     NotationCatalog, NotationEntry, NotationError, NotationParsing, NotationSource,

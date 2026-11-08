@@ -117,6 +117,42 @@ pub fn latest_catalog() -> &'static [LatestCard] {
         .cards
 }
 
+/// Identifies the catalog and card profile this engine executes.
+///
+/// A search record that does not name its ruleset cannot be replayed or compared, so the identity
+/// travels with every decision. The catalog hash is the source's own fingerprint; the profile hash
+/// covers the supported-card set, which is what decides which cards can appear.
+pub fn latest_identity() -> (&'static str, &'static str, u64) {
+    #[derive(Deserialize)]
+    struct Catalog {
+        source_catalog_hash: String,
+    }
+    static IDENTITY: OnceLock<(String, u64)> = OnceLock::new();
+    let (catalog_hash, profile_hash) = IDENTITY.get_or_init(|| {
+        let catalog: Catalog = serde_json::from_str(include_str!(
+            "../../../rulesets/augment_chess_20261102/cards/catalog.json"
+        ))
+        .expect("bundled canonical catalog");
+        // Hash the supported ids in sorted order so the value changes only when the set does.
+        // FNV-1a, matching the state fingerprint's hasher so the value is stable across runs.
+        let mut ids: Vec<&str> = execution_profile().keys().map(String::as_str).collect();
+        ids.sort_unstable();
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for id in ids {
+            for byte in id.as_bytes() {
+                hash ^= u64::from(*byte);
+                hash = hash.wrapping_mul(0x100_0000_01b3);
+            }
+        }
+        (catalog.source_catalog_hash, hash)
+    });
+    (
+        crate::LATEST_RULESET_ID,
+        catalog_hash.as_str(),
+        *profile_hash,
+    )
+}
+
 #[derive(Deserialize)]
 struct ExecutionPolicy {
     id: String,

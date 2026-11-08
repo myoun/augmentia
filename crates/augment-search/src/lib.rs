@@ -144,6 +144,74 @@ pub struct SearchReport {
     pub elapsed_ms: f64,
     pub budget_overrun_ms: f64,
     pub stats: SearchStats,
+    /// Everything needed to reproduce this decision, recorded with it.
+    ///
+    /// A record that names the chosen action but not the position, budget or generation settings
+    /// cannot be replayed or checked against a policy, so those travel together.
+    pub provenance: Provenance,
+}
+
+/// The inputs a decision depended on, recorded so the decision can be reproduced.
+#[derive(Clone, Debug, Serialize)]
+pub struct Provenance {
+    /// Which position was searched. Two records with the same fingerprint are the same decision.
+    pub state_fingerprint: u64,
+    /// Full ruleset identity: the ruleset plus the catalog and card profile in force.
+    pub engine: EngineIdentity,
+    /// The budget and search settings that produced the result.
+    pub config: SearchProvenance,
+}
+
+impl Provenance {
+    /// Whether two records describe the same decision, i.e. the same position under the same rules.
+    pub fn same_decision(&self, other: &Self) -> bool {
+        self.state_fingerprint == other.state_fingerprint
+            && self.engine.ruleset_id == other.engine.ruleset_id
+            && self.engine.catalog_hash == other.engine.catalog_hash
+    }
+}
+
+/// Identity of the engine state that decided legality and card behavior.
+#[derive(Clone, Debug, Serialize)]
+pub struct EngineIdentity {
+    pub ruleset_id: String,
+    pub catalog_hash: String,
+    pub card_profile_hash: String,
+}
+
+/// The settings that shape a decision, recorded verbatim.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct SearchProvenance {
+    pub time_limit_ms: u128,
+    pub max_depth: u8,
+    pub depth_unit: DepthUnit,
+    pub max_nodes: u64,
+    pub chance_samples: usize,
+    pub search_seed: u64,
+    /// Serialized as its stable label, so an artifact says `positional-v1` rather than `Positional`.
+    #[serde(serialize_with = "serialize_evaluation")]
+    pub evaluation: Evaluation,
+}
+
+fn serialize_evaluation<S: serde::Serializer>(
+    evaluation: &Evaluation,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_str(evaluation.label())
+}
+
+impl From<&SearchConfig> for SearchProvenance {
+    fn from(config: &SearchConfig) -> Self {
+        Self {
+            time_limit_ms: config.time_limit.as_millis(),
+            max_depth: config.max_depth,
+            depth_unit: config.depth_unit,
+            max_nodes: config.max_nodes,
+            chance_samples: config.chance_samples,
+            search_seed: config.search_seed,
+            evaluation: config.evaluation,
+        }
+    }
 }
 #[derive(Debug)]
 pub enum SearchError {
@@ -184,6 +252,20 @@ pub fn search_with_cancel(
         return Err(SearchError::InvalidConfig);
     }
     let start = Instant::now();
+    // Capture the root identity before searching: the record must name the position it decided,
+    // and the position is not recoverable from the action alone.
+    let provenance = Provenance {
+        state_fingerprint: state.fingerprint(),
+        engine: {
+            let (ruleset_id, catalog_hash, profile_hash) = augment_core::latest_identity();
+            EngineIdentity {
+                ruleset_id: ruleset_id.to_owned(),
+                catalog_hash: catalog_hash.to_owned(),
+                card_profile_hash: format!("{profile_hash:016x}"),
+            }
+        },
+        config: SearchProvenance::from(&config),
+    };
     let mut ctx = Context {
         engine,
         config,
@@ -265,6 +347,7 @@ pub fn search_with_cancel(
         elapsed_ms,
         budget_overrun_ms: (elapsed_ms - config.time_limit.as_secs_f64() * 1000.0).max(0.0),
         stats: ctx.stats,
+        provenance,
     })
 }
 
@@ -1451,5 +1534,88 @@ mod tests {
             ),
             Err(SearchError::InvalidConfig)
         ));
+    }
+
+    /// A recorded decision must be reproducible from the record alone.
+    ///
+    /// This is what P2-1 asks for: the provenance names the position, the engine identity and the
+    /// budget, and running the same configuration on the same position must produce the same action.
+    /// Without the position in the record the action could not be replayed at all.
+    #[test]
+    fn a_recorded_decision_reproduces_from_its_provenance() {
+        let (engine, state) = fixture();
+        let settings = config(4);
+        let first = search(&engine, &state, settings).unwrap();
+
+        // The provenance names the position actually searched.
+        assert_eq!(first.provenance.state_fingerprint, state.fingerprint());
+        assert_eq!(first.provenance.config.search_seed, settings.search_seed);
+        assert_eq!(
+            first.provenance.config.time_limit_ms,
+            settings.time_limit.as_millis()
+        );
+        assert_eq!(
+            first.provenance.engine.catalog_hash,
+            augment_core::latest_identity().1
+        );
+
+        // Re-running the recorded configuration on the recorded position gives the same action.
+        let second = search(&engine, &state, settings).unwrap();
+        assert_eq!(
+            first.action, second.action,
+            "a recorded decision must replay identically"
+        );
+        assert_eq!(first.score, second.score);
+        assert!(first.provenance.same_decision(&second.provenance));
+    }
+
+    /// Two different positions must not look like the same decision.
+    #[test]
+    fn provenance_distinguishes_positions() {
+        let (engine, state) = fixture();
+        let mut other = state.clone();
+        other.board.set(
+            augment_core::Square::new(4, 3).unwrap(),
+            Some(Piece::new(Player::White, PieceKind::Pawn)),
+        );
+        let first = search(&engine, &state, config(2)).unwrap();
+        let second = search(&engine, &other, config(2)).unwrap();
+        assert_ne!(
+            first.provenance.state_fingerprint,
+            second.provenance.state_fingerprint
+        );
+        assert!(!first.provenance.same_decision(&second.provenance));
+    }
+
+    /// The recorded evaluation must be the one that ran, not a default.
+    #[test]
+    fn provenance_records_the_evaluation_that_ran() {
+        let (engine, state) = fixture();
+        let material = search(
+            &engine,
+            &state,
+            SearchConfig {
+                evaluation: Evaluation::Material,
+                ..config(1)
+            },
+        )
+        .unwrap();
+        let positional = search(
+            &engine,
+            &state,
+            SearchConfig {
+                evaluation: Evaluation::Positional,
+                ..config(1)
+            },
+        )
+        .unwrap();
+        assert_eq!(material.provenance.config.evaluation, Evaluation::Material);
+        assert_eq!(
+            positional.provenance.config.evaluation,
+            Evaluation::Positional
+        );
+        // The serialized form is the stable label, so an artifact is readable without this code.
+        let text = serde_json::to_string(&positional.provenance).unwrap();
+        assert!(text.contains("positional-v1"), "{text}");
     }
 }
