@@ -315,6 +315,7 @@ impl GameSession {
             search_seed: number("searchSeed", 19, 0, u64::MAX)?,
             depth_unit,
             evaluation,
+            policy: None,
         };
         let state = self.state();
         let report = search_with_cancel(&self.engine, state, config, Some(&self.cancellation))

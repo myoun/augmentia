@@ -3,6 +3,7 @@ use augment_core::{
 };
 use augment_search::arena::{self, ArenaConfig};
 use augment_search::tactics::{TacticalConfig, find_tactical_win};
+use augment_search::teacher;
 use augment_search::{DepthUnit, Evaluation, SearchConfig, search};
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -176,6 +177,9 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let mut arena = ArenaConfig::default();
     // When set, the arena becomes a match between this configuration and the opponent.
     let mut opponent: Option<Evaluation> = None;
+    // When set, the first side searches with this policy ordering the root.
+    let mut policy: Option<augment_search::policy::LinearPolicy> = None;
+    let mut policy_path: Option<String> = None;
     let mut it = args.iter().skip(1);
     while let Some(flag) = it.next() {
         let value = it.next().ok_or("Missing flag value")?;
@@ -194,6 +198,8 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             "--games" => arena.games_per_pairing = value.parse()?,
             "--max-actions" => arena.max_actions = value.parse()?,
             "--seed" => arena.seed = value.parse()?,
+            // A policy file turns the arena into a policy-vs-no-policy match.
+            "--policy" => policy_path = Some(value.clone()),
             // Supplying a second evaluation turns the arena into a match between the two.
             "--against" => {
                 opponent = Some(match value.as_str() {
@@ -205,11 +211,29 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             _ => return Err(format!("Unknown flag {flag}").into()),
         }
     }
-    arena.search = config;
+    arena.search = config.clone();
+    if let Some(path) = policy_path {
+        let text = std::fs::read_to_string(&path)?;
+        policy = Some(serde_json::from_str(&text)?);
+    }
     let engine = Engine::bundled_latest()?;
-    let (records, summary) = match opponent {
-        Some(other) => arena::run_match(&engine, arena, config.evaluation, other),
-        None => arena::run(&engine, arena),
+    // Snapshot the settings for the report before the arena consumes them.
+    let recorded = json!({
+        "time_ms": arena.search.time_limit.as_millis(),
+        "depth": arena.search.max_depth,
+        "evaluation": arena.search.evaluation.label(),
+        "against": opponent.map(Evaluation::label),
+        "policy": policy.is_some(),
+        "games_per_pairing": arena.games_per_pairing,
+        "max_actions": arena.max_actions,
+    });
+    let (records, summary) = if let Some(policy) = policy {
+        arena::run_policy_match(&engine, arena, std::sync::Arc::new(policy))
+    } else {
+        match opponent {
+            Some(other) => arena::run_match(&engine, arena, config.evaluation, other),
+            None => arena::run(&engine, arena),
+        }
     };
     println!(
         "{}",
@@ -217,16 +241,99 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             "ruleset": engine.ruleset().id,
             "site_parity_verified": false,
             "build": if cfg!(debug_assertions) { "debug" } else { "release" },
-            "config": {
-                "time_ms": arena.search.time_limit.as_millis(),
-                "depth": arena.search.max_depth,
-                "evaluation": arena.search.evaluation.label(),
-                "against": opponent.map(Evaluation::label),
-                "games_per_pairing": arena.games_per_pairing,
-                "max_actions": arena.max_actions,
-            },
+            "config": recorded,
             "summary": summary,
             "games": records,
+        }))?
+    );
+    Ok(())
+}
+
+/// Emit teacher records: one JSON line per decision, for the learning pipeline.
+///
+/// The records carry the position, the engine identity and budget, and the full candidate set, so a
+/// learner and an independent verifier can both work from the file alone.
+fn teacher_records(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    let mut config = SearchConfig::default();
+    let mut seed = 1u64;
+    let mut games = 1u32;
+    let mut max_actions = 60u32;
+    let mut it = args.iter().skip(1);
+    while let Some(flag) = it.next() {
+        let value = it.next().ok_or("Missing flag value")?;
+        match flag.as_str() {
+            "--time-ms" => config.time_limit = Duration::from_millis(value.parse()?),
+            "--depth" => config.max_depth = value.parse()?,
+            "--nodes" => config.max_nodes = value.parse()?,
+            "--evaluation" => {
+                config.evaluation = match value.as_str() {
+                    "material" => Evaluation::Material,
+                    "positional" => Evaluation::Positional,
+                    _ => return Err("Expected --evaluation material or positional".into()),
+                }
+            }
+            "--seed" => seed = value.parse()?,
+            "--games" => games = value.parse()?,
+            "--max-actions" => max_actions = value.parse()?,
+            _ => return Err(format!("Unknown flag {flag}").into()),
+        }
+    }
+    let engine = Engine::bundled_latest()?;
+    for game in 0..games {
+        let (records, _status) = teacher::collect_game(
+            &engine,
+            seed.wrapping_add(u64::from(game)),
+            config.clone(),
+            max_actions,
+        );
+        for record in records {
+            println!("{}", serde_json::to_string(&record)?);
+        }
+    }
+    Ok(())
+}
+
+/// Fit a policy on teacher records and verify it on records it never saw.
+///
+/// The split is by record order, and the held-out portion is verified separately, because
+/// agreement on the training data says nothing about whether the policy generalised.
+fn policy_fit(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    use augment_search::policy::{train_policy, verify_imitation};
+    let mut epochs = 5usize;
+    let mut holdout = 0.3f64;
+    let mut k = 3usize;
+    let mut it = args.iter().skip(1);
+    while let Some(flag) = it.next() {
+        let value = it.next().ok_or("Missing flag value")?;
+        match flag.as_str() {
+            "--epochs" => epochs = value.parse()?,
+            "--holdout" => holdout = value.parse()?,
+            "--top-k" => k = value.parse()?,
+            _ => return Err(format!("Unknown flag {flag}").into()),
+        }
+    }
+    let mut input = String::new();
+    std::io::Read::read_to_string(&mut std::io::stdin(), &mut input)?;
+    let records: Vec<augment_search::policy::LearnedRecord> = input
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect();
+    if records.len() < 2 {
+        return Err("need at least two teacher records".into());
+    }
+    let split = ((records.len() as f64) * (1.0 - holdout)).round() as usize;
+    let split = split.clamp(1, records.len() - 1);
+    let (train, held) = records.split_at(split);
+    let (policy, training) = train_policy(train, epochs);
+    let held_out = verify_imitation(held, &policy, k);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "train": training,
+            "holdout": held_out,
+            "note": "holdout agreement is the quality measure; training agreement is not",
+            "policy": policy,
         }))?
     );
     Ok(())
@@ -241,9 +348,17 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if command == "arena" {
         return arena_games(&args);
     }
+    if command == "teacher" {
+        return teacher_records(&args);
+    }
+    if command == "policy-fit" {
+        return policy_fit(&args);
+    }
     if !["bench", "play", "cannon-fixtures", "transition-trace"].contains(&command) {
         return Err(
-            "Expected bench, play, tactics, arena, cannon-fixtures, or transition-trace".into(),
+            "Expected bench, play, tactics, arena, teacher, policy-fit, cannon-fixtures, or \
+             transition-trace"
+                .into(),
         );
     }
     let mut config = SearchConfig::default();
@@ -342,7 +457,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         for (name, state) in scenarios {
             let before = state.fingerprint();
-            let report = search(&engine, &state, config)?;
+            let report = search(&engine, &state, config.clone())?;
             if let Some(ref action) = report.selected_action {
                 engine.apply(&state, action.clone())?;
             }
@@ -355,7 +470,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             if state.status != GameStatus::Ongoing {
                 break;
             }
-            let report = search(&engine, &state, config)?;
+            let report = search(&engine, &state, config.clone())?;
             let action = report
                 .selected_action
                 .clone()

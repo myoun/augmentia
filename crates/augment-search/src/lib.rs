@@ -2,7 +2,10 @@
 //! Depth counts completed player turns by default; actions within a turn share a depth.
 //! Chance is sampled, not a forced-win proof.
 pub mod arena;
+pub mod features;
+pub mod policy;
 pub mod tactics;
+pub mod teacher;
 
 use augment_core::{
     Action, Engine, GameState, GameStatus, LegalActionBatch, PieceKind, Player, SearchChanceContext,
@@ -52,7 +55,7 @@ fn remaining_depth(unit: DepthUnit, depth: u8, events: &[augment_core::Event]) -
     depth.saturating_sub(consumed.min(u8::MAX as usize) as u8)
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct SearchConfig {
     pub time_limit: Duration,
     /// Remaining player turns (not white+black pairs), or actions in legacy mode.
@@ -65,6 +68,12 @@ pub struct SearchConfig {
     /// Which leaf evaluation to use. The default keeps the material baseline so a change in
     /// playing strength can be attributed rather than assumed.
     pub evaluation: Evaluation,
+    /// Optional learned policy used only to order the root, never to prune it.
+    ///
+    /// A prior that could prune would make a result depend on the policy being right, and a wrong
+    /// prior would hide a win. Ordering keeps every candidate scored, so the result stays exact for
+    /// the searched depth while a good prior reaches it sooner.
+    pub policy: Option<std::sync::Arc<crate::policy::LinearPolicy>>,
 }
 
 /// Leaf evaluation variants.
@@ -100,6 +109,7 @@ impl Default for SearchConfig {
             chance_samples: 4,
             search_seed: 19,
             evaluation: Evaluation::default(),
+            policy: None,
         }
     }
 }
@@ -266,6 +276,10 @@ pub fn search_with_cancel(
         },
         config: SearchProvenance::from(&config),
     };
+    let time_limit = config.time_limit;
+    let depth_unit_recorded = config.depth_unit;
+    let search_seed = config.search_seed;
+    let max_depth = config.max_depth;
     let mut ctx = Context {
         engine,
         config,
@@ -287,13 +301,40 @@ pub fn search_with_cancel(
     } else {
         "depth_limit"
     };
-    for depth in 1..=config.max_depth {
+    for depth in 1..=max_depth {
         if actions.is_empty() {
             break;
         }
         let mut order: Vec<usize> = (0..actions.len()).collect();
-        // Previous iteration's best goes first. No action is pruned by a learned prior.
-        order.sort_by_key(|i| (Some(&actions[*i]) != best.as_ref(), *i));
+        // Previous iteration's best goes first, then a learned prior if one is configured. The
+        // prior only reorders: every candidate is still scored, so a wrong prior costs time, not
+        // correctness.
+        let prior: Option<Vec<f32>> = ctx.config.policy.as_ref().map(|policy| {
+            let position = crate::features::position_features(state, state.turn);
+            actions
+                .iter()
+                .map(|action| {
+                    let action_features = crate::features::action_features(state, action);
+                    policy.score(position.as_slice(), action_features.as_slice())
+                })
+                .collect()
+        });
+        order.sort_by(|left, right| {
+            let incumbent_left = Some(&actions[*left]) != best.as_ref();
+            let incumbent_right = Some(&actions[*right]) != best.as_ref();
+            if incumbent_left != incumbent_right {
+                return incumbent_left.cmp(&incumbent_right);
+            }
+            if let Some(prior) = &prior {
+                let by_prior = prior[*right]
+                    .partial_cmp(&prior[*left])
+                    .unwrap_or(std::cmp::Ordering::Equal);
+                if by_prior != std::cmp::Ordering::Equal {
+                    return by_prior;
+                }
+            }
+            left.cmp(right)
+        });
         let mut iteration_best = None;
         let mut iteration_score = f64::NEG_INFINITY;
         let mut aborted = false;
@@ -306,7 +347,7 @@ pub fn search_with_cancel(
                 // use full child windows, so the selected score is exact for this sample tree.
                 iteration_score,
                 f64::INFINITY,
-                mix(config.search_seed ^ index as u64),
+                mix(search_seed ^ index as u64),
             ) {
                 Ok(value) => {
                     if value > iteration_score {
@@ -336,7 +377,7 @@ pub fn search_with_cancel(
         score,
         action_space: "engine-enumerated-subset".into(),
         completed_depth,
-        depth_unit: config.depth_unit,
+        depth_unit: depth_unit_recorded,
         root_actions: actions.len(),
         scored_root_actions: if completed_depth > 0 {
             actions.len()
@@ -345,7 +386,7 @@ pub fn search_with_cancel(
         },
         stop_reason: stop.into(),
         elapsed_ms,
-        budget_overrun_ms: (elapsed_ms - config.time_limit.as_secs_f64() * 1000.0).max(0.0),
+        budget_overrun_ms: (elapsed_ms - time_limit.as_secs_f64() * 1000.0).max(0.0),
         stats: ctx.stats,
         provenance,
     })
@@ -1545,7 +1586,7 @@ mod tests {
     fn a_recorded_decision_reproduces_from_its_provenance() {
         let (engine, state) = fixture();
         let settings = config(4);
-        let first = search(&engine, &state, settings).unwrap();
+        let first = search(&engine, &state, settings.clone()).unwrap();
 
         // The provenance names the position actually searched.
         assert_eq!(first.provenance.state_fingerprint, state.fingerprint());
@@ -1560,7 +1601,7 @@ mod tests {
         );
 
         // Re-running the recorded configuration on the recorded position gives the same action.
-        let second = search(&engine, &state, settings).unwrap();
+        let second = search(&engine, &state, settings.clone()).unwrap();
         assert_eq!(
             first.action, second.action,
             "a recorded decision must replay identically"

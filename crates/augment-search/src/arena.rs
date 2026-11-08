@@ -38,7 +38,7 @@ impl Side {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct ArenaConfig {
     /// Search settings shared by both sides. Equal time and equal rules are required for the
     /// comparison to mean anything, so there is no per-side override.
@@ -267,10 +267,10 @@ fn play_match(
         } else {
             second
         };
-        let mut search_config = config.search;
+        let mut search_config = config.search.clone();
         search_config.evaluation = evaluation;
         search_config.search_seed = seed;
-        let report = match search(engine, &state, search_config) {
+        let report = match search(engine, &state, search_config.clone()) {
             Ok(report) => report,
             Err(error) => {
                 record.outcome = Outcome::Truncated;
@@ -332,7 +332,7 @@ fn play_one(engine: &Engine, config: &ArenaConfig, first_plays: Side, seed: u64)
             return record;
         }
     };
-    let mut search_config = config.search;
+    let mut search_config = config.search.clone();
     search_config.search_seed = seed;
 
     while state.status == GameStatus::Ongoing {
@@ -343,7 +343,7 @@ fn play_one(engine: &Engine, config: &ArenaConfig, first_plays: Side, seed: u64)
         // Draft and forced-choice phases need their own action selection, which the arena does not
         // implement. It plays whatever `search` returns for the current phase; when the engine
         // offers nothing to search, the game is reported unfinished rather than counted as a loss.
-        let report = match search(engine, &state, search_config) {
+        let report = match search(engine, &state, search_config.clone()) {
             Ok(report) => report,
             Err(error) => {
                 record.outcome = Outcome::Truncated;
@@ -395,6 +395,124 @@ fn play_one(engine: &Engine, config: &ArenaConfig, first_plays: Side, seed: u64)
     record
 }
 
+/// Pit policy-guided search against the same search without it.
+///
+/// This answers P2-2's second question. Imitation accuracy does not imply strength: a policy can
+/// copy the teacher and still not reach better positions. Only a game result shows whether the prior
+/// helps, so the two sides differ in exactly one thing — whether the root is ordered by the policy —
+/// and colour is exchanged so the first-move advantage cancels.
+///
+/// The prior only reorders; every candidate is still scored, so a wrong prior costs time rather than
+/// hiding a move.
+pub fn run_policy_match(
+    engine: &Engine,
+    config: ArenaConfig,
+    policy: std::sync::Arc<crate::policy::LinearPolicy>,
+) -> (Vec<GameRecord>, ArenaSummary) {
+    let mut records = Vec::new();
+    for pairing in 0..config.games_per_pairing {
+        for first_plays in [Side::White, Side::Black] {
+            let seed = config.seed.wrapping_add(u64::from(pairing)).wrapping_add(
+                if first_plays == Side::White {
+                    0
+                } else {
+                    1_000_003
+                },
+            );
+            records.push(play_policy_match(
+                engine,
+                &config,
+                first_plays,
+                &policy,
+                seed,
+            ));
+        }
+    }
+    let summary = ArenaSummary::from_records(&records);
+    (records, summary)
+}
+
+/// One game: the first configuration searches with the policy prior, the second without.
+fn play_policy_match(
+    engine: &Engine,
+    config: &ArenaConfig,
+    first_plays: Side,
+    policy: &std::sync::Arc<crate::policy::LinearPolicy>,
+    seed: u64,
+) -> GameRecord {
+    let mut record = GameRecord {
+        first_plays,
+        outcome: Outcome::Decided,
+        winner: None,
+        actions: 0,
+        max_overrun_ms: 0.0,
+        error: None,
+    };
+    let mut state = match engine.new_game(Mode::Standard, seed) {
+        Ok(state) => state,
+        Err(error) => {
+            record.outcome = Outcome::Error;
+            record.error = Some(error.to_string());
+            return record;
+        }
+    };
+
+    while state.status == GameStatus::Ongoing {
+        if record.actions >= config.max_actions {
+            record.outcome = Outcome::Truncated;
+            return record;
+        }
+        let mut search_config = config.search.clone();
+        search_config.search_seed = seed;
+        // Only the first configuration carries the prior.
+        if state.turn == first_plays.player() {
+            search_config.policy = Some(policy.clone());
+        }
+        let report = match search(engine, &state, search_config) {
+            Ok(report) => report,
+            Err(error) => {
+                record.outcome = Outcome::Truncated;
+                record.error = Some(format!("search stopped in {:?}: {error}", state.phase));
+                return record;
+            }
+        };
+        record.max_overrun_ms = record.max_overrun_ms.max(report.budget_overrun_ms);
+        let Some(action) = report.selected_action else {
+            record.outcome = Outcome::Error;
+            record.error = Some("search returned no action".to_owned());
+            return record;
+        };
+        match engine.apply(&state, action) {
+            Ok(transition) => {
+                state = transition.state;
+                record.actions += 1;
+            }
+            Err(error) => {
+                record.outcome = Outcome::Error;
+                record.error = Some(error.to_string());
+                return record;
+            }
+        }
+    }
+
+    record.winner = match state.status {
+        GameStatus::Won { winner, .. } => {
+            if winner == first_plays.player() {
+                Some(Winner::First)
+            } else {
+                Some(Winner::Second)
+            }
+        }
+        GameStatus::Draw { .. } | GameStatus::Ongoing => None,
+    };
+    record.outcome = if record.max_overrun_ms > OVERRUN_TOLERANCE_MS {
+        Outcome::Overrun
+    } else {
+        Outcome::Decided
+    };
+    record
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,8 +528,8 @@ mod tests {
         }
     }
 
-    /// Unfinished, unknown and late games must never enter the score rate. Folding them in would
-    /// let a harness that hangs or crashes look strong.
+    /// Unfinished, unknown and late games must never enter the score rate. Folding them in would let
+    /// a harness that hangs or crashes look strong.
     #[test]
     fn unfinished_and_unknown_games_are_excluded_from_the_score_rate() {
         let records = vec![
@@ -426,7 +544,6 @@ mod tests {
         assert_eq!(summary.truncated, 1);
         assert_eq!(summary.errors, 1);
         assert_eq!(summary.overruns, 1);
-        // Only the two decided games count, and the first configuration won both.
         assert_eq!(summary.first_wins, 2);
         assert_eq!(summary.second_wins, 0);
         assert!((summary.first_score_rate - 1.0).abs() < 1e-9);
@@ -447,19 +564,13 @@ mod tests {
     #[test]
     fn colour_exchange_cancels_a_first_move_advantage() {
         let records = vec![
-            // Game 1: first configuration held White and won.
             record(Side::White, Outcome::Decided, Some(Winner::First)),
-            // Game 2: first configuration held Black and lost, so the second configuration won.
             record(Side::Black, Outcome::Decided, Some(Winner::Second)),
         ];
         let summary = ArenaSummary::from_records(&records);
         assert_eq!(summary.first_wins, 1);
         assert_eq!(summary.second_wins, 1);
-        assert!(
-            (summary.first_score_rate - 0.5).abs() < 1e-9,
-            "mirrored results must score 0.5, got {}",
-            summary.first_score_rate
-        );
+        assert!((summary.first_score_rate - 0.5).abs() < 1e-9);
     }
 
     /// A draw scores half a point and must be counted, not dropped.
@@ -492,19 +603,26 @@ mod tests {
         );
     }
 
-    /// Both sides must be played for every pairing, so a batch cannot be one-sided.
-    #[test]
-    fn a_pairing_plays_both_colours() {
-        let engine = Engine::bundled_latest().unwrap();
-        let config = ArenaConfig {
+    fn quick_config(seed: u64) -> ArenaConfig {
+        ArenaConfig {
             search: SearchConfig {
                 time_limit: std::time::Duration::from_millis(20),
                 max_depth: 1,
                 ..Default::default()
             },
             max_actions: 1,
+            games_per_pairing: 1,
+            seed,
+        }
+    }
+
+    /// Both sides must be played for every pairing, so a batch cannot be one-sided.
+    #[test]
+    fn a_pairing_plays_both_colours() {
+        let engine = Engine::bundled_latest().unwrap();
+        let config = ArenaConfig {
             games_per_pairing: 2,
-            seed: 3,
+            ..quick_config(3)
         };
         let (records, summary) = run(&engine, config);
         assert_eq!(records.len(), 4, "two pairings must play four games");
@@ -530,19 +648,9 @@ mod tests {
     #[test]
     fn a_match_exchanges_colours_between_the_two_evaluations() {
         let engine = Engine::bundled_latest().unwrap();
-        let config = ArenaConfig {
-            search: SearchConfig {
-                time_limit: std::time::Duration::from_millis(20),
-                max_depth: 1,
-                ..Default::default()
-            },
-            max_actions: 1,
-            games_per_pairing: 1,
-            seed: 5,
-        };
         let (records, summary) = run_match(
             &engine,
-            config,
+            quick_config(5),
             Evaluation::Positional,
             Evaluation::Material,
         );
@@ -553,16 +661,39 @@ mod tests {
                 .iter()
                 .filter(|r| r.first_plays == Side::White)
                 .count(),
-            1,
-            "the first evaluation must play White once"
+            1
         );
         assert_eq!(
             records
                 .iter()
                 .filter(|r| r.first_plays == Side::Black)
                 .count(),
-            1,
-            "and Black once"
+            1
+        );
+    }
+
+    /// A policy match must give the prior to exactly one side and exchange colours, so a result
+    /// cannot come from both sides having it or from the first-move advantage.
+    #[test]
+    fn a_policy_match_exchanges_colours_and_uses_one_prior() {
+        let engine = Engine::bundled_latest().unwrap();
+        let policy = std::sync::Arc::new(crate::policy::LinearPolicy::zeros());
+        let (records, summary) = run_policy_match(&engine, quick_config(11), policy);
+        assert_eq!(records.len(), 2, "one pairing plays two games");
+        assert_eq!(summary.games, 2);
+        assert_eq!(
+            records
+                .iter()
+                .filter(|r| r.first_plays == Side::White)
+                .count(),
+            1
+        );
+        assert_eq!(
+            records
+                .iter()
+                .filter(|r| r.first_plays == Side::Black)
+                .count(),
+            1
         );
     }
 }
