@@ -5757,16 +5757,30 @@ impl Engine {
             return false;
         }
         let shared_turn = state.shared_turn_count();
-        let phase = if !state.completed_drafts[DraftPhase::Middle.index()] && shared_turn >= 10 {
-            Some(DraftPhase::Middle)
-        } else if state.completed_drafts[DraftPhase::Middle.index()]
-            && !state.completed_drafts[DraftPhase::End.index()]
-            && shared_turn >= 20
-        {
-            Some(DraftPhase::End)
-        } else {
-            None
-        };
+        // Read the schedule from the manifest instead of assuming 10 and 20. The values matched for
+        // this snapshot, but a hard-coded copy would ignore a snapshot that moved a checkpoint.
+        let mode_id = format!("{:?}", state.mode).to_ascii_lowercase();
+        let schedule = self
+            .ruleset
+            .modes
+            .iter()
+            .find(|mode| mode.id == mode_id)
+            .or_else(|| self.ruleset.modes.first())
+            .map(|mode| mode.draft.clone())
+            .expect("a ruleset declares at least one mode");
+        let middle_at = schedule.middle_checkpoint_turn().unwrap_or(10);
+        let end_at = schedule.end_checkpoint_turn().unwrap_or(20);
+        let phase =
+            if !state.completed_drafts[DraftPhase::Middle.index()] && shared_turn >= middle_at {
+                Some(DraftPhase::Middle)
+            } else if state.completed_drafts[DraftPhase::Middle.index()]
+                && !state.completed_drafts[DraftPhase::End.index()]
+                && shared_turn >= end_at
+            {
+                Some(DraftPhase::End)
+            } else {
+                None
+            };
         let Some(phase) = phase else {
             return false;
         };

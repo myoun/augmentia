@@ -67,6 +67,49 @@ impl Release {
     }
 }
 
+impl DraftConfig {
+    /// Shared turn at which the MIDDLE draft opens, if this mode runs round-based drafts.
+    ///
+    /// The manifest declares the schedule as checkpoint names; the engine must read it rather than
+    /// assume, otherwise a snapshot that moves a checkpoint would be silently ignored.
+    pub fn middle_checkpoint_turn(&self) -> Option<u32> {
+        self.checkpoint_turn("move_count_10").or_else(|| {
+            // Derive from whichever `move_count_<n>` checkpoint names the first milestone.
+            self.checkpoint_turns().into_iter().find(|turn| *turn < 20)
+        })
+    }
+
+    /// Shared turn at which the END draft opens, if this mode runs round-based drafts.
+    pub fn end_checkpoint_turn(&self) -> Option<u32> {
+        self.checkpoint_turns().into_iter().find(|turn| *turn >= 20)
+    }
+
+    /// Every numeric checkpoint in declaration order.
+    pub fn checkpoint_turns(&self) -> Vec<u32> {
+        let Self::Rounds { checkpoints, .. } = self else {
+            return Vec::new();
+        };
+        checkpoints
+            .iter()
+            .filter_map(|name| {
+                name.strip_prefix("move_count_")
+                    .and_then(|count| count.parse().ok())
+            })
+            .collect()
+    }
+
+    fn checkpoint_turn(&self, name: &str) -> Option<u32> {
+        let Self::Rounds { checkpoints, .. } = self else {
+            return None;
+        };
+        checkpoints
+            .iter()
+            .find(|checkpoint| checkpoint.as_str() == name)
+            .and_then(|_| name.strip_prefix("move_count_"))
+            .and_then(|count| count.parse().ok())
+    }
+}
+
 impl RulesetManifest {
     pub fn bundled_latest() -> Result<Self, RulesetError> {
         Self::from_json(BUNDLED_20261102)
@@ -365,6 +408,27 @@ impl From<serde_json::Error> for RulesetError {
 mod tests {
     use super::*;
     use crate::BUNDLED_RULESET_ID;
+
+    /// The draft schedule must come from the manifest, not from a hard-coded pair of turns.
+    ///
+    /// The engine used to assume 10 and 20. Those values happen to match this snapshot, but a
+    /// hard-coded copy would silently ignore a snapshot that moved a checkpoint, so the schedule is
+    /// read from the declaration and this test pins the parse.
+    #[test]
+    fn the_draft_schedule_is_read_from_the_manifest() {
+        let latest = RulesetManifest::bundled_latest().unwrap();
+        let standard = latest
+            .modes
+            .iter()
+            .find(|mode| mode.id == "standard")
+            .expect("the standard mode must exist");
+        assert_eq!(standard.draft.checkpoint_turns(), vec![10, 20]);
+        assert_eq!(standard.draft.middle_checkpoint_turn(), Some(10));
+        assert_eq!(standard.draft.end_checkpoint_turn(), Some(20));
+        // A mode without numeric checkpoints reports none rather than guessing.
+        assert!(matches!(standard.draft, DraftConfig::Rounds { .. }));
+        assert_eq!(standard.draft.checkpoint_turns().len(), 2);
+    }
 
     /// The current snapshot keeps the star tiebreak and the extension rule enabled.
     ///

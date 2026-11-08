@@ -70,6 +70,60 @@
 3. 일반 이동 경로가 **모든 수**에서 게이지를 초기화 → 폰 이동·포획만 초기화하도록 수정.
    이것이 실제 버그였고, 고치기 전에는 연장전이 시작돼도 절대 끝나지 않았다.
 
+## 드래프트
+
+원본 번들에서 확인한 트리거 (`@17822676`, `@17822873`):
+
+```
+sharedTurns >= 20 && middleDraftDone && !endDraftDone  → END 드래프트
+sharedTurns >= 10 && !middleDraftDone                  → MIDDLE 드래프트
+```
+
+`sharedTurns = min(white.turnsTaken, black.turnsTaken)` — **양쪽이 모두** 해당 수를 마쳐야 열린다.
+
+| 항목 | 원본 | 우리 | 판정 |
+|---|---|---|---|
+| 오프닝 드래프트 | 게임 시작 | `game_start` | 일치 |
+| MIDDLE 시점 | 양쪽 10수 완료 | `shared_turn >= 10` | 일치 |
+| END 시점 | 양쪽 20수 완료 | `shared_turn >= 20` | 일치 |
+| 매 드래프트 제안 수 | 3장 | `bundle_count: 3` | 일치 |
+| 매 드래프트 선택 수 | 1장 | `picks_per_round: 1` | 일치 |
+| 총 획득 카드 | 3장 | 3 라운드 × 1 | 일치 |
+| END 카드 첫 드래프트 제외 | 제외 | `DraftPhase` 분리로 처리 | 일치 |
+| 그랜드 모드 풀 | 28장 (OPENING 4, MIDDLE 10, PIECE 7, END 7) | `pool_size: 28`, 동일 분포 | 일치 |
+
+### 구조적 결함: 선언된 체크포인트를 엔진이 읽지 않는다
+
+`ModeConfig.draft`의 `checkpoints: ["game_start", "move_count_10", "move_count_20"]`는
+**선언만 되고 어떤 Rust 코드도 읽지 않는다**(grep 결과 `ruleset.rs`의 타입 정의 1회뿐).
+
+엔진의 `start_due_milestone_draft`가 `10`과 `20`을 **하드코딩**한다:
+
+```rust
+let phase = if !completed[Middle] && shared_turn >= 10 { Some(Middle) }
+    else if completed[Middle] && !completed[End] && shared_turn >= 20 { Some(End) }
+    else { None };
+```
+
+**현재 값은 원본과 일치하므로 동작 차이는 없다.** 그러나 manifest가 드래프트 시점의 권위가
+아니라는 뜻이며, 다른 스냅숏이 다른 체크포인트를 선언하면 조용히 무시된다.
+
+## 턴 구조
+
+P0-2에서 원본 번들을 실행해 대조한 결과를 옮긴다([전이 대조 기록](search-teacher-cleanup-backlog.md)).
+
+| 항목 | 원본 | 우리 | 판정 |
+|---|---|---|---|
+| 턴 종료 판정 | `TurnEnded` 이벤트 | `Event::TurnEnded` | 일치 |
+| 같은 행동자 연속 행동 | 턴 안에서 여러 액션 | `actions_remaining` | 일치 |
+| `END_TURN` 카드 | 카드 사용이 턴을 종료 | `ends_turn` | 일치 |
+| 다음 턴 카드 잠금 | `nextTurnPending` (dev 카드 예외) | `available_after_turn` | 일치 |
+| 턴당 카드 예산 | v2 인벤토리 `usedAtPly` 기준 | `cards_used_this_turn` | 일치 |
+| `retainV6Turn` | 액터 복원·앙파상 초기화·흑 풀무브 롤백 | 동일 | 일치 |
+
+턴 종료 카드 4장(`brainwash`, `miracle`, `trojan-horse`, `zugzwang`)은 Rust 테스트가 실제
+`TurnEnded` 발생을 확인한다.
+
 ## 종료 사유 이름
 
 원본은 종료 사유를 별도로 표기한다: `king_capture`, `no_legal_move`, `threefold_repetition`,
