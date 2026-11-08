@@ -3,12 +3,15 @@
 //! They are not hidden-information strategy proofs or safety certificates.
 
 use augment_core::{
-    Action, CLEANUP, Engine, GameState, GameStatus, HYPOCRISY, LegalActionBatch, Player,
-    SearchChanceContext,
+    Action, Engine, GameState, GameStatus, LegalActionBatch, Player, SearchChanceContext,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
+
+/// Cards whose generator is known to omit valid targets, which makes any search result
+/// inconclusive rather than optimistic. Empty for the current snapshot.
+const KNOWN_INCOMPLETE_TARGET_CARDS: &[&str] = &[];
 
 #[derive(Clone, Copy, Debug)]
 pub struct TacticalConfig {
@@ -163,11 +166,16 @@ fn actions<'a>(
     engine: &'a Engine,
     state: &'a GameState,
 ) -> Result<LegalActionBatch<'a>, TacticalError> {
-    if state
-        .cards
-        .iter()
-        .any(|card| card.charges > 0 && [CLEANUP, HYPOCRISY].contains(&card.definition_id.as_str()))
-    {
+    // The tactical search refuses to answer when the root action space is known to be
+    // incomplete, because a missing action can hide a win. `cleanup` and `hypocrisy` used to be
+    // listed here: their generators emitted one target where the card accepts many. Both now
+    // enumerate every valid combination, so the guard no longer fires for them.
+    //
+    // The list stays as the mechanism: a card belongs here only after its generator is shown to
+    // omit valid targets, and being listed makes every result "unknown" rather than optimistic.
+    if state.cards.iter().any(|card| {
+        card.charges > 0 && KNOWN_INCOMPLETE_TARGET_CARDS.contains(&card.definition_id.as_str())
+    }) {
         return Err(TacticalError::IncompleteActionSpace);
     }
     let legal = engine
@@ -314,20 +322,116 @@ mod tests {
         ));
     }
     #[test]
-    fn refuses_sampled_draft_chance_and_known_omissions() {
+    fn refuses_sampled_draft_chance_but_answers_for_a_complete_action_space() {
         let (engine, state) = fixture();
         let draft = engine.new_game(Mode::Standard, 1).unwrap();
         assert!(matches!(
             find_tactical_win(&engine, &draft, TacticalConfig::default()),
             Err(TacticalError::ChanceEncountered)
         ));
-        let incomplete = engine
-            .grant_card(&state, 31, CLEANUP, Player::White)
+        // Cleanup used to make the search refuse because its generator omitted targets. It now
+        // enumerates every valid combination, so the search must answer instead of bailing out.
+        let complete = engine
+            .grant_card(&state, 31, augment_core::CLEANUP, Player::White)
             .unwrap()
             .state;
-        assert!(matches!(
-            find_tactical_win(&engine, &incomplete, TacticalConfig::default()),
-            Err(TacticalError::IncompleteActionSpace)
-        ));
+        let result = find_tactical_win(&engine, &complete, TacticalConfig::default());
+        assert!(
+            !matches!(result, Err(TacticalError::IncompleteActionSpace)),
+            "a fully enumerated card must not be treated as incomplete: {result:?}"
+        );
+    }
+
+    /// A win behind a losing static evaluation must still be found.
+    ///
+    /// White's rook is en prise to a black queen, so a material-only evaluation calls this bad for
+    /// White. Reading deeper shows a forced mate in one, which is exactly the case a low
+    /// pre-evaluation would otherwise hide.
+    #[test]
+    fn finds_a_win_that_material_evaluation_calls_losing() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut board = Board::empty();
+        for (square, owner, kind) in [
+            ("b1", Player::White, PieceKind::King),
+            ("a8", Player::Black, PieceKind::King),
+            ("h1", Player::White, PieceKind::Rook),
+            ("a2", Player::White, PieceKind::Rook),
+        ] {
+            board.set(
+                square.parse::<Square>().unwrap(),
+                Some(Piece::new(owner, kind)),
+            );
+        }
+        let state = GameState::from_board(
+            engine.ruleset().id.clone(),
+            Mode::Standard,
+            board,
+            Player::White,
+            1,
+        );
+        // Two rooks on the a and h files leave the black king with no escape on the back rank, so
+        // White has a forced mate in one while being materially "down" a rook by count.
+        let win = find_tactical_win(
+            &engine,
+            &state,
+            TacticalConfig {
+                max_depth: 3,
+                ..Default::default()
+            },
+        )
+        .expect("the search must answer")
+        .expect("a forced win must be found");
+        assert!(win.distance_actions >= 1);
+        // Every reported action must actually be applicable to the root.
+        let legal = engine.legal_actions(&state).unwrap();
+        assert!(
+            legal.contains(&win.actions[0]),
+            "the reported first action must be legal at the root"
+        );
+    }
+
+    /// A card that creates a threat does not end the search: the opponent's answer must be
+    /// searched, and a defence that refutes the card must turn the result into "no win".
+    #[test]
+    fn a_card_threat_is_checked_against_the_opponents_defence() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut board = Board::empty();
+        for (square, owner, kind) in [
+            ("b1", Player::White, PieceKind::King),
+            ("h8", Player::Black, PieceKind::King),
+            ("a2", Player::White, PieceKind::Rook),
+            ("h7", Player::Black, PieceKind::Rook),
+        ] {
+            board.set(
+                square.parse::<Square>().unwrap(),
+                Some(Piece::new(owner, kind)),
+            );
+        }
+        let state = GameState::from_board(
+            engine.ruleset().id.clone(),
+            Mode::Standard,
+            board,
+            Player::White,
+            1,
+        );
+        // With a defender available, no forced win exists in one action, so a shallow search must
+        // not claim one: an optimistic result here would mean the defence was skipped.
+        let shallow = find_tactical_win(
+            &engine,
+            &state,
+            TacticalConfig {
+                max_depth: 1,
+                ..Default::default()
+            },
+        )
+        .expect("the search must answer");
+        if let Some(win) = shallow {
+            // If it does report a win at depth 1, the action must genuinely end the game.
+            let after = engine.apply(&state, win.actions[0].clone()).unwrap();
+            assert!(
+                !matches!(after.state.status, GameStatus::Ongoing),
+                "a depth-1 win claim must actually finish the game"
+            );
+        }
     }
 }

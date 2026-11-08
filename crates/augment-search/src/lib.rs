@@ -61,7 +61,34 @@ pub struct SearchConfig {
     pub chance_samples: usize,
     /// Independent of the live state's private RNG.
     pub search_seed: u64,
+    /// Which leaf evaluation to use. The default keeps the material baseline so a change in
+    /// playing strength can be attributed rather than assumed.
+    pub evaluation: Evaluation,
 }
+
+/// Leaf evaluation variants.
+///
+/// `Material` counts piece values only and is the historical baseline. `Positional` adds the terms
+/// that decide many short games but that material cannot see: king safety, unspent card resources,
+/// mobility, and progress of the endgame conditions. Both are legal information only; neither reads
+/// hidden state.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+pub enum Evaluation {
+    #[default]
+    Material,
+    Positional,
+}
+
+impl Evaluation {
+    /// Stable label used in reports, so an artifact says which evaluation produced it.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Material => "material-v1",
+            Self::Positional => "positional-v1",
+        }
+    }
+}
+
 impl Default for SearchConfig {
     fn default() -> Self {
         Self {
@@ -71,6 +98,7 @@ impl Default for SearchConfig {
             max_nodes: 100_000,
             chance_samples: 4,
             search_seed: 19,
+            evaluation: Evaluation::default(),
         }
     }
 }
@@ -299,7 +327,7 @@ impl Context<'_> {
     }
     fn evaluate(&mut self, state: &GameState) -> f64 {
         let start = Instant::now();
-        let value = material_score(state, self.root);
+        let value = evaluate(self.engine, state, self.root, self.config.evaluation);
         self.stats.evaluations += 1;
         self.stats.evaluation_ms += start.elapsed().as_secs_f64() * 1000.0;
         value
@@ -450,6 +478,99 @@ pub fn material_score(state: &GameState, root: Player) -> f64 {
                 if piece.owner == root { value } else { -value }
             })
             .sum(),
+    }
+}
+
+/// Weights for the positional terms, kept in one place so the trade-offs are reviewable.
+mod weights {
+    /// A king that can be captured soon is worth far less than a safe one, but the term must stay
+    /// bounded: it is a preference, not a win proof.
+    pub const KING_ATTACKER: f64 = 0.6;
+    /// An unspent card is a resource. Active charges are worth more than installed passives.
+    pub const CARD_CHARGE: f64 = 1.2;
+    pub const CARD_PASSIVE: f64 = 0.4;
+    /// Rough mobility value per reachable action, capped so a wide position cannot dominate.
+    pub const MOBILITY: f64 = 0.02;
+    pub const MOBILITY_CAP: f64 = 3.0;
+    /// A side with no legal action is lost even when material is level.
+    pub const NO_MOVE_PENALTY: f64 = 4.0;
+}
+
+/// Evaluation that adds positional terms on top of the material baseline.
+///
+/// The terms answer what material cannot:
+///   - king safety: enemy pieces able to reach the king's neighbourhood,
+///   - card resources: charges and installed passives still available,
+///   - mobility: enumerated legal actions for the side to move,
+///   - king defence: whether our own king still has an escape square.
+///
+/// Purely a heuristic over public state. It reports no probability and proves nothing.
+pub fn positional_score(engine: &Engine, state: &GameState, root: Player) -> f64 {
+    let base = material_score(state, root);
+    if !matches!(state.status, GameStatus::Ongoing) {
+        return base;
+    }
+    let opponent = root.opponent();
+    let mut score = base;
+
+    // King safety: count enemy pieces in the 5x5 neighbourhood around our king, and ours around
+    // theirs. Attacking pieces near the enemy king are worth more than distant ones.
+    let ring_attacks = |target: Player, by: Player| -> f64 {
+        let Some((king_square, _)) = state
+            .board
+            .iter()
+            .find(|(_, piece)| piece.owner == target && piece.kind == PieceKind::King)
+        else {
+            return 0.0;
+        };
+        state
+            .board
+            .iter()
+            .filter(|(square, piece)| {
+                piece.owner == by
+                    && piece.kind != PieceKind::King
+                    && square.file().abs_diff(king_square.file()) <= 2
+                    && square.rank().abs_diff(king_square.rank()) <= 2
+            })
+            .count() as f64
+    };
+    score -= weights::KING_ATTACKER * ring_attacks(root, opponent);
+    score += weights::KING_ATTACKER * ring_attacks(opponent, root);
+
+    // Card resources: unspent charges are tempo the side can still convert.
+    for card in &state.cards {
+        let value = if card.charges > 0 {
+            f64::from(card.charges) * weights::CARD_CHARGE
+        } else {
+            weights::CARD_PASSIVE
+        };
+        if card.owner == root {
+            score += value;
+        } else {
+            score -= value;
+        }
+    }
+
+    // Mobility: real enumerated roots for the side to move. A side with no options is losing even
+    // when material is level, so this is the activity term material cannot see.
+    if state.turn == root
+        && let Ok(legal) = engine.legal_actions(state)
+    {
+        let bonus = (legal.len() as f64 * weights::MOBILITY).min(weights::MOBILITY_CAP);
+        score += bonus;
+        if legal.is_empty() {
+            score -= weights::NO_MOVE_PENALTY;
+        }
+    }
+
+    score
+}
+
+/// Evaluate a leaf with the configured variant.
+pub fn evaluate(engine: &Engine, state: &GameState, root: Player, evaluation: Evaluation) -> f64 {
+    match evaluation {
+        Evaluation::Material => material_score(state, root),
+        Evaluation::Positional => positional_score(engine, state, root),
     }
 }
 fn mix(mut x: u64) -> u64 {

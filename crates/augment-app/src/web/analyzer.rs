@@ -1,5 +1,5 @@
 use augment_core::{Action, Engine, GameState, GameStatus};
-use augment_search::{DepthUnit, SearchConfig, material_score, search_with_cancel};
+use augment_search::{DepthUnit, Evaluation, SearchConfig, material_score, search_with_cancel};
 use serde_json::{Value, json};
 use std::sync::{
     Arc,
@@ -298,6 +298,15 @@ impl GameSession {
             "actions" => DepthUnit::Actions,
             _ => return Err("깊이 단위는 turns 또는 actions여야 합니다.".into()),
         };
+        let evaluation = match payload
+            .get("evaluation")
+            .and_then(Value::as_str)
+            .unwrap_or("material")
+        {
+            "material" => Evaluation::Material,
+            "positional" => Evaluation::Positional,
+            _ => return Err("평가는 material 또는 positional이어야 합니다.".into()),
+        };
         let config = SearchConfig {
             max_depth: number("depth", 4, 1, 32)? as u8,
             time_limit: Duration::from_millis(number("timeMs", 1000, 10, 30_000)?),
@@ -305,6 +314,7 @@ impl GameSession {
             chance_samples: number("chanceSamples", 4, 1, 64)? as usize,
             search_seed: number("searchSeed", 19, 0, u64::MAX)?,
             depth_unit,
+            evaluation,
         };
         let state = self.state();
         let report = search_with_cancel(&self.engine, state, config, Some(&self.cancellation))

@@ -221,8 +221,14 @@ fn play(
     }
     let mut used = Vec::new();
     let mut moves = Vec::with_capacity(squares.len() / 2);
+    // Validate each pair against the board state after the earlier pairs, because that is the state
+    // `declarations` used to produce them. Checking every pair against the original position
+    // rejects legal chains: the second move was chosen for a board where the first piece had
+    // already relocated.
+    let mut staged = state.clone();
     for chunk in squares.chunks_exact(2) {
-        let declared = validate_pair(engine, state, actor, chunk[0], chunk[1], &mut used)?;
+        let declared = validate_pair(engine, &staged, actor, chunk[0], chunk[1], &mut used)?;
+        apply_declared(&mut staged, declared);
         moves.push(MoveAction::new(
             declared.from,
             declared.to,
@@ -477,6 +483,39 @@ mod tests {
             );
             assert_eq!(state, before, "a rejected selection must not mutate state");
         }
+    }
+
+    /// Every enumerated declaration must actually be applicable.
+    ///
+    /// `offered` reads `legal_actions`, which runs the generator only. A generator can emit a chain
+    /// the validator later rejects, and that gap is what broke seed 3 of the benchmark: the second
+    /// pair was chosen for a board where the first piece had already moved, but the validator
+    /// checked it against the original board. Two movable pieces keep the enumeration small while
+    /// still exercising the multi-pair path.
+    #[test]
+    fn every_offered_declaration_is_applicable() {
+        let (engine, state) = with_premove(&[
+            ("a2", Player::White, PieceKind::Rook),
+            ("b2", Player::White, PieceKind::Knight),
+        ]);
+        let offered = offered(&engine, &state);
+        assert!(!offered.is_empty(), "the position must offer declarations");
+        assert!(
+            offered.iter().any(|squares| squares.len() == 4),
+            "a two-pair declaration must be offered: {offered:?}"
+        );
+        let mut rejected = Vec::new();
+        for squares in &offered {
+            let names: Vec<String> = squares.iter().map(|square| square.to_string()).collect();
+            let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+            if let Err(error) = use_squares(&engine, &state, &refs) {
+                rejected.push(format!("{squares:?}: {error}"));
+            }
+        }
+        assert!(
+            rejected.is_empty(),
+            "the generator offered declarations the validator rejects: {rejected:?}"
+        );
     }
 
     /// Depth 3 must not be truncated. Upstream rejects a declaration longer than three

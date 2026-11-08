@@ -2,7 +2,7 @@ use augment_core::{
     Action, Board, Engine, GameState, GameStatus, Mode, Piece, PieceKind, Player, Square,
 };
 use augment_search::tactics::{TacticalConfig, find_tactical_win};
-use augment_search::{DepthUnit, SearchConfig, search};
+use augment_search::{DepthUnit, Evaluation, SearchConfig, search};
 use serde_json::{Value, json};
 use std::time::Duration;
 
@@ -192,6 +192,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--nodes" => config.max_nodes = value.parse()?,
             "--chance-samples" => config.chance_samples = value.parse()?,
             "--search-seed" => config.search_seed = value.parse()?,
+            "--evaluation" => {
+                config.evaluation = match value.as_str() {
+                    "material" => Evaluation::Material,
+                    "positional" => Evaluation::Positional,
+                    _ => return Err("Expected --evaluation material or positional".into()),
+                }
+            }
             "--seed" => seed = value.parse()?,
             "--decisions" => decisions = value.parse()?,
             _ => return Err(format!("Unknown flag {flag}").into()),
@@ -288,7 +295,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({"ruleset": engine.ruleset().id,
-        "semantics": "model-free/actor-aware/sampled-chance/material-v1",
+        "semantics": format!("model-free/actor-aware/sampled-chance/{}", config.evaluation.label()),
         "site_parity_verified": false, "build": if cfg!(debug_assertions) {"debug"} else {"release"},
         "seed": seed, "config": {"time_ms": config.time_limit.as_millis(), "depth": config.max_depth,
             "depth_unit": config.depth_unit,
