@@ -15,7 +15,7 @@
 use augment_core::{Engine, GameStatus, Mode, Player};
 use serde::Serialize;
 
-use crate::{SearchConfig, search};
+use crate::{Evaluation, SearchConfig, search};
 
 /// A move counts as late only when the search ran this far past its deadline. The search checks the
 /// clock between nodes, so the final node can always finish slightly late; that is the mechanism
@@ -192,6 +192,127 @@ pub fn run(engine: &Engine, config: ArenaConfig) -> (Vec<GameRecord>, ArenaSumma
     }
     let summary = ArenaSummary::from_records(&records);
     (records, summary)
+}
+
+/// Pit two configurations against each other.
+///
+/// This is how an evaluation change is judged: the two search settings differ only in the thing
+/// being tested, and colour is exchanged so the first-move advantage cancels. `ArenaConfig` is
+/// reused for the shared limits, but each side gets its own evaluation.
+pub fn run_match(
+    engine: &Engine,
+    config: ArenaConfig,
+    first: Evaluation,
+    second: Evaluation,
+) -> (Vec<GameRecord>, ArenaSummary) {
+    let mut records = Vec::new();
+    for pairing in 0..config.games_per_pairing {
+        // Alternate which colour the first configuration holds, so both sides see both colours.
+        for (first_plays, _) in [(Side::White, Side::Black), (Side::Black, Side::White)] {
+            let seed = config.seed.wrapping_add(u64::from(pairing)).wrapping_add(
+                if first_plays == Side::White {
+                    0
+                } else {
+                    1_000_003
+                },
+            );
+            records.push(play_match(
+                engine,
+                &config,
+                first_plays,
+                first,
+                second,
+                seed,
+            ));
+        }
+    }
+    let summary = ArenaSummary::from_records(&records);
+    (records, summary)
+}
+
+/// One game where each side may use a different evaluation.
+fn play_match(
+    engine: &Engine,
+    config: &ArenaConfig,
+    first_plays: Side,
+    first: Evaluation,
+    second: Evaluation,
+    seed: u64,
+) -> GameRecord {
+    let mut record = GameRecord {
+        first_plays,
+        outcome: Outcome::Decided,
+        winner: None,
+        actions: 0,
+        max_overrun_ms: 0.0,
+        error: None,
+    };
+    let mut state = match engine.new_game(Mode::Standard, seed) {
+        Ok(state) => state,
+        Err(error) => {
+            record.outcome = Outcome::Error;
+            record.error = Some(error.to_string());
+            return record;
+        }
+    };
+
+    while state.status == GameStatus::Ongoing {
+        if record.actions >= config.max_actions {
+            record.outcome = Outcome::Truncated;
+            return record;
+        }
+        // A side's evaluation is chosen by which colour it holds, so colour exchange swaps them.
+        let evaluation = if state.turn == first_plays.player() {
+            first
+        } else {
+            second
+        };
+        let mut search_config = config.search;
+        search_config.evaluation = evaluation;
+        search_config.search_seed = seed;
+        let report = match search(engine, &state, search_config) {
+            Ok(report) => report,
+            Err(error) => {
+                record.outcome = Outcome::Truncated;
+                record.error = Some(format!("search stopped in {:?}: {error}", state.phase));
+                return record;
+            }
+        };
+        record.max_overrun_ms = record.max_overrun_ms.max(report.budget_overrun_ms);
+        let Some(action) = report.selected_action else {
+            record.outcome = Outcome::Error;
+            record.error = Some("search returned no action".to_owned());
+            return record;
+        };
+        match engine.apply(&state, action) {
+            Ok(transition) => {
+                state = transition.state;
+                record.actions += 1;
+            }
+            Err(error) => {
+                record.outcome = Outcome::Error;
+                record.error = Some(error.to_string());
+                return record;
+            }
+        }
+    }
+
+    record.winner = match state.status {
+        GameStatus::Won { winner, .. } => {
+            if winner == first_plays.player() {
+                Some(Winner::First)
+            } else {
+                Some(Winner::Second)
+            }
+        }
+        GameStatus::Draw { .. } | GameStatus::Ongoing => None,
+    };
+    record.outcome = if record.max_overrun_ms > OVERRUN_TOLERANCE_MS {
+        Outcome::Overrun
+    } else {
+        Outcome::Decided
+    };
+    record
 }
 
 fn play_one(engine: &Engine, config: &ArenaConfig, first_plays: Side, seed: u64) -> GameRecord {
@@ -401,6 +522,47 @@ mod tests {
                 .filter(|r| r.first_plays == Side::Black)
                 .count(),
             2
+        );
+    }
+
+    /// A match must give each configuration both colours, so a result cannot come from the
+    /// first-move advantage alone.
+    #[test]
+    fn a_match_exchanges_colours_between_the_two_evaluations() {
+        let engine = Engine::bundled_latest().unwrap();
+        let config = ArenaConfig {
+            search: SearchConfig {
+                time_limit: std::time::Duration::from_millis(20),
+                max_depth: 1,
+                ..Default::default()
+            },
+            max_actions: 1,
+            games_per_pairing: 1,
+            seed: 5,
+        };
+        let (records, summary) = run_match(
+            &engine,
+            config,
+            Evaluation::Positional,
+            Evaluation::Material,
+        );
+        assert_eq!(records.len(), 2, "one pairing plays two games");
+        assert_eq!(summary.games, 2);
+        assert_eq!(
+            records
+                .iter()
+                .filter(|r| r.first_plays == Side::White)
+                .count(),
+            1,
+            "the first evaluation must play White once"
+        );
+        assert_eq!(
+            records
+                .iter()
+                .filter(|r| r.first_plays == Side::Black)
+                .count(),
+            1,
+            "and Black once"
         );
     }
 }

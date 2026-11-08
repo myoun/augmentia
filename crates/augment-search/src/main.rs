@@ -174,6 +174,8 @@ fn tactical_diagnostics(args: &[String]) -> Result<(), Box<dyn std::error::Error
 fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let mut config = SearchConfig::default();
     let mut arena = ArenaConfig::default();
+    // When set, the arena becomes a match between this configuration and the opponent.
+    let mut opponent: Option<Evaluation> = None;
     let mut it = args.iter().skip(1);
     while let Some(flag) = it.next() {
         let value = it.next().ok_or("Missing flag value")?;
@@ -192,12 +194,23 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             "--games" => arena.games_per_pairing = value.parse()?,
             "--max-actions" => arena.max_actions = value.parse()?,
             "--seed" => arena.seed = value.parse()?,
+            // Supplying a second evaluation turns the arena into a match between the two.
+            "--against" => {
+                opponent = Some(match value.as_str() {
+                    "material" => Evaluation::Material,
+                    "positional" => Evaluation::Positional,
+                    _ => return Err("Expected --against material or positional".into()),
+                })
+            }
             _ => return Err(format!("Unknown flag {flag}").into()),
         }
     }
     arena.search = config;
     let engine = Engine::bundled_latest()?;
-    let (records, summary) = arena::run(&engine, arena);
+    let (records, summary) = match opponent {
+        Some(other) => arena::run_match(&engine, arena, config.evaluation, other),
+        None => arena::run(&engine, arena),
+    };
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -208,6 +221,7 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 "time_ms": arena.search.time_limit.as_millis(),
                 "depth": arena.search.max_depth,
                 "evaluation": arena.search.evaluation.label(),
+                "against": opponent.map(Evaluation::label),
                 "games_per_pairing": arena.games_per_pairing,
                 "max_actions": arena.max_actions,
             },
