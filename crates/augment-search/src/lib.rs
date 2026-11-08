@@ -328,7 +328,7 @@ impl Context<'_> {
     }
     fn evaluate(&mut self, state: &GameState) -> f64 {
         let start = Instant::now();
-        let value = evaluate(self.engine, state, self.root, self.config.evaluation);
+        let value = evaluate(state, self.root, self.config.evaluation);
         self.stats.evaluations += 1;
         self.stats.evaluation_ms += start.elapsed().as_secs_f64() * 1000.0;
         value
@@ -493,20 +493,22 @@ mod weights {
     /// Rough mobility value per reachable action, capped so a wide position cannot dominate.
     pub const MOBILITY: f64 = 0.02;
     pub const MOBILITY_CAP: f64 = 3.0;
-    /// A side with no legal action is lost even when material is level.
-    pub const NO_MOVE_PENALTY: f64 = 4.0;
 }
 
 /// Evaluation that adds positional terms on top of the material baseline.
 ///
-/// The terms answer what material cannot:
-///   - king safety: enemy pieces able to reach the king's neighbourhood,
+/// The terms answer what material cannot, and every one of them is O(pieces) so it can run at every
+/// leaf:
+///   - king safety: enemy pieces near our king, ours near theirs,
 ///   - card resources: charges and installed passives still available,
-///   - mobility: enumerated legal actions for the side to move,
-///   - king defence: whether our own king still has an escape square.
+///   - mobility: a piece-placement approximation of activity.
+///
+/// An earlier version enumerated legal actions for real mobility. That made evaluation 38x more
+/// expensive than material and cost three plies of depth, which is a bad trade: depth is worth more
+/// than an exact activity count. This approximation is derived from the position alone.
 ///
 /// Purely a heuristic over public state. It reports no probability and proves nothing.
-pub fn positional_score(engine: &Engine, state: &GameState, root: Player) -> f64 {
+pub fn positional_score(state: &GameState, root: Player) -> f64 {
     let base = material_score(state, root);
     if !matches!(state.status, GameStatus::Ongoing) {
         return base;
@@ -552,26 +554,56 @@ pub fn positional_score(engine: &Engine, state: &GameState, root: Player) -> f64
         }
     }
 
-    // Mobility: real enumerated roots for the side to move. A side with no options is losing even
-    // when material is level, so this is the activity term material cannot see.
-    if state.turn == root
-        && let Ok(legal) = engine.legal_actions(state)
-    {
-        let bonus = (legal.len() as f64 * weights::MOBILITY).min(weights::MOBILITY_CAP);
-        score += bonus;
-        if legal.is_empty() {
-            score -= weights::NO_MOVE_PENALTY;
+    // Activity: count the empty squares each side's pieces could structurally reach, ignoring
+    // blockers. This distinguishes a rook on an open file from one boxed in without running the
+    // move generator.
+    let (mut ours, mut theirs) = (0.0, 0.0);
+    for (square, piece) in state.board.iter() {
+        let reach = reachable_squares(piece.kind, &square);
+        if piece.owner == root {
+            ours += reach;
+        } else {
+            theirs += reach;
         }
     }
+    let activity =
+        ((ours - theirs) * weights::MOBILITY).clamp(-weights::MOBILITY_CAP, weights::MOBILITY_CAP);
+    score += activity;
 
     score
 }
 
+/// How many squares a piece kind can structurally reach from `square`, ignoring occupancy.
+///
+/// This is a shape measure, not a legality test: sliding pieces get their full ray length, leapers a
+/// constant. It exists to be cheap enough for every leaf.
+fn reachable_squares(kind: PieceKind, square: &augment_core::Square) -> f64 {
+    let file = f64::from(square.file().min(7));
+    let rank = f64::from(square.rank().min(7));
+    let horizontal = file.min(7.0 - file);
+    let vertical = rank.min(7.0 - rank);
+    let diagonal = horizontal.min(vertical);
+    let rays = horizontal + vertical + 2.0 * diagonal;
+    match kind {
+        PieceKind::Rook => rays,
+        PieceKind::Bishop => 2.0 * diagonal,
+        PieceKind::Queen => rays + 2.0 * diagonal,
+        PieceKind::Knight => 3.0,
+        PieceKind::Archbishop => 2.0 * diagonal + 3.0,
+        PieceKind::Chancellor => rays + 3.0,
+        PieceKind::Pawn => 2.0,
+        PieceKind::King => 3.0,
+        // Monsters and other card pieces are not given an activity value; their worth is in their
+        // ability, which this heuristic cannot see.
+        _ => 0.0,
+    }
+}
+
 /// Evaluate a leaf with the configured variant.
-pub fn evaluate(engine: &Engine, state: &GameState, root: Player, evaluation: Evaluation) -> f64 {
+pub fn evaluate(state: &GameState, root: Player, evaluation: Evaluation) -> f64 {
     match evaluation {
         Evaluation::Material => material_score(state, root),
-        Evaluation::Positional => positional_score(engine, state, root),
+        Evaluation::Positional => positional_score(state, root),
     }
 }
 fn mix(mut x: u64) -> u64 {
