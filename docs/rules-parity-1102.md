@@ -35,6 +35,29 @@
 동률이면 `null`(무승부)이다. 우리 `resolve_lower_stars_*`가 같은 방향이며 `EqualStars*`가 동률을
 무승부로 처리한다.
 
+별 합계의 출처도 같다. 원본 `deckStarTotal`은 덱 카드의 `stars` 합이고, 우리는 `add_card`가
+`half_star_totals`에 `half_stars`를 누적한다. 같은 값이다.
+
+### 별 판정보다 우선하는 예외: 샷건 킹
+
+원본 `resolveStarTiebreak`는 별을 비교하기 **전에** 샷건 킹을 확인한다:
+
+```js
+const shotgunColor = shotgunPenaltyColor();
+if (shotgunColor) { endGame(opponent(shotgunColor), "샷건 킹은 장기전 판정에서 패배합니다."); return; }
+```
+
+즉 샷건 킹을 가진 쪽은 별 수와 무관하게 장기전 판정에서 **패배**한다.
+
+이 예외는 우리에게 **없다.** 다만 `shotgun-king`은 카탈로그 카드가 아니다. 번들에서
+`local-shotgun-dlc`라는 **로컬 DLC 효과**로 주입되며(`shotgunDlcPolicy`), `effects.global`의
+`kind: "local-shotgun-dlc"` 항목이 있을 때만 정의된다. 우리 카탈로그 281장에 포함되지 않는 것이
+정상이며, DLC를 켜지 않으면 도달하지 않는다.
+
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| 샷건 킹 장기전 패배 예외 | 미구현 | 로컬 DLC 전용. DLC 미지원이므로 도달 경로 없음 |
+
 ## 무승부 조건
 
 | 항목 | 원본 | 우리 | 판정 |
@@ -124,6 +147,17 @@ P0-2에서 원본 번들을 실행해 대조한 결과를 옮긴다([전이 대�
 턴 종료 카드 4장(`brainwash`, `miracle`, `trojan-horse`, `zugzwang`)은 Rust 테스트가 실제
 `TurnEnded` 발생을 확인한다.
 
+## 기본 체스 규칙
+
+| 항목 | 원본 | 우리 | 판정 |
+|---|---|---|---|
+| 프로모션 선택지 | Q/R/B/N (`PROMOTION_PIECES`) | Knight/Bishop/Rook/Queen | 일치 |
+| 카드 변형 프로모션 | `mutation` → 몬스터 추가, `fast-growth` → N/B만 | 동일 | 일치 |
+| 앙파상 | `enPassantTarget` | `EnPassantState` | 일치 |
+| 캐슬링 | `castlingRights` | `standard_castling_rook_plan` | 일치 |
+| 체크메이트 없음 | 킹 포획이 승리 | `king_capture_wins: true` | 일치 |
+| 스테일메이트 | 당한 쪽 패배 | `immobility_loses: true` | 일치 |
+
 ## 종료 사유 이름
 
 원본은 종료 사유를 별도로 표기한다: `king_capture`, `no_legal_move`, `threefold_repetition`,
@@ -135,18 +169,29 @@ P0-2에서 원본 번들을 실행해 대조한 결과를 옮긴다([전이 대�
 
 ## 결론
 
-**승리·무승부·연장전 축은 일치한다.** 킹 포획·합법 행동·카드 승리, 3회 반복과 45수 별 판정,
-50수 무승부, 연장전 시작·주기·종료 판정이 모두 원본과 같다.
+**다섯 축 모두 원본과 일치한다.** 승리·무승부·연장전·드래프트·턴 구조 및 기본 체스 규칙에서
+규칙 판정 불일치가 0건이다.
 
-남은 항목:
+이번 대조에서 **고친 것 4개**:
+
+| 항목 | 수정 전 | 수정 후 |
+|---|---|---|
+| 연장전 활성 | `false` | `true` |
+| 연장전 시작·주기 | 0, 0 | 45, 10 |
+| 3회 반복 판정 | 무승부 | 별 적은 쪽 승리 |
+| 연장전 게이지 초기화 | 모든 수 | 폰 이동·포획만 |
+| 드래프트 시점 | 하드코딩 10/20 | manifest에서 읽음 |
+
+그중 **실제 버그는 연장전 게이지 1건**이다. 나머지는 설정값과 구조 문제였다.
+
+남은 항목과 근거:
 
 | 항목 | 상태 | 근거 |
 |---|---|---|
-| 연장전 경고 표시 | 미구현 | UI 알림이며 규칙 판정에 영향 없음 |
-| 종료 사유 이름 (`deathmatch_inactivity`, `star_limit`, `revelation`) | 이름 미대응 | 우리는 `WinReason`/`DrawReason`으로 표현하며 판정 결과는 같음 |
+| 연장전 경고 표시 (종료 2 하프턴 전) | 미구현 | UI 알림. 규칙 판정에 영향 없음 |
+| 종료 사유 이름 (`deathmatch_inactivity`, `star_limit`, `revelation`) | 이름 미대응 | 판정 결과는 같고 표현만 다름 |
 | 레거시 모드 (별 합산 즉시 종료) | 미구현 | 범위에서 제외 |
-| 드래프트 체크포인트 | `game_start`/`10`/`20`, 3장 중 1장 | 사이트 문서와 일치 |
-| 턴 구조 | 행동 후 턴 종료, `END_TURN` 카드 | P0-2에서 대조 완료 |
+| 샷건 킹 장기전 패배 예외 | 미구현 | `local-shotgun-dlc` 전용. DLC 미지원이므로 도달 경로 없음 |
+| `revelation` 카드 주기 10→5 | 구현됨 | `card_runtime.revelation` 확인 |
 
-**규칙 판정은 원본과 동일하다.** 종료 사유의 이름 체계만 다르며, 그것은 결과에 영향을 주지 않는
-표현 차이다.
+**규칙 판정은 원본과 동일하다.**
