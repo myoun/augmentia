@@ -199,3 +199,71 @@ fn eligibility(state: &GameState, owner: Player, _: AcquisitionContext) -> CardE
         "후퇴할 아군 기물이 필요합니다.",
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::delayed::position;
+    use super::*;
+
+    fn card() -> CardInstance {
+        CardInstance {
+            instance_id: 1,
+            definition_id: crate::EMERGENCY_EVACUATION.to_owned(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 1,
+            available_after_turn: None,
+        }
+    }
+
+    fn offered(state: &GameState) -> Vec<Vec<Square>> {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut out = Vec::new();
+        actions(&engine, state, &card(), &mut out);
+        out.into_iter()
+            .map(|action| match action {
+                Action::UseCard {
+                    target: ActionTarget::Squares(squares),
+                    ..
+                } => squares,
+                other => panic!("unexpected action {other:?}"),
+            })
+            .collect()
+    }
+
+    /// The selection is 1-3 pieces, so the recursive walk must offer every admissible size,
+    /// not only the singles and the full set.
+    #[test]
+    fn evacuation_enumerates_one_two_and_three_piece_retreats() {
+        let state = position(&[
+            ("b3", Player::White, PieceKind::Rook),
+            ("c3", Player::White, PieceKind::Knight),
+            ("d3", Player::White, PieceKind::Bishop),
+        ]);
+        let offered = offered(&state);
+        for size in 1..=3 {
+            assert!(
+                offered.iter().any(|squares| squares.len() == size),
+                "a {size}-piece retreat must be offered: {offered:?}"
+            );
+        }
+    }
+
+    /// A piece is only offered when the square behind it is free.
+    #[test]
+    fn evacuation_requires_an_open_retreat_square() {
+        // b2 can retreat to b1 because that square is empty; c2 is blocked by c1.
+        let state = position(&[
+            ("b2", Player::White, PieceKind::Rook),
+            ("c2", Player::White, PieceKind::Knight),
+            ("c1", Player::White, PieceKind::Bishop),
+        ]);
+        let offered = offered(&state);
+        assert!(
+            offered
+                .iter()
+                .all(|squares| squares.len() == 1 && squares[0] == "b2".parse().unwrap()),
+            "only the piece with a free retreat square is offered: {offered:?}"
+        );
+    }
+}
