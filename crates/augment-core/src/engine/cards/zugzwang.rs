@@ -224,4 +224,34 @@ mod tests {
             Ok([false, true])
         );
     }
+
+    /// The catalog declares END_TURN for zugzwang, so using it must complete the actor's turn.
+    #[test]
+    fn zugzwang_ends_the_turn() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[("d6", Player::Black, PieceKind::Rook)]);
+        state.actions_remaining = 2;
+        state = engine
+            .grant_card(&state, 1, crate::ZUGZWANG, Player::White)
+            .expect("zugzwang is supported")
+            .state;
+        let after = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::None,
+                },
+            )
+            .expect("the card is usable");
+        assert!(
+            after
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::TurnEnded { .. })),
+            "using zugzwang must end the turn: {:?}",
+            after.events
+        );
+        assert_eq!(after.state.turn, Player::Black);
+    }
 }

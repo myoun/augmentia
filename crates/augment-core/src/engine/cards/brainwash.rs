@@ -360,4 +360,38 @@ mod tests {
             !eligibility(&strong_enemy, Player::White, AcquisitionContext::Draft).is_eligible()
         );
     }
+
+    /// The catalog declares END_TURN for brainwash, so using it must complete the actor's turn.
+    #[test]
+    fn brainwash_ends_the_turn() {
+        let engine = Engine::bundled_latest().unwrap();
+        // The victim must be worth less than the sacrifice, so give up a queen for a pawn.
+        let mut state = position(&[
+            ("b2", Player::White, PieceKind::Queen),
+            ("d4", Player::Black, PieceKind::Pawn),
+        ]);
+        state.actions_remaining = 2;
+        state = engine
+            .grant_card(&state, 1, crate::BRAINWASH, Player::White)
+            .expect("brainwash is supported")
+            .state;
+        let after = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: pair("b2", "d4"),
+                },
+            )
+            .expect("the swap is legal");
+        assert!(
+            after
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::TurnEnded { .. })),
+            "using brainwash must end the turn: {:?}",
+            after.events
+        );
+        assert_eq!(after.state.turn, Player::Black);
+    }
 }

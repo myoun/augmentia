@@ -177,4 +177,51 @@ mod tests {
             assert_eq!(state, before, "{target:?} mutated state");
         }
     }
+
+    /// The 2026-10-27 balance pass moved Trojan Horse to END_TURN: using it completes the
+    /// actor's turn instead of leaving it open (`usesTurnEndingTrojan` +
+    /// `finishV13CompletedCardTurn`, bundle 7250773 and 9579552).
+    #[test]
+    fn trojan_horse_ends_the_turn() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = position(&[
+            ("b1", Player::White, PieceKind::Knight),
+            ("d2", Player::White, PieceKind::Pawn),
+        ]);
+        // Give the actor a second action so an unended turn would be observable.
+        state.actions_remaining = 2;
+        state = engine
+            .grant_card(&state, 1, crate::TROJAN_HORSE, Player::White)
+            .expect("trojan-horse is supported")
+            .state;
+        assert_eq!(state.turn, Player::White);
+
+        let after = engine
+            .apply(
+                &state,
+                Action::UseCard {
+                    instance_id: 1,
+                    target: ActionTarget::Squares(vec![
+                        "b1".parse().unwrap(),
+                        "d2".parse().unwrap(),
+                    ]),
+                },
+            )
+            .expect("the declaration is legal");
+
+        assert!(
+            after
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::TurnEnded { .. })),
+            "using trojan-horse must end the turn: {:?}",
+            after.events
+        );
+        assert_eq!(
+            after.state.turn,
+            Player::Black,
+            "the turn passes to the opponent"
+        );
+        assert_eq!(after.state.cards[0].charges, 0);
+    }
 }
