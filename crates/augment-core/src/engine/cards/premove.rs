@@ -94,10 +94,19 @@ fn apply_declared(state: &mut GameState, declared: Declared) {
     state.card_runtime.moved_piece_ids.insert(piece.id);
 }
 
-/// Enumeration note: the source client builds a declaration incrementally from a prefix,
-/// but an `Action` carries the complete square list, so every legal chain must be
-/// materialised for `legal_actions`. All three depths are enumerated in full; upstream
-/// rejects a list longer than three but places no cap on how many exist.
+/// Push one completed declaration as a single action.
+///
+/// The source client builds a declaration incrementally from a prefix, but an `Action`
+/// carries the complete square list, so `legal_actions` must materialise every legal chain.
+/// All three depths are enumerated in full: upstream rejects a list longer than three but
+/// places no cap on how many exist, so truncating would drop legal declarations.
+///
+/// This is why enumeration is expensive here. Measured on six movable pieces: 58,468
+/// actions, about 355ms, of which 88% is generating the third step. Deriving the third step
+/// more cheaply is possible but risky (a wrong cache silently omits targets), and splitting
+/// an `Action` into one-step units would change the action-path budget and the meaning of a
+/// root action for the whole search. The trade-off is recorded in
+/// `docs/search-teacher-cleanup-backlog.md`; the current shape is the deliberate choice.
 fn push_action(card: &CardInstance, path: &[Square], out: &mut Vec<Action>) {
     out.push(Action::UseCard {
         instance_id: card.instance_id,
