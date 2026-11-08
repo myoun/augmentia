@@ -322,11 +322,25 @@ fn policy_fit(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if records.len() < 2 {
         return Err("need at least two teacher records".into());
     }
-    let split = ((records.len() as f64) * (1.0 - holdout)).round() as usize;
-    let split = split.clamp(1, records.len() - 1);
-    let (train, held) = records.split_at(split);
-    let (policy, training) = train_policy(train, epochs);
-    let held_out = verify_imitation(held, &policy, k);
+    // Split by a fixed stride instead of halving the file order. Records arrive in game order, so a
+    // positional split would train on early positions and verify on late ones, which measures the
+    // position distribution rather than generalisation. A stride assigns every held-out record to
+    // the same mix of plies and phases that the training set sees.
+    let stride = ((1.0 / holdout).round() as usize).max(2);
+    let mut train = Vec::new();
+    let mut held = Vec::new();
+    for (index, record) in records.into_iter().enumerate() {
+        if index % stride == 0 {
+            held.push(record);
+        } else {
+            train.push(record);
+        }
+    }
+    if train.is_empty() || held.is_empty() {
+        return Err("holdout split produced an empty side".into());
+    }
+    let (policy, training) = train_policy(&train, epochs);
+    let held_out = verify_imitation(&held, &policy, k);
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
