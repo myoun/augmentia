@@ -39,6 +39,49 @@
 | P2 | 교사 결정 기록 | 실제 사용 정보·행동·예산·coverage·정책 생성 방식 재현 |
 | P2 | Policy 학습과 별도 Value 검증 | 독립 검증에서 교사 판단 재현 및 탐색 기력 추가 이득 |
 
+## P0-2 결과: 전이 대조는 두 층으로 닫혔다
+
+### 술어 층 — 원본 대조 완료
+
+`scripts/test-snapshot-transitions.mjs`가 **1102 번들 자체를 실행**해 15개 술어를 검증한다.
+15개 술어, 40개 단정이며 `verify-search.ps1`에 연결돼 있다.
+
+| 영역 | 검증한 술어 |
+|---|---|
+| 카드 잠금 | `usesTurnEndingTrojan`, `isWorkerCardPendingNextTurn`, `authoritativeCardsUsedThisTurn`, `normalizeCardsUsedThisTurn` |
+| 후속 phase | `ownerStartDuePly`, `ownerStartsRemaining`, `retainV6Turn` |
+| 확률 | `workerStableIndex`, `stableHash`, `stableIndex`, `stableShuffle` |
+| 종료 | `usesOctober27Balance`, `usesNovemberExpansion`, `usesRulesAtLeast`, `usesV13Rules` |
+
+자기완결적 술어만 pin한다. 의존이 해시 상수뿐인 것들이라 어댑터가 작게 유지되고, 단정이
+실제 번들 코드로 판정된다.
+
+### 카드 사례 층 — 어댑터 비용 때문에 범위 밖
+
+전이 계약이 바뀐 17장의 **카드 전이 함수를 실행해 대조하는 것**은 불가능하다. 측정값:
+
+| 대상 | 필요한 어댑터 선언 |
+|---|---:|
+| 기존 오라클 9개 전체 이관 | **36,600** |
+| 카드 dispatcher 7개 (`applyOctober13Card` 등) | 각 **4,001+** (측정 상한) |
+
+번들의 절반을 복제해야 하고, 그러면 "번들로 번들을 검증"하는 순환이 된다. 대신
+`crates/augment-core/tests/card_definitions.rs`가 17장의 계약이 카탈로그 선언과 일치하는지
+검증한다. 이는 원본 대조가 아니라 **카탈로그 대조**이며, 그 구분을 명시한다.
+
+카드 수준 `END_TURN` 동작은 Rust 테스트가 직접 확인한다: `brainwash`, `miracle`,
+`trojan-horse`, `zugzwang`이 실제로 턴을 종료하는지.
+
+### 발견한 카탈로그 결함
+
+번들의 v2 카드 빌더는 PASSIVE 카드의 `turnPolicy`가 `NOT_APPLICABLE`이 아니면
+`Inconsistent v2 card activation`을 던진다. 그런데 우리 카탈로그는 **PASSIVE 18장에
+`PRESERVE_TURN`을 기록**하고 있다.
+
+이 필드는 해당 카드들에 대해 **무효**하다. PASSIVE는 획득 시 설치되고 소비할 charge가 없어
+`ends_turn`을 읽는 경로에 도달하지 않는다. 그래도 카탈로그가 원본과 어긋난 사실은 남긴다.
+`passive_cards_declare_inert_turn_policies` 테스트가 이 18장을 고정해, 조용히 늘어나지 않게 한다.
+
 ## 알려진 한계: `premove` 열거 비용
 
 `P0` 동적 목표 열거 작업에서 가변 선택 카드 6장을 전수 조사했다. 5장은 완전 열거로
