@@ -297,12 +297,7 @@ impl Engine {
                 .card_definitions()
                 .into_iter()
                 .filter(|card| card.activation == CardActivation::Rule)
-                .filter(|card| {
-                    matches!(
-                        self.ruleset.id.as_str(),
-                        "augment_chess_20260915" | crate::LATEST_RULESET_ID
-                    ) || card.id != crate::CAPTURE_THE_FLAG
-                })
+                .filter(|card| card.id != crate::CAPTURE_THE_FLAG)
                 .collect();
             executable_rules.sort_by_key(|card| card.name_ko);
             let (selection_roll, index) = state.rng_mut().web_choice_index(executable_rules.len());
