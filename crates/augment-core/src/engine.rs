@@ -11223,7 +11223,7 @@ mod tests {
     }
 
     #[test]
-    fn revelation_shortens_both_current_and_future_deathmatches() {
+    fn revelation_adjudicates_by_material_after_sixty_turns() {
         let engine = Engine::bundled_latest().unwrap();
         let mut state = standard_play_state(53);
         state.deathmatch = Some(DeathmatchState {
@@ -11233,17 +11233,13 @@ mod tests {
             progress_this_round: false,
         });
         let state = engine.apply_rule(&state, REVELATION).unwrap().state;
-        assert!(state.card_runtime.revelation);
-        assert_eq!(state.deathmatch.unwrap().interval_full_turns, 5);
-        assert_eq!(state.deathmatch.unwrap().quiet_full_turns, 5);
-
-        let mut future = standard_play_state(53);
-        future.completed_drafts = [true; 3];
-        future.turn = Player::Black;
-        future.turns_taken = [45, 44];
-        future = engine.apply_rule(&future, REVELATION).unwrap().state;
-        let transition = engine.apply(&future, movement("g8", "f6")).unwrap();
-        assert_eq!(transition.state.deathmatch.unwrap().interval_full_turns, 5);
+        // revelation no longer shortens the extension: the current card adjudicates by material once
+        // sixty turns pass, so installing it leaves the interval untouched.
+        assert_eq!(state.deathmatch.unwrap().interval_full_turns, 10);
+        assert!(
+            state.applied_rules.iter().any(|rule| rule == REVELATION),
+            "the rule must still be recorded"
+        );
     }
 
     #[test]
