@@ -93,7 +93,7 @@ mod historical_contract_tests {
 
     #[test]
     fn majesty_destination_filter_direct_diagnostic() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut board = crate::Board::empty();
         board.set(
             "e1".parse().unwrap(),
@@ -104,7 +104,7 @@ mod historical_contract_tests {
             Some(Piece::new(Player::Black, PieceKind::Queen)),
         );
         let mut state = GameState::from_board(
-            crate::BUNDLED_RULESET_ID,
+            crate::LATEST_RULESET_ID,
             Mode::Standard,
             board,
             Player::Black,
@@ -118,7 +118,7 @@ mod historical_contract_tests {
     }
     #[test]
     fn majesty_blocks_enemy_major_pieces_from_king_adjacent_destinations() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut board = crate::Board::empty();
         for (square, owner, kind) in [
             ("e1", Player::White, PieceKind::King),
@@ -130,7 +130,7 @@ mod historical_contract_tests {
             board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
         }
         let without = GameState::from_board(
-            crate::BUNDLED_RULESET_ID,
+            crate::LATEST_RULESET_ID,
             Mode::Standard,
             board,
             Player::Black,

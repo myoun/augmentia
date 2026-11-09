@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::fmt;
 
-use crate::{BUNDLED_RULESET_ID, SUPPORTED_SCHEMA_VERSION};
+use crate::SUPPORTED_SCHEMA_VERSION;
 
 const BUNDLED_NOTATION_20260818: &str =
     include_str!("../../../rulesets/augment_chess_20260818/notation.json");
@@ -21,13 +21,14 @@ pub struct NotationCatalog {
 }
 
 impl NotationCatalog {
-    pub fn bundled_20260807() -> Result<Self, NotationError> {
-        Self::bundled_20260818()
-    }
-
-    pub fn bundled_20260818() -> Result<Self, NotationError> {
+    /// The bundled notation legend.
+    ///
+    /// Notation is a dictionary of piece codes, not a ruleset claim: the legend does not change
+    /// between snapshots unless a piece is added. The captured 2026-08-18 legend is the only one
+    /// bundled, so it validates against its own ruleset id rather than the current one.
+    pub fn bundled() -> Result<Self, NotationError> {
         let catalog = Self::from_json(BUNDLED_NOTATION_20260818)?;
-        catalog.validate_for_ruleset(BUNDLED_RULESET_ID)?;
+        catalog.validate()?;
         Ok(catalog)
     }
 
@@ -189,7 +190,7 @@ mod tests {
 
     #[test]
     fn bundled_catalog_has_52_unique_codes() {
-        let catalog = NotationCatalog::bundled_20260807().unwrap();
+        let catalog = NotationCatalog::bundled().unwrap();
         assert_eq!(catalog.entries.len(), 52);
         let unique: BTreeSet<_> = catalog.entries.iter().map(|entry| &entry.code).collect();
         assert_eq!(unique.len(), 52);
@@ -197,7 +198,7 @@ mod tests {
 
     #[test]
     fn normalized_entries_are_present_in_the_preserved_html() {
-        let catalog = NotationCatalog::bundled_20260807().unwrap();
+        let catalog = NotationCatalog::bundled().unwrap();
         assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dt>").count(), 52);
         assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dd>").count(), 52);
         for entry in &catalog.entries {
@@ -211,7 +212,7 @@ mod tests {
 
     #[test]
     fn longest_prefix_wins_for_overlapping_codes() {
-        let catalog = NotationCatalog::bundled_20260807().unwrap();
+        let catalog = NotationCatalog::bundled().unwrap();
         let (missionary, remainder) = catalog.split_piece_prefix("MIe4").unwrap();
         assert_eq!(missionary.code, "MI");
         assert_eq!(missionary.name_ko, "선교사");
@@ -224,7 +225,7 @@ mod tests {
 
     #[test]
     fn pawn_notation_has_no_piece_prefix() {
-        let catalog = NotationCatalog::bundled_20260807().unwrap();
+        let catalog = NotationCatalog::bundled().unwrap();
         assert!(catalog.split_piece_prefix("e4").is_none());
     }
 }

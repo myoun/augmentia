@@ -517,7 +517,8 @@ mod tests {
                 "{disabled} must stay rejected"
             );
         }
-        assert!(ruleset_card("augment_chess_20260915", "qxe1").is_some());
+        // Only the current snapshot ships, so a card absent from it has no definition anywhere.
+        assert!(ruleset_card(LATEST_RULESET_ID, "qxe1").is_none());
         // A card still queued in `pending` must not be executable.
         for pending in crate::latest::pending_ids() {
             assert!(

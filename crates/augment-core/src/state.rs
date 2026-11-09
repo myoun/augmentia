@@ -2297,18 +2297,18 @@ impl StableHasher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BUNDLED_RULESET_ID;
+    use crate::LATEST_RULESET_ID;
 
     #[test]
     fn same_seed_and_position_have_same_fingerprint() {
-        let left = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
-        let right = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
+        let left = GameState::standard(LATEST_RULESET_ID, Mode::Standard, 7);
+        let right = GameState::standard(LATEST_RULESET_ID, Mode::Standard, 7);
         assert_eq!(left.fingerprint(), right.fingerprint());
     }
 
     #[test]
     fn rng_state_is_part_of_full_fingerprint_but_not_position_key() {
-        let left = GameState::standard(BUNDLED_RULESET_ID, Mode::Standard, 7);
+        let left = GameState::standard(LATEST_RULESET_ID, Mode::Standard, 7);
         let mut right = left.clone();
         right.rng_mut().next_u64();
         assert_eq!(left.position_key(), right.position_key());

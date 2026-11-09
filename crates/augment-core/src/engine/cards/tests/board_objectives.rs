@@ -11,7 +11,7 @@ pub(in crate::engine::cards) fn flag_test_state() -> GameState {
         board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
     }
     let mut state = GameState::from_board(
-        crate::BUNDLED_RULESET_ID,
+        crate::LATEST_RULESET_ID,
         Mode::Standard,
         board,
         Player::Black,

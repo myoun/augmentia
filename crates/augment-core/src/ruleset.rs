@@ -4,12 +4,6 @@ use std::fmt;
 
 use crate::{SUPPORTED_ENGINE_API_VERSION, SUPPORTED_SCHEMA_VERSION};
 
-const BUNDLED_20260818: &str =
-    include_str!("../../../rulesets/augment_chess_20260818/manifest.json");
-const BUNDLED_20260915: &str =
-    include_str!("../../../rulesets/augment_chess_20260915/manifest.json");
-const BUNDLED_20261017: &str =
-    include_str!("../../../rulesets/augment_chess_20261017/manifest.json");
 const BUNDLED_20261102: &str =
     include_str!("../../../rulesets/augment_chess_20261102/manifest.json");
 
@@ -113,25 +107,6 @@ impl DraftConfig {
 impl RulesetManifest {
     pub fn bundled_latest() -> Result<Self, RulesetError> {
         Self::from_json(BUNDLED_20261102)
-    }
-
-    /// The previous snapshot, kept for the transition tests that pin historical
-    /// behavior while the current profile catches up.
-    pub fn bundled_20261017() -> Result<Self, RulesetError> {
-        Self::from_json(BUNDLED_20261017)
-    }
-
-    pub fn bundled_20260807() -> Result<Self, RulesetError> {
-        Self::bundled_20260818()
-    }
-
-    pub fn bundled_20260818() -> Result<Self, RulesetError> {
-        Self::from_json(BUNDLED_20260818)
-    }
-
-    /// Announced September rules. The legacy constructors remain frozen metadata loaders.
-    pub fn bundled_20260915() -> Result<Self, RulesetError> {
-        Self::from_json(BUNDLED_20260915)
     }
 
     pub fn from_json(json: &str) -> Result<Self, RulesetError> {
@@ -407,7 +382,7 @@ impl From<serde_json::Error> for RulesetError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BUNDLED_RULESET_ID;
+    use crate::LATEST_RULESET_ID;
 
     /// The draft schedule must come from the manifest, not from a hard-coded pair of turns.
     ///
@@ -449,11 +424,6 @@ mod tests {
         assert_eq!(latest.base_rules.fifty_move_completed_turns, Some(100));
         assert_eq!(latest.opening_rule.chance_numerator, 1);
         assert_eq!(latest.opening_rule.chance_denominator, 5);
-        // The older snapshot keeps the same policy, so history still parses.
-        let old = RulesetManifest::bundled_20260915().unwrap();
-        assert!(old.base_rules.deathmatch_enabled);
-        assert_eq!(old.base_rules.fifty_move_completed_turns, None);
-        assert_eq!(old.base_rules.repetition_tiebreak, "lower_half_star_total");
     }
 
     /// The release gate asks for card coverage, not behavior parity. The current
@@ -504,41 +474,25 @@ mod tests {
         }
     }
 
-    /// Earlier snapshots predate the release block and must keep loading.
-    #[test]
-    fn snapshots_without_a_release_block_still_parse() {
-        for manifest in [
-            RulesetManifest::bundled_20260807().unwrap(),
-            RulesetManifest::bundled_20260818().unwrap(),
-            RulesetManifest::bundled_20260915().unwrap(),
-            RulesetManifest::bundled_20261017().unwrap(),
-        ] {
-            assert!(
-                manifest.release.is_none(),
-                "{} predates releases",
-                manifest.id
-            );
-        }
-    }
-
     #[test]
     fn bundled_manifest_is_valid_and_explicitly_incomplete() {
-        let manifest = RulesetManifest::bundled_20260807().unwrap();
-        assert_eq!(manifest.id, BUNDLED_RULESET_ID);
-        assert_eq!(manifest.snapshot_date, "2026-08-18");
+        let manifest = RulesetManifest::bundled_latest().unwrap();
+        assert_eq!(manifest.id, LATEST_RULESET_ID);
+        assert_eq!(manifest.snapshot_date, "2026-11-02");
         // Every publicly active card is executable, which is the card-coverage claim.
         assert_eq!(manifest.coverage.status, "publicly_active");
         assert!(manifest.coverage.covers_all_public_cards());
-        assert_eq!(manifest.coverage.target_card_count, 208);
-        assert_eq!(manifest.coverage.publicly_active_card_count, 208);
-        assert_eq!(manifest.coverage.implemented_card_count, 208);
-        assert_eq!(manifest.coverage.behavioral_slice_card_count, 208);
+        assert_eq!(manifest.coverage.publicly_active_card_count, 272);
+        assert_eq!(manifest.coverage.implemented_card_count, 272);
+        assert_eq!(manifest.coverage.behavioral_slice_card_count, 272);
+        // The catalog lists 281 cards; nine are disabled upstream.
+        assert_eq!(manifest.coverage.target_card_count, 281);
         // ...but behavior parity with the live site is still not claimed.
         assert!(!manifest.coverage.site_parity_is_complete());
         assert_eq!(manifest.coverage.site_parity_verified_card_count, 0);
         assert_eq!(manifest.base_rules.deathmatch_starts_at_move_count, 45);
         assert_eq!(manifest.base_rules.deathmatch_quiet_move_count, 10);
-        assert_eq!(manifest.opening_rule.chance_numerator, 2);
+        assert_eq!(manifest.opening_rule.chance_numerator, 1);
         assert_eq!(manifest.opening_rule.chance_denominator, 5);
         assert_eq!(
             manifest.artifacts.source_manifest,
@@ -553,46 +507,8 @@ mod tests {
     }
 
     #[test]
-    fn september_manifest_reports_partial_coverage_without_replacing_legacy() {
-        let old = RulesetManifest::bundled_20260818().unwrap();
-        assert_eq!(old, RulesetManifest::bundled_20260807().unwrap());
-        assert_eq!(old.id, "augment_chess_20260818");
-        let latest = RulesetManifest::bundled_20260915().unwrap();
-        assert_eq!(latest.id, "augment_chess_20260915");
-        assert_eq!(latest.snapshot_date, "2026-09-15");
-        assert_eq!(latest.coverage.target_card_count, 240);
-        assert_eq!(latest.coverage.publicly_active_card_count, 240);
-        assert!(latest.coverage.covers_all_public_cards());
-        // Card coverage is complete; site behavior parity remains unverified.
-        assert_eq!(latest.coverage.status, "publicly_active");
-        assert!(!latest.coverage.site_parity_is_complete());
-        assert_eq!(latest.coverage.site_parity_verified_card_count, 0);
-        let implemented: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../rulesets/augment_chess_20260915/cards/implemented.json"
-        ))
-        .unwrap();
-        assert_eq!(
-            latest.coverage.implemented_card_count as usize,
-            implemented["cards"].as_array().unwrap().len()
-        );
-        assert_eq!(
-            implemented["scope"]["implemented_cards"].as_u64(),
-            Some(latest.coverage.implemented_card_count.into())
-        );
-        assert!(implemented["cards"].as_array().unwrap().iter().all(|card| {
-            card["activation"].is_string()
-                && card["compatibility"].is_array()
-                && card["engine_primitives"].is_array()
-        }));
-        assert_eq!(
-            latest.coverage.behavioral_slice_card_count,
-            latest.coverage.implemented_card_count
-        );
-    }
-
-    #[test]
     fn all_public_modes_are_present() {
-        let manifest = RulesetManifest::bundled_20260807().unwrap();
+        let manifest = RulesetManifest::bundled_latest().unwrap();
         for mode in ["standard", "chaos", "grand"] {
             assert!(manifest.mode(mode).is_some());
         }

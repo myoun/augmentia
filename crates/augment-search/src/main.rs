@@ -81,7 +81,7 @@ fn tactical_diagnostics(args: &[String]) -> Result<(), Box<dyn std::error::Error
     if config.max_depth == 0 || config.max_nodes == 0 {
         return Err("Tactical depth and node budgets must be positive".into());
     }
-    let engine = Engine::bundled_20260915()?;
+    let engine = Engine::bundled_latest()?;
     let immediate = board_state(
         &engine,
         &[
@@ -370,7 +370,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     let engine = if command == "cannon-fixtures" {
-        Engine::bundled_20260915()?
+        Engine::bundled_latest()?
     } else {
         Engine::bundled_latest()?
     };

@@ -8,7 +8,6 @@ mod action;
 mod card;
 mod card_eligibility;
 mod card_ids;
-mod compat;
 mod effect;
 mod engine;
 mod event;
@@ -64,7 +63,6 @@ pub use card_ids::{
     VANGUARD, VANISH, VIGILANCE, VIP, VORTEX, WANDERER, WANTED, WHITE_BOX, WINDMILL,
     WINTER_KINGDOM, WITCH_TRIAL, WIZARD, ZUGZWANG,
 };
-pub use compat::card_definitions::{IMPLEMENTED_CARDS, implemented_card};
 pub use effect::{
     ChoiceHandler, ChoiceRegistry, ChoiceRegistryError, EffectCommand, EffectHandler,
     EffectRegistry, EffectRegistryError,
@@ -96,9 +94,8 @@ pub use state::{
 };
 pub use state::{CaptureTheFlagState, FlagOccupation};
 
-/// Ruleset bundled into this build and used by the first engine milestone.
-pub const BUNDLED_RULESET_ID: &str = "augment_chess_20260818";
-/// Latest captured rules, with an explicitly limited executable card profile.
+/// The captured rules this build executes. Historical snapshots are no longer bundled, so this is
+/// the only ruleset the engine can run.
 pub const LATEST_RULESET_ID: &str = "augment_chess_20261102";
 pub const SUPPORTED_SCHEMA_VERSION: u32 = 1;
 pub const SUPPORTED_ENGINE_API_VERSION: u32 = 1;

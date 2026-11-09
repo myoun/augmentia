@@ -57,10 +57,6 @@ impl Engine {
         owner: Player,
         events: &mut Vec<Event>,
     ) -> Result<(), EngineError> {
-        if state.ruleset_id != crate::LATEST_RULESET_ID {
-            self.apply_card_definition(state, id, owner, events);
-            return Ok(());
-        }
         super::acquire(self, state, id, owner, events)
     }
 }

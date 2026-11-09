@@ -111,7 +111,7 @@ mod historical_contract_tests {
 
     #[test]
     fn highlander_unique_types_win_but_duplicate_pawns_do_not() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         for (duplicate_pawn, wins) in [(false, true), (true, false)] {
             let mut board = crate::Board::empty();
             for (square, owner, kind) in [
@@ -131,7 +131,7 @@ mod historical_contract_tests {
                 board.set(square.parse().unwrap(), Some(Piece::new(owner, kind)));
             }
             let state = GameState::from_board(
-                crate::BUNDLED_RULESET_ID,
+                crate::LATEST_RULESET_ID,
                 Mode::Standard,
                 board,
                 Player::White,

@@ -206,7 +206,7 @@ mod tests {
     use augment_core::{Board, Mode, Piece, PieceKind, Square};
 
     fn fixture() -> (Engine, GameState) {
-        let engine = Engine::bundled_20260915().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut board = Board::empty();
         for (square, owner, kind) in [
             ("a1", Player::White, PieceKind::King),

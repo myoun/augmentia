@@ -27,11 +27,7 @@ pub struct ImplementedCardDefinition {
     pub turn_exclusive: bool,
 }
 
-/// Select metadata from the requested ruleset. Current definitions own every field.
-pub fn ruleset_card(ruleset_id: &str, id: &str) -> Option<ImplementedCardDefinition> {
-    if ruleset_id == crate::LATEST_RULESET_ID {
-        crate::latest::card_definition(id)
-    } else {
-        crate::compat::card_definitions::implemented_card(id).copied()
-    }
+/// Card metadata for a ruleset. Only the current snapshot ships, so the id is not consulted.
+pub fn ruleset_card(_ruleset_id: &str, id: &str) -> Option<ImplementedCardDefinition> {
+    crate::latest::card_definition(id)
 }

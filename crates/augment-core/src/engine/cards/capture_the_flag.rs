@@ -107,7 +107,7 @@ mod historical_contract_tests {
     use super::*;
     #[test]
     fn capture_the_flag_defender_has_one_turn_to_liberate() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let state = flag_test_state();
         let occupied = engine.apply(&state, flag_move("a2", "a1")).unwrap().state;
         assert_eq!(occupied.status, GameStatus::Ongoing);
@@ -134,8 +134,8 @@ mod historical_contract_tests {
     }
     #[test]
     fn capture_the_flag_installs_seeded_home_flags() {
-        let engine = Engine::bundled_20260818().unwrap();
-        let state = GameState::standard(crate::BUNDLED_RULESET_ID, Mode::Standard, 915);
+        let engine = Engine::bundled_latest().unwrap();
+        let state = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 915);
         let first = engine.apply_rule(&state, "capture-the-flag").unwrap();
         let second = engine.apply_rule(&state, "capture-the-flag").unwrap();
         assert_eq!(first.state.fingerprint(), second.state.fingerprint());
@@ -157,7 +157,7 @@ mod historical_contract_tests {
     }
     #[test]
     fn capture_the_flag_fingerprint_and_replay_restore_deadline() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut state = flag_test_state();
         state.actions_remaining = 2;
         let occupied = engine.apply(&state, flag_move("a2", "a1")).unwrap().state;

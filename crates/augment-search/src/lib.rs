@@ -741,7 +741,7 @@ mod tests {
     use super::*;
     use augment_core::{Board, Mode, Piece, Square};
     fn fixture() -> (Engine, GameState) {
-        let engine = Engine::bundled_20260915().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut board = Board::empty();
         for (sq, owner, kind) in [
             ("a1", Player::White, PieceKind::King),
@@ -974,7 +974,7 @@ mod tests {
     }
     #[test]
     fn chance_is_multisampled_without_changing_live_rng() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let initial = engine.new_game(Mode::Standard, 701).unwrap();
         // Reuse real draft offers, but a no-rule initial board so two constructors differ only in RNG.
         let mut state = GameState::standard(engine.ruleset().id.clone(), Mode::Standard, 701);
@@ -1076,7 +1076,7 @@ mod tests {
     }
     #[test]
     fn chance_average_uses_exact_children_even_under_finite_window() {
-        let engine = Engine::bundled_20260915().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let mut board = Board::empty();
         for (sq, owner, kind) in [
             ("h1", Player::White, PieceKind::King),
@@ -1148,7 +1148,7 @@ mod tests {
     }
     #[test]
     fn interrupted_chance_average_is_not_a_value() {
-        let engine = Engine::bundled_20260818().unwrap();
+        let engine = Engine::bundled_latest().unwrap();
         let state = engine.new_game(Mode::Standard, 701).unwrap();
         let mut ctx = Context {
             engine: &engine,

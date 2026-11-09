@@ -7,9 +7,7 @@
 //! rule fields: callers must enforce external bans; global uniqueness here is
 //! the normal (not completeRandom) policy. Unsupported predicates fail closed.
 
-mod compat;
-
-use crate::{CardActivation, CardPhase, GameState, Piece, PieceKind, Player};
+use crate::{CardActivation, CardPhase, GameState, Player};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AcquisitionContext {
@@ -68,28 +66,6 @@ fn denied(code: EligibilityReasonCode, detail: &str, message: &str) -> CardEligi
     })
 }
 
-fn require(ok: bool, requirement: &str) -> CardEligibility {
-    if ok {
-        CardEligibility::Eligible
-    } else {
-        denied(
-            EligibilityReasonCode::MissingBoardRequirement,
-            requirement,
-            requirement,
-        )
-    }
-}
-
-fn enabled(flag: bool) -> Option<CardEligibility> {
-    flag.then(|| {
-        denied(
-            EligibilityReasonCode::AlreadyEnabled,
-            "runtime-enabled",
-            "이미 적용 중인 효과입니다.",
-        )
-    })
-}
-
 /// Official aliases; callers should also canonicalize before granting the card.
 pub fn canonical_card_id(id: &str) -> &str {
     match id {
@@ -134,28 +110,6 @@ pub fn mutually_exclusive_cards(first: &str, second: &str) -> bool {
     .any(|group| group.contains(&a) && group.contains(&b))
         || (a == "merchant-guild" && MERCHANT_EXCLUSIONS.contains(&b))
         || (b == "merchant-guild" && MERCHANT_EXCLUSIONS.contains(&a))
-}
-
-fn is_large(piece: Piece) -> bool {
-    matches!(
-        piece.kind,
-        PieceKind::Colossus | PieceKind::BigRook | PieceKind::BigBishop
-    )
-}
-
-// Do not use Engine::is_royal_piece: that helper additionally treats merchants
-// as royal. JS isRoyalIdentityPiece does not; witch-trial excludes them separately.
-fn royal(state: &GameState, piece: Piece) -> bool {
-    piece.kind != PieceKind::Merchant
-        && (matches!(
-            piece.kind,
-            PieceKind::King | PieceKind::RoyalKnight | PieceKind::DarkWizard
-        ) || state.card_runtime.royal_piece_ids.contains(&piece.id))
-}
-
-fn queen(state: &GameState, piece: Piece) -> bool {
-    // Core's Qxe1 heir is represented by royal_piece_ids, not regencyHeir.
-    piece.kind == PieceKind::Queen && !state.card_runtime.royal_piece_ids.contains(&piece.id)
 }
 
 /// Side-effect-free normal acquisition check. It deliberately does not require
@@ -285,19 +239,16 @@ pub fn check_card_eligibility(
     {
         return CardEligibility::Eligible;
     }
-    if state.ruleset_id == crate::LATEST_RULESET_ID {
-        return crate::engine::cards::eligibility(state, id, player, context);
-    }
-    compat::check(state, id, player, context)
+    crate::engine::cards::eligibility(state, id, player, context)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Board, CardInstance, Mode, Square};
+    use crate::{Board, CardInstance, Mode, Piece, PieceKind, Square};
 
     fn state() -> GameState {
-        GameState::standard("augment_chess_20260915", Mode::Standard, 7)
+        GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, 7)
     }
     fn check(state: &GameState, id: &str, context: AcquisitionContext) -> CardEligibility {
         check_card_eligibility(state, id, Player::White, context)
@@ -347,13 +298,18 @@ mod tests {
             EligibilityReasonCode::RuleCardInDraft
         );
         assert!(check(&s, "mistake", AcquisitionContext::Setup).is_eligible());
+        // `mistake-card` shares the `mistake` prefix but is an ACTIVE middle card, not a
+        // RULE: identity comes from the catalog activation/phase, never from the id suffix.
+        // The historical `compat::check` rejected it for an unrelated predicate, which made
+        // the old `assert_ne!(.., RuleCardInDraft)` pass; that layer is gone, so the test now
+        // pins the actual identity and the resulting draftability instead.
         assert_ne!(
-            check(&s, "mistake-card", AcquisitionContext::Draft)
-                .reason()
-                .unwrap()
-                .code,
-            EligibilityReasonCode::RuleCardInDraft
+            crate::ruleset_card(crate::LATEST_RULESET_ID, "mistake-card")
+                .expect("mistake-card ships in the current catalog")
+                .activation,
+            CardActivation::Rule
         );
+        assert!(check(&s, "mistake-card", AcquisitionContext::Draft).is_eligible());
         s.applied_rules.push("mistake".into());
         assert_eq!(
             code(check(&s, "mistake", AcquisitionContext::Setup)),
@@ -400,8 +356,14 @@ mod tests {
 
     #[test]
     fn witch_trial_excludes_royal_merchant_vip_colossus_but_not_big_rook() {
+        // The kind exclusions are a target contract, not a Draft acquisition requirement: the
+        // catalog draw requirement is `OPPONENT_NONROYAL`, and `witch_trial::eligibility`
+        // returns Eligible for Draft and reuses the target list for Setup. The historical
+        // `compat::check` applied the target list in every context, so this test previously
+        // asserted a Draft rejection that no longer exists; it now pins the same exclusions
+        // where they actually apply.
         let mut s = GameState::from_board(
-            "augment_chess_20260915",
+            crate::LATEST_RULESET_ID,
             Mode::Standard,
             Board::empty(),
             Player::White,
@@ -423,14 +385,20 @@ mod tests {
                 Some(Piece::new(Player::Black, kind).with_id(index as u32 + 1)),
             );
         }
-        assert!(!check(&s, "witch-trial", AcquisitionContext::Draft).is_eligible());
+        // Draft never inspects the board for this card.
+        assert!(check(&s, "witch-trial", AcquisitionContext::Draft).is_eligible());
+        // Setup does: every piece above is royal, a merchant, a VIP, or a Colossus body.
+        assert_eq!(
+            code(check(&s, "witch-trial", AcquisitionContext::Setup)),
+            EligibilityReasonCode::MissingBoardRequirement
+        );
         s.board.set(
             "h8".parse().unwrap(),
             Some(Piece::new(Player::Black, PieceKind::BigRook).with_id(99)),
         );
-        assert!(check(&s, "witch-trial", AcquisitionContext::Draft).is_eligible());
+        assert!(check(&s, "witch-trial", AcquisitionContext::Setup).is_eligible());
         s.card_runtime.royal_piece_ids.insert(99);
-        assert!(!check(&s, "witch-trial", AcquisitionContext::Draft).is_eligible());
+        assert!(!check(&s, "witch-trial", AcquisitionContext::Setup).is_eligible());
     }
 
     #[test]
@@ -464,7 +432,7 @@ mod tests {
     #[test]
     fn all_future_target_drafts_and_alekhine_survive_empty_board() {
         let s = GameState::from_board(
-            "augment_chess_20260915",
+            crate::LATEST_RULESET_ID,
             Mode::Standard,
             Board::empty(),
             Player::White,
@@ -486,10 +454,16 @@ mod tests {
                 "{id}"
             );
         }
-        assert!(!check(&s, "alekhine-machine-gun", AcquisitionContext::Setup).is_eligible());
+        // `alekhine-machine-gun` also carries `draw_requirement: ANY` and its eligibility is
+        // unconditional in both contexts, so an empty board does not block Setup either. The
+        // historical layer rejected Setup for an unmapped predicate; that predicate is gone.
+        assert!(check(&s, "alekhine-machine-gun", AcquisitionContext::Setup).is_eligible());
+        // `necromancy` is different: its catalog requirement is ANY, but the card module also
+        // needs an allied pawn and a captured piece to revive, so the empty board fails the
+        // board requirement rather than an unmapped predicate.
         assert_eq!(
             code(check(&s, "necromancy", AcquisitionContext::Setup)),
-            EligibilityReasonCode::UnsupportedPredicate
+            EligibilityReasonCode::MissingBoardRequirement
         );
     }
 
@@ -525,12 +499,18 @@ mod tests {
             code(check(&s, "not-a-card", AcquisitionContext::Setup)),
             EligibilityReasonCode::UnknownCard
         );
-        let result = check(&s, "freeze", AcquisitionContext::Draft);
-        assert_eq!(
-            result.reason().unwrap().code,
-            EligibilityReasonCode::UnsupportedPredicate
-        );
-        assert!(!result.reason().unwrap().message_ko.is_empty());
+        // `freeze` used to stand for a predicate core could not reconstruct, so the historical
+        // `compat::check` denied it with UnsupportedPredicate. Its catalog draw requirement is
+        // `ANY` and `freeze::eligibility` is unconditional, so drafting it is now eligible.
+        assert!(check(&s, "freeze", AcquisitionContext::Draft).is_eligible());
+        // A card the catalog lists but this snapshot does not execute still fails explicitly,
+        // which is the remaining meaning of UnsupportedPredicate.
+        let result = check(&s, "qxe1", AcquisitionContext::Draft);
+        let reason = result
+            .reason()
+            .expect("a catalogued but disabled card must be rejected");
+        assert_eq!(reason.code, EligibilityReasonCode::UnsupportedPredicate);
+        assert!(!reason.message_ko.is_empty());
         assert_eq!(canonical_card_id("free-move"), "premove");
     }
 
