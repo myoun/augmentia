@@ -426,6 +426,7 @@ impl Engine {
         })
     }
 
+    #[allow(dead_code)]
     fn apply_false_start(&self, state: &mut GameState, actor: Player) {
         let direction = if actor == Player::White { 1 } else { -1 };
         let pieces = state
@@ -509,6 +510,7 @@ impl Engine {
         self.piece_ability_kind(state, piece) == kind
     }
 
+    #[allow(dead_code)]
     fn is_ranged_piece(&self, state: &GameState, piece: Piece) -> bool {
         matches!(
             self.piece_ability_kind(state, piece),
@@ -678,6 +680,12 @@ impl Engine {
         }
     }
 
+    // The opening-layout helpers below (`replace_layout` and the per-card `apply_*_layout` wrappers)
+    // are the pre-passive implementation of the opening cards. Now that every supported OPENING card
+    // is PASSIVE and installs through `cards::acquire`, nothing calls them; they are kept because the
+    // layouts are the reference for the shapes those passives install, and deleting them would lose
+    // that mapping. Allowing dead code here is scoped to this group rather than the whole impl.
+    #[allow(dead_code)]
     fn replace_layout(
         &self,
         state: &mut GameState,
@@ -720,6 +728,7 @@ impl Engine {
         }
     }
 
+    #[allow(dead_code)]
     fn apply_london_layout(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         const WHITE: &[(&str, PieceKind, bool)] = &[
             ("a1", PieceKind::Rook, false),
@@ -766,6 +775,7 @@ impl Engine {
         );
     }
 
+    #[allow(dead_code)]
     fn apply_horde_layout(
         &self,
         state: &mut GameState,
@@ -834,6 +844,7 @@ impl Engine {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn apply_big_rook_layout(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         let anchor = opening_square(actor, "g2", "g8");
         let placements: &[(&str, PieceKind)] = if actor == Player::White {
@@ -881,6 +892,7 @@ impl Engine {
         self.register_spawned_piece(state, anchor, rook, false);
     }
 
+    #[allow(dead_code)]
     fn apply_big_bishop_layout(
         &self,
         state: &mut GameState,
@@ -933,6 +945,7 @@ impl Engine {
         self.register_spawned_piece(state, anchor, bishop, false);
     }
 
+    #[allow(dead_code)]
     fn apply_merchant_guild(
         &self,
         state: &mut GameState,
@@ -977,6 +990,7 @@ impl Engine {
         Ok(())
     }
 
+    #[allow(dead_code)]
     fn apply_qxe1(
         &self,
         state: &mut GameState,
@@ -1033,6 +1047,7 @@ impl Engine {
             || state.card_runtime.royal_piece_ids.contains(&piece.id)
     }
 
+    #[allow(dead_code)]
     fn opening_card_none_legal(
         &self,
         state: &GameState,
@@ -4530,6 +4545,7 @@ impl Engine {
         self.record_move_replay(state, actor, before, en_passant_before, runtime_before);
     }
 
+    #[allow(dead_code)]
     fn apply_freeze(&self, state: &mut GameState, actor: Player, events: &mut Vec<Event>) {
         let mut candidates = web_ordered_pieces(state)
             .into_iter()
@@ -9211,6 +9227,7 @@ impl Engine {
         }
     }
 
+    #[allow(dead_code)]
     fn nearest_alibaba_candidates(
         &self,
         state: &GameState,
@@ -9662,6 +9679,7 @@ fn opening_square(player: Player, white: &str, black: &str) -> Square {
     .expect("static opening square")
 }
 
+#[allow(dead_code)]
 fn opening_squares(player: Player, white: &[&str], black: &[&str]) -> Vec<Square> {
     if player == Player::White {
         white
@@ -9693,6 +9711,7 @@ fn large_piece_occupied_cells(state: &GameState, piece_id: u32, anchor: Square) 
         .collect()
 }
 
+#[allow(dead_code)]
 fn clear_queen_line(board: &crate::Board, from: Square, to: Square) -> bool {
     let file_delta = to.file() as i8 - from.file() as i8;
     let rank_delta = to.rank() as i8 - from.rank() as i8;
@@ -13072,7 +13091,7 @@ mod tests {
 
     #[test]
     fn herald_transform_next_to_enemy_king_wins_immediately() {
-        let engine = Engine::bundled_latest().unwrap();
+        let _engine = Engine::bundled_latest().unwrap();
         let mut state = minimal_state(
             &[
                 ("a1", Player::White, PieceKind::King),
@@ -13124,7 +13143,7 @@ mod tests {
 
     #[test]
     fn opening_pawn_transform_cards_follow_original_files() {
-        let engine = Engine::bundled_latest().unwrap();
+        let _engine = Engine::bundled_latest().unwrap();
         // apprentice-knights transforms the b- and g-file pawns in place, so the squires keep the
         // pawns' original files and identities.
         let mut apprentice = standard_play_state(101);
@@ -13353,7 +13372,7 @@ mod tests {
 
     #[test]
     fn mass_opening_cards_build_expected_armies() {
-        let engine = Engine::bundled_latest().unwrap();
+        let _engine = Engine::bundled_latest().unwrap();
 
         let mut dutch = standard_play_state(108);
         grant_test_card(&mut dutch, DUTCH, 1);
@@ -13404,7 +13423,7 @@ mod tests {
 
     #[test]
     fn big_rook_and_colossus_have_large_piece_state() {
-        let engine = Engine::bundled_latest().unwrap();
+        let _engine = Engine::bundled_latest().unwrap();
         let mut rook = standard_play_state(111);
         grant_test_card(&mut rook, BIG_ROOK, 1);
         let rook = rook.clone(); // BIG_ROOK is PASSIVE: granting installed it

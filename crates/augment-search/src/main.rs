@@ -369,11 +369,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             _ => return Err(format!("Unknown flag {flag}").into()),
         }
     }
-    let engine = if command == "cannon-fixtures" {
-        Engine::bundled_latest()?
-    } else {
-        Engine::bundled_latest()?
-    };
+    // Only the current snapshot ships, so every subcommand runs on the same engine.
+    let engine = Engine::bundled_latest()?;
     if command == "cannon-fixtures" {
         println!(
             "{}",

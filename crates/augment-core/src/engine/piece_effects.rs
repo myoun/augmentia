@@ -1935,6 +1935,7 @@ impl Engine {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub(super) fn has_trolley_bundle_pair(&self, state: &GameState, player: Player) -> bool {
         let pieces = state
             .board
@@ -2143,6 +2144,7 @@ fn collect_trolley_bundles(
     }
 }
 
+#[allow(dead_code)]
 pub(super) fn push_square_combinations(
     actions: &mut Vec<Action>,
     instance_id: u32,
@@ -2261,6 +2263,7 @@ pub(super) fn suspicious_potion_effects(
     .collect()
 }
 
+#[allow(dead_code)]
 pub(super) fn is_major_piece(kind: PieceKind) -> bool {
     matches!(
         kind,
