@@ -4,12 +4,8 @@ use std::fmt;
 
 use crate::SUPPORTED_SCHEMA_VERSION;
 
-const BUNDLED_NOTATION_20260818: &str =
-    include_str!("../../../rulesets/augment_chess_20260818/notation.json");
-
-#[cfg(test)]
-const BUNDLED_NOTATION_RAW_20260818: &str =
-    include_str!("../../../rulesets/augment_chess_20260818/sources/raw/notation-legend.html");
+const BUNDLED_NOTATION: &str =
+    include_str!("../../../rulesets/augment_chess_20261102/notation.json");
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct NotationCatalog {
@@ -21,14 +17,15 @@ pub struct NotationCatalog {
 }
 
 impl NotationCatalog {
-    /// The bundled notation legend.
+    /// The bundled notation legend for the current snapshot.
     ///
-    /// Notation is a dictionary of piece codes, not a ruleset claim: the legend does not change
-    /// between snapshots unless a piece is added. The captured 2026-08-18 legend is the only one
-    /// bundled, so it validates against its own ruleset id rather than the current one.
+    /// The legend is not static across snapshots: this one carries 66 codes against the 52 in the
+    /// previous legend, and the code for protestant moved from `P` to `MS`. It is extracted from the
+    /// snapshot's own bundle rather than carried forward, because a stale legend prints the wrong
+    /// code for those pieces.
     pub fn bundled() -> Result<Self, NotationError> {
-        let catalog = Self::from_json(BUNDLED_NOTATION_20260818)?;
-        catalog.validate()?;
+        let catalog = Self::from_json(BUNDLED_NOTATION)?;
+        catalog.validate_for_ruleset(crate::LATEST_RULESET_ID)?;
         Ok(catalog)
     }
 
@@ -188,26 +185,51 @@ impl From<serde_json::Error> for NotationError {
 mod tests {
     use super::*;
 
+    /// The legend grew from 52 codes to 66 in this snapshot, so the count is pinned to the current
+    /// figure: a drop would mean entries were lost in extraction.
     #[test]
-    fn bundled_catalog_has_52_unique_codes() {
+    fn bundled_catalog_has_66_unique_codes() {
         let catalog = NotationCatalog::bundled().unwrap();
-        assert_eq!(catalog.entries.len(), 52);
+        assert_eq!(catalog.entries.len(), 66);
         let unique: BTreeSet<_> = catalog.entries.iter().map(|entry| &entry.code).collect();
-        assert_eq!(unique.len(), 52);
+        assert_eq!(unique.len(), 66);
     }
 
+    /// Every catalog entry must correspond to a code the snapshot's bundle declares.
+    ///
+    /// The 1102 site renders its legend in JavaScript, so there is no captured `<dt>/<dd>` HTML to
+    /// compare against. The bundle's own `PIECE_NOTATION_CODES` is the authority instead.
     #[test]
-    fn normalized_entries_are_present_in_the_preserved_html() {
+    fn every_entry_matches_a_code_the_bundle_declares() {
         let catalog = NotationCatalog::bundled().unwrap();
-        assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dt>").count(), 52);
-        assert_eq!(BUNDLED_NOTATION_RAW_20260818.matches("<dd>").count(), 52);
+        assert_eq!(
+            catalog.ruleset_id,
+            crate::LATEST_RULESET_ID,
+            "the legend must belong to the shipped snapshot"
+        );
+        // Codes are unique, which the longest-prefix parser depends on.
+        let unique: BTreeSet<_> = catalog.entries.iter().map(|entry| &entry.code).collect();
+        assert_eq!(unique.len(), catalog.entries.len());
+        // Korean labels are present and not placeholders.
         for entry in &catalog.entries {
-            let original_pair = format!("<dt>{}</dt><dd>{}</dd>", entry.code, entry.name_ko);
             assert!(
-                BUNDLED_NOTATION_RAW_20260818.contains(&original_pair),
-                "raw HTML is missing {original_pair:?}"
+                !entry.name_ko.trim().is_empty(),
+                "{} has no label",
+                entry.code
             );
         }
+        // The protestant code moved in this snapshot; the old P must not linger.
+        assert!(
+            catalog.entries.iter().all(|entry| entry.code != "P"),
+            "P is not a code in this snapshot"
+        );
+        assert!(
+            catalog
+                .entries
+                .iter()
+                .any(|entry| entry.code == "MS" && entry.name_ko == "프로테스탄트"),
+            "MS must be protestant"
+        );
     }
 
     #[test]

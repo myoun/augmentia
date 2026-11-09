@@ -1,0 +1,281 @@
+{
+  "ruleset_id": "augment_chess_20261102",
+  "schema_version": 1,
+  "source": {
+    "kind": "site_bundle_javascript",
+    "received_at": "2026-11-02",
+    "raw_path": "sources/raw/main-COPLmLfz.js",
+    "verification": "extracted_from_bundle_piece_notation_codes"
+  },
+  "parsing": {
+    "case_sensitive": true,
+    "variable_width": true,
+    "prefix_strategy": "longest_match"
+  },
+  "entries": [
+    {
+      "code": "A",
+      "name_ko": "알필"
+    },
+    {
+      "code": "B",
+      "name_ko": "비숍"
+    },
+    {
+      "code": "C",
+      "name_ko": "낙타"
+    },
+    {
+      "code": "D",
+      "name_ko": "드래곤"
+    },
+    {
+      "code": "F",
+      "name_ko": "광신도"
+    },
+    {
+      "code": "G",
+      "name_ko": "그래스호퍼"
+    },
+    {
+      "code": "H",
+      "name_ko": "전령"
+    },
+    {
+      "code": "J",
+      "name_ko": "광대"
+    },
+    {
+      "code": "K",
+      "name_ko": "킹"
+    },
+    {
+      "code": "L",
+      "name_ko": "통나무"
+    },
+    {
+      "code": "M",
+      "name_ko": "상인"
+    },
+    {
+      "code": "N",
+      "name_ko": "나이트"
+    },
+    {
+      "code": "Q",
+      "name_ko": "퀸"
+    },
+    {
+      "code": "R",
+      "name_ko": "룩"
+    },
+    {
+      "code": "S",
+      "name_ko": "허수아비"
+    },
+    {
+      "code": "T",
+      "name_ko": "시간 여행자"
+    },
+    {
+      "code": "U",
+      "name_ko": "유니콘"
+    },
+    {
+      "code": "V",
+      "name_ko": "뱀파이어 군주"
+    },
+    {
+      "code": "W",
+      "name_ko": "풍차"
+    },
+    {
+      "code": "X",
+      "name_ko": "거신병"
+    },
+    {
+      "code": "Z",
+      "name_ko": "아마존"
+    },
+    {
+      "code": "AB",
+      "name_ko": "알리바바"
+    },
+    {
+      "code": "AS",
+      "name_ko": "암살자"
+    },
+    {
+      "code": "BB",
+      "name_ko": "아기곰"
+    },
+    {
+      "code": "BE",
+      "name_ko": "곰"
+    },
+    {
+      "code": "BK",
+      "name_ko": "버서커"
+    },
+    {
+      "code": "BP",
+      "name_ko": "베롤리나 폰"
+    },
+    {
+      "code": "BR",
+      "name_ko": "빅룩"
+    },
+    {
+      "code": "BS",
+      "name_ko": "빅숍"
+    },
+    {
+      "code": "BT",
+      "name_ko": "박쥐"
+    },
+    {
+      "code": "CA",
+      "name_ko": "추기경"
+    },
+    {
+      "code": "CF",
+      "name_ko": "오래된 관"
+    },
+    {
+      "code": "CH",
+      "name_ko": "체커"
+    },
+    {
+      "code": "CN",
+      "name_ko": "포"
+    },
+    {
+      "code": "CP",
+      "name_ko": "캠프파이어"
+    },
+    {
+      "code": "CR",
+      "name_ko": "왕관"
+    },
+    {
+      "code": "DQ",
+      "name_ko": "돈 키호테"
+    },
+    {
+      "code": "DW",
+      "name_ko": "흑마법사"
+    },
+    {
+      "code": "FB",
+      "name_ko": "축구공"
+    },
+    {
+      "code": "GD",
+      "name_ko": "근위병"
+    },
+    {
+      "code": "HG",
+      "name_ko": "고슴도치"
+    },
+    {
+      "code": "HK",
+      "name_ko": "구행"
+    },
+    {
+      "code": "ID",
+      "name_ko": "아이돌"
+    },
+    {
+      "code": "KM",
+      "name_ko": "기사단장"
+    },
+    {
+      "code": "LB",
+      "name_ko": "랍스터"
+    },
+    {
+      "code": "MG",
+      "name_ko": "마법소녀"
+    },
+    {
+      "code": "MI",
+      "name_ko": "선교사"
+    },
+    {
+      "code": "MN",
+      "name_ko": "만"
+    },
+    {
+      "code": "MO",
+      "name_ko": "괴물"
+    },
+    {
+      "code": "MS",
+      "name_ko": "프로테스탄트"
+    },
+    {
+      "code": "OX",
+      "name_ko": "오메가체스트론"
+    },
+    {
+      "code": "PM",
+      "name_ko": "국무총리"
+    },
+    {
+      "code": "PR",
+      "name_ko": "프린세스"
+    },
+    {
+      "code": "RC",
+      "name_ko": "징집관"
+    },
+    {
+      "code": "RN",
+      "name_ko": "로얄 나이트"
+    },
+    {
+      "code": "RP",
+      "name_ko": "사신"
+    },
+    {
+      "code": "SB",
+      "name_ko": "기수"
+    },
+    {
+      "code": "SI",
+      "name_ko": "세이렌"
+    },
+    {
+      "code": "SK",
+      "name_ko": "샷건 킹"
+    },
+    {
+      "code": "SL",
+      "name_ko": "슬라임"
+    },
+    {
+      "code": "SQ",
+      "name_ko": "종자"
+    },
+    {
+      "code": "SR",
+      "name_ko": "공성추"
+    },
+    {
+      "code": "TR",
+      "name_ko": "트릭스터"
+    },
+    {
+      "code": "UD",
+      "name_ko": "언데드"
+    },
+    {
+      "code": "VP",
+      "name_ko": "귀빈"
+    },
+    {
+      "code": "WZ",
+      "name_ko": "마법사"
+    }
+  ]
+}
