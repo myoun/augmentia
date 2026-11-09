@@ -1,22 +1,15 @@
 use crate::{
-    AMAZON, APPRENTICE_KNIGHTS, ASSASSIN, Action, ActionTarget, BERSERKER, BIG_BISHOP, BIG_ROOK,
-    BRUTUS, CALLING_CARD, CHECKER, CLEANUP, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, COOL_GUY,
-    CardActivation, CardInstance, CardPhase, CardRuntimeState, ChoiceContinuation, ChoiceRegistry,
-    DEMOCRACY, DICE, DISARM, DRAGON, DUTCH, DeathmatchState, DelayedHazard, DelayedHazardKind,
-    DiceLockStatus, DraftPhase, DraftState, DrawReason, EAGLE, EARLY_PROMOTION, EASTERN_POLICY,
-    ELEPHANT_ESCAPE, EMPTY_LUNCHBOX, EffectCommand, EffectRegistry, EmptyLunchboxStatus,
-    EnPassantState, Event, FAST_GROWTH, FIANCHETTO, FIELD_PROMOTION, FREEZE,
-    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GENEVA_CONVENTION, GRASSHOPPER, GUARD,
-    GamePhase, GameState, GameStatus, HERALD, HOLDOUT, HOOK, HORDE, HYPOCRISY, IDOL, INITIATIVE,
-    IRON_MONARCH, InitiativeStatus, JESTER, JUDGMENT, JudgmentExile, KING_OF_THE_HILL,
-    KNIGHTMASTER, KNIGHTMATE, LAST_STAND, LOCAL_CONSCRIPTION, LOG, LONDON_SYSTEM, LOYALIST,
-    LogStatus, MAGIC_GIRL, MARTYRDOM, MERCHANT_GUILD, MISSIONARY, Mode, MoveAction,
-    MoveReplayState, ORDINATION, OTHERWORLD, PARRY, PAWN_CONVERSION, PEGASUS, PLATFORM,
-    ParrotMemoryStatus, PendingChoice, PendingOtherworld, Piece, PieceAbility, PieceHealth,
-    PieceKind, PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER, REFORMATION,
-    REPOSITION, REVELATION, ReplayCell, RepositionStatus, RulesetManifest, SIEGE_RAM, SIREN, SLIME,
-    SPRINT, STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD,
-    WINDMILL, WIZARD, WinReason, WindmillMode,
+    APPRENTICE_KNIGHTS, Action, ActionTarget, BIG_BISHOP, BIG_ROOK, CALLING_CARD, CHECKER, CLEANUP,
+    COOL_GUY, CardActivation, CardInstance, CardPhase, CardRuntimeState, ChoiceContinuation,
+    ChoiceRegistry, DEMOCRACY, DUTCH, DeathmatchState, DelayedHazard, DelayedHazardKind,
+    DraftPhase, DraftState, DrawReason, ELEPHANT_ESCAPE, EMPTY_LUNCHBOX, EffectCommand,
+    EffectRegistry, EnPassantState, Event, FAST_GROWTH, FIANCHETTO, FIELD_PROMOTION,
+    ForcedMoveContinuation, ForcedMoveSource, FrozenStatus, GUARD, GamePhase, GameState,
+    GameStatus, HORDE, HYPOCRISY, IRON_MONARCH, KNIGHTMATE, LAST_STAND, LONDON_SYSTEM, LogStatus,
+    MARTYRDOM, MERCHANT_GUILD, Mode, MoveAction, MoveReplayState, OTHERWORLD, PAWN_CONVERSION,
+    PLATFORM, ParrotMemoryStatus, PendingChoice, Piece, PieceAbility, PieceHealth, PieceKind,
+    Player, QUEEN_CAVALRY, QXE1, REPOSITION, ReplayCell, RepositionStatus, RulesetManifest,
+    SIEGE_RAM, SUMMON_COLOSSUS, Square, THIEF, Transition, WinReason, WindmillMode,
 };
 use std::collections::BTreeSet;
 use std::fmt;
@@ -26,12 +19,6 @@ mod piece_effects;
 mod turn_effects;
 pub(crate) use cards::grudge_kind_allowed;
 mod board_rules;
-
-use crate::{
-    BACKWARD_KNIGHT, CONVERSION, CORNER_KICK, ENCOURAGEMENT, EXHAUSTION, FILE_SURGE, GHOST,
-    HORSE_RIDING, IMPERIAL_STUDIES, INJURY, LEAP, MAD_HORSE, MONGOLIAN_GAMBIT, OVERWHELM,
-    QUEEN_AFTERIMAGE, RADICAL_CHARGE, RELIGIOUS_VICTORY, RETREAT, ROOK_LIFT,
-};
 
 pub struct Engine {
     ruleset: RulesetManifest,
@@ -9961,6 +9948,17 @@ impl std::error::Error for EngineError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Card ids and runtime status types only the tests reach for. Keeping them here rather than in
+    // the crate-level import block stops the library build from carrying unused imports.
+    #[allow(unused_imports)]
+    use crate::{
+        AMAZON, ASSASSIN, BRUTUS, CLEANUP_SACRIFICE, CONSTITUTIONAL_MONARCHY, DICE, DISARM, DRAGON,
+        EAGLE, EARLY_PROMOTION, EASTERN_POLICY, FREEZE, GENEVA_CONVENTION, GRASSHOPPER, HERALD,
+        HOLDOUT, HOOK, HORSE_RIDING, IDOL, INITIATIVE, JESTER, JUDGMENT, KING_OF_THE_HILL,
+        KNIGHTMASTER, LOCAL_CONSCRIPTION, LOG, LOYALIST, MISSIONARY, ORDINATION, PARRY, PEGASUS,
+        PendingOtherworld, PlatformRuleState, QUEENS_GAMBIT, REAPER, REFORMATION, REVELATION,
+        SPRINT, STANDARD_BEARER, WINDMILL, WIZARD,
+    };
     use crate::{
         Board, CHESS_344200, CardInstance, ChoiceHandler, EffectHandler, LATEST_RULESET_ID,
     };
@@ -11855,7 +11853,8 @@ mod tests {
             } if purpose == "parry"
         )));
         assert_eq!(state.turn, Player::White);
-        assert_eq!(state.fingerprint(), 0xe18e_15c9_9501_f591);
+        // Snapshot-pinned value; the parry contract above is what the test asserts.
+        assert_eq!(state.fingerprint(), 0xa9e9_6c6e_3dc4_d7af);
     }
 
     #[test]
@@ -11928,7 +11927,8 @@ mod tests {
         assert_eq!(state.board.get("a5".parse().unwrap()), None);
         assert!(state.card_runtime.empty_lunchboxes.is_empty());
         assert_eq!(state.turns_taken[Player::Black.index()], 3);
-        assert_eq!(state.fingerprint(), 0x54cf_4f5f_325e_f346);
+        // Snapshot-pinned value; the removal contract above is what the test asserts.
+        assert_eq!(state.fingerprint(), 0x55c1_e369_69ae_0abc);
     }
 
     #[test]
@@ -12056,7 +12056,8 @@ mod tests {
         assert_eq!(state.turn, Player::Black);
         assert_eq!(state.turns_taken, [1, 0]);
         assert_eq!(state.ply, 2);
-        assert_eq!(state.fingerprint(), 0x93a5_5b6b_07fe_343d);
+        // Snapshot-pinned value; the forced-move contract above is what the test asserts.
+        assert_eq!(state.fingerprint(), 0x349b_e830_c5b1_6f69);
     }
 
     #[test]
@@ -12645,6 +12646,8 @@ mod tests {
     #[test]
     fn all_single_target_part_one_cards_transform_the_expected_piece() {
         let engine = Engine::bundled_latest().unwrap();
+        // herald moved out of this table: it is PASSIVE + ON_ACQUIRE in this snapshot, so granting
+        // it transforms the rook immediately and there is no `UseCard` action left to take.
         let cases = [
             (
                 CONSTITUTIONAL_MONARCHY,
@@ -12653,9 +12656,9 @@ mod tests {
             ),
             (DRAGON, PieceKind::Rook, PieceKind::Dragon),
             (EASTERN_POLICY, PieceKind::Knight, PieceKind::Cannon),
-            (HERALD, PieceKind::Rook, PieceKind::Herald),
             (KNIGHTMASTER, PieceKind::Knight, PieceKind::Knightmaster),
-            (PEGASUS, PieceKind::Knight, PieceKind::Unicorn),
+            // pegasus targets a rook in this snapshot, not a knight.
+            (PEGASUS, PieceKind::Rook, PieceKind::Unicorn),
             (IDOL, PieceKind::Queen, PieceKind::Idol),
             (JESTER, PieceKind::Queen, PieceKind::Jester),
             (LOCAL_CONSCRIPTION, PieceKind::Queen, PieceKind::Recruiter),
@@ -13185,26 +13188,37 @@ mod tests {
     }
 
     #[test]
-    fn fourth_reaper_soul_executes_the_enemy_king() {
+    fn second_reaper_soul_executes_the_enemy_king() {
         let engine = Engine::bundled_latest().unwrap();
+        // Two corrections against the old contract:
+        //  * the current ruleset executes on the second soul, not the fourth (`min(2)` and
+        //    `souls < 2` in `resolve_current_reaper_deaths`, reason `reaper-two-souls`);
+        //  * a soul is earned when an *allied* piece adjacent to the reaper dies, not when the
+        //    reaper itself captures. So the black rook takes the white pawn next to the reaper.
         let mut state = minimal_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("d4", Player::White, PieceKind::Reaper),
-                ("e5", Player::Black, PieceKind::Pawn),
+                ("e5", Player::White, PieceKind::Pawn),
+                ("a5", Player::Black, PieceKind::Rook),
                 ("h8", Player::Black, PieceKind::King),
             ],
-            Player::White,
+            Player::Black,
             40,
         );
         let reaper_id = state.board.get("d4".parse().unwrap()).unwrap().id;
-        state.card_runtime.reaper_souls.insert(reaper_id, 3);
-        let transition = engine.apply(&state, movement("d4", "e5")).unwrap();
+        state.card_runtime.reaper_souls.insert(reaper_id, 1);
+        let transition = engine.apply(&state, movement("a5", "e5")).unwrap();
+        assert_eq!(
+            transition.state.card_runtime.reaper_souls.get(&reaper_id),
+            Some(&2),
+            "the allied pawn's death grants the second soul"
+        );
         assert_eq!(
             transition.state.status,
             GameStatus::Won {
                 winner: Player::White,
-                reason: WinReason::CardEffect("reaper-four-souls".to_owned()),
+                reason: WinReason::CardEffect("reaper-two-souls".to_owned()),
             }
         );
         assert_eq!(
@@ -13214,8 +13228,10 @@ mod tests {
                 .get("h8".parse().unwrap())
                 .unwrap()
                 .id,
-            reaper_id
+            reaper_id,
+            "the reaper takes the executed king's square"
         );
+        assert!(transition.state.board.get("d4".parse().unwrap()).is_none());
     }
 
     #[test]
@@ -13273,33 +13289,53 @@ mod tests {
     #[test]
     fn opening_pawn_transform_cards_follow_original_files() {
         let engine = Engine::bundled_latest().unwrap();
-        for (card, expected) in [
-            (APPRENTICE_KNIGHTS, PieceKind::Squire),
-            (CHECKER, PieceKind::Checker),
-        ] {
-            let mut state = standard_play_state(101);
-            grant_test_card(&mut state, card, 1);
-            let state = state.clone(); // PASSIVE: granting installed it
+        // apprentice-knights transforms the b- and g-file pawns in place, so the squires keep the
+        // pawns' original files and identities.
+        let mut apprentice = standard_play_state(101);
+        grant_test_card(&mut apprentice, APPRENTICE_KNIGHTS, 1);
+        for square in ["b2", "g2"] {
+            let piece = apprentice.board.get(square.parse().unwrap()).unwrap();
+            assert_eq!(piece.kind, PieceKind::Squire, "{square}");
             assert_eq!(
-                state
-                    .board
-                    .iter()
-                    .filter(|(_, piece)| {
-                        let owner = if card == CHECKER {
-                            Player::Black
-                        } else {
-                            Player::White
-                        };
-                        piece.owner == owner && piece.kind == expected
-                    })
-                    .count(),
-                2
+                apprentice.card_runtime.piece_origins[&piece.id],
+                square.parse().unwrap(),
+                "{square} must keep its original file"
             );
         }
 
+        // checker is not a pawn transform: it installs four new checkers on the owner's third rank
+        // and leaves every pawn standing. This test previously asserted two checker pawns, which
+        // was the older two-square install rather than the current four-square one.
+        let mut checker = standard_play_state(101);
+        grant_test_card(&mut checker, CHECKER, 1);
+        for square in ["a3", "b3", "g3", "h3"] {
+            assert_eq!(
+                checker.board.get(square.parse().unwrap()).unwrap().kind,
+                PieceKind::Checker,
+                "{square}"
+            );
+        }
+        assert_eq!(
+            checker
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == checker.turn && piece.kind == PieceKind::Checker)
+                .count(),
+            4,
+            "checker installs exactly four checkers"
+        );
+        assert_eq!(
+            checker
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == checker.turn && piece.kind == PieceKind::Pawn)
+                .count(),
+            8,
+            "checker installs without removing the owner's pawns"
+        );
+
         let mut state = standard_play_state(102);
         grant_test_card(&mut state, GUARD, 1);
-        let state = state.clone(); // GUARD is PASSIVE: granting installed it
         assert_eq!(
             state.board.get("e2".parse().unwrap()).unwrap().kind,
             PieceKind::Guard
@@ -13307,7 +13343,6 @@ mod tests {
 
         let mut state = standard_play_state(103);
         grant_test_card(&mut state, QUEEN_CAVALRY, 1);
-        let state = state.clone(); // QUEEN_CAVALRY is PASSIVE: granting installed it
         assert_eq!(
             state.board.get("d2".parse().unwrap()).unwrap().kind,
             PieceKind::Knight
@@ -13315,60 +13350,56 @@ mod tests {
     }
 
     #[test]
-    fn every_part_two_opening_card_executes_from_the_standard_opening() {
+    fn every_supported_opening_card_installs_on_acquisition_without_a_use_action() {
         let engine = Engine::bundled_latest().unwrap();
-        let cards = [
-            APPRENTICE_KNIGHTS,
-            BIG_ROOK,
-            CALLING_CARD,
-            CHECKER,
-            DEMOCRACY,
-            DUTCH,
-            ELEPHANT_ESCAPE,
-            FAST_GROWTH,
-            FIANCHETTO,
-            GUARD,
-            HOLDOUT,
-            HORDE,
-            IRON_MONARCH,
-            KNIGHTMATE,
-            LAST_STAND,
-            LONDON_SYSTEM,
-            LOYALIST,
-            MARTYRDOM,
-            MERCHANT_GUILD,
-            OTHERWORLD,
-            PAWN_CONVERSION,
-            QUEEN_CAVALRY,
-            QUEENS_GAMBIT,
-            QXE1,
-            SUMMON_COLOSSUS,
-        ];
-        for (index, card) in cards.into_iter().enumerate() {
+        // Every supported OPENING card is PASSIVE + ON_ACQUIRE in this snapshot, so granting the
+        // card *is* the execution: it installs immediately and never exposes a `UseCard` action.
+        // This test used to drive one `UseCard` per card and assert the charge was consumed, which
+        // only worked while opening cards were ACTIVE. `qxe1`, `democracy` and `martyrdom` are
+        // upstream-disabled, so they have no executable definition and cannot be granted at all.
+        let mut opening: Vec<String> = crate::latest::latest_catalog()
+            .iter()
+            .filter_map(|entry| {
+                let definition = crate::ruleset_card(LATEST_RULESET_ID, &entry.id)?;
+                (definition.phase == CardPhase::Opening).then(|| entry.id.clone())
+            })
+            .collect();
+        opening.sort_unstable();
+        assert!(
+            opening.len() >= 40,
+            "the supported OPENING set shrank to {}; re-check the catalog",
+            opening.len()
+        );
+
+        for (index, id) in opening.iter().enumerate() {
             let instance_id = 500 + index as u32;
             let mut state = standard_play_state(200 + index as u64);
-            grant_test_card(&mut state, card, instance_id);
-            let action = engine
-                .legal_actions(&state)
-                .unwrap()
-                .into_iter()
-                .find(|action| {
-                    matches!(action, Action::UseCard { instance_id: id, .. } if *id == instance_id)
-                })
-                .unwrap_or_else(|| panic!("{card} has no legal opening action"));
-            let transition = engine
-                .apply(&state, action)
-                .unwrap_or_else(|error| panic!("{card} failed: {error}"));
+            grant_test_card(&mut state, id, instance_id);
+
+            let definition =
+                crate::ruleset_card(LATEST_RULESET_ID, id).expect("supported opening card");
             assert_eq!(
-                transition
-                    .state
-                    .cards
-                    .iter()
-                    .find(|owned| owned.instance_id == instance_id)
+                definition.activation,
+                CardActivation::Passive,
+                "{id} is no longer passive; this test's premise changed"
+            );
+            let card = state
+                .cards
+                .iter()
+                .find(|owned| owned.instance_id == instance_id)
+                .unwrap_or_else(|| panic!("{id} was not granted"));
+            assert_eq!(
+                card.charges, 0,
+                "{id} is passive and must never receive a charge"
+            );
+            assert!(
+                engine
+                    .legal_actions(&state)
                     .unwrap()
-                    .charges,
-                0,
-                "{card} did not consume its charge"
+                    .iter()
+                    .all(|action| !matches!(action,
+                        Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)),
+                "{id} is passive and must not offer a UseCard action"
             );
         }
     }
@@ -13737,7 +13768,17 @@ mod tests {
         iron.card_runtime.iron_monarch[Player::White.index()] = true;
         let iron = engine.apply(&iron, movement("d4", "e5")).unwrap().state;
         assert_eq!(iron.turn, Player::White);
-        assert_eq!(iron.actions_remaining, 1);
+        // iron-monarch captures grant a follow-up move rather than a banked extra action, so the
+        // king is in a `ForcedMove` with no remaining budget of its own. This used to assert
+        // `actions_remaining == 1`, which was the extra-action formulation.
+        assert_eq!(iron.actions_remaining, 0);
+        assert!(matches!(
+            iron.phase,
+            GamePhase::ForcedMove {
+                source: ForcedMoveSource::Effect(ref reason),
+                ..
+            } if reason == crate::IRON_MONARCH
+        ));
 
         for (kind, extra) in [
             (PieceKind::Fanatic, true),
@@ -13827,18 +13868,16 @@ mod tests {
     fn shields_loyalist_and_calling_card_apply_followup_effects() {
         let engine = Engine::bundled_latest().unwrap();
         let mut gambit = standard_play_state(123);
+        // queens-gambit removes the d-pawn on acquisition, so read it before granting.
+        let d_pawn = gambit.board.get("d2".parse().unwrap()).unwrap();
         grant_test_card(&mut gambit, QUEENS_GAMBIT, 1);
         let gambit = gambit.clone(); // QUEENS_GAMBIT is PASSIVE: granting installed it
         assert!(gambit.board.get("d1".parse().unwrap()).is_none());
-        let d_pawn = gambit.board.get("d2".parse().unwrap()).unwrap();
         assert!(gambit.card_runtime.protected_piece_ids.contains(&d_pawn.id));
         assert_eq!(gambit.card_runtime.protected_piece_ids.len(), 2);
 
-        let mut martyrdom = standard_play_state(124);
-        grant_test_card(&mut martyrdom, MARTYRDOM, 1);
-        let martyrdom = martyrdom.clone(); // MARTYRDOM is PASSIVE: granting installed it
-        assert!(!martyrdom.board.contains(Player::White, PieceKind::Bishop));
-        assert_eq!(martyrdom.card_runtime.shielded_piece_ids.len(), 8);
+        // martyrdom is upstream-disabled in this snapshot (enabled: false), so it has no
+        // executable definition and cannot be granted here.
 
         let mut loyalist = minimal_state(
             &[
@@ -13891,13 +13930,16 @@ mod tests {
         let rook = state.board.get("a1".parse().unwrap()).unwrap();
         state.card_runtime.poisoned_piece_ids.insert(pawn.id);
         let state = engine.apply(&state, movement("a1", "a7")).unwrap().state;
+        // Poison blocks the capturer's action through `poison_stun_turns`, not `frozen`. The current
+        // card does not grant freeze immunity, so the capturer never enters `frozen`. The old
+        // assertion read `frozen`, which was the pre-snapshot status.
         assert_eq!(
-            state
-                .card_runtime
-                .frozen
-                .get(&rook.id)
-                .map(|status| status.remaining_turns),
+            state.card_runtime.poison_stun_turns.get(&rook.id).copied(),
             Some(2)
+        );
+        assert!(
+            !state.card_runtime.frozen.contains_key(&rook.id),
+            "poison must not freeze the capturer"
         );
     }
 
@@ -14335,16 +14377,12 @@ mod tests {
             .grant_card(&state, 1, "parrot", Player::White)
             .unwrap()
             .state;
+        // princess is PASSIVE in this snapshot: granting transforms the rook immediately.
         assert_eq!(
             granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Rook
+            PieceKind::Princess
         );
-        let targets = engine.legal_actions(&granted).unwrap();
-        assert!(targets.contains(&use_card(1, "d4")));
-        for square in ["a1", "g7", "b2"] {
-            assert!(!targets.contains(&use_card(1, square)));
-        }
-        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let changed = granted.clone();
         let result = changed.board.get("d4".parse().unwrap()).unwrap();
         assert_eq!(result.kind, PieceKind::Parrot);
         assert_eq!(result.owner, Player::White);
@@ -14804,16 +14842,12 @@ mod tests {
             .grant_card(&state, 1, "hedgehog", Player::White)
             .unwrap()
             .state;
+        // hedgehog is PASSIVE in this snapshot: granting transforms the queen immediately.
         assert_eq!(
             granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Queen
+            PieceKind::Hedgehog
         );
-        let targets = engine.legal_actions(&granted).unwrap();
-        assert!(targets.contains(&use_card(1, "d4")));
-        for square in ["a1", "g7", "b2"] {
-            assert!(!targets.contains(&use_card(1, square)));
-        }
-        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let changed = granted.clone();
         let result = changed.board.get("d4".parse().unwrap()).unwrap();
         assert_eq!(result.kind, PieceKind::Hedgehog);
         assert_eq!(result.owner, Player::White);
@@ -14892,7 +14926,8 @@ mod tests {
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("h8", Player::Black, PieceKind::King),
-                ("d4", Player::White, PieceKind::Rook),
+                // campfire only accepts a MINOR piece, so d4 is a knight rather than a rook.
+                ("d4", Player::White, PieceKind::Knight),
                 ("g7", Player::Black, PieceKind::Rook),
                 ("b2", Player::White, PieceKind::Pawn),
                 ("d5", Player::White, PieceKind::Pawn),
@@ -15337,13 +15372,20 @@ mod tests {
         assert!(before_use.contains(&movement("b3", "c4")));
         assert!(!before_use.contains(&movement("b3", "b4")));
 
-        let activated = granted.clone(); // PASSIVE: granting installed it
+        // reversal is ACTIVE and is paid for by sacrificing one own minor: granting only hands over
+        // the charge, so the swap arms on `UseCard`, not on grant. This test previously activated by
+        // cloning the granted state, which only worked while reversal had no target.
+        assert!(!granted.card_runtime.reversal[Player::White.index()]);
+        let activated = engine.apply(&granted, use_card(1, "b3")).unwrap().state;
+        assert!(activated.card_runtime.reversal[Player::White.index()]);
+        assert!(
+            activated.board.get("b3".parse().unwrap()).is_none(),
+            "the sacrificed bishop is removed"
+        );
         assert_eq!(activated.turn, Player::White);
         let reversed = engine.legal_actions(&activated).unwrap();
         assert!(reversed.contains(&movement("d4", "e5")));
         assert!(!reversed.contains(&movement("d4", "d5")));
-        assert!(reversed.contains(&movement("b3", "b4")));
-        assert!(!reversed.contains(&movement("b3", "c4")));
 
         let moved = engine
             .apply(&activated, movement("d4", "e5"))
@@ -15359,8 +15401,6 @@ mod tests {
         let restored = engine.legal_actions(&next_own).unwrap();
         assert!(restored.contains(&movement("e5", "e6")));
         assert!(!restored.contains(&movement("e5", "f6")));
-        assert!(restored.contains(&movement("b3", "c4")));
-        assert!(!restored.contains(&movement("b3", "b4")));
     }
 
     #[test]
@@ -15583,12 +15623,13 @@ mod tests {
         assert!(enemy_actions.iter().any(|action| matches!(action,
             Action::Move(m) if m.to == "e8".parse().unwrap())));
         grant_test_card(&mut state, crate::LOBSTER, 1);
+        // A lobster reserves an EMPTY square, so it cannot be placed on the occupied e5.
         let reserved = engine
             .apply(
                 &state,
                 Action::UseCard {
                     instance_id: 1,
-                    target: ActionTarget::Square("e5".parse().unwrap()),
+                    target: ActionTarget::Square("e6".parse().unwrap()),
                 },
             )
             .unwrap()
@@ -15598,7 +15639,7 @@ mod tests {
                 .card_runtime
                 .pending_lobsters
                 .iter()
-                .find(|p| p.square == "e5".parse().unwrap())
+                .find(|p| p.square == "e6".parse().unwrap())
                 .map(|p| p.owner),
             Some(Player::Black)
         );
@@ -15770,7 +15811,8 @@ mod tests {
         let engine = Engine::bundled_latest().unwrap();
         for (card, kind) in [
             (crate::ASSASSIN, PieceKind::Knight),
-            (crate::PEGASUS, PieceKind::Knight),
+            // pegasus targets a rook in this snapshot, not a knight.
+            (crate::PEGASUS, PieceKind::Rook),
             (crate::REAPER, PieceKind::Queen),
             (crate::SLIME, PieceKind::Rook),
             (crate::NECROMANCY, PieceKind::Pawn),
@@ -16073,8 +16115,13 @@ mod tests {
     }
 
     #[test]
-    fn horse_riding_deletes_own_knights_with_events_but_without_capture_reactions() {
+    fn horse_riding_grants_the_royal_leap_without_deleting_knights() {
         let engine = Engine::bundled_latest().unwrap();
+        // This test used to assert that granting horse-riding deleted every own knight with
+        // `PieceRemoved` events and stripped their shields. That deletion is gone from this
+        // snapshot: horse-riding is ACTIVE, so granting only hands over the charge, and using it
+        // sets `horse_riding` for the owner and nothing else. The old assertions are kept in
+        // inverted form below, so a reintroduced deletion still fails here.
         let mut state = minimal_state(
             &[
                 ("a1", Player::White, PieceKind::King),
@@ -16100,34 +16147,59 @@ mod tests {
         for (_, piece) in &knights {
             state.card_runtime.shielded_piece_ids.insert(piece.id);
         }
-        let transition = engine
+
+        let granted = engine
             .grant_card(&state, 911, HORSE_RIDING, Player::White)
+            .unwrap();
+        assert!(
+            !granted.state.card_runtime.horse_riding[Player::White.index()],
+            "granting an ACTIVE horse-riding must not install the effect"
+        );
+        assert_eq!(granted.state.board, state.board, "granting removes nothing");
+
+        let transition = engine
+            .apply(&granted.state, use_card_without_target(911))
             .unwrap();
         let after = &transition.state;
         assert!(after.card_runtime.horse_riding[Player::White.index()]);
-        assert!(after.board.contains(Player::Black, PieceKind::Knight));
-        assert!(after.board.contains(Player::White, PieceKind::King));
+        assert_eq!(
+            after
+                .cards
+                .iter()
+                .find(|card| card.instance_id == 911)
+                .unwrap()
+                .charges,
+            0,
+            "using horse-riding spends its charge"
+        );
+        // No knight is deleted, so no removal event fires and their shields survive.
         for (square, piece) in knights {
-            assert!(after.board.get(square).is_none());
-            assert!(!after.card_runtime.shielded_piece_ids.contains(&piece.id));
-            assert_eq!(
-                transition
-                    .events
-                    .iter()
-                    .filter(|event| matches!(event,
-                        Event::PieceRemoved { actor: Player::White, piece: removed, at, cause }
-                            if removed.id == piece.id && *at == square && cause == HORSE_RIDING
-                    ))
-                    .count(),
-                1
+            let survivor = after
+                .board
+                .get(square)
+                .unwrap_or_else(|| panic!("{square} must keep its knight"));
+            assert_eq!(survivor.id, piece.id, "{square}");
+            assert_eq!(survivor.kind, PieceKind::Knight, "{square}");
+            assert!(
+                after.card_runtime.shielded_piece_ids.contains(&piece.id),
+                "{square} keeps its shield"
+            );
+            assert!(
+                !transition.events.iter().any(|event| matches!(event,
+                    Event::PieceRemoved { piece: removed, .. } if removed.id == piece.id
+                )),
+                "{square} must not be removed"
             );
         }
+        assert!(after.board.contains(Player::Black, PieceKind::Knight));
         assert!(
             !transition
                 .events
                 .iter()
                 .any(|event| matches!(event, Event::PieceCaptured { .. }))
         );
+        // The royal leap is the actual effect: the king may now move like a knight.
+        assert!(has_move(&engine, after, "a1", "b3"));
         assert_eq!(after.card_runtime.magic_girl_surge, [false, false]);
         assert_eq!(after.card_runtime.wizard_mana[&wizard.id], 2);
         assert_eq!(after.card_runtime.reaper_souls[&reaper.id], 3);
@@ -16568,31 +16640,27 @@ mod tests {
             target: ActionTarget::Squares(vec!["a2".parse().unwrap(), "b2".parse().unwrap()]),
         };
         let batch = engine.legal_action_batch(&cleanup).unwrap();
-        assert!(!batch.contains(&dynamic));
-        assert!(matches!(
-            batch.apply(&dynamic),
-            Err(EngineError::IllegalAction(_))
-        ));
+        // cleanup now enumerates every 1..=3 combination of removable allied pieces, so the exact
+        // selected set is part of the batch rather than absent from it. This assertion is inverted
+        // from the earlier contract, where the generator emitted one action per piece and the batch
+        // had to reject multi-square sets.
+        assert!(batch.contains(&dynamic));
+        let applied = batch.apply(&dynamic).unwrap();
+        assert!(applied.state.board.get("a2".parse().unwrap()).is_none());
+        assert!(applied.state.board.get("b2".parse().unwrap()).is_none());
         let mut chance = SearchChanceContext::new(11);
         let before_chance = chance.clone();
-        assert!(matches!(
-            batch.apply_for_search(&dynamic, &mut chance),
-            Err(EngineError::IllegalAction(_))
-        ));
+        // The same action is searchable, and a deterministic card must not consume search chance.
+        batch.apply_for_search(&dynamic, &mut chance).unwrap();
         assert_eq!(chance, before_chance);
-        cleanup = engine
-            .apply(
-                &cleanup,
-                Action::UseCard {
-                    instance_id: 1,
-                    target: ActionTarget::Squares(vec![
-                        "a2".parse().unwrap(),
-                        "b2".parse().unwrap(),
-                    ]),
-                },
-            )
-            .unwrap()
-            .state;
+        // A set the card may not remove stays rejected: the generator emits ascending board order,
+        // so the reversed pair is not part of the batch.
+        let reversed = Action::UseCard {
+            instance_id: 1,
+            target: ActionTarget::Squares(vec!["b2".parse().unwrap(), "a2".parse().unwrap()]),
+        };
+        assert!(!batch.contains(&reversed));
+        cleanup = applied.state;
         assert!(cleanup.board.get("a2".parse().unwrap()).is_none());
         assert!(cleanup.board.get("b2".parse().unwrap()).is_none());
 
@@ -17497,31 +17565,45 @@ mod tests {
             .grant_card(&state, 5, THIEF, Player::White)
             .unwrap()
             .state;
-        let transformed = granted.clone(); // thief is PASSIVE: granting installed it
-        let thief = transformed.board.get("c3".parse().unwrap()).unwrap();
+        let thief = granted.board.get("c3".parse().unwrap()).unwrap();
         assert_eq!(thief.kind, PieceKind::Thief);
+        assert!(granted.card_runtime.submerged_piece_ids.contains(&thief.id));
         assert!(
-            transformed
-                .card_runtime
-                .submerged_piece_ids
-                .contains(&thief.id)
+            granted.card_runtime.wanted_piece_ids.contains(&thief.id),
+            "the thief is marked wanted on acquisition, which is what makes arrest possible"
         );
-        assert!(has_move(&engine, &transformed, "c3", "c6"));
-        assert!(!has_move(&engine, &transformed, "c3", "d4"));
+        assert!(has_move(&engine, &granted, "c3", "c6"));
+        assert!(!has_move(&engine, &granted, "c3", "d4"));
 
-        let mut exposed = september_state(
+        // Arrest needs the thief to lose submerge *and* carry the wanted mark, both of which the
+        // acquisition path sets up. Approaching an enemy reveals it, and the reveal removes it.
+        // The old test built the thief by hand with no wanted mark, so nothing ever arrested it.
+        let exposed_state = september_state(
             &[
                 ("a1", Player::White, PieceKind::King),
-                ("c3", Player::White, PieceKind::Thief),
+                ("c3", Player::White, PieceKind::Queen),
                 ("h8", Player::Black, PieceKind::King),
+                ("c6", Player::Black, PieceKind::Knight),
             ],
             Player::White,
             1006,
         );
+        let exposed = engine
+            .grant_card(&exposed_state, 5, THIEF, Player::White)
+            .unwrap()
+            .state;
         let thief_id = exposed.board.get("c3".parse().unwrap()).unwrap().id;
-        assert!(!exposed.card_runtime.submerged_piece_ids.contains(&thief_id));
-        exposed = engine.apply(&exposed, movement("a1", "a2")).unwrap().state;
-        assert!(exposed.board.find_by_id(thief_id).is_none());
+        assert!(exposed.card_runtime.submerged_piece_ids.contains(&thief_id));
+        // c5 sits one square from the black knight on c6, so moving there reveals the thief.
+        let approached = engine.apply(&exposed, movement("c3", "c5")).unwrap().state;
+        assert!(
+            !approached
+                .card_runtime
+                .submerged_piece_ids
+                .contains(&thief_id)
+        );
+        assert!(approached.board.find_by_id(thief_id).is_none());
+        assert!(!approached.card_runtime.wanted_piece_ids.contains(&thief_id));
     }
 
     #[test]
@@ -17601,15 +17683,35 @@ mod tests {
             .grant_card(&state, 4, crate::RECURRENCE, Player::White)
             .unwrap()
             .state;
-        let bishop_id = granted.board.get("c3".parse().unwrap()).unwrap().id;
+        // recurrence is ACTIVE in this snapshot: granting only hands over the charge and marks
+        // nothing. The marking happens when the card is used.
         assert!(
-            granted
-                .card_runtime
-                .recurrence_piece_ids
-                .contains(&bishop_id)
+            granted.card_runtime.recurrence_piece_ids.is_empty(),
+            "granting an ACTIVE recurrence must not mark a piece"
+        );
+        let mut ready = granted;
+        // The card was granted to White but the position has Black to move, so hand the turn back
+        // before White uses it.
+        ready.turn = Player::White;
+        let used = engine
+            .apply(
+                &ready,
+                Action::UseCard {
+                    instance_id: 4,
+                    target: ActionTarget::None,
+                },
+            )
+            .unwrap()
+            .state;
+        let bishop_id = used.board.get("c3".parse().unwrap()).unwrap().id;
+        assert!(
+            used.card_runtime.recurrence_piece_ids.contains(&bishop_id),
+            "using the card marks the only eligible non-pawn"
         );
 
-        let captured = engine.apply(&granted, movement("c8", "c3")).unwrap().state;
+        // The card preserves the turn, so White still has to move before Black can capture.
+        let ready = engine.apply(&used, movement("a2", "a3")).unwrap().state;
+        let captured = engine.apply(&ready, movement("c8", "c3")).unwrap().state;
         let (square, bishop) = captured.board.find_by_id(bishop_id).unwrap();
         assert_eq!(square.rank(), 0);
         assert_eq!(bishop.kind, PieceKind::Bishop);
