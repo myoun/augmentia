@@ -4392,10 +4392,9 @@ impl Engine {
         en_passant_before: Option<EnPassantState>,
         runtime_before: &CardRuntimeState,
     ) {
-        if state.ruleset_id != "augment_chess_20260818" {
-            state.card_runtime.move_replays[actor.index()] = None;
-            return;
-        }
+        // The old `augment_chess_20260818`-only guard is gone: that ruleset no longer ships, and
+        // keeping the check would leave every current move unrecorded, which makes Replay and its
+        // runtime-restore path dead. Replay is now part of the only ruleset there is.
         if runtime_before.free_move_no_capture[actor.index()] {
             state.card_runtime.move_replays[actor.index()] = None;
             return;
@@ -16657,18 +16656,24 @@ mod tests {
             }
         );
 
+        // replay is ACTIVE and only legal while the recorded move still matches the board, so give
+        // it a capture to restore rather than a quiet step.
         let mut replay = minimal_state(
             &[
                 ("e1", Player::White, PieceKind::King),
                 ("a1", Player::White, PieceKind::Rook),
+                ("a2", Player::Black, PieceKind::Pawn),
                 ("h8", Player::Black, PieceKind::King),
             ],
             Player::White,
             209,
         );
+        let captured = replay.board.get("a2".parse().unwrap()).unwrap();
         grant_test_card(&mut replay, crate::REPLAY, 4);
+        // replay only restores the acting player's own last move, so do not hand the turn to Black in
+        // between: the recorded move must still be White's capture when the card is used.
         replay = engine.apply(&replay, movement("a1", "a2")).unwrap().state;
-        replay = engine.apply(&replay, movement("h8", "h7")).unwrap().state;
+        replay.turn = Player::White;
         replay = engine
             .apply(&replay, use_card_without_target(4))
             .unwrap()
@@ -16678,7 +16683,11 @@ mod tests {
             PieceKind::Rook,
             "replay restores the rook to its origin"
         );
-        assert!(replay.board.get("a2".parse().unwrap()).is_none());
+        assert_eq!(
+            replay.board.get("a2".parse().unwrap()),
+            Some(captured),
+            "replay restores the captured piece"
+        );
     }
 
     #[test]
