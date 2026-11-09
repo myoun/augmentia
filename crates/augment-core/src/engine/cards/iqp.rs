@@ -6,7 +6,7 @@ pub(super) fn acquire(
     owner: Player,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    state.card_runtime.october.iqp_pending[owner.index()] = true;
+    state.card_runtime.effects.iqp_pending[owner.index()] = true;
     Ok(())
 }
 
@@ -32,7 +32,7 @@ impl Engine {
             return;
         }
         for owner in [Player::White, Player::Black] {
-            if !std::mem::take(&mut state.card_runtime.october.iqp_pending[owner.index()]) {
+            if !std::mem::take(&mut state.card_runtime.effects.iqp_pending[owner.index()]) {
                 continue;
             }
             let targets: Vec<_> = state
@@ -76,7 +76,7 @@ mod tests {
             .apply(&state, Action::DraftPick { offer_index: 0 })
             .unwrap();
         assert!(picked.state.board.get("c7".parse().unwrap()).is_some());
-        assert!(picked.state.card_runtime.october.iqp_pending[0]);
+        assert!(picked.state.card_runtime.effects.iqp_pending[0]);
         let mut next_state = picked.state;
         let GamePhase::Draft(offer) = &mut next_state.phase else {
             panic!("expected second opening draft")
@@ -90,6 +90,6 @@ mod tests {
         assert!(next.state.board.get("c5".parse().unwrap()).is_none());
         assert!(next.state.board.get("c2".parse().unwrap()).is_some());
         assert!(next.state.card_runtime.pending_recurrences.is_empty());
-        assert_eq!(next.state.card_runtime.october.iqp_pending, [false; 2]);
+        assert_eq!(next.state.card_runtime.effects.iqp_pending, [false; 2]);
     }
 }

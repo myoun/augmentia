@@ -11,7 +11,7 @@ pub(super) fn play(
     let id = ID;
     let (square, piece) = piece_target(state, target)?;
     engine.delete_piece_for_card(state, square, piece, actor, id, events);
-    state.card_runtime.october.greek_gift_pending[actor.index()] = true;
+    state.card_runtime.effects.greek_gift_pending[actor.index()] = true;
     engine.resolve_gomoku_victory(state);
     Ok(())
 }
@@ -64,7 +64,7 @@ impl Engine {
         actor: Player,
         events: &mut Vec<Event>,
     ) {
-        if std::mem::take(&mut state.card_runtime.october.greek_gift_pending[actor.index()]) {
+        if std::mem::take(&mut state.card_runtime.effects.greek_gift_pending[actor.index()]) {
             let kings: Vec<_> = state
                 .board
                 .iter()
@@ -127,7 +127,7 @@ mod tests {
         assert!(s.card_runtime.pending_recurrences.is_empty());
         s.actions_remaining = 2;
         s = engine.apply(&s, movement("a1", "a2")).unwrap().state;
-        assert!(s.card_runtime.october.greek_gift_pending[0]);
+        assert!(s.card_runtime.effects.greek_gift_pending[0]);
         assert_eq!(at(&s, "g7"), protected);
         s = engine.apply(&s, movement("a2", "a3")).unwrap().state;
         for q in ["g7", "h7"] {
@@ -136,6 +136,6 @@ mod tests {
         for q in ["g8", "b7", "g6"] {
             assert!(s.board.get(q.parse().unwrap()).is_some());
         }
-        assert!(!s.card_runtime.october.greek_gift_pending[0]);
+        assert!(!s.card_runtime.effects.greek_gift_pending[0]);
     }
 }

@@ -288,14 +288,14 @@ fn replay_piece_runtime_matches(current: &CardRuntimeState, replay: &MoveReplayS
         };
     }
     for id in replay_piece_ids(replay) {
-        if current.october.grudged_piece_ids.contains(&id)
-            != after.october.grudged_piece_ids.contains(&id)
-            || current.october.grudge_losses.get(&id) != after.october.grudge_losses.get(&id)
+        if current.effects.grudged_piece_ids.contains(&id)
+            != after.effects.grudged_piece_ids.contains(&id)
+            || current.effects.grudge_losses.get(&id) != after.effects.grudge_losses.get(&id)
         {
             return false;
         }
-        if current.october.bound_piece_ids.contains(&id)
-            != after.october.bound_piece_ids.contains(&id)
+        if current.effects.bound_piece_ids.contains(&id)
+            != after.effects.bound_piece_ids.contains(&id)
         {
             return false;
         }
@@ -356,20 +356,20 @@ pub(super) fn restore_piece_runtime(
         };
     }
     for id in ids.iter().copied() {
-        if before.october.grudged_piece_ids.contains(&id) {
-            current.october.grudged_piece_ids.insert(id);
+        if before.effects.grudged_piece_ids.contains(&id) {
+            current.effects.grudged_piece_ids.insert(id);
         } else {
-            current.october.grudged_piece_ids.remove(&id);
+            current.effects.grudged_piece_ids.remove(&id);
         }
-        if let Some(loss) = before.october.grudge_losses.get(&id) {
-            current.october.grudge_losses.insert(id, *loss);
+        if let Some(loss) = before.effects.grudge_losses.get(&id) {
+            current.effects.grudge_losses.insert(id, *loss);
         } else {
-            current.october.grudge_losses.remove(&id);
+            current.effects.grudge_losses.remove(&id);
         }
-        if before.october.bound_piece_ids.contains(&id) {
-            current.october.bound_piece_ids.insert(id);
+        if before.effects.bound_piece_ids.contains(&id) {
+            current.effects.bound_piece_ids.insert(id);
         } else {
-            current.october.bound_piece_ids.remove(&id);
+            current.effects.bound_piece_ids.remove(&id);
         }
         restore_sets!(id;
             moved_piece_ids, castled_piece_ids, parry_piece_ids, shielded_piece_ids, protected_piece_ids,

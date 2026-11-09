@@ -322,7 +322,7 @@ impl Engine {
                 _ => true,
             });
         }
-        let rt = &state.card_runtime.october;
+        let rt = &state.card_runtime.effects;
         if rt.grudge_losses.is_empty() && rt.pawn_chain_links.is_empty() {
             return;
         }

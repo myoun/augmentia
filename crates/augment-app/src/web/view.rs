@@ -189,11 +189,11 @@ pub(crate) fn board_view(state: &GameState) -> Vec<Value> {
 
 fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Square) -> Value {
     let mut statuses = Vec::new();
-    let october = &state.card_runtime.october;
-    if october.grudged_piece_ids.contains(&piece.id) {
+    let effects = &state.card_runtime.effects;
+    if effects.grudged_piece_ids.contains(&piece.id) {
         statuses.push("원한".into());
     }
-    if let Some(mask) = october.grudge_losses.get(&piece.id) {
+    if let Some(mask) = effects.grudge_losses.get(&piece.id) {
         let lost = [(1, "직선"), (2, "대각선"), (4, "나이트"), (8, "낙타")]
             .into_iter()
             .filter(|(bit, _)| mask & bit != 0)
@@ -202,7 +202,7 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
             .join("·");
         statuses.push(format!("행마 상실: {lost}"));
     }
-    let partners = october
+    let partners = effects
         .pawn_chain_links
         .iter()
         .filter(|pair| pair.contains(&piece.id))
@@ -222,7 +222,7 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     }
     if state
         .card_runtime
-        .october
+        .effects
         .bound_piece_ids
         .contains(&piece.id)
     {
@@ -230,7 +230,7 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     }
     if state
         .card_runtime
-        .october
+        .effects
         .pending_seals
         .iter()
         .any(|p| p.piece_id == piece.id)
@@ -239,7 +239,7 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
     }
     if state
         .card_runtime
-        .october
+        .effects
         .pending_taboo
         .iter()
         .any(|p| p.piece_id == piece.id)
@@ -421,7 +421,7 @@ fn piece_view(state: &GameState, piece: Piece, anchor: bool, anchor_square: Squa
 }
 
 fn pending_card_label(state: &GameState, id: &str, owner: Player) -> String {
-    let rt = &state.card_runtime.october;
+    let rt = &state.card_runtime.effects;
     match id {
         augment_core::PENTA_CHECK => rt.penta_check[owner.index()]
             .map_or_else(String::new, |p| format!("체크 {}/5", p.count)),

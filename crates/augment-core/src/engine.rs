@@ -5102,17 +5102,17 @@ impl Engine {
             .retain(|id| *id != piece_id);
         state
             .card_runtime
-            .october
+            .effects
             .grudged_piece_ids
             .remove(&piece_id);
-        state.card_runtime.october.grudge_losses.remove(&piece_id);
+        state.card_runtime.effects.grudge_losses.remove(&piece_id);
         state
             .card_runtime
-            .october
+            .effects
             .pawn_chain_links
             .retain(|pair| !pair.contains(&piece_id));
         self.cancel_prophecies(state);
-        state.card_runtime.october.bound_piece_ids.remove(&piece_id);
+        state.card_runtime.effects.bound_piece_ids.remove(&piece_id);
         if let Some(flags) = &mut state.card_runtime.capture_the_flag {
             for occupation in &mut flags.occupations {
                 if occupation.is_some_and(|entry| entry.piece_id == piece_id) {
@@ -5981,7 +5981,7 @@ impl Engine {
             };
             if state
                 .card_runtime
-                .october
+                .effects
                 .bound_piece_ids
                 .contains(&piece_id)
             {
@@ -5991,7 +5991,7 @@ impl Engine {
                 state.card_runtime.log_statuses.remove(&piece_id);
                 continue;
             };
-            let progress = (!state.card_runtime.october.grudged_piece_ids.is_empty()).then(|| {
+            let progress = (!state.card_runtime.effects.grudged_piece_ids.is_empty()).then(|| {
                 (
                     state.board.clone(),
                     state.card_runtime.clone(),
@@ -6066,7 +6066,7 @@ impl Engine {
             ));
         }
         state.take_turn_end_request();
-        state.card_runtime.october.rook_lift_chain = None;
+        state.card_runtime.effects.rook_lift_chain = None;
         if state.status != GameStatus::Ongoing {
             self.push_game_ended(state, events);
             return Ok(());
@@ -6787,7 +6787,7 @@ impl Engine {
                 && !state.card_runtime.allied_monster_ids.contains(&piece.id))
                 || state
                     .card_runtime
-                    .october
+                    .effects
                     .bound_piece_ids
                     .contains(&piece.id))
         {
@@ -7040,7 +7040,7 @@ impl Engine {
                         && target_piece.owner == piece.owner
                         && !state
                             .card_runtime
-                            .october
+                            .effects
                             .bound_piece_ids
                             .contains(&target_piece.id)
                         && !self.piece_has_ability(state, target_piece, PieceKind::Slime)
@@ -7599,7 +7599,7 @@ impl Engine {
                 if ally.owner == piece.owner
                     && !state
                         .card_runtime
-                        .october
+                        .effects
                         .bound_piece_ids
                         .contains(&ally.id)
                     && ally.id != piece.id
@@ -7632,7 +7632,7 @@ impl Engine {
                     && !self.piece_has_ability(state, ally, PieceKind::Slime)
                     && !state
                         .card_runtime
-                        .october
+                        .effects
                         .bound_piece_ids
                         .contains(&ally.id)
                     && !state.card_runtime.piece_status.contains_key(&ally.id)
@@ -8209,7 +8209,7 @@ impl Engine {
     ) {
         if state
             .card_runtime
-            .october
+            .effects
             .bound_piece_ids
             .contains(&piece.id)
         {
@@ -9325,7 +9325,7 @@ impl Engine {
                 || !(rook.kind == PieceKind::Rook || big_rook)
                 || state
                     .card_runtime
-                    .october
+                    .effects
                     .bound_piece_ids
                     .contains(&rook.id)
                 || state.card_runtime.moved_piece_ids.contains(&rook.id)

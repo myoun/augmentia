@@ -81,7 +81,7 @@ pub(in crate::engine::cards) fn reservations_affect_repetition_and_reject_reserv
         let mut s = base.clone();
         use_at(&mut s, &engine, id, target);
         let mut cleared = s.clone();
-        cleared.card_runtime.october = crate::state::OctoberRuntimeState::default();
+        cleared.card_runtime.effects = crate::state::CardEffectRuntimeState::default();
         assert_ne!(s.position_key(), cleared.position_key());
         assert_ne!(s.fingerprint(), cleared.fingerprint());
     }

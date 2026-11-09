@@ -218,15 +218,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(0)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "001018d70262990b"
+          "fingerprint": "c1368e472138c322"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(1)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "eb1e3c0381836263"
+          "fingerprint": "dffeec0e115f2f57"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(2)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 4, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "9da1db6a8b25b721"
+          "fingerprint": "c47135607b104f64"
         }
       ]
     },
@@ -272,19 +272,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(13), to: Square(29), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"assembly\" }]",
-      "fingerprint": "9086e56d79fe387f",
+      "fingerprint": "81f1baa3090b57de",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "5bfbb3af617aad12"
+          "fingerprint": "8221a7d0d4100602"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "d453116afac95a80"
+          "fingerprint": "2c88145fe1497e00"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(6), to: Square(21), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "21e15c139c9046d2"
+          "fingerprint": "409c21e003dc700a"
         }
       ]
     },
@@ -2976,11 +2976,11 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(2)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Bishop, capture_count: 0 }, at: Square(2), cause: \"greek-gift\" }]",
-          "fingerprint": "2ca5932262bce21a"
+          "fingerprint": "d50aa86abdbabec6"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(5)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: White, piece: Piece { id: 6, owner: White, kind: Bishop, capture_count: 0 }, at: Square(5), cause: \"greek-gift\" }]",
-          "fingerprint": "60c1aaddc2c45562"
+          "fingerprint": "d7a60e28628dd9c7"
         }
       ]
     },
@@ -2993,19 +2993,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(13), to: Square(29), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"grudge\" }, RandomSample { purpose: \"acquire.v19.grudge\", roll_53: 7576952847266813 }]",
-      "fingerprint": "0c906dae6c3d9fbd",
+      "fingerprint": "7a67358fcfc2f75f",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "f07c2aed9fdfb48f"
+          "fingerprint": "d8a5b6a1ad4a28f1"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "fa9802ed0aab2c3b"
+          "fingerprint": "cb1b39fa42fc84c7"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(6), to: Square(21), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "0d813e15acab3711"
+          "fingerprint": "5347ef9867c3e9f3"
         }
       ]
     },
@@ -3292,19 +3292,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(13), to: Square(29), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"hope\" }]",
-      "fingerprint": "5adec530373f87ef",
+      "fingerprint": "f26233c746e0ad61",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "8e2cb6e4f826f03e"
+          "fingerprint": "b118cdc04e99dd4e"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "404877a4dfcd89b0"
+          "fingerprint": "1e6ad0268b6142c4"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(6), to: Square(21), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "296cbc6dca055904"
+          "fingerprint": "800f1b8790409cf6"
         }
       ]
     },
@@ -5186,19 +5186,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(13), to: Square(29), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"pawn-chain\" }]",
-      "fingerprint": "cea99a1c983f9eb1",
+      "fingerprint": "2426e0bd21078add",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "2c7249d7a55e3a0a"
+          "fingerprint": "d3710a16036c9a7a"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "beab63172eec45ec"
+          "fingerprint": "1da10ffa98a750b8"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(6), to: Square(21), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "4b4914f8608d6c76"
+          "fingerprint": "1d150a731c61eb7c"
         }
       ]
     },
@@ -5306,19 +5306,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(11), to: Square(19), promotion: None }), Move(MoveAction { from: Square(11), to: Square(27), promotion: None }), Move(MoveAction { from: Square(12), to: Square(20), promotion: None }), Move(MoveAction { from: Square(12), to: Square(28), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(13), to: Square(29), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"penta-check\" }]",
-      "fingerprint": "852ed80a29ca1048",
+      "fingerprint": "ce83d6a15afb9ef5",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "da8b202aac7fec52"
+          "fingerprint": "bfff541ca10501b8"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "ff2c1f76d7ebb5c6"
+          "fingerprint": "1b176db5e7529ac6"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(6), to: Square(21), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "8bbea7ffa79e17ba"
+          "fingerprint": "c80a020103d14432"
         }
       ]
     },
@@ -5612,7 +5612,7 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: None } }, CardUsed { owner: White, instance_id: 1, definition_id: \"prophecy\" }]",
-          "fingerprint": "a60af705489e0744"
+          "fingerprint": "218d7cb910acf646"
         }
       ]
     },
@@ -6520,15 +6520,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(48)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "1615fa9fd6315b90"
+          "fingerprint": "9451106671e50ea7"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(49)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "b9bc6287bfcfe302"
+          "fingerprint": "eb88ad284d2c630d"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(50)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "31f178e55eed36d8"
+          "fingerprint": "87f667d517f1a3ea"
         }
       ]
     },
@@ -7189,15 +7189,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(16)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "f918c022ed0e971d"
+          "fingerprint": "f63bb261bb6b2667"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(17)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "994a6e2c03a95c60"
+          "fingerprint": "f5d7a16cfb64e0e3"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(18)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "cc825824a8dc7bb0"
+          "fingerprint": "ffad2f44aebba8c9"
         }
       ]
     },
@@ -8150,15 +8150,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(0)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "7f0d16b12f2da63e"
+          "fingerprint": "abf732a9292ba0df"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(1)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "3688002b1d4ac8ec"
+          "fingerprint": "6d76cebe3dd59a36"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(2)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: White, piece: Piece { id: 3, owner: White, kind: Queen, capture_count: 0 }, at: Square(3), cause: \"ascension\" }]",
-          "fingerprint": "7fd5efe2e3a2cb71"
+          "fingerprint": "16ddc71970155f12"
         }
       ]
     },
@@ -8204,19 +8204,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"assembly\" }]",
-      "fingerprint": "6c5872df9b88f0b5",
+      "fingerprint": "27dbbb187df47245",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "b0e317e5c591fef4"
+          "fingerprint": "b045c5a8228ae81c"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "c01347e61ada53f1"
+          "fingerprint": "9466f1cc97cc8189"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "04582a2ac06c68e7"
+          "fingerprint": "0982f9b1938cf9fd"
         }
       ]
     },
@@ -10912,11 +10912,11 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(5)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: White, piece: Piece { id: 5, owner: White, kind: Bishop, capture_count: 0 }, at: Square(5), cause: \"greek-gift\" }]",
-          "fingerprint": "3646f3fa199aa257"
+          "fingerprint": "e5a82e65eddda9e9"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(20)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: White, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20), cause: \"greek-gift\" }]",
-          "fingerprint": "28e24004574471b7"
+          "fingerprint": "f3e545e2640d22cd"
         }
       ]
     },
@@ -10929,19 +10929,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"grudge\" }, RandomSample { purpose: \"acquire.v19.grudge\", roll_53: 7576952847266813 }]",
-      "fingerprint": "d5c8952c6b216c17",
+      "fingerprint": "9c6d1dacd139fff0",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "7e748e56035a7391"
+          "fingerprint": "e403a78489f95b77"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "3a7e0206e8fe8e84"
+          "fingerprint": "b868d8891d9cd67c"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "d740417dfc6c3956"
+          "fingerprint": "3ded9a037b8ffecc"
         }
       ]
     },
@@ -11228,19 +11228,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"hope\" }]",
-      "fingerprint": "be22f3ff38f8aff9",
+      "fingerprint": "7bbc4622964c6d27",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "323d34a600da2240"
+          "fingerprint": "47c7e091d54f1108"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "04f9dfbbac215f9d"
+          "fingerprint": "a1f8b36214eaa0bd"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "46a12c429d8c2133"
+          "fingerprint": "9f0bd5d055b81ca3"
         }
       ]
     },
@@ -13122,19 +13122,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"pawn-chain\" }]",
-      "fingerprint": "e3f7c2239fe7247d",
+      "fingerprint": "0e0f8c514bbe5866",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "e21d476d618fd368"
+          "fingerprint": "e80223b261a878c0"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "f1a8e36ff4bf6a9d"
+          "fingerprint": "e915f635b41574cd"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "194e43d4dad79dbf"
+          "fingerprint": "0fc392ed226b0f83"
         }
       ]
     },
@@ -13242,19 +13242,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(1), to: Square(11), promotion: None }), Move(MoveAction { from: Square(1), to: Square(16), promotion: None }), Move(MoveAction { from: Square(1), to: Square(18), promotion: None }), Move(MoveAction { from: Square(3), to: Square(2), promotion: None }), Move(MoveAction { from: Square(3), to: Square(11), promotion: None }), Move(MoveAction { from: Square(3), to: Square(19), promotion: None }), Move(MoveAction { from: Square(4), to: Square(11), promotion: None }), Move(MoveAction { from: Square(6), to: Square(21), promotion: None }), Move(MoveAction { from: Square(6), to: Square(23), promotion: None }), Move(MoveAction { from: Square(8), to: Square(16), promotion: None }), Move(MoveAction { from: Square(8), to: Square(24), promotion: None }), Move(MoveAction { from: Square(9), to: Square(17), promotion: None }), Move(MoveAction { from: Square(9), to: Square(25), promotion: None }), Move(MoveAction { from: Square(10), to: Square(18), promotion: None }), Move(MoveAction { from: Square(10), to: Square(26), promotion: None }), Move(MoveAction { from: Square(13), to: Square(21), promotion: None }), Move(MoveAction { from: Square(14), to: Square(22), promotion: None }), Move(MoveAction { from: Square(14), to: Square(30), promotion: None }), Move(MoveAction { from: Square(15), to: Square(23), promotion: None }), Move(MoveAction { from: Square(15), to: Square(31), promotion: None }), Move(MoveAction { from: Square(20), to: Square(2), promotion: None }), Move(MoveAction { from: Square(20), to: Square(11), promotion: None }), Move(MoveAction { from: Square(20), to: Square(29), promotion: None })]",
       "events": "[CardGranted { owner: White, instance_id: 1, definition_id: \"penta-check\" }]",
-      "fingerprint": "a8f9d98f3af189f6",
+      "fingerprint": "ed582906aba986bf",
       "results": [
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(11), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "e3291ee89679ed60"
+          "fingerprint": "3df30c73c224b20c"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(16), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "b104e073f8e8c19d"
+          "fingerprint": "d939f9c583ccf1fd"
         },
         {
           "events": "[ActionApplied { actor: White, action: Move(MoveAction { from: Square(1), to: Square(18), promotion: None }) }, TurnEnding { player: White }, TurnEnded { player: White }, TurnChanged { player: Black }, TurnStarted { player: Black, actions_remaining: 1 }]",
-          "fingerprint": "67b4afd3d3c5a8e7"
+          "fingerprint": "87d36b95d2541ebf"
         }
       ]
     },
@@ -13548,7 +13548,7 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: None } }, CardUsed { owner: White, instance_id: 1, definition_id: \"prophecy\" }]",
-          "fingerprint": "caebb83c9f2ea824"
+          "fingerprint": "033eaa2f630ccf3f"
         }
       ]
     },
@@ -14460,15 +14460,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(29)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "f88d06b4b067df79"
+          "fingerprint": "5dc70960067710d0"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(35)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "d42075a4435d2587"
+          "fingerprint": "c0a6cd031398428a"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: PieceAt(Square(42)) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "ef08f4e54a70e011"
+          "fingerprint": "1ac53a7e5e03d088"
         }
       ]
     },
@@ -15113,15 +15113,15 @@
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(2)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "38350c1841fd0f54"
+          "fingerprint": "3b3b39fc3bcf80f6"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(11)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "8813412d11ef04ae"
+          "fingerprint": "c0b2db25b9e60365"
         },
         {
           "events": "[ActionApplied { actor: White, action: UseCard { instance_id: 1, target: Squares([Square(3), Square(16)]) } }, CardUsed { owner: White, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "297952edc1dfb813"
+          "fingerprint": "018a87ce8799ac6a"
         }
       ]
     },
@@ -16078,15 +16078,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(0)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "9a7d2dd5b52327ff"
+          "fingerprint": "3f293abde0c48458"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(1)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "9acf4ce716c3d5d0"
+          "fingerprint": "9b8da50284be9a80"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(2)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "ef52c9f46390fcfa"
+          "fingerprint": "cdf2995590245f79"
         }
       ]
     },
@@ -16132,19 +16132,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"assembly\" }]",
-      "fingerprint": "a2fecd209fc6babd",
+      "fingerprint": "730cee91b1ebbb92",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(32), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "050efc80e371d091"
+          "fingerprint": "bd131c40ce1ba171"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(40), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "03f8b8af39e83215"
+          "fingerprint": "cebb26ac07a85043"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(49), to: Square(33), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "fc3a0f4e4a8c75e5"
+          "fingerprint": "a2071ad0d92e1a2b"
         }
       ]
     },
@@ -18836,11 +18836,11 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(58)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: Black, piece: Piece { id: 27, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(58), cause: \"greek-gift\" }]",
-          "fingerprint": "1097b68d233b2474"
+          "fingerprint": "bdf6ad819c4409ea"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(61)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: Black, piece: Piece { id: 30, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(61), cause: \"greek-gift\" }]",
-          "fingerprint": "ec5a2563f8e58dc8"
+          "fingerprint": "74c629971e49c6b8"
         }
       ]
     },
@@ -18853,19 +18853,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"grudge\" }, RandomSample { purpose: \"acquire.v19.grudge\", roll_53: 7576952847266813 }]",
-      "fingerprint": "56184ae5c3d52fed",
+      "fingerprint": "cb62fd3a823b06ee",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(32), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "b2ccdbc5c815b0c0"
+          "fingerprint": "2c5c988954d27b98"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(40), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "295c080bb067ed38"
+          "fingerprint": "acd352fab83392fe"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(49), to: Square(33), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "29384eee1704cbe4"
+          "fingerprint": "578268b87d4654e4"
         }
       ]
     },
@@ -19152,19 +19152,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"hope\" }]",
-      "fingerprint": "be55e5cceb4bfef3",
+      "fingerprint": "7cabb01b171bb116",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(32), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "c349b0f909950e31"
+          "fingerprint": "d8dc542dcbfd48e5"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(40), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "0cf46f2596f360b5"
+          "fingerprint": "33366f9ce488ae1d"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(49), to: Square(33), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "f7132822a32fffd5"
+          "fingerprint": "9a6f4d738880f9a7"
         }
       ]
     },
@@ -21046,19 +21046,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"pawn-chain\" }]",
-      "fingerprint": "0362f452ba5f9cc7",
+      "fingerprint": "c73b64cf317d4f08",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(32), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "2fc6bd0d072bb7ed"
+          "fingerprint": "0dcd7d81a3e06781"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(40), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "575868e24c825d35"
+          "fingerprint": "ac687eebc9ad1a1f"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(49), to: Square(33), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "710cff698906d021"
+          "fingerprint": "6c7a32ab04bbda15"
         }
       ]
     },
@@ -21166,19 +21166,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(50), to: Square(34), promotion: None }), Move(MoveAction { from: Square(50), to: Square(42), promotion: None }), Move(MoveAction { from: Square(51), to: Square(35), promotion: None }), Move(MoveAction { from: Square(51), to: Square(43), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(57), to: Square(40), promotion: None }), Move(MoveAction { from: Square(57), to: Square(42), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"penta-check\" }]",
-      "fingerprint": "3ba7bbcfe2b38d4a",
+      "fingerprint": "dcd8cbd1f388e3f6",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(32), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "149559137bff473d"
+          "fingerprint": "a5f7340350678de5"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(48), to: Square(40), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "cc77e6190961af0d"
+          "fingerprint": "0d0571d7262c2051"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(49), to: Square(33), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "4d052cde0012bb03"
+          "fingerprint": "a92b2e07218cf57b"
         }
       ]
     },
@@ -21472,7 +21472,7 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: None } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"prophecy\" }]",
-          "fingerprint": "837e8e70ff88d00c"
+          "fingerprint": "e3046fd9dbc01a6d"
         }
       ]
     },
@@ -22380,15 +22380,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(0)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "c4aeb76597f87c24"
+          "fingerprint": "aaa827e9fb3cd55a"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(1)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "2680f77a5d83a42a"
+          "fingerprint": "49371ec8d204992d"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(2)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "23093b8ca316f380"
+          "fingerprint": "c967f27580b19efd"
         }
       ]
     },
@@ -23049,15 +23049,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(16)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "5e75c817c6474230"
+          "fingerprint": "6569ff10f6825b28"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(17)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "2c245d485cc1145c"
+          "fingerprint": "e69634165b3a7578"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(18)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "0814478aeb3ca95a"
+          "fingerprint": "e3c5308f8b4ca3ed"
         }
       ]
     },
@@ -24010,15 +24010,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(0)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "93cefefb11c162e2"
+          "fingerprint": "23343b4dcfe52e78"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(1)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "20742ce4ca147f5e"
+          "fingerprint": "d63243cdcf83be70"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(2)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"ascension\" }, PieceRemoved { actor: Black, piece: Piece { id: 29, owner: Black, kind: Queen, capture_count: 0 }, at: Square(59), cause: \"ascension\" }]",
-          "fingerprint": "517d14cb1179f6b2"
+          "fingerprint": "30aa49941967c553"
         }
       ]
     },
@@ -24064,19 +24064,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"assembly\" }]",
-      "fingerprint": "8c7cc54510458581",
+      "fingerprint": "faa10106aba87b6d",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "124be347ede097a3"
+          "fingerprint": "8c07031da8ba8949"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "c6e509636ff073ac"
+          "fingerprint": "3a7d44254a9d6a90"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "f7e67d644df9e727"
+          "fingerprint": "f22b8366f480324b"
         }
       ]
     },
@@ -26772,11 +26772,11 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(58)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: Black, piece: Piece { id: 28, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(58), cause: \"greek-gift\" }]",
-          "fingerprint": "fa4657cf655ef9a1"
+          "fingerprint": "1b67ec17a7b406d0"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(61)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"greek-gift\" }, PieceRemoved { actor: Black, piece: Piece { id: 31, owner: Black, kind: Bishop, capture_count: 0 }, at: Square(61), cause: \"greek-gift\" }]",
-          "fingerprint": "afce11adab6dc282"
+          "fingerprint": "ad529b8146b31494"
         }
       ]
     },
@@ -26789,19 +26789,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"grudge\" }, RandomSample { purpose: \"acquire.v19.grudge\", roll_53: 7576952847266813 }]",
-      "fingerprint": "0b3533b168f52cb2",
+      "fingerprint": "69a9a3ea20122136",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "1d9b68c10255e574"
+          "fingerprint": "7ecdfac16e034488"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "3ee7ac7949b49d19"
+          "fingerprint": "dd692d14f01c19eb"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "d865ca5fcef92a96"
+          "fingerprint": "6124d6118fb8f992"
         }
       ]
     },
@@ -27088,19 +27088,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"hope\" }]",
-      "fingerprint": "a1ff493efb05061e",
+      "fingerprint": "e57e6c218705f658",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "6eb57dfe6b387a2d"
+          "fingerprint": "6608c2beafad8d49"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "d439fe7b61e05a06"
+          "fingerprint": "c537e613caf89f40"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "2a9f09527f0acd5b"
+          "fingerprint": "1df7e3e4bbf91ef7"
         }
       ]
     },
@@ -28986,19 +28986,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"pawn-chain\" }]",
-      "fingerprint": "1ed9510553bc1cc9",
+      "fingerprint": "7f3cfca3057a7a63",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "453d874934404c29"
+          "fingerprint": "3cdc1ba4cbe035e5"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "0c5c5bb3ef3a0454"
+          "fingerprint": "1d82d5040e189260"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "b62a3c7f62d44aa3"
+          "fingerprint": "ff9926a5264645b7"
         }
       ]
     },
@@ -29106,19 +29106,19 @@
     "acquired": {
       "actions": "[Move(MoveAction { from: Square(29), to: Square(20), promotion: None }), Move(MoveAction { from: Square(29), to: Square(21), promotion: None }), Move(MoveAction { from: Square(42), to: Square(25), promotion: None }), Move(MoveAction { from: Square(42), to: Square(27), promotion: None }), Move(MoveAction { from: Square(42), to: Square(32), promotion: None }), Move(MoveAction { from: Square(42), to: Square(36), promotion: None }), Move(MoveAction { from: Square(42), to: Square(57), promotion: None }), Move(MoveAction { from: Square(48), to: Square(32), promotion: None }), Move(MoveAction { from: Square(48), to: Square(40), promotion: None }), Move(MoveAction { from: Square(49), to: Square(33), promotion: None }), Move(MoveAction { from: Square(49), to: Square(41), promotion: None }), Move(MoveAction { from: Square(52), to: Square(36), promotion: None }), Move(MoveAction { from: Square(52), to: Square(44), promotion: None }), Move(MoveAction { from: Square(53), to: Square(37), promotion: None }), Move(MoveAction { from: Square(53), to: Square(45), promotion: None }), Move(MoveAction { from: Square(54), to: Square(38), promotion: None }), Move(MoveAction { from: Square(54), to: Square(46), promotion: None }), Move(MoveAction { from: Square(55), to: Square(39), promotion: None }), Move(MoveAction { from: Square(55), to: Square(47), promotion: None }), Move(MoveAction { from: Square(56), to: Square(57), promotion: None }), Move(MoveAction { from: Square(58), to: Square(23), promotion: None }), Move(MoveAction { from: Square(58), to: Square(30), promotion: None }), Move(MoveAction { from: Square(58), to: Square(37), promotion: None }), Move(MoveAction { from: Square(58), to: Square(44), promotion: None }), Move(MoveAction { from: Square(58), to: Square(51), promotion: None }), Move(MoveAction { from: Square(59), to: Square(43), promotion: None }), Move(MoveAction { from: Square(59), to: Square(51), promotion: None }), Move(MoveAction { from: Square(60), to: Square(51), promotion: None }), Move(MoveAction { from: Square(62), to: Square(45), promotion: None }), Move(MoveAction { from: Square(62), to: Square(47), promotion: None })]",
       "events": "[CardGranted { owner: Black, instance_id: 1, definition_id: \"penta-check\" }]",
-      "fingerprint": "287dff3ca06a4f70",
+      "fingerprint": "99aa6f9ecc5f6e36",
       "results": [
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(20), promotion: None }) }, PieceCaptured { actor: Black, piece: Piece { id: 15, owner: White, kind: Bishop, capture_count: 0 }, at: Square(20) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "f43d4d5f023b4bc5"
+          "fingerprint": "411548392d51be6f"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(29), to: Square(21), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "69abffd37abc7444"
+          "fingerprint": "26879f880887b79c"
         },
         {
           "events": "[ActionApplied { actor: Black, action: Move(MoveAction { from: Square(42), to: Square(25), promotion: None }) }, TurnEnding { player: Black }, TurnEnded { player: Black }, TurnChanged { player: White }, TurnStarted { player: White, actions_remaining: 1 }]",
-          "fingerprint": "f9aae3002dee206b"
+          "fingerprint": "8bfaefdc3107778f"
         }
       ]
     },
@@ -29412,7 +29412,7 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: None } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"prophecy\" }]",
-          "fingerprint": "c73bdb6ddbd1b058"
+          "fingerprint": "a01df8e96d8231f8"
         }
       ]
     },
@@ -30324,15 +30324,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(0)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "525b14528ac012ab"
+          "fingerprint": "c1d91c4753e8a68c"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(1)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "08568909bd10c441"
+          "fingerprint": "6a080dfb28873bc5"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: PieceAt(Square(3)) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"seal\" }]",
-          "fingerprint": "5cc5f16e29891d30"
+          "fingerprint": "fdcae684d3f9021a"
         }
       ]
     },
@@ -30977,15 +30977,15 @@
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(2)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "6b3d8bb4392b9de7"
+          "fingerprint": "f6c20d9ce8572770"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(11)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "d3c2d9d16203ce90"
+          "fingerprint": "2d5bc8ab19cef355"
         },
         {
           "events": "[ActionApplied { actor: Black, action: UseCard { instance_id: 1, target: Squares([Square(59), Square(16)]) } }, CardUsed { owner: Black, instance_id: 1, definition_id: \"taboo\" }]",
-          "fingerprint": "5490551f3a311164"
+          "fingerprint": "b7f011371ad4dbf5"
         }
       ]
     },

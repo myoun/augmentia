@@ -13,7 +13,7 @@ pub(super) fn play(
         .board
         .get(square)
         .ok_or_else(|| EngineError::Invariant("missing taboo queen".into()))?;
-    state.card_runtime.october.pending_taboo.push(PendingTaboo {
+    state.card_runtime.effects.pending_taboo.push(PendingTaboo {
         owner: actor,
         piece_id: piece.id,
         square: landing,
@@ -75,10 +75,10 @@ impl Engine {
         actor: Player,
         events: &mut Vec<Event>,
     ) {
-        let pending = std::mem::take(&mut state.card_runtime.october.pending_taboo);
+        let pending = std::mem::take(&mut state.card_runtime.effects.pending_taboo);
         for entry in pending {
             if entry.owner != actor {
-                state.card_runtime.october.pending_taboo.push(entry);
+                state.card_runtime.effects.pending_taboo.push(entry);
                 continue;
             }
             if state.status != GameStatus::Ongoing {
@@ -151,7 +151,7 @@ mod tests {
         for q in ["d4", "e5"] {
             assert_eq!(at(&s, q).kind, PieceKind::Monster);
         }
-        assert!(s.card_runtime.october.pending_taboo.is_empty());
+        assert!(s.card_runtime.effects.pending_taboo.is_empty());
         s.turn = Player::White;
         s.card_runtime.royal_command[0] = Some(crate::RoyalCommandStatus {
             starts_at_turn: 0,
@@ -184,7 +184,7 @@ mod tests {
             s.board.set("d1".parse().unwrap(), convert.then_some(queen));
             handoff(&engine, &mut s);
             assert!(!s.board.iter().any(|(_, p)| p.kind == PieceKind::Monster));
-            assert!(s.card_runtime.october.pending_taboo.is_empty());
+            assert!(s.card_runtime.effects.pending_taboo.is_empty());
         }
     }
 }

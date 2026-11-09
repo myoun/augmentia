@@ -76,7 +76,7 @@ pub(super) fn acquire(
             .collect();
         state
             .card_runtime
-            .october
+            .effects
             .pawn_chain_links
             .extend(super::pawn_chain::pawn_links(pawns, Some(owner)));
     }

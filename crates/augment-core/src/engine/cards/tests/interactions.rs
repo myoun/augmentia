@@ -104,7 +104,7 @@ pub(in crate::engine::cards) fn six_restored_transform_contracts_keep_identity_o
 pub(in crate::engine::cards) fn october_runtime_changes_search_and_repetition_identity() {
     let state = base();
     let mut changed = state.clone();
-    changed.card_runtime.october.assembly[0] = true;
+    changed.card_runtime.effects.assembly[0] = true;
     assert_ne!(state.position_key(), changed.position_key());
     assert_ne!(state.fingerprint(), changed.fingerprint());
 }

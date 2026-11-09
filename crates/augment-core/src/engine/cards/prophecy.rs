@@ -8,7 +8,7 @@ pub(super) fn play(
     _target: &ActionTarget,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    state.card_runtime.october.prophecy_remaining[actor.index()] = Some(6);
+    state.card_runtime.effects.prophecy_remaining[actor.index()] = Some(6);
     Ok(())
 }
 
@@ -18,7 +18,7 @@ pub(super) fn actions(
     card: &CardInstance,
     actions: &mut Vec<Action>,
 ) {
-    if state.card_runtime.october.prophecy_remaining[state.turn.index()].is_none()
+    if state.card_runtime.effects.prophecy_remaining[state.turn.index()].is_none()
         && state
             .board
             .iter()
@@ -48,7 +48,7 @@ pub(super) fn eligibility(
     if let Some(result) = enabled({
         rt.prophecy[i].is_some()
             || (state.ruleset_id == crate::LATEST_RULESET_ID
-                && rt.october.prophecy_remaining[i].is_some())
+                && rt.effects.prophecy_remaining[i].is_some())
     }) {
         return result;
     }
@@ -60,7 +60,7 @@ pub(super) const BEHAVIOR: CardBehavior = CardBehavior::active(ID, play, actions
 impl Engine {
     pub(in crate::engine) fn cancel_prophecies(&self, state: &mut GameState) {
         if state.ruleset_id == crate::LATEST_RULESET_ID {
-            state.card_runtime.october.prophecy_remaining = [None; 2];
+            state.card_runtime.effects.prophecy_remaining = [None; 2];
         }
     }
 }
@@ -77,11 +77,11 @@ impl Engine {
         self.settle_check_objectives(state);
         for owner in [Player::White, Player::Black] {
             if let Some(remaining) =
-                &mut state.card_runtime.october.prophecy_remaining[owner.index()]
+                &mut state.card_runtime.effects.prophecy_remaining[owner.index()]
             {
                 *remaining = remaining.saturating_sub(1);
                 if *remaining == 0 {
-                    state.card_runtime.october.prophecy_remaining[owner.index()] = None;
+                    state.card_runtime.effects.prophecy_remaining[owner.index()] = None;
                     state.status = GameStatus::Won {
                         winner: owner,
                         reason: WinReason::CardEffect(crate::PROPHECY.into()),
@@ -104,7 +104,7 @@ mod tests {
         arm(&e, &mut s);
         s.actions_remaining = 2;
         s = e.apply(&s, movement("a1", "a2")).unwrap().state;
-        assert_eq!(s.card_runtime.october.prophecy_remaining[0], Some(6));
+        assert_eq!(s.card_runtime.effects.prophecy_remaining[0], Some(6));
         for (i, (a, b)) in [
             ("a2", "a3"),
             ("h8", "h7"),
@@ -120,7 +120,7 @@ mod tests {
             if i < 5 {
                 assert_eq!(s.status, GameStatus::Ongoing);
                 assert_eq!(
-                    s.card_runtime.october.prophecy_remaining[0],
+                    s.card_runtime.effects.prophecy_remaining[0],
                     Some(5 - i as u8)
                 );
             }
@@ -141,16 +141,16 @@ mod tests {
             ("a7", Player::Black, PieceKind::Pawn),
         ]);
         arm(&e, &mut s);
-        s.card_runtime.october.prophecy_remaining[0] = Some(1);
+        s.card_runtime.effects.prophecy_remaining[0] = Some(1);
         s = e.apply(&s, movement("a2", "a7")).unwrap().state;
         assert_eq!(s.status, GameStatus::Ongoing);
-        assert_eq!(s.card_runtime.october.prophecy_remaining, [None; 2]);
+        assert_eq!(s.card_runtime.effects.prophecy_remaining, [None; 2]);
         let mut s = position(&[("a2", Player::White, PieceKind::Rook)]);
         arm(&e, &mut s);
-        s.card_runtime.october.prophecy_remaining[0] = Some(1);
+        s.card_runtime.effects.prophecy_remaining[0] = Some(1);
         s = e.apply(&s, movement("a2", "h2")).unwrap().state;
         assert_eq!(s.status, GameStatus::Ongoing);
-        assert_eq!(s.card_runtime.october.prophecy_remaining, [None; 2]);
+        assert_eq!(s.card_runtime.effects.prophecy_remaining, [None; 2]);
         let mut s = position(&[("c1", Player::White, PieceKind::Bishop)]);
         arm(&e, &mut s);
         s = e
@@ -167,7 +167,7 @@ mod tests {
             )
             .unwrap()
             .state;
-        assert_eq!(s.card_runtime.october.prophecy_remaining, [None; 2]);
+        assert_eq!(s.card_runtime.effects.prophecy_remaining, [None; 2]);
     }
     #[test]
     fn prophecy_started_while_checked_cancels_immediately_and_search_is_transactional() {
@@ -175,7 +175,7 @@ mod tests {
         let mut s = position(&[("h2", Player::White, PieceKind::Rook)]);
         arm(&e, &mut s);
         assert_eq!(s.cards[0].charges, 0);
-        assert_eq!(s.card_runtime.october.prophecy_remaining, [None; 2]);
+        assert_eq!(s.card_runtime.effects.prophecy_remaining, [None; 2]);
         let mut quiet = position(&[]);
         arm(&e, &mut quiet);
         let before = quiet.clone();
@@ -189,13 +189,13 @@ mod tests {
                 .transition
                 .state
                 .card_runtime
-                .october
+                .effects
                 .prophecy_remaining[0],
             Some(5)
         );
         assert_eq!(quiet, before);
         let mut changed = quiet.clone();
-        changed.card_runtime.october.prophecy_remaining[0] = Some(4);
+        changed.card_runtime.effects.prophecy_remaining[0] = Some(4);
         assert_ne!(changed.position_key(), quiet.position_key());
     }
 }

@@ -6,7 +6,7 @@ pub(super) fn acquire(
     owner: Player,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    state.card_runtime.october.assembly[owner.index()] = true;
+    state.card_runtime.effects.assembly[owner.index()] = true;
     Ok(())
 }
 
@@ -17,7 +17,7 @@ pub(super) fn eligibility(
 ) -> CardEligibility {
     let rt = &state.card_runtime;
     let i = player.index();
-    if let Some(result) = enabled(rt.october.assembly[i]) {
+    if let Some(result) = enabled(rt.effects.assembly[i]) {
         return result;
     }
     CardEligibility::Eligible
@@ -33,7 +33,7 @@ impl Engine {
         events: &[Event],
     ) {
         if state.ruleset_id != crate::LATEST_RULESET_ID
-            || !state.card_runtime.october.assembly[original.owner.index()]
+            || !state.card_runtime.effects.assembly[original.owner.index()]
         {
             return;
         }

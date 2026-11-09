@@ -3,7 +3,7 @@
 use super::*;
 use std::collections::BTreeMap;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct OctoberRuntimeState {
+pub struct CardEffectRuntimeState {
     pub assembly: [bool; 2],
     pub hope: [bool; 2],
     pub iqp_pending: [bool; 2],

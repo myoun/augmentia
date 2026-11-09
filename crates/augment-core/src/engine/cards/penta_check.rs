@@ -6,7 +6,7 @@ pub(super) fn acquire(
     owner: Player,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    state.card_runtime.october.penta_check[owner.index()] = Some(PentaCheckProgress {
+    state.card_runtime.effects.penta_check[owner.index()] = Some(PentaCheckProgress {
         count: 0,
         opponent_checked: engine.card_royal_checked(state, owner),
     });
@@ -37,7 +37,7 @@ impl Engine {
     ) {
         if state.ruleset_id == crate::LATEST_RULESET_ID
             && state.status == GameStatus::Ongoing
-            && state.card_runtime.october.penta_check[owner.index()].is_some_and(|p| p.count >= 5)
+            && state.card_runtime.effects.penta_check[owner.index()].is_some_and(|p| p.count >= 5)
         {
             state.status = GameStatus::Won {
                 winner: owner,
@@ -54,7 +54,7 @@ impl Engine {
         checked: [bool; 2],
     ) {
         for owner in [Player::White, Player::Black] {
-            if let Some(progress) = &mut state.card_runtime.october.penta_check[owner.index()] {
+            if let Some(progress) = &mut state.card_runtime.effects.penta_check[owner.index()] {
                 if checked[owner.index()] && !progress.opponent_checked {
                     progress.count = (progress.count + 1).min(5);
                 }
@@ -88,7 +88,7 @@ mod tests {
         {
             s = e.apply(&s, movement(from, to)).unwrap().state;
             assert_eq!(
-                s.card_runtime.october.penta_check[0].unwrap().count,
+                s.card_runtime.effects.penta_check[0].unwrap().count,
                 (i + 1) as u8
             );
             assert_eq!(s.status, GameStatus::Ongoing);
@@ -114,17 +114,17 @@ mod tests {
             .grant_card(&s, 1, crate::PENTA_CHECK, Player::White)
             .unwrap()
             .state;
-        assert_eq!(s.card_runtime.october.penta_check[0].unwrap().count, 0);
+        assert_eq!(s.card_runtime.effects.penta_check[0].unwrap().count, 0);
         s.actions_remaining = 2;
         s = e.apply(&s, movement("h2", "h3")).unwrap().state;
-        assert_eq!(s.card_runtime.october.penta_check[0].unwrap().count, 0);
+        assert_eq!(s.card_runtime.effects.penta_check[0].unwrap().count, 0);
         s = e.apply(&s, movement("h3", "g3")).unwrap().state;
         assert!(
-            !s.card_runtime.october.penta_check[0]
+            !s.card_runtime.effects.penta_check[0]
                 .unwrap()
                 .opponent_checked
         );
         s = e.apply(&s, movement("h8", "g8")).unwrap().state;
-        assert_eq!(s.card_runtime.october.penta_check[0].unwrap().count, 1);
+        assert_eq!(s.card_runtime.effects.penta_check[0].unwrap().count, 1);
     }
 }

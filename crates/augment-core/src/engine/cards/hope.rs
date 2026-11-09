@@ -6,7 +6,7 @@ pub(super) fn acquire(
     owner: Player,
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
-    state.card_runtime.october.hope[owner.index()] = true;
+    state.card_runtime.effects.hope[owner.index()] = true;
     Ok(())
 }
 
@@ -17,7 +17,7 @@ pub(super) fn eligibility(
 ) -> CardEligibility {
     let rt = &state.card_runtime;
     let i = player.index();
-    if let Some(result) = enabled(rt.october.hope[i]) {
+    if let Some(result) = enabled(rt.effects.hope[i]) {
         return result;
     }
     CardEligibility::Eligible
@@ -29,7 +29,7 @@ impl Engine {
     pub(in crate::engine) fn settle_hope_turn_start(&self, state: &mut GameState, owner: Player) {
         if state.ruleset_id == crate::LATEST_RULESET_ID
             && state.status == GameStatus::Ongoing
-            && state.card_runtime.october.hope[owner.index()]
+            && state.card_runtime.effects.hope[owner.index()]
             && state
                 .board
                 .iter()
@@ -106,17 +106,17 @@ mod tests {
             .apply(&state, Action::DraftPick { offer_index: 0 })
             .unwrap()
             .state;
-        assert!(!state.card_runtime.october.hope[0]);
+        assert!(!state.card_runtime.effects.hope[0]);
         state = engine
             .apply(&state, Action::DraftPick { offer_index: 0 })
             .unwrap()
             .state;
         assert_eq!(state.status, GameStatus::Ongoing);
-        assert!(!state.card_runtime.october.hope[0]);
+        assert!(!state.card_runtime.effects.hope[0]);
         state = engine.apply(&state, movement("a1", "a2")).unwrap().state;
         assert_eq!(state.status, GameStatus::Ongoing);
         state = engine.apply(&state, movement("h8", "h7")).unwrap().state;
-        assert!(state.card_runtime.october.hope[0]);
+        assert!(state.card_runtime.effects.hope[0]);
         assert!(matches!(
             state.status,
             GameStatus::Won {

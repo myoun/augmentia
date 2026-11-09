@@ -12,7 +12,7 @@ pub(super) fn acquire(
             p.owner == owner
                 && grudge_kind_allowed(p.kind)
                 && !engine.is_royal_piece(state, *p)
-                && !state.card_runtime.october.grudged_piece_ids.contains(&p.id)
+                && !state.card_runtime.effects.grudged_piece_ids.contains(&p.id)
         })
         .collect();
     if !candidates.is_empty() {
@@ -28,7 +28,7 @@ pub(super) fn acquire(
         };
         state
             .card_runtime
-            .october
+            .effects
             .grudged_piece_ids
             .insert(candidates[index].1.id);
     }
@@ -51,7 +51,7 @@ pub(super) fn eligibility(
         has_own(&|p| {
             crate::engine::grudge_kind_allowed(p.kind)
                 && !royal(state, p)
-                && !rt.october.grudged_piece_ids.contains(&p.id)
+                && !rt.effects.grudged_piece_ids.contains(&p.id)
         }),
         "원한을 부여할 비왕실 아군 비폰 기물이 필요합니다.",
     )
@@ -69,7 +69,7 @@ impl Engine {
         events: &[Event],
     ) {
         if state.ruleset_id != crate::LATEST_RULESET_ID
-            || rt.october.grudged_piece_ids.is_empty()
+            || rt.effects.grudged_piece_ids.is_empty()
             || state.board.find_by_id(attacker.id).is_none()
         {
             return;
@@ -93,13 +93,13 @@ impl Engine {
             };
             if let Some(victim) = victim
                 && victim.owner != attacker.owner
-                && rt.october.grudged_piece_ids.contains(&victim.id)
+                && rt.effects.grudged_piece_ids.contains(&victim.id)
             {
                 let mask = grudge_movement_mask(victim, before, rt, 0);
                 if mask != 0 {
                     *state
                         .card_runtime
-                        .october
+                        .effects
                         .grudge_losses
                         .entry(attacker.id)
                         .or_default() |= mask;
@@ -192,7 +192,7 @@ pub(super) fn grudge_movement_mask(
         mask = 7;
     }
     mask & !rt
-        .october
+        .effects
         .grudge_losses
         .get(&piece.id)
         .copied()
@@ -215,7 +215,7 @@ mod tests {
         let one = e.grant_card(&s, 1, crate::GRUDGE, Player::White).unwrap();
         assert_eq!(one.state.rng_state(), s.rng_state());
         assert_eq!(
-            one.state.card_runtime.october.grudged_piece_ids,
+            one.state.card_runtime.effects.grudged_piece_ids,
             BTreeSet::from([id])
         );
         let mut multi = s.clone();
@@ -263,7 +263,7 @@ mod tests {
             .state;
         let queen = at(&s, "d4");
         s = e.apply(&s, movement("d4", "d6")).unwrap().state;
-        assert_eq!(s.card_runtime.october.grudge_losses[&queen.id], 2);
+        assert_eq!(s.card_runtime.effects.grudge_losses[&queen.id], 2);
         s.turn = Player::White;
         assert!(has_move(&e, &s, "d6", "e6"));
         assert!(!has_move(&e, &s, "d6", "e7"));
@@ -274,7 +274,7 @@ mod tests {
         assert!(!has_move(&e, &s, "d6", "e7"));
         let mut saved = CardRuntimeState::default();
         turn_effects::restore_piece_runtime(&mut saved, &s.card_runtime, &[queen.id]);
-        assert_eq!(saved.october.grudge_losses[&queen.id], 2);
+        assert_eq!(saved.effects.grudge_losses[&queen.id], 2);
     }
     #[test]
     fn grudge_shield_contact_and_already_lost_victim_component_do_not_add_losses() {
@@ -290,10 +290,10 @@ mod tests {
         let bishop = at(&s, "d6");
         s.card_runtime.shielded_piece_ids.insert(bishop.id);
         let contact = e.apply(&s, movement("d4", "d6")).unwrap().state;
-        assert!(contact.card_runtime.october.grudge_losses.is_empty());
+        assert!(contact.card_runtime.effects.grudge_losses.is_empty());
         s.card_runtime.shielded_piece_ids.clear();
-        s.card_runtime.october.grudge_losses.insert(bishop.id, 2);
+        s.card_runtime.effects.grudge_losses.insert(bishop.id, 2);
         let capture = e.apply(&s, movement("d4", "d6")).unwrap().state;
-        assert!(capture.card_runtime.october.grudge_losses.is_empty());
+        assert!(capture.card_runtime.effects.grudge_losses.is_empty());
     }
 }

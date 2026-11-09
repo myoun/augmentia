@@ -17,7 +17,7 @@ pub(super) fn acquire(
         .iter()
         .any(|c| c.owner == enemy && c.definition_id == HORDE);
     let links = pawn_links(pawns, horde.then_some(enemy));
-    state.card_runtime.october.pawn_chain_links.extend(links);
+    state.card_runtime.effects.pawn_chain_links.extend(links);
     Ok(())
 }
 
@@ -40,7 +40,7 @@ impl Engine {
         if state.ruleset_id != crate::LATEST_RULESET_ID {
             return;
         }
-        state.card_runtime.october.pawn_chain_links.retain(|pair| {
+        state.card_runtime.effects.pawn_chain_links.retain(|pair| {
             let Some((a, _)) = state.board.find_by_id(pair[0]) else {
                 return false;
             };
@@ -156,13 +156,13 @@ mod tests {
             .grant_card(&s, 1, crate::PAWN_CHAIN, Player::White)
             .unwrap()
             .state;
-        assert_eq!(s.card_runtime.october.pawn_chain_links.len(), 7);
+        assert_eq!(s.card_runtime.effects.pawn_chain_links.len(), 7);
         s.turn = Player::Black;
         assert!(has_move(&e, &s, "b7", "b5"));
         s = e.apply(&s, movement("b7", "b5")).unwrap().state;
         s.turn = Player::Black;
         assert!(!has_move(&e, &s, "b5", "b4"));
-        assert_eq!(s.card_runtime.october.pawn_chain_links.len(), 7);
+        assert_eq!(s.card_runtime.effects.pawn_chain_links.len(), 7);
         let mut promoted = at(&s, "b5");
         promoted.kind = PieceKind::Rook;
         s.board.set("b5".parse().unwrap(), Some(promoted));
@@ -180,21 +180,21 @@ mod tests {
             .grant_card(&s, 1, crate::PAWN_CHAIN, Player::White)
             .unwrap()
             .state;
-        assert_eq!(s.card_runtime.october.pawn_chain_links.len(), 1);
+        assert_eq!(s.card_runtime.effects.pawn_chain_links.len(), 1);
         let after = e.apply(&s, movement("b1", "b3")).unwrap().state;
-        assert!(after.card_runtime.october.pawn_chain_links.is_empty());
+        assert!(after.card_runtime.effects.pawn_chain_links.is_empty());
         let before = s.board.clone();
         let p = at(&s, "b3");
         s.board.set("b3".parse().unwrap(), None);
         s.board.set("b7".parse().unwrap(), Some(p));
         e.clean_pawn_chains(&mut s, &before);
-        assert!(s.card_runtime.october.pawn_chain_links.is_empty());
+        assert!(s.card_runtime.effects.pawn_chain_links.is_empty());
         s.card_runtime
-            .october
+            .effects
             .pawn_chain_links
             .push([p.id, at(&s, "c3").id]);
         let before = s.board.clone();
         e.clean_pawn_chains(&mut s, &before);
-        assert_eq!(s.card_runtime.october.pawn_chain_links.len(), 1);
+        assert_eq!(s.card_runtime.effects.pawn_chain_links.len(), 1);
     }
 }

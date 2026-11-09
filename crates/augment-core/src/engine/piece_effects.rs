@@ -841,7 +841,7 @@ impl Engine {
                         && !self.d4_restricts(state, piece.owner, false, from)
                         && state
                             .card_runtime
-                            .october
+                            .effects
                             .pawn_chain_links
                             .iter()
                             .all(|pair| {
@@ -1459,12 +1459,12 @@ impl Engine {
         if state.ruleset_id == crate::LATEST_RULESET_ID {
             let count = state
                 .card_runtime
-                .october
+                .effects
                 .rook_lift_chain
                 .filter(|(id, _)| *id == original_piece.id)
                 .map_or(0, |(_, count)| count);
             rook_lift &= captured_piece.is_none() && count < 3;
-            state.card_runtime.october.rook_lift_chain =
+            state.card_runtime.effects.rook_lift_chain =
                 rook_lift.then_some((original_piece.id, count.saturating_add(1)));
         }
         let extra_move = captured_backward

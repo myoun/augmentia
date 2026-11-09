@@ -9,7 +9,7 @@ pub(super) fn play(
     _events: &mut Vec<Event>,
 ) -> Result<(), EngineError> {
     let (_, piece) = piece_target(state, target)?;
-    state.card_runtime.october.pending_seals.push(PendingSeal {
+    state.card_runtime.effects.pending_seals.push(PendingSeal {
         by: actor,
         piece_id: piece.id,
         due_turn: state.turns_taken[actor.index()].saturating_add(1),
@@ -85,7 +85,7 @@ impl Engine {
                 .map(|(_, p)| p.id)
                 .collect();
             for id in release {
-                state.card_runtime.october.bound_piece_ids.remove(&id);
+                state.card_runtime.effects.bound_piece_ids.remove(&id);
             }
         }
     }
@@ -98,16 +98,16 @@ impl Engine {
         owner: Player,
         events: &mut Vec<Event>,
     ) {
-        let seals = std::mem::take(&mut state.card_runtime.october.pending_seals);
+        let seals = std::mem::take(&mut state.card_runtime.effects.pending_seals);
         for seal in seals {
             if seal.by != owner || state.turns_taken[owner.index()] < seal.due_turn {
-                state.card_runtime.october.pending_seals.push(seal);
+                state.card_runtime.effects.pending_seals.push(seal);
             } else if let Some((_, piece)) = state.board.find_by_id(seal.piece_id)
                 && piece.owner == owner.opponent()
                 && !self.is_royal_piece(state, piece)
                 && piece.kind != PieceKind::King
             {
-                state.card_runtime.october.bound_piece_ids.insert(piece.id);
+                state.card_runtime.effects.bound_piece_ids.insert(piece.id);
                 events.push(Event::EffectApplied {
                     source_card_instance: 0,
                     command: format!("seal-bound:{}", piece.id),
@@ -137,12 +137,12 @@ mod tests {
         ]);
         let id = at(&state, "d5").id;
         use_at(&mut state, &engine, crate::SEAL, single("d5"));
-        assert!(state.card_runtime.october.bound_piece_ids.is_empty());
+        assert!(state.card_runtime.effects.bound_piece_ids.is_empty());
         state = engine.apply(&state, movement("a1", "a2")).unwrap().state;
         assert!(has_move(&engine, &state, "d5", "d4"));
         state = engine.apply(&state, movement("d5", "d4")).unwrap().state;
-        assert!(state.card_runtime.october.bound_piece_ids.contains(&id));
-        assert!(state.card_runtime.october.pending_seals.is_empty());
+        assert!(state.card_runtime.effects.bound_piece_ids.contains(&id));
+        assert!(state.card_runtime.effects.pending_seals.is_empty());
         assert!(
             has_move(&engine, &state, "c3", "d4"),
             "bound grants no capture protection"
@@ -150,7 +150,7 @@ mod tests {
         state = engine.apply(&state, movement("a2", "a3")).unwrap().state;
         assert!(!has_move(&engine, &state, "d4", "d3"));
         state = engine.apply(&state, movement("h8", "h7")).unwrap().state;
-        assert!(!state.card_runtime.october.bound_piece_ids.contains(&id));
+        assert!(!state.card_runtime.effects.bound_piece_ids.contains(&id));
     }
     #[test]
     fn seal_rechecks_dead_converted_and_royal_targets_without_hitting_replacements() {
@@ -170,8 +170,8 @@ mod tests {
             s.board.set("d5".parse().unwrap(), Some(p));
             s.turns_taken[0] = 1;
             engine.settle_delayed_turn_start(&mut s, Player::White, &mut Vec::new());
-            assert!(s.card_runtime.october.bound_piece_ids.is_empty());
-            assert!(s.card_runtime.october.pending_seals.is_empty());
+            assert!(s.card_runtime.effects.bound_piece_ids.is_empty());
+            assert!(s.card_runtime.effects.pending_seals.is_empty());
         }
     }
     #[test]
@@ -184,7 +184,7 @@ mod tests {
             ("h1", Player::White, PieceKind::Rook),
         ]);
         for q in ["d4", "h1"] {
-            s.card_runtime.october.bound_piece_ids.insert(at(&s, q).id);
+            s.card_runtime.effects.bound_piece_ids.insert(at(&s, q).id);
         }
         assert!(!has_move(&engine, &s, "d4", "f6"));
         assert!(!has_move(&engine, &s, "c2", "h1"));

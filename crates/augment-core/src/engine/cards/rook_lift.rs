@@ -67,7 +67,7 @@ mod tests {
                 }
             );
         }
-        assert!(state.card_runtime.october.rook_lift_chain.is_none());
+        assert!(state.card_runtime.effects.rook_lift_chain.is_none());
         let mut capture = position(
             &[
                 ("d2", Player::White, PieceKind::King),

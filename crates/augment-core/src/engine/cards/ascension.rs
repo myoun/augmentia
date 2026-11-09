@@ -24,7 +24,7 @@ pub(super) fn play(
     engine.delete_piece_for_card(state, square, piece, actor, id, events);
     state
         .card_runtime
-        .october
+        .effects
         .pending_ascensions
         .push(PendingAscension {
             piece,
@@ -110,10 +110,10 @@ impl Engine {
         owner: Player,
         events: &mut Vec<Event>,
     ) {
-        let pending = std::mem::take(&mut state.card_runtime.october.pending_ascensions);
+        let pending = std::mem::take(&mut state.card_runtime.effects.pending_ascensions);
         for entry in pending {
             if entry.piece.owner != owner || state.turns_taken[owner.index()] < entry.due_turn {
-                state.card_runtime.october.pending_ascensions.push(entry);
+                state.card_runtime.effects.pending_ascensions.push(entry);
                 continue;
             }
             if self.d4_restricts(state, entry.piece.owner, false, entry.square) {
@@ -189,7 +189,7 @@ mod tests {
         engine.settle_ascension(&mut pending, Player::White, &mut Vec::new());
         assert_eq!(pending.board.get("d5".parse().unwrap()), Some(blocker));
         assert!(pending.board.find_by_id(queen.id).is_none());
-        assert!(pending.card_runtime.october.pending_ascensions.is_empty());
+        assert!(pending.card_runtime.effects.pending_ascensions.is_empty());
     }
     #[test]
     fn ascension_returns_on_third_owner_start_with_frozen_metadata_and_original_identity() {
@@ -210,8 +210,8 @@ mod tests {
         use_at(&mut s, &engine, crate::ASCENSION, pair("d1", "e5"));
         assert!(s.board.find_by_id(queen.id).is_none());
         assert!(!s.card_runtime.shielded_piece_ids.contains(&queen.id));
-        let pending = &s.card_runtime.october.pending_ascensions[0];
-        assert!(pending.runtime.october.pending_ascensions.is_empty());
+        let pending = &s.card_runtime.effects.pending_ascensions[0];
+        assert!(pending.runtime.effects.pending_ascensions.is_empty());
         assert_eq!(pending.due_turn, 7);
         // Place an occupant on the landing square before the return is due: the
         // current contract allows a non-empty landing and clears it on return.
@@ -222,14 +222,14 @@ mod tests {
         s.card_runtime.shielded_piece_ids.insert(100);
         for _ in 0..14 {
             handoff(&engine, &mut s);
-            if s.card_runtime.october.pending_ascensions.is_empty() {
+            if s.card_runtime.effects.pending_ascensions.is_empty() {
                 break;
             }
             assert!(s.board.find_by_id(queen.id).is_none());
         }
         assert_eq!(at(&s, "e5"), queen);
         assert!(s.card_runtime.recurrence_piece_ids.contains(&queen.id));
-        assert!(s.card_runtime.october.pending_ascensions.is_empty());
+        assert!(s.card_runtime.effects.pending_ascensions.is_empty());
         assert!(s.card_runtime.shielded_piece_ids.contains(&queen.id));
         assert_eq!(s.card_runtime.frozen[&queen.id].remaining_turns, 2);
         assert!(!s.card_runtime.moved_piece_ids.contains(&queen.id));
@@ -248,7 +248,7 @@ mod tests {
         s = engine.apply(&s, movement("a1", "b2")).unwrap().state;
         assert_eq!(s.turn, Player::White);
         assert_eq!(s.turns_taken[0], 0);
-        assert_eq!(s.card_runtime.october.pending_ascensions[0].due_turn, 7);
+        assert_eq!(s.card_runtime.effects.pending_ascensions[0].due_turn, 7);
         let black = at(&s, "h8");
         s.board.set("h8".parse().unwrap(), None);
         s.board.set("g7".parse().unwrap(), Some(black));
@@ -257,7 +257,7 @@ mod tests {
         for _ in 0..14 {
             handoff(&engine, &mut s);
         }
-        assert!(s.card_runtime.october.pending_ascensions.is_empty());
+        assert!(s.card_runtime.effects.pending_ascensions.is_empty());
         assert!(s.board.get("a5".parse().unwrap()).is_none());
     }
 }

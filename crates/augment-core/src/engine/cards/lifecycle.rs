@@ -64,8 +64,8 @@ impl Engine {
 impl Engine {
     pub(in crate::engine) fn settle_check_objectives(&self, state: &mut GameState) {
         if state.ruleset_id != crate::LATEST_RULESET_ID
-            || (state.card_runtime.october.penta_check == [None; 2]
-                && state.card_runtime.october.prophecy_remaining == [None; 2])
+            || (state.card_runtime.effects.penta_check == [None; 2]
+                && state.card_runtime.effects.prophecy_remaining == [None; 2])
         {
             return;
         }

@@ -609,7 +609,7 @@ fn switcheroo_swaps_royal_and_pawn_consumes_turn_and_resets_quiet_count() {
     let f = state.board.get("f2".parse().unwrap()).unwrap();
     state
         .card_runtime
-        .october
+        .effects
         .pawn_chain_links
         .push([e.id, f.id]);
     state.quiet_ply = 17;

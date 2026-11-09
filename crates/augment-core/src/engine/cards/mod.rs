@@ -126,7 +126,7 @@ mod transform_support;
 mod transmission_tower;
 mod windmill;
 mod wizard;
-pub use runtime::OctoberRuntimeState;
+pub use runtime::CardEffectRuntimeState;
 #[cfg(test)]
 mod tests;
 use super::piece_effects::has_adjacent_enemy;

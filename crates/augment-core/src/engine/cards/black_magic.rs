@@ -385,7 +385,7 @@ mod tests {
             "the summoned monster must be registered as allied"
         );
         assert!(
-            state.card_runtime.october.bound_piece_ids.is_empty(),
+            state.card_runtime.effects.bound_piece_ids.is_empty(),
             "an allied monster must not be bound"
         );
         // The monster is the summoner's piece, so only its owner can move it, and

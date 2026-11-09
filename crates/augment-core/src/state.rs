@@ -1,4 +1,4 @@
-pub use crate::engine::cards::OctoberRuntimeState;
+pub use crate::engine::cards::CardEffectRuntimeState;
 use crate::{Board, DeterministicRng, MoveAction, Piece, PieceKind, Player, Square};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -485,7 +485,7 @@ pub struct CaptureTheFlagState {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CardRuntimeState {
-    pub october: OctoberRuntimeState,
+    pub effects: CardEffectRuntimeState,
     pub capture_the_flag: Option<CaptureTheFlagState>,
     pub majesty: [bool; 2],
     /// Active OPENING cards acquired from the initial draft are forced after their owner's first
@@ -1239,17 +1239,17 @@ impl GameState {
             hash.bytes(b"current-rule-runtime-v1");
             hash.bytes(self.rule_runtime.position_data(self).as_bytes());
         }
-        if self.card_runtime.october != OctoberRuntimeState::default() {
-            hash.bytes(b"october-runtime-v1");
-            let mut october = self.card_runtime.october.clone();
+        if self.card_runtime.effects != CardEffectRuntimeState::default() {
+            hash.bytes(b"effects-runtime-v1");
+            let mut effects = self.card_runtime.effects.clone();
             // A pending return with two starts left is a different position from
             // one with a single start left, even when no board piece changed.
-            for seal in &mut october.pending_seals {
+            for seal in &mut effects.pending_seals {
                 seal.due_turn = seal
                     .due_turn
                     .saturating_sub(self.turns_taken[seal.by.index()]);
             }
-            for entry in &mut october.pending_ascensions {
+            for entry in &mut effects.pending_ascensions {
                 entry.due_turn = entry
                     .due_turn
                     .saturating_sub(self.turns_taken[entry.piece.owner.index()]);
@@ -1257,7 +1257,7 @@ impl GameState {
             // Ascension snapshots embed CardRuntimeState. Preserve the old key
             // for snapshots without wanted status while retaining nonempty data.
             hash.bytes(
-                format!("{october:?}")
+                format!("{effects:?}")
                     .replace(", wanted_piece_ids: {}", "")
                     .replace(", thief_turn_paths: {}", "")
                     .replace(", large_missing_cells: {}", "")

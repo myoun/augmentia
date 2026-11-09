@@ -3,7 +3,7 @@ use super::*;
 pub(in crate::engine::cards) fn objective_geometry_matches_pinned_upstream_fixtures() {
     let e = Engine::bundled_latest().unwrap();
     let data: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../tests/fixtures/october-objectives.json"
+        "../../../../tests/fixtures/effects-objectives.json"
     ))
     .unwrap();
     for case in data["masks"].as_array().unwrap() {
@@ -33,7 +33,7 @@ pub(in crate::engine::cards) fn objective_geometry_matches_pinned_upstream_fixtu
         }
         if let Some(loss) = case["loss"].as_u64() {
             s.card_runtime
-                .october
+                .effects
                 .grudge_losses
                 .insert(piece.id, loss as u8);
         }
@@ -48,7 +48,7 @@ pub(in crate::engine::cards) fn objective_geometry_matches_pinned_upstream_fixtu
         let mut s = position(&[("d4", Player::White, kind)]);
         let piece = at(&s, "d4");
         s.card_runtime
-            .october
+            .effects
             .grudge_losses
             .insert(piece.id, case["loss"].as_u64().unwrap() as u8);
         let mut actions = (0..64)
@@ -109,9 +109,9 @@ pub(in crate::engine::cards) fn swaps_bypass_grudge_geometry_but_check_both_pawn
         ("d4", Player::White, PieceKind::Pawn),
     ]);
     let dragon = at(&s, "a2");
-    s.card_runtime.october.grudge_losses.insert(dragon.id, 4);
+    s.card_runtime.effects.grudge_losses.insert(dragon.id, 4);
     s.card_runtime
-        .october
+        .effects
         .pawn_chain_links
         .push([at(&s, "c2").id, at(&s, "d4").id]);
     assert!(!has_move(&e, &s, "a2", "b4"));

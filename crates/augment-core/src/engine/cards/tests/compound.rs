@@ -56,7 +56,7 @@ pub(in crate::engine::cards) fn moves(
 pub(in crate::engine::cards) fn compound_moves_match_pinned_upstream_fixtures() {
     let engine = Engine::bundled_latest().unwrap();
     let data: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../tests/fixtures/october-compound.json"
+        "../../../../tests/fixtures/effects-compound.json"
     ))
     .unwrap();
     for fixture in data["fixtures"].as_array().unwrap() {
