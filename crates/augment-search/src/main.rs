@@ -63,41 +63,6 @@ fn cannon_fixtures(engine: &Engine) -> Result<Value, Box<dyn std::error::Error>>
         json!({"ruleset": engine.ruleset().id, "scope": "cannon-path/no-rules/no-passives", "cases": cases}),
     )
 }
-// Exact local regression trace: full Debug states/events and ordered legal actions.
-// This is a before/after engine comparison, not an original-site parity oracle.
-fn transition_trace(seed: u64, decisions: usize) -> Result<Value, Box<dyn std::error::Error>> {
-    let mut traces = Vec::new();
-    for engine in [
-        Engine::bundled_20260807()?,
-        Engine::bundled_20260818()?,
-        Engine::bundled_20260915()?,
-    ] {
-        let mut state = engine.new_game(Mode::Standard, seed)?;
-        let initial = format!("{state:?}");
-        let mut steps = Vec::new();
-        for step in 0..decisions {
-            if state.status != GameStatus::Ongoing {
-                break;
-            }
-            let actions = engine.legal_actions(&state)?;
-            if actions.is_empty() {
-                return Err("Ongoing trace has no legal actions".into());
-            }
-            let selected = (step * 17 + seed as usize % actions.len()) % actions.len();
-            let transition = engine.apply(&state, actions[selected].clone())?;
-            steps.push(
-                json!({"decision": step, "legal_actions": format!("{actions:?}"),
-                "selected_index": selected, "transition": format!("{transition:?}")}),
-            );
-            state = transition.state;
-        }
-        traces.push(json!({"ruleset": engine.ruleset().id, "initial": initial, "steps": steps}));
-    }
-    Ok(
-        json!({"seed": seed, "requested_decisions": decisions, "site_parity_verified": false,
-        "traces": traces}),
-    )
-}
 fn tactical_diagnostics(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let mut config = TacticalConfig::default();
     let mut flags = args.iter().skip(1);
@@ -368,11 +333,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if command == "policy-fit" {
         return policy_fit(&args);
     }
-    if !["bench", "play", "cannon-fixtures", "transition-trace"].contains(&command) {
+    if !["bench", "play", "cannon-fixtures"].contains(&command) {
         return Err(
-            "Expected bench, play, tactics, arena, teacher, policy-fit, cannon-fixtures, or \
-             transition-trace"
-                .into(),
+            "Expected bench, play, tactics, arena, teacher, policy-fit, or cannon-fixtures".into(),
         );
     }
     let mut config = SearchConfig::default();
@@ -405,13 +368,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             "--decisions" => decisions = value.parse()?,
             _ => return Err(format!("Unknown flag {flag}").into()),
         }
-    }
-    if command == "transition-trace" {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&transition_trace(seed, decisions)?)?
-        );
-        return Ok(());
     }
     let engine = if command == "cannon-fixtures" {
         Engine::bundled_20260915()?

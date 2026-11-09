@@ -82,11 +82,13 @@ fn contracts(ids: &std::collections::BTreeSet<&str>) -> Value {
 fn supported_cards_preserve_acquisition_actions_events_and_state_identity() {
     let expected: Value =
         serde_json::from_str(include_str!("fixtures/card-contracts.json")).unwrap();
-    let ids = expected
-        .as_array()
-        .unwrap()
+    // Cover every supported card, not just the ones already in the fixture. Reading the id set from
+    // the fixture made this self-referential: a newly supported card was never added to the fixture
+    // and so was never checked, which left 146 of 272 cards uncovered.
+    let ids: std::collections::BTreeSet<&str> = latest_catalog()
         .iter()
-        .map(|case| case["id"].as_str().unwrap())
+        .filter(|card| card.supported())
+        .map(|card| card.id.as_str())
         .collect();
     let actual = contracts(&ids);
     if let Ok(path) = std::env::var("AUGMENTIA_CONTRACT_DIAGNOSTIC") {
@@ -111,6 +113,7 @@ fn supported_cards_preserve_acquisition_actions_events_and_state_identity() {
     assert!(differences.is_empty(), "Changed contracts: {differences:?}");
     assert_eq!(
         actual.as_array().unwrap().len(),
-        expected.as_array().unwrap().len()
+        expected.as_array().unwrap().len(),
+        "the fixture must cover every supported card"
     );
 }
