@@ -14182,12 +14182,14 @@ mod tests {
             .grant_card(&state, 1, "parrot", Player::White)
             .unwrap()
             .state;
-        // princess is PASSIVE in this snapshot: granting transforms the rook immediately.
+        // parrot is ACTIVE: it transforms a chosen rook to a parrot on use.
         assert_eq!(
             granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Princess
+            PieceKind::Rook
         );
-        let changed = granted.clone();
+        let targets = engine.legal_actions(&granted).unwrap();
+        assert!(targets.contains(&use_card(1, "d4")));
+        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
         let result = changed.board.get("d4".parse().unwrap()).unwrap();
         assert_eq!(result.kind, PieceKind::Parrot);
         assert_eq!(result.owner, Player::White);
@@ -14330,16 +14332,12 @@ mod tests {
             .grant_card(&state, 1, "princess", Player::White)
             .unwrap()
             .state;
+        // princess is PASSIVE in this snapshot: granting transforms a rook immediately.
         assert_eq!(
             granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Rook
+            PieceKind::Princess
         );
-        let targets = engine.legal_actions(&granted).unwrap();
-        assert!(targets.contains(&use_card(1, "d4")));
-        for square in ["a1", "g7", "b2"] {
-            assert!(!targets.contains(&use_card(1, square)));
-        }
-        let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
+        let changed = granted.clone();
         let result = changed.board.get("d4".parse().unwrap()).unwrap();
         assert_eq!(result.kind, PieceKind::Princess);
         assert_eq!(result.owner, Player::White);
@@ -14745,13 +14743,16 @@ mod tests {
             .grant_card(&state, 1, "campfire", Player::White)
             .unwrap()
             .state;
+        // campfire is ACTIVE and takes a minor target; d4 is a knight, so it is still a knight after
+        // granting and becomes a campfire on use.
         assert_eq!(
             granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Rook
+            PieceKind::Knight
         );
         let targets = engine.legal_actions(&granted).unwrap();
         assert!(targets.contains(&use_card(1, "d4")));
-        for square in ["a1", "g7", "b2"] {
+        // A royal king and a black rook are not valid minor targets.
+        for square in ["a1", "g7"] {
             assert!(!targets.contains(&use_card(1, square)));
         }
         let changed = engine.apply(&granted, use_card(1, "d4")).unwrap().state;
