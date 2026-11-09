@@ -17,7 +17,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Workspace tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Workspace clippy failed' }
 & node --check (Join-Path $root 'crates/augment-app/src/web/static/app.js')
 if ($LASTEXITCODE -ne 0) { throw 'Web JavaScript syntax failed' }
-foreach ($testScript in @('test-acg-codec.mjs', 'test-acg-export.mjs', 'test-reference-help.mjs', 'test-workspace-ui.mjs', 'test-latest-ruleset.mjs', 'test-october-ports.mjs', 'test-opening-acquisition.mjs', 'test-target-procedure-ports.mjs', 'test-compound-pieces.mjs', 'test-delayed-ports.mjs', 'test-check-objectives.mjs', 'test-rule-ports.mjs', 'test-piece-card-ports.mjs', 'test-snapshot-transitions.mjs')) {
+foreach ($testScript in @('test-acg-codec.mjs', 'test-acg-export.mjs', 'test-reference-help.mjs', 'test-workspace-ui.mjs', 'test-latest-ruleset.mjs', 'test-runtime-ports.mjs', 'test-opening-acquisition.mjs', 'test-target-procedure-ports.mjs', 'test-compound-pieces.mjs', 'test-delayed-ports.mjs', 'test-check-objectives.mjs', 'test-rule-ports.mjs', 'test-piece-card-ports.mjs', 'test-snapshot-transitions.mjs')) {
     & node (Join-Path $PSScriptRoot $testScript)
     if ($LASTEXITCODE -ne 0) { throw ('Offline web check failed: ' + $testScript) }
 }
@@ -67,6 +67,6 @@ $processor = Get-CimInstance Win32_Processor | Select-Object -First 1
     baseline_commit = $commit; working_tree_changes = $true; measured_at_utc = (Get-Date).ToUniversalTime().ToString('o');
     rust = $rustVersion; node = $nodeVersion; cpu = $processor.Name; logical_processors = $processor.NumberOfLogicalProcessors;
     execution = 'serial local workload smoke; single sample per position; not playing strength';
-    benchmarks_skipped = [bool]$SkipBenchmarks; ruleset = 'augment_chess_20261017'; diagnostic_ruleset = 'augment_chess_20260915'; site_parity_verified = $false
+    benchmarks_skipped = [bool]$SkipBenchmarks; ruleset = 'augment_chess_20261102'; site_parity_verified = $false
 } | ConvertTo-Json | Out-File -Encoding utf8 (Join-Path $output 'environment.json')
 Write-Output ('Search verification artifacts: {0}' -f $output)

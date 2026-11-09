@@ -78,4 +78,4 @@ const lines = source.split(/\r?\n/);
 for (const card of ports.cards) for (const range of card.source_ranges) {
   assert.ok(Number.isInteger(range[0]) && range[0] > 0 && range[1] >= range[0] && range[1] <= lines.length);
 }
-console.log('October ports: pinned transform contracts, native minors, initiative/overwhelm/highlander/assembly source helpers passed; full interaction parity unverified.');
+console.log('Effect runtime ports: pinned transform contracts, native minors, initiative/overwhelm/highlander/assembly source helpers passed; full interaction parity unverified.');

@@ -73,7 +73,7 @@ const graphInputs=[
 ];
 const graphs=graphInputs.map(({squares,horde=null})=>{const entries=squares.map((s,i)=>({id:String(i+1).padStart(4,'0'),row:8-Number(s[1]),col:s.charCodeAt(0)-97}));const output=horde?c.hordePawnChainLinks(entries,horde):c.spatialPawnChainLinks(entries);return {squares,horde,expected:Array.from(output,pair=>Array.from(pair,Number))};});
 const fixture={source_bundle_sha256:createHash('sha256').update(bytes).digest('hex'),scope:'Native grudge masks, geometric loss restrictions and deterministic chain layouts. Unrelated state plumbing excluded.',masks,restrictions,graphs};
-const path=new URL('crates/augment-core/tests/fixtures/october-objectives.json',root);
+const path=new URL('crates/augment-core/tests/fixtures/effects-objectives.json',root);
 assert.ok(process.argv.slice(2).every(a=>a==='--write'));
 if(process.argv.includes('--write'))writeFileSync(path,JSON.stringify(fixture,null,2)+'\n',{flag:'wx'});
 assert.deepEqual(JSON.parse(readFileSync(path,'utf8')),fixture);

@@ -87,7 +87,7 @@ for(const kind of ['archbishop','chancellor']) for(const owner of ['white','blac
   fixtures.push({kind,owner,from,blockers,expected});
 }
 const expected={source_bundle_sha256:sha,scope:'Native compound rays and leaps without unrelated effects; generated from pinned parrotBaseMoves.',fixtures};
-const fixturePath=new URL('crates/augment-core/tests/fixtures/october-compound.json',root);
+const fixturePath=new URL('crates/augment-core/tests/fixtures/effects-compound.json',root);
 assert.ok(process.argv.slice(2).every(x=>x==='--write'));
 if(process.argv.includes('--write')) {mkdirSync(new URL('.',fixturePath),{recursive:true});writeFileSync(fixturePath,JSON.stringify(expected,null,2)+'\n',{flag:'wx'});}
 assert.deepEqual(JSON.parse(readFileSync(fixturePath,'utf8')),expected);
