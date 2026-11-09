@@ -10012,7 +10012,7 @@ mod tests {
         GameState::from_board(LATEST_RULESET_ID, Mode::Standard, board, turn, seed)
     }
 
-    fn september_state(pieces: &[(&str, Player, PieceKind)], turn: Player, seed: u64) -> GameState {
+    fn standard_state(pieces: &[(&str, Player, PieceKind)], turn: Player, seed: u64) -> GameState {
         let mut board = Board::empty();
         for (square, owner, kind) in pieces {
             board.set(square.parse().unwrap(), Some(Piece::new(*owner, *kind)));
@@ -10847,9 +10847,9 @@ mod tests {
     }
 
     #[test]
-    fn september_runtime_preserves_input_and_consumes_locust_charge() {
+    fn runtime_preserves_input_and_consumes_locust_charge() {
         let engine = Engine::bundled_latest().unwrap();
-        let mut state = september_state(
+        let mut state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("c3", Player::White, PieceKind::Knight),
@@ -14216,7 +14216,7 @@ mod tests {
     }
 
     #[test]
-    fn september_six_parrot_transformation_and_basic_behavior() {
+    fn parrot_transforms_an_own_rook_and_leaps() {
         let engine = Engine::bundled_latest().unwrap();
         let state = minimal_state(
             &[
@@ -14251,7 +14251,7 @@ mod tests {
     // L3851 catalog own-knight; L3903-3914 transforms own nonroyal knight.
     // L82170-82171: knight leaps. L3932: captures prohibited.
     #[test]
-    fn september_six_paladin_transformation_and_basic_behavior() {
+    fn paladin_transforms_an_own_knight_and_keeps_its_leap() {
         let engine = Engine::bundled_latest().unwrap();
         let state = minimal_state(
             &[
@@ -14645,7 +14645,7 @@ mod tests {
     }
 
     #[test]
-    fn september_six_octopus_transformation_and_basic_behavior() {
+    fn octopus_transforms_an_own_piece_and_reaches_diagonally() {
         let engine = Engine::bundled_latest().unwrap();
         let state = minimal_state(
             &[
@@ -16874,7 +16874,7 @@ mod tests {
     }
 
     #[test]
-    fn september_deletion_and_undead_timing_regression() {
+    fn deletion_and_undead_timing_regression() {
         let engine = Engine::bundled_latest().unwrap();
         let mut state = minimal_state(
             &[
@@ -16916,7 +16916,7 @@ mod tests {
     }
 
     #[test]
-    fn september_queens_gambit_transform_protection_regression() {
+    fn queens_gambit_transform_protection_regression() {
         let engine = Engine::bundled_latest().unwrap();
         let mut state = minimal_state(
             &[
@@ -17297,7 +17297,7 @@ mod tests {
     #[test]
     fn metal_restricts_range_and_applies_three_owner_turns_of_cooldown() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("h1", Player::White, PieceKind::King),
                 ("d4", Player::White, PieceKind::Rook),
@@ -17340,7 +17340,7 @@ mod tests {
     #[test]
     fn false_start_advances_each_friendly_file_as_far_as_its_path_allows() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::Rook),
                 ("a2", Player::White, PieceKind::Pawn),
@@ -17382,7 +17382,7 @@ mod tests {
     #[test]
     fn locust_swarm_grants_one_adjacent_hurdle_jump_to_unmoved_non_pawns() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("c3", Player::White, PieceKind::Knight),
@@ -17437,7 +17437,7 @@ mod tests {
     #[test]
     fn thief_transforms_a_queen_leaps_and_is_arrested_after_losing_submerge() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("c3", Player::White, PieceKind::Queen),
@@ -17463,7 +17463,7 @@ mod tests {
         // Arrest needs the thief to lose submerge *and* carry the wanted mark, both of which the
         // acquisition path sets up. Approaching an enemy reveals it, and the reveal removes it.
         // The old test built the thief by hand with no wanted mark, so nothing ever arrested it.
-        let exposed_state = september_state(
+        let exposed_state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("c3", Player::White, PieceKind::Queen),
@@ -17494,7 +17494,7 @@ mod tests {
     #[test]
     fn brutus_can_capture_its_friendly_king() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("a3", Player::White, PieceKind::Rook),
@@ -17525,7 +17525,7 @@ mod tests {
     #[test]
     fn big_bishop_opening_creates_a_two_by_two_diagonal_large_piece() {
         let engine = Engine::bundled_latest().unwrap();
-        let state = september_state(
+        let state = standard_state(
             &[
                 ("a1", Player::White, PieceKind::King),
                 ("h8", Player::Black, PieceKind::King),
@@ -17553,7 +17553,7 @@ mod tests {
     #[test]
     fn recurrence_marks_a_random_non_pawn_and_respawns_it_on_the_home_rank() {
         let engine = Engine::bundled_latest().unwrap();
-        let mut state = september_state(
+        let mut state = standard_state(
             &[
                 ("a2", Player::White, PieceKind::Pawn),
                 ("c3", Player::White, PieceKind::Bishop),

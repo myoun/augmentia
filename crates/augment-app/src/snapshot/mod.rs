@@ -589,7 +589,7 @@ const CARD_CATEGORY_GROUPS = Object.freeze({
     }
 
     #[test]
-    fn declarative_extract_covers_september_definitions() {
+    fn declarative_extract_covers_a_captured_bundle() {
         let source = std::fs::read(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../rulesets/augment_chess_20260915/sources/raw/main-6qeAcxbX.js"
