@@ -573,6 +573,12 @@ impl Context<'_> {
     }
 }
 /// Deliberately weak, transparent baseline. Does not value card synergies or alternate objectives.
+///
+/// Piece values come from the snapshot's own bundle rather than a hand-written table: `PIECE_VALUES`
+/// for the 71 kinds it lists, and `AI_PIECE_VALUES` divided by 100 for the five it omits. The two
+/// upstream tables are not the same scale (their ratio ranges from 45 to 155 depending on the piece),
+/// so they must not be mixed freely. Royal kinds share the king's value because losing one ends the
+/// game. Exhaustive by construction: every `PieceKind` has an arm, so nothing falls to a default.
 pub fn material_score(state: &GameState, root: Player) -> f64 {
     match state.status {
         GameStatus::Won { winner, .. } => {
@@ -588,17 +594,92 @@ pub fn material_score(state: &GameState, root: Player) -> f64 {
             .iter()
             .map(|(_, piece)| {
                 let value = match piece.kind {
+                    // The inert rule monster has no material worth; the summonable one is priced.
                     PieceKind::Monster if state.ruleset_id == augment_core::LATEST_RULESET_ID => {
                         0.0
                     }
-                    PieceKind::Pawn => 1.0,
-                    PieceKind::Knight | PieceKind::Bishop => 3.0,
-                    PieceKind::Rook => 5.0,
-                    PieceKind::Queen => 9.0,
-                    PieceKind::Archbishop => 7.5,
-                    PieceKind::Chancellor => 8.5,
+                    PieceKind::Alfil => 1.0,
+                    PieceKind::Alibaba => 3.1,
+                    PieceKind::Amazon => 13.0,
+                    PieceKind::Archbishop => 7.0,
+                    PieceKind::Assassin => 4.0,
+                    PieceKind::BabyBear => 4.0,
+                    PieceKind::Barrier => 5.0,
+                    PieceKind::Bat => 2.6,
+                    PieceKind::Beacon => 5.0,
+                    PieceKind::Bear => 17.0,
+                    PieceKind::BerolinaPawn => 1.0,
+                    PieceKind::Berserker => 7.0,
+                    PieceKind::BigBishop => 8.0,
+                    PieceKind::BigRook => 8.0,
+                    PieceKind::Bishop => 3.0,
+                    PieceKind::Brutus => 10.0,
+                    PieceKind::Camel => 2.0,
+                    PieceKind::Campfire => 4.0,
+                    PieceKind::Cannon => 4.0,
+                    PieceKind::Cardinal => 7.0,
+                    PieceKind::Chancellor => 8.0,
+                    PieceKind::Checker => 1.0,
+                    PieceKind::CheckerKing => 2.0,
+                    PieceKind::Clockwork => 5.0,
+                    PieceKind::Colossus => 12.0,
+                    PieceKind::Crown => 9.4,
+                    PieceKind::DarkWizard => 100.0,
+                    PieceKind::DonQuixote => 7.0,
+                    PieceKind::Dragon => 5.0,
+                    PieceKind::Fanatic => 1.0,
+                    PieceKind::Ferz => 2.1,
+                    PieceKind::Football => 0.0,
+                    PieceKind::Grappler => 13.0,
+                    PieceKind::Grasshopper => 4.0,
+                    PieceKind::Guard => 2.0,
+                    PieceKind::Hedgehog => 9.0,
+                    PieceKind::Herald => 5.0,
+                    PieceKind::Hook => 15.0,
+                    PieceKind::Idol => 9.0,
+                    PieceKind::Jester => 9.0,
+                    PieceKind::Killer => 3.0,
                     PieceKind::King => 100.0,
-                    _ => 3.0, // Unknown strategic value is not unknown legality.
+                    PieceKind::Knight => 3.0,
+                    PieceKind::Knightmaster => 3.0,
+                    PieceKind::Lobster => 2.0,
+                    PieceKind::Log => 2.0,
+                    PieceKind::MagicGirl => 6.0,
+                    PieceKind::Man => 4.0,
+                    PieceKind::Medium => 3.0,
+                    PieceKind::Merchant => 100.0,
+                    PieceKind::Missionary => 2.0,
+                    PieceKind::Monster => 4.0,
+                    PieceKind::Octopus => 5.0,
+                    PieceKind::Offering => 5.0,
+                    PieceKind::OmegaChesstron => 99.0,
+                    PieceKind::Paladin => 4.0,
+                    PieceKind::Parrot => 5.0,
+                    PieceKind::Pawn => 1.0,
+                    PieceKind::PrimeMinister => 9.0,
+                    PieceKind::Princess => 6.0,
+                    PieceKind::Protestant => 3.0,
+                    PieceKind::Queen => 9.0,
+                    PieceKind::Reaper => 9.0,
+                    PieceKind::Recruiter => 9.0,
+                    PieceKind::RevolvingDoor => 5.0,
+                    PieceKind::Rook => 5.0,
+                    PieceKind::RoyalKnight => 100.0,
+                    PieceKind::Scarecrow => 3.0,
+                    PieceKind::SiegeRam => 5.0,
+                    PieceKind::Siren => 9.0,
+                    PieceKind::Slime => 5.0,
+                    PieceKind::Squire => 1.0,
+                    PieceKind::StandardBearer => 2.0,
+                    PieceKind::Thief => 9.0,
+                    PieceKind::TransmissionTower => 5.0,
+                    PieceKind::Trickster => 5.0,
+                    PieceKind::Undead => 9.0,
+                    PieceKind::Unicorn => 6.5,
+                    PieceKind::Vip => 0.0,
+                    PieceKind::Wanderer => 5.0,
+                    PieceKind::Windmill => 4.0,
+                    PieceKind::Wizard => 9.0,
                 };
                 if piece.owner == root { value } else { -value }
             })
