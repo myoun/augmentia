@@ -105,25 +105,35 @@ mod tests {
     }
 }
 
+/// Pins the current highlander contract at board level.
+///
+/// This module used to be `historical_contract_tests` and asserted that *three* distinct own types
+/// were enough to win. The current ruleset needs four distinct types and a literal king
+/// (`resolve_highlander_victory`), so the old position never won. The scenario is kept, extended by
+/// one distinct type, and the duplicate case now duplicates an existing type instead of a pawn.
 #[cfg(test)]
-mod historical_contract_tests {
+mod current_contract_tests {
     use super::*;
 
     #[test]
     fn highlander_unique_types_win_but_duplicate_pawns_do_not() {
         let engine = Engine::bundled_latest().unwrap();
-        for (duplicate_pawn, wins) in [(false, true), (true, false)] {
+        // Four distinct types (king, bishop, rook, pawn) win; the duplicate variant repeats the
+        // bishop, leaving only three distinct types, which must not.
+        for (duplicate, wins) in [(false, true), (true, false)] {
             let mut board = crate::Board::empty();
             for (square, owner, kind) in [
                 ("a1", Player::White, PieceKind::King),
                 ("b2", Player::White, PieceKind::Pawn),
+                ("c2", Player::White, PieceKind::Bishop),
+                ("d2", Player::White, PieceKind::Rook),
                 (
-                    "c2",
+                    "e2",
                     Player::White,
-                    if duplicate_pawn {
-                        PieceKind::Pawn
-                    } else {
+                    if duplicate {
                         PieceKind::Bishop
+                    } else {
+                        PieceKind::Knight
                     },
                 ),
                 ("h8", Player::Black, PieceKind::King),
@@ -137,6 +147,13 @@ mod historical_contract_tests {
                 Player::White,
                 915,
             );
+            let distinct = state
+                .board
+                .iter()
+                .filter(|(_, piece)| piece.owner == Player::White)
+                .map(|(_, piece)| piece.kind)
+                .collect::<BTreeSet<_>>()
+                .len();
             let next = engine
                 .grant_card(&state, 1, "highlander", Player::White)
                 .unwrap()
@@ -149,7 +166,8 @@ mod historical_contract_tests {
                         ..
                     }
                 ),
-                wins
+                wins,
+                "duplicate={duplicate} has {distinct} distinct types"
             );
         }
     }
