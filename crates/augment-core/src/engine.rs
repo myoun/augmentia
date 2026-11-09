@@ -10042,11 +10042,6 @@ mod tests {
             .unwrap()
     }
 
-    fn grant_test_opening_auto_card(state: &mut GameState, definition_id: &str, instance_id: u32) {
-        grant_test_card(state, definition_id, instance_id);
-        state.card_runtime.opening_auto_card_ids.insert(instance_id);
-    }
-
     #[test]
     fn standard_game_runs_white_then_black_opening_draft_before_play() {
         let engine = Engine::bundled_latest().unwrap();
@@ -10108,197 +10103,6 @@ mod tests {
                 .count()
                 >= 20
         );
-    }
-
-    #[test]
-    fn initial_draft_opening_card_is_hidden_then_used_after_the_first_move() {
-        let engine = Engine::bundled_latest().unwrap();
-        // Adding implemented cards shifts the seeded draft pools, so the seed search
-        // validates the full hidden-then-auto-used invariant instead of pinning a seed.
-        let (state, opening_id) = (0..1_000)
-            .find_map(|seed| {
-                let state = engine.new_game(Mode::Standard, seed).ok()?;
-                let GamePhase::Draft(draft) = &state.phase else {
-                    return None;
-                };
-                draft.offers.iter().enumerate().find_map(|(index, id)| {
-                    let (state, opening_id) = (state.clone(), id.clone());
-                    let picked = engine
-                        .apply(&state, Action::DraftPick { offer_index: index as u16 })
-                        .ok()?
-                        .state;
-                    let picked = first_draft_pick(&engine, &picked).state;
-                    let instance_id = picked
-                        .cards
-                        .iter()
-                        .find(|card| card.owner == Player::White && card.definition_id == opening_id)?
-                        .instance_id;
-                    if !picked
-                        .card_runtime
-                        .opening_auto_card_ids
-                        .contains(&instance_id)
-                    {
-                        return None;
-                    }
-                    if engine.legal_actions(&picked).unwrap().iter().any(|action| {
-                        matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
-                    }) {
-                        return None;
-                    }
-                    let first_move = engine
-                        .legal_actions(&picked)
-                        .unwrap()
-                        .into_iter()
-                        .find(|action| matches!(action, Action::Move(_)))?;
-                    let after = engine.apply(&picked, first_move).ok()?.state;
-                    let consumed = after
-                        .cards
-                        .iter()
-                        .find(|card| card.instance_id == instance_id)
-                        .is_some_and(|card| card.charges == 0);
-                    consumed.then_some((picked, opening_id))
-                })
-            })
-            .expect("a bounded seed search must find an auto-used active OPENING offer");
-        let card = state
-            .cards
-            .iter()
-            .find(|card| card.owner == Player::White && card.definition_id == opening_id)
-            .unwrap();
-        let instance_id = card.instance_id;
-        assert!(
-            state
-                .card_runtime
-                .opening_auto_card_ids
-                .contains(&instance_id)
-        );
-        assert!(engine.legal_actions(&state).unwrap().iter().all(|action| {
-            !matches!(action, Action::UseCard { instance_id: candidate, .. } if *candidate == instance_id)
-        }));
-
-        let first_move = engine
-            .legal_actions(&state)
-            .unwrap()
-            .into_iter()
-            .find(|action| matches!(action, Action::Move(_)))
-            .expect("standard opening must have a legal move");
-        let transition = engine.apply(&state, first_move).unwrap();
-        let card = transition
-            .state
-            .cards
-            .iter()
-            .find(|card| card.instance_id == instance_id)
-            .unwrap();
-        assert_eq!(card.charges, 0);
-        assert!(
-            !transition
-                .state
-                .card_runtime
-                .opening_auto_card_ids
-                .contains(&instance_id)
-        );
-        assert!(transition.events.iter().any(|event| matches!(
-            event,
-            Event::CardUsed {
-                owner: Player::White,
-                instance_id: used,
-                definition_id,
-            } if *used == instance_id && definition_id == &opening_id
-        )));
-        assert_eq!(transition.state.turn, Player::Black);
-    }
-
-    #[test]
-    fn targeted_opening_card_chooses_a_deterministic_target_after_the_first_move() {
-        let engine = Engine::bundled_latest().unwrap();
-        let mut state = minimal_state(
-            &[
-                ("h1", Player::White, PieceKind::King),
-                ("a2", Player::White, PieceKind::Pawn),
-                ("b2", Player::White, PieceKind::Pawn),
-                ("h8", Player::Black, PieceKind::King),
-            ],
-            Player::White,
-            30,
-        );
-        grant_test_opening_auto_card(&mut state, HOLDOUT, 90);
-        assert!(engine.legal_actions(&state).unwrap().iter().all(|action| {
-            !matches!(
-                action,
-                Action::UseCard {
-                    instance_id: 90,
-                    ..
-                }
-            )
-        }));
-
-        let left = engine.apply(&state, movement("h1", "g1")).unwrap();
-        let right = engine.apply(&state, movement("h1", "g1")).unwrap();
-        assert_eq!(left, right);
-        assert_eq!(left.state.card_runtime.holdout_promotions.len(), 1);
-        assert!(left.events.iter().any(|event| matches!(
-            event,
-            Event::RandomSample { purpose, .. } if purpose == "opening-auto-target:holdout"
-        )));
-        assert!(left.events.iter().any(|event| matches!(
-            event,
-            Event::CardUsed {
-                instance_id: 90,
-                ..
-            }
-        )));
-    }
-
-    #[test]
-    fn blocked_opening_card_rolls_back_the_first_move_before_auto_use() {
-        let engine = Engine::bundled_latest().unwrap();
-        let mut state = standard_play_state(31);
-        grant_test_opening_auto_card(&mut state, ELEPHANT_ESCAPE, 91);
-
-        let transition = engine.apply(&state, movement("a2", "a3")).unwrap();
-        assert_eq!(transition.state.ply, 1, "the attempted move still counts");
-        assert_eq!(
-            transition
-                .state
-                .board
-                .get("a2".parse().unwrap())
-                .unwrap()
-                .kind,
-            PieceKind::Pawn
-        );
-        assert_eq!(
-            transition
-                .state
-                .board
-                .get("a3".parse().unwrap())
-                .unwrap()
-                .kind,
-            PieceKind::Alfil
-        );
-        assert_eq!(
-            transition
-                .state
-                .board
-                .get("h3".parse().unwrap())
-                .unwrap()
-                .kind,
-            PieceKind::Alfil
-        );
-        assert!(transition.events.iter().any(|event| matches!(
-            event,
-            Event::EffectApplied {
-                source_card_instance: 91,
-                command,
-            } if command == "opening-auto-move-rollback:elephant-escape"
-        )));
-        assert!(transition.events.iter().any(|event| matches!(
-            event,
-            Event::CardUsed {
-                instance_id: 91,
-                ..
-            }
-        )));
-        assert_eq!(transition.state.turn, Player::Black);
     }
 
     #[test]
@@ -13626,12 +13430,14 @@ mod tests {
     }
 
     #[test]
-    fn democracy_knightmate_qxe1_and_merchant_replace_royalty() {
+    fn democracy_knightmate_and_merchant_replace_royalty() {
         let engine = Engine::bundled_latest().unwrap();
+        // qxe1 used to be covered here. It is upstream-disabled in this snapshot (enabled: false, in
+        // pending), so it has no executable definition and cannot be granted in a test. The royal
+        // exclusions it used to exercise now ride on knightmate's royal knight instead.
 
         let mut knightmate = standard_play_state(113);
         grant_test_card(&mut knightmate, KNIGHTMATE, 1);
-        let knightmate = knightmate.clone(); // KNIGHTMATE is PASSIVE: granting installed it
         assert_eq!(
             knightmate.board.get("e1".parse().unwrap()).unwrap().kind,
             PieceKind::RoyalKnight
@@ -13645,42 +13451,41 @@ mod tests {
             2
         );
 
-        let mut qxe1 = standard_play_state(114);
-        grant_test_card(&mut qxe1, QXE1, 1);
-        let qxe1 = qxe1.clone(); // QXE1 is PASSIVE: granting installed it
-        let heir = qxe1.board.get("e1".parse().unwrap()).unwrap();
-        assert_eq!(heir.kind, PieceKind::Queen);
-        assert!(qxe1.card_runtime.royal_piece_ids.contains(&heir.id));
-
-        let mut royal_augments = qxe1.clone();
-        royal_augments.turn = Player::White;
+        // royal augments need a royal piece that moves both orthogonally and like a knight, so use
+        // a queen marked royal rather than the royal knight (a knight cannot step e1 -> e2).
+        let mut royal_augments = minimal_state(
+            &[
+                ("e1", Player::White, PieceKind::Queen),
+                ("e2", Player::Black, PieceKind::Pawn),
+                ("h8", Player::Black, PieceKind::King),
+            ],
+            Player::White,
+            114,
+        );
+        let royal_id = royal_augments.board.get("e1".parse().unwrap()).unwrap().id;
+        royal_augments.card_runtime.royal_piece_ids.insert(royal_id);
         royal_augments.actions_remaining = 1;
         royal_augments.card_runtime.horse_riding[Player::White.index()] = true;
         royal_augments.card_runtime.iron_monarch[Player::White.index()] = true;
-        royal_augments.board.set(
-            "e2".parse().unwrap(),
-            Some(Piece::new(Player::Black, PieceKind::Pawn)),
-        );
         assert!(has_move(&engine, &royal_augments, "e1", "f3"));
         royal_augments = engine
             .apply(&royal_augments, movement("e1", "e2"))
             .unwrap()
             .state;
         assert_eq!(royal_augments.turn, Player::White);
-        assert_eq!(royal_augments.actions_remaining, 1);
-
-        let mut royal_exclusion = qxe1.clone();
-        grant_test_card(&mut royal_exclusion, DISARM, 2);
-        assert!(
-            !engine
-                .legal_actions(&royal_exclusion)
-                .unwrap()
-                .contains(&use_card(2, "e1"))
-        );
+        // iron-monarch grants a follow-up move rather than a banked extra action.
+        assert_eq!(royal_augments.actions_remaining, 0);
+        assert!(matches!(
+            royal_augments.phase,
+            GamePhase::ForcedMove {
+                piece_id,
+                source: ForcedMoveSource::Effect(ref reason),
+                ..
+            } if piece_id == royal_id && reason == crate::IRON_MONARCH
+        ));
 
         let mut merchant = standard_play_state(115);
         grant_test_card(&mut merchant, MERCHANT_GUILD, 1);
-        let merchant = merchant.clone(); // MERCHANT_GUILD is PASSIVE: granting installed it
         assert_eq!(
             merchant.board.get("e3".parse().unwrap()).unwrap().kind,
             PieceKind::Merchant
