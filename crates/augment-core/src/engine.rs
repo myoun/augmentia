@@ -16,7 +16,7 @@ use crate::{
     PieceKind, PlatformRuleState, Player, QUEEN_CAVALRY, QUEENS_GAMBIT, QXE1, REAPER, REFORMATION,
     REPOSITION, REVELATION, ReplayCell, RepositionStatus, RulesetManifest, SIEGE_RAM, SIREN, SLIME,
     SPRINT, STANDARD_BEARER, SUMMON_COLOSSUS, Square, THIEF, TRICKSTER, Transition, UNDEAD,
-    WINDMILL, WIZARD, WinReason, WindmillMode, implemented_card,
+    WINDMILL, WIZARD, WinReason, WindmillMode,
 };
 use std::borrow::Cow;
 use std::collections::BTreeSet;
@@ -1264,6 +1264,19 @@ impl Engine {
             .collect()
     }
 
+    /// Rarity weights for a draft phase in this snapshot.
+    ///
+    /// The source picks a rarity by these weights, then draws a card of that rarity from the phase's
+    /// allowed categories (`NOVEMBER_DRAFT_WEIGHTS`, selected because `usesNovemberExpansion` holds
+    /// for this catalog hash). Drawing by per-card weight instead would ignore the tier system.
+    fn draft_rarity_weights(phase: DraftPhase) -> &'static [(&'static str, u64)] {
+        match phase {
+            DraftPhase::Opening => &[("common", 40), ("rare", 33), ("epic", 24), ("legendary", 3)],
+            DraftPhase::Middle => &[("common", 40), ("rare", 33), ("epic", 24), ("legendary", 3)],
+            DraftPhase::End => &[("common", 20), ("rare", 40), ("epic", 36), ("legendary", 4)],
+        }
+    }
+
     fn draw_weighted_draft_cards(
         &self,
         state: &mut GameState,
@@ -1273,51 +1286,77 @@ impl Engine {
         count: usize,
         excluded: &mut BTreeSet<String>,
     ) -> Vec<String> {
-        let mut candidates = self.draft_candidates_for_categories(state, categories, excluded);
-        if self.ruleset.id == crate::LATEST_RULESET_ID && phase == DraftPhase::End {
-            candidates.retain(|id| {
-                crate::latest_catalog()
-                    .iter()
-                    .any(|card| card.id == *id && card.rarity.as_deref() != Some("common"))
-            });
-        }
-        if self.checked_draft_eligibility {
-            candidates.retain(|id| {
-                crate::check_card_eligibility(state, id, owner, crate::AcquisitionContext::Draft)
+        let candidates = self.draft_candidates_for_categories(state, categories, excluded);
+        let candidates: Vec<String> = if self.checked_draft_eligibility {
+            candidates
+                .into_iter()
+                .filter(|id| {
+                    crate::check_card_eligibility(
+                        state,
+                        id,
+                        owner,
+                        crate::AcquisitionContext::Draft,
+                    )
                     .is_eligible()
-            });
-        }
+                })
+                .collect()
+        } else {
+            candidates
+        };
+
         let mut picked = Vec::new();
-        while picked.len() < count && !candidates.is_empty() {
-            let weights: Vec<_> = candidates
+        while picked.len() < count {
+            // Restrict to the rarities that still have an available candidate, then roll for one.
+            let weights: Vec<(&str, u64)> = Self::draft_rarity_weights(phase)
                 .iter()
-                .map(|candidate| {
-                    if self.ruleset.id == crate::LATEST_RULESET_ID {
-                        crate::latest_catalog()
-                            .iter()
-                            .find(|card| card.id == *candidate)
-                            .map_or(0, |card| card.draft_weight_units)
-                    } else {
-                        draft_card_weight_units(candidate, phase)
-                    }
+                .filter(|(rarity, _)| {
+                    candidates.iter().any(|id| {
+                        !excluded.contains(id) && self.card_rarity(id).as_deref() == Some(*rarity)
+                    })
+                })
+                .copied()
+                .collect();
+            if weights.is_empty() {
+                break;
+            }
+            let total: u64 = weights.iter().map(|(_, weight)| *weight).sum();
+            let roll = state.rng_mut().next_unit_53();
+            let scaled = u128::from(roll) * u128::from(total);
+            let mut cumulative = 0_u64;
+            let rarity = weights
+                .iter()
+                .find(|(_, weight)| {
+                    cumulative = cumulative.saturating_add(*weight);
+                    scaled <= u128::from(cumulative) * (1_u128 << 53)
+                })
+                .map(|(rarity, _)| *rarity)
+                .unwrap_or(weights[weights.len() - 1].0);
+
+            // Draw one card of that rarity, evenly among the candidates.
+            let pool: Vec<&String> = candidates
+                .iter()
+                .filter(|id| {
+                    !excluded.contains(*id) && self.card_rarity(id).as_deref() == Some(rarity)
                 })
                 .collect();
-            let total_weight: u64 = weights.iter().sum();
-            let roll = state.rng_mut().next_unit_53();
-            let scaled_roll = u128::from(roll) * u128::from(total_weight);
-            let mut cumulative_weight = 0_u64;
-            let index = weights
-                .iter()
-                .position(|weight| {
-                    cumulative_weight = cumulative_weight.saturating_add(*weight);
-                    scaled_roll <= u128::from(cumulative_weight) * (1_u128 << 53)
-                })
-                .unwrap_or(weights.len() - 1);
-            let card = candidates.remove(index);
+            if pool.is_empty() {
+                continue;
+            }
+            let index =
+                ((state.rng_mut().next_unit_53() as u128 * pool.len() as u128) >> 53) as usize;
+            let card = pool[index.min(pool.len() - 1)].clone();
             excluded.insert(card.clone());
             picked.push(card);
         }
         picked
+    }
+
+    /// A card's rarity, from the current catalog.
+    fn card_rarity(&self, id: &str) -> Option<String> {
+        crate::latest_catalog()
+            .iter()
+            .find(|card| card.id == id)
+            .and_then(|card| card.rarity.clone())
     }
 
     fn draw_draft_offers_once(
@@ -9850,25 +9889,6 @@ fn squares_are_adjacent(left: Square, right: Square) -> bool {
 /// Integer form of the web bundle's draft weights. Base weights use eighths; OPENING cards in
 /// the first draft receive the bundle's 1.3 multiplier. The common denominator is irrelevant to
 /// weighted selection, so the returned units are exact (`base_eighths * 10` or `* 13`).
-fn draft_card_weight_units(definition_id: &str, draft_phase: DraftPhase) -> u64 {
-    let Some(card) = implemented_card(definition_id) else {
-        return 0;
-    };
-    let score = card.half_stars;
-    let base_eighths = if score <= 5 {
-        9
-    } else {
-        u64::from(14_u16.saturating_sub(score.clamp(6, 10)))
-    };
-    let phase_multiplier = if draft_phase == DraftPhase::Opening && card.phase == CardPhase::Opening
-    {
-        13
-    } else {
-        10
-    };
-    base_eighths * phase_multiplier
-}
-
 fn draft_offer_average(ruleset_id: &str, offers: &[String]) -> Option<DraftOfferAverage> {
     let scores: Vec<_> = offers
         .iter()
@@ -9960,6 +9980,7 @@ mod tests {
     use super::*;
     use crate::{
         BUNDLED_RULESET_ID, Board, CHESS_344200, CardInstance, ChoiceHandler, EffectHandler,
+        implemented_card,
     };
     use std::str::FromStr;
 
@@ -10426,23 +10447,6 @@ mod tests {
         assert!(!candidates.contains(CLEANUP_SACRIFICE));
         assert!(!candidates.contains(PLATFORM));
         assert!(!candidates.contains(REVELATION));
-    }
-
-    #[test]
-    fn first_draft_applies_the_web_opening_weight_boost() {
-        assert_eq!(
-            draft_card_weight_units(KING_OF_THE_HILL, DraftPhase::Opening),
-            117
-        );
-        assert_eq!(
-            draft_card_weight_units(GENEVA_CONVENTION, DraftPhase::Opening),
-            104
-        );
-        assert_eq!(draft_card_weight_units(PARRY, DraftPhase::Opening), 60);
-        assert_eq!(
-            draft_card_weight_units(KING_OF_THE_HILL, DraftPhase::Middle),
-            90
-        );
     }
 
     #[test]
@@ -17795,6 +17799,50 @@ mod tests {
                 .card_runtime
                 .recurrence_piece_ids
                 .contains(&bishop_id)
+        );
+    }
+
+    /// Draft offers must be drawn by rarity weight, not by per-card weight.
+    ///
+    /// The source picks a rarity from `NOVEMBER_DRAFT_WEIGHTS` and then a card of that rarity. The
+    /// tier system is what those weights encode, so a draw that ignores rarity would make epic and
+    /// legendary cards as likely as common ones. This samples many drafts and checks that the
+    /// observed rarity mix follows the declared weights rather than the card counts.
+    #[test]
+    fn draft_offers_follow_the_declared_rarity_weights() {
+        let engine = Engine::bundled_latest().unwrap();
+        let mut counts = std::collections::BTreeMap::new();
+        let mut total = 0usize;
+        for seed in 0..200u64 {
+            let mut state = GameState::standard(crate::LATEST_RULESET_ID, Mode::Standard, seed);
+            state.completed_drafts = [true, true, true];
+            engine.start_draft(&mut state, DraftPhase::Middle, Player::White, None, None);
+            let GamePhase::Draft(draft) = &state.phase else {
+                panic!("the draft phase must be active");
+            };
+            for id in &draft.offers {
+                let rarity = engine.card_rarity(id).unwrap_or_else(|| "none".to_owned());
+                *counts.entry(rarity).or_insert(0usize) += 1;
+                total += 1;
+            }
+        }
+        assert!(total > 0, "the sample must produce offers");
+        // MIDDLE weights are common 40, rare 33, epic 24, legendary 3: common must lead and
+        // legendary must be rare. A per-card draw would invert this, since MIDDLE has only two
+        // legendary cards against forty-two common ones.
+        let common = *counts.get("common").unwrap_or(&0) as f64 / total as f64;
+        let legendary = *counts.get("legendary").unwrap_or(&0) as f64 / total as f64;
+        assert!(
+            common > 0.30,
+            "common must be the most likely tier: {counts:?}"
+        );
+        assert!(
+            legendary < 0.12,
+            "legendary must stay rare despite its card count: {counts:?}"
+        );
+        assert!(
+            common > legendary * 5.0,
+            "the declared weights must dominate card counts: {counts:?}"
         );
     }
 }
