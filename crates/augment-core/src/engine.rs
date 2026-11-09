@@ -14686,8 +14686,10 @@ mod tests {
     // L1058-1064 catalog own-queen; L86537-86538 transforms queen.
     // L86114 initializes bearRetaliationsRemaining; L1164-1165 gives two charges.
     // L82310-82311: king-step movement.
+    // Named for the behaviour rather than the September balance pass it used to track; that pass is
+    // not in the code any more, and the assertions below pin the current snapshot.
     #[test]
-    fn september_six_hedgehog_transformation_and_basic_behavior() {
+    fn hedgehog_transforms_an_own_queen_and_gains_two_retaliations() {
         let engine = Engine::bundled_latest().unwrap();
         let state = minimal_state(
             &[
@@ -14704,21 +14706,17 @@ mod tests {
             .grant_card(&state, 1, "hedgehog", Player::White)
             .unwrap()
             .state;
-        // hedgehog is PASSIVE in this snapshot: granting transforms the queen immediately.
-        assert_eq!(
-            granted.board.get("d4".parse().unwrap()).unwrap().kind,
-            PieceKind::Hedgehog
-        );
-        let changed = granted.clone();
-        let result = changed.board.get("d4".parse().unwrap()).unwrap();
+        // hedgehog is PASSIVE in this snapshot: granting transforms the queen immediately, so there
+        // is no `UseCard` step and the touched square is already the hedgehog.
+        let result = granted.board.get("d4".parse().unwrap()).unwrap();
         assert_eq!(result.kind, PieceKind::Hedgehog);
         assert_eq!(result.owner, Player::White);
-        assert_eq!(changed.turn, Player::White);
+        assert_eq!(granted.turn, Player::White);
         assert_eq!(
-            changed.card_runtime.bear_retaliations.get(&result.id),
+            granted.card_runtime.bear_retaliations.get(&result.id),
             Some(&2)
         );
-        let moves = engine.legal_actions(&changed).unwrap();
+        let moves = engine.legal_actions(&granted).unwrap();
         assert!(moves.contains(&movement("d4", "e5")));
         assert!(!moves.contains(&movement("d4", "d6")));
     }
