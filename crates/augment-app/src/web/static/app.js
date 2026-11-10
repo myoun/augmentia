@@ -13,8 +13,6 @@ const elements = {
   plyValue: document.querySelector("#plyValue"),
   actionValue: document.querySelector("#actionValue"),
   turnValue: document.querySelector("#turnValue"),
-  whiteStars: document.querySelector("#whiteStars"),
-  blackStars: document.querySelector("#blackStars"),
   whiteCards: document.querySelector("#whiteCards"),
   blackCards: document.querySelector("#blackCards"),
   decisionPanel: document.querySelector("#decisionPanel"),
@@ -244,8 +242,6 @@ function renderHeader() {
   elements.plyValue.textContent = game.ply;
   elements.actionValue.textContent = game.actionsRemaining;
   elements.turnValue.textContent = `${game.turns.white} / ${game.turns.black}`;
-  elements.whiteStars.textContent = `${game.stars.white} ★`;
-  elements.blackStars.textContent = `${game.stars.black} ★`;
 }
 
 function phaseDetail() {
@@ -483,7 +479,7 @@ function renderCards(owner, container) {
     button.querySelector(".card-meta").textContent = card.pending || stateLabel;
     button.classList.toggle("spent", card.charges === 0 && card.activation !== "passive" && !card.openingAutoPending && !card.locked);
     button.setAttribute("aria-label", `${card.name} · ${stateLabel}`);
-    registerInfo(button, card.name, `${card.description}${card.help ? `\n${card.help}` : ""}\n${stateLabel} · ${card.stars}★`);
+    registerInfo(button, card.name, `${card.description}${card.help ? `\n${card.help}` : ""}\n${stateLabel} · ${rarityLabel(card)}`);
     button.addEventListener("click", () => {
       if (busy || editor || acgFrame) return;
       showSelectionInfo(card.name, `${card.description}${card.help ? `\n${card.help}` : ""}\n${stateLabel}`);
@@ -554,7 +550,7 @@ function renderDecisionPanel() {
     button.querySelector("small").textContent = card
       ? `${activationLabel(card.activation)} · ${card.phase.toUpperCase()}`
       : "후속 효과";
-    button.querySelector(".stars").textContent = card ? `${card.stars} ★` : "";
+    button.querySelector(".stars").textContent = rarityLabel(card);
     if (card) registerInfo(button, card.name, `${card.description}${card.help ? `\n${card.help}` : ""}`);
     button.disabled = busy;
     button.addEventListener("click", () => applyAction(action.index));
@@ -735,6 +731,18 @@ function activationLabel(activation) {
     passive: "패시브",
     rule: "RULE",
   }[activation] || activation;
+}
+
+// The current ruleset grades cards by rarity, not by stars. Stars stay in the catalog data because
+// they still drive the draft cost, but the UI does not show them: the grade a player sees is rarity.
+function rarityLabel(card) {
+  if (!card) return "";
+  return {
+    common: "커먼",
+    rare: "레어",
+    epic: "에픽",
+    legendary: "전설",
+  }[card.rarity] || card.rarity || "";
 }
 
 function setBusy(value) {
@@ -977,7 +985,7 @@ function renderSetupPicker() {
     wrapper.tabIndex = 0;
     registerInfo(wrapper, card.name, `${card.description}${card.help ? `\n${card.help}` : ""}${card.reason ? `\n${card.reason}` : ""}`);
     const button = document.createElement("button"); button.className = "button secondary";
-    button.textContent = `${card.name} · ${card.stars}★ · ${card.phase}`;
+    button.textContent = `${card.name} · ${rarityLabel(card)} · ${card.phase}`;
     button.disabled = busy || !card.eligible; button.title = card.reason || card.description;
     button.addEventListener("click", () => acquireSetupCard(card.id, owner, setupData.fingerprint));
     const description = document.createElement("p"); description.textContent = card.description;
@@ -1061,7 +1069,6 @@ function renderAcg() {
     target.className = cards.length ? "card-list" : "card-list empty-message";
     target.replaceChildren(...cards); if (!cards.length) target.textContent = "카드 없음";
   }
-  elements.whiteStars.textContent = "ACG"; elements.blackStars.textContent = "ACG";
   elements.decisionPanel.classList.add("hidden"); elements.abilityList.replaceChildren();
   elements.eventLog.replaceChildren(...(event?.notations || []).map(n => { const li = document.createElement("li"); li.textContent = `${n.text} · ${n.description}`; return li; }));
   elements.selectedHint.textContent = "원본 ACG 재생입니다. 엔진 분석을 위해서는 정확한 상태 변환이 필요합니다.";
