@@ -82,11 +82,16 @@ pub struct SearchConfig {
 /// that decide many short games but that material cannot see: king safety, unspent card resources,
 /// mobility, and progress of the endgame conditions. Both are legal information only; neither reads
 /// hidden state.
+///
+/// `LegacyMaterial` is `Material` with the pre-snapshot piece table (nine named kinds, everything
+/// else at 3.0). It exists only so the arena can measure what the corrected table changed: the two
+/// variants differ by nothing else, so a match between them isolates the table.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 pub enum Evaluation {
     #[default]
     Material,
     Positional,
+    LegacyMaterial,
 }
 
 impl Evaluation {
@@ -95,6 +100,7 @@ impl Evaluation {
         match self {
             Self::Material => "material-v1",
             Self::Positional => "positional-v1",
+            Self::LegacyMaterial => "material-legacy",
         }
     }
 }
@@ -687,7 +693,40 @@ pub fn material_score(state: &GameState, root: Player) -> f64 {
     }
 }
 
-/// Weights for the positional terms, kept in one place so the trade-offs are reviewable.
+/// The pre-snapshot material table, kept only as an arena control.
+///
+/// Nine named kinds plus a blanket 3.0 for the other 73, which is what the engine shipped with before
+/// the snapshot's own value table was adopted. It exists so `arena --against legacy-material` can
+/// measure what the correction changed; it is not a supported evaluation for real use.
+pub fn legacy_material_score(state: &GameState, root: Player) -> f64 {
+    match state.status {
+        GameStatus::Won { winner, .. } => {
+            if winner == root {
+                WIN
+            } else {
+                -WIN
+            }
+        }
+        GameStatus::Draw { .. } => 0.0,
+        GameStatus::Ongoing => state
+            .board
+            .iter()
+            .map(|(_, piece)| {
+                let value = match piece.kind {
+                    PieceKind::Pawn => 1.0,
+                    PieceKind::Knight | PieceKind::Bishop => 3.0,
+                    PieceKind::Rook => 5.0,
+                    PieceKind::Queen => 9.0,
+                    PieceKind::Archbishop => 7.5,
+                    PieceKind::Chancellor => 8.5,
+                    PieceKind::King => 100.0,
+                    _ => 3.0,
+                };
+                if piece.owner == root { value } else { -value }
+            })
+            .sum(),
+    }
+}
 mod weights {
     /// A king that can be captured soon is worth far less than a safe one, but the term must stay
     /// bounded: it is a preference, not a win proof.
@@ -809,6 +848,7 @@ pub fn evaluate(state: &GameState, root: Player, evaluation: Evaluation) -> f64 
     match evaluation {
         Evaluation::Material => material_score(state, root),
         Evaluation::Positional => positional_score(state, root),
+        Evaluation::LegacyMaterial => legacy_material_score(state, root),
     }
 }
 fn mix(mut x: u64) -> u64 {

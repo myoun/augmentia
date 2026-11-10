@@ -157,7 +157,12 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 config.evaluation = match value.as_str() {
                     "material" => Evaluation::Material,
                     "positional" => Evaluation::Positional,
-                    _ => return Err("Expected --evaluation material or positional".into()),
+                    "legacy-material" => Evaluation::LegacyMaterial,
+                    _ => {
+                        return Err(
+                            "Expected --evaluation material, positional or legacy-material".into(),
+                        );
+                    }
                 }
             }
             "--games" => arena.games_per_pairing = value.parse()?,
@@ -170,7 +175,12 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 opponent = Some(match value.as_str() {
                     "material" => Evaluation::Material,
                     "positional" => Evaluation::Positional,
-                    _ => return Err("Expected --against material or positional".into()),
+                    "legacy-material" => Evaluation::LegacyMaterial,
+                    _ => {
+                        return Err(
+                            "Expected --against material, positional or legacy-material".into()
+                        );
+                    }
                 })
             }
             _ => return Err(format!("Unknown flag {flag}").into()),
