@@ -299,8 +299,57 @@ pub fn search_with_cancel(
     if state.status == GameStatus::Ongoing && actions.is_empty() {
         return Err(SearchError::EmptyOngoingState);
     }
-    let mut best = actions.first().cloned();
+    // Forced-move safety, decided before any deepening. Two cheap guarantees, each one apply per
+    // candidate:
+    //   1. a move that ends the game right away is taken immediately, without searching;
+    //   2. if some move hands the opponent an immediate win, the incumbent is narrowed to the moves
+    //      that avoid it, so a time-limited shallow iteration cannot pick a losing one.
+    // The seed-20260807 game showed why this belongs before the loop: depth 1 in turn units cannot see
+    // the opponent's reply, and its choice uncritically let a king capture through.
+    let forced = ctx.forced_root_action(state, &actions);
+    let immediate_win = matches!(&forced, ForcedRoot::Win(_));
+    // `ForcedRoot::None` means every candidate loses immediately: nothing can be saved, so the deep
+    // search runs unconstrained and any move is as good as it gets. Falling back to the first legal
+    // action keeps the report well-formed for that lost position.
+    let mut best = match &forced {
+        ForcedRoot::Win(action) | ForcedRoot::Safe(action) => Some(action.clone()),
+        ForcedRoot::None => actions.first().cloned(),
+    };
+    // The deep loop may only choose among these: every root candidate that neither loses on the spot
+    // nor allows the opponent an immediate win. `None` means the sweep found nothing to protect against
+    // (all candidates lose at once), in which case the constraint lifts.
+    let safe_set: Option<std::collections::BTreeSet<Action>> = match &forced {
+        ForcedRoot::Win(_) => None, // the win returns below; the set is unused
+        ForcedRoot::Safe(_) => Some(
+            actions
+                .iter()
+                .filter(|candidate| {
+                    Some(*candidate) == best.as_ref() || !ctx.is_two_ply_blunder(state, candidate)
+                })
+                .cloned()
+                .collect(),
+        ),
+        ForcedRoot::None => None,
+    };
     let mut score = ctx.evaluate(state);
+    if immediate_win {
+        let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+        return Ok(SearchReport {
+            action: best.as_ref().map(|a| format!("{a:?}")),
+            selected_action: best,
+            score: WIN,
+            action_space: "engine-enumerated-subset".into(),
+            completed_depth: 1,
+            depth_unit: depth_unit_recorded,
+            root_actions: actions.len(),
+            scored_root_actions: actions.len(),
+            stop_reason: "immediate_win".into(),
+            elapsed_ms,
+            budget_overrun_ms: (elapsed_ms - time_limit.as_secs_f64() * 1000.0).max(0.0),
+            stats: ctx.stats,
+            provenance,
+        });
+    }
     let mut completed_depth = 0;
     let mut stop = if actions.is_empty() {
         "terminal"
@@ -356,7 +405,10 @@ pub fn search_with_cancel(
                 mix(search_seed ^ index as u64),
             ) {
                 Ok(value) => {
-                    if value > iteration_score {
+                    let eligible = safe_set
+                        .as_ref()
+                        .is_none_or(|safe| safe.contains(&actions[index]));
+                    if eligible && value > iteration_score {
                         iteration_score = value;
                         iteration_best = Some(actions[index].clone());
                     }
@@ -372,8 +424,15 @@ pub fn search_with_cancel(
         if aborted {
             break;
         }
-        best = iteration_best;
-        score = iteration_score;
+        // A safe move exists, so the iteration must not hand the choice to a losing one. When the
+        // whole iteration landed on unsafe moves only, keep the previous best.
+        if iteration_best
+            .as_ref()
+            .is_some_and(|chosen| safe_set.as_ref().is_none_or(|safe| safe.contains(chosen)))
+        {
+            best = iteration_best;
+            score = iteration_score;
+        }
         completed_depth = depth;
     }
     let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
@@ -407,6 +466,18 @@ impl From<SearchError> for Failure {
         Self::Error(e)
     }
 }
+
+/// What the pre-search forced-move sweep decided about the root.
+///
+/// `Win` is a move that ends the game on the spot: it is played without searching. `Safe` is a move
+/// that does not hand the opponent an immediate win; when at least one exists, only these may be
+/// chosen. `None` means every move loses immediately, so any of them is as good as it gets.
+enum ForcedRoot {
+    Win(Action),
+    Safe(Action),
+    None,
+}
+
 struct Context<'a> {
     engine: &'a Engine,
     config: SearchConfig,
@@ -431,6 +502,109 @@ impl Context<'_> {
             return Err(Failure::Stop("node_limit"));
         }
         Ok(())
+    }
+
+    /// Decide the forced part of the root before any deepening.
+    ///
+    /// Walks the root candidates once, applying each:
+    ///   - a candidate that ends the game with the root player winning is returned as `Win` and stops
+    ///     the walk, because nothing can beat it;
+    ///   - a candidate that ends the game with the root player losing is skipped;
+    ///   - a candidate that keeps the game going is safe unless the opponent can win on the spot after
+    ///     it, so that reply is checked with one apply per opponent action.
+    ///
+    /// The second ply matters: depth 1 in turn units never sees the opponent's reply, and the
+    /// seed-20260807 game was lost exactly there — three of forty-four moves allowed an immediate king
+    /// capture, and a time-limited depth-1 search picked one.
+    ///
+    /// If every candidate loses at once, `None` is returned: losing immediately is unavoidable and the
+    /// deep search can pick among equally lost moves. Candidates with a search chance roll are treated
+    /// as safe — this net only catches outcomes that are certain.
+    fn forced_root_action(
+        &mut self,
+        _state: &GameState,
+        actions: &LegalActionBatch<'_>,
+    ) -> ForcedRoot {
+        for index in 0..actions.len() {
+            let action = &actions[index];
+            let mut chance = SearchChanceContext::new(mix(index as u64));
+            let Ok(transition) = apply_search_transition(actions, action, &mut chance) else {
+                // An unapplicable root candidate is not the search's business; the deep loop will
+                // surface it if it matters.
+                continue;
+            };
+            match transition.transition.state.status {
+                GameStatus::Won { winner, .. } if winner == self.root => {
+                    return ForcedRoot::Win(action.clone());
+                }
+                GameStatus::Won { .. } => {
+                    // A certain immediate loss: never choose this if anything else exists.
+                    continue;
+                }
+                _ => {}
+            }
+            // The opponent only gets to reply if this action ends the mover's turn. In turn-unit
+            // searches a player's turn spans several actions, so a first action that keeps the turn
+            // cannot be a blunder yet — checking the opponent here would exclude normal attacking
+            // moves, which is exactly how the depth-one-turn fixture lost its mating line. When the
+            // turn does pass, the reply is checked with one apply per opponent action.
+            if transition.transition.state.turn != self.root
+                && self.opponent_can_win_immediately(&transition.transition.state)
+            {
+                continue;
+            }
+            return ForcedRoot::Safe(action.clone());
+        }
+        ForcedRoot::None
+    }
+
+    /// Whether the player to move in `state` can end the game with an immediate win.
+    ///
+    /// Only meaningful when `state.turn` differs from the mover: in a turn-unit search the mover may
+    /// hold several actions, and the reply only happens once the turn passes. One apply per opponent
+    /// action; stops at the first winning reply. This is what makes the safety net two plies deep.
+    fn opponent_can_win_immediately(&mut self, state: &GameState) -> bool {
+        if state.status != GameStatus::Ongoing {
+            return false;
+        }
+        let Ok(batch) = self.legal(state) else {
+            return false;
+        };
+        for opponent_index in 0..batch.len() {
+            let mut chance =
+                SearchChanceContext::new(mix(state.fingerprint() ^ opponent_index as u64));
+            let Ok(transition) = batch.apply_for_search(&batch[opponent_index], &mut chance) else {
+                continue;
+            };
+            if matches!(transition.transition.state.status, GameStatus::Won { .. }) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Whether a root candidate is a two-ply blunder: it loses on the spot, or it lets the opponent
+    /// win on the spot. The same standard `forced_root_action` applies when picking the incumbent.
+    fn is_two_ply_blunder(&mut self, state: &GameState, action: &Action) -> bool {
+        let Ok(batch) = self.legal(state) else {
+            return false;
+        };
+        let Some(index) = batch.iter().position(|candidate| candidate == action) else {
+            return false;
+        };
+        let mut chance = SearchChanceContext::new(mix(state.fingerprint() ^ index as u64));
+        let Ok(transition) = batch.apply_for_search(action, &mut chance) else {
+            return false;
+        };
+        match transition.transition.state.status {
+            GameStatus::Won { winner, .. } if winner == self.root => false,
+            GameStatus::Won { .. } => true,
+            // The opponent can only punish if the turn actually passed; see forced_root_action.
+            _ => {
+                transition.transition.state.turn != self.root
+                    && self.opponent_can_win_immediately(&transition.transition.state)
+            }
+        }
     }
     fn legal<'a>(&mut self, state: &'a GameState) -> Result<LegalActionBatch<'a>, SearchError>
     where
