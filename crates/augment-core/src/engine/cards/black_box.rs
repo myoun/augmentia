@@ -62,15 +62,43 @@ fn candidates(state: &GameState, actor: Player) -> Vec<&'static str> {
         .collect()
 }
 
+/// Shuffle for the box's own bookkeeping: one game-RNG draw seeds a private cursor.
+///
+/// The upstream box consumes a single random value per use (`randomValues[0]`, bounded by
+/// `V12_BOX_SEED_RANGE`) and drives the whole Fisher-Yates from a one-shot cursor built on it. Drawing
+/// from the game RNG per swap instead consumed 150 draws and logged 150 `RandomSample` events per use,
+/// which pushed deep searches past the effect-resolution cap on seed 8.
+///
+/// So: one draw from the game RNG, recorded as the single `RandomSample` the reveal is accountable for,
+/// then a private cursor shuffles without touching the game stream again. Different game seeds still
+/// reveal different cards, and a seeded game stays reproducible.
 fn shuffle<T>(state: &mut GameState, values: &mut [T], purpose: &str, events: &mut Vec<Event>) {
+    let (roll, _) = state.rng_mut().web_choice_index(1 << 32);
+    events.push(Event::RandomSample {
+        purpose: purpose.to_owned(),
+        roll_53: roll,
+    });
+    // Expand the one draw into a cursor the way the site expands `randomValues[0]`.
+    let mut cursor = mix_search_seed_like(roll);
+    let mut draw = |bound: usize| -> usize {
+        cursor = cursor
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        ((cursor >> 33) as usize) % bound
+    };
     for index in (1..values.len()).rev() {
-        let (roll, selected) = state.rng_mut().web_choice_index(index + 1);
-        events.push(Event::RandomSample {
-            purpose: purpose.to_owned(),
-            roll_53: roll,
-        });
-        values.swap(index, selected.expect("shuffle prefix is non-empty"));
+        values.swap(index, draw(index + 1));
     }
+}
+
+/// The cursor expansion, mirroring the engine's search-seed mixer so the single draw spreads across the
+/// whole 64-bit space before driving the shuffle.
+fn mix_search_seed_like(mut value: u64) -> u64 {
+    value ^= value >> 30;
+    value = value.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    value ^= value >> 27;
+    value = value.wrapping_mul(0x94d0_49bb_1331_11eb);
+    value ^ (value >> 31)
 }
 
 /// The nested card runs against a probe that already carries it as the source
