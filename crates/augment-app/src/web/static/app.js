@@ -738,10 +738,10 @@ function activationLabel(activation) {
 function rarityLabel(card) {
   if (!card) return "";
   return {
-    common: "커먼",
-    rare: "레어",
-    epic: "에픽",
-    legendary: "전설",
+    common: "COMMON",
+    rare: "RARE",
+    epic: "EPIC",
+    legendary: "LEGENDARY",
   }[card.rarity] || card.rarity || "";
 }
 
