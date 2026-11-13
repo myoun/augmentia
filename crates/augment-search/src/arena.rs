@@ -17,6 +17,9 @@ use serde::Serialize;
 
 use crate::{Evaluation, SearchConfig, search};
 
+#[path = "arena_recording.rs"]
+pub mod recording;
+
 /// A move counts as late only when the search ran this far past its deadline. The search checks the
 /// clock between nodes, so the final node can always finish slightly late; that is the mechanism
 /// working, not a defect worth relabelling a game over.
@@ -175,240 +178,190 @@ impl ArenaSummary {
     }
 }
 
-/// Play `games_per_pairing` games from each colour and return every record.
-///
-/// Both sides use the same configuration. The point is a reproducible harness that classifies
-/// outcomes honestly, not an opponent model.
-pub fn run(engine: &Engine, config: ArenaConfig) -> (Vec<GameRecord>, ArenaSummary) {
-    let mut records = Vec::new();
-    for pairing in 0..config.games_per_pairing {
-        for side in [Side::White, Side::Black] {
-            let seed = config
-                .seed
-                .wrapping_add(u64::from(pairing))
-                .wrapping_add(if side == Side::White { 0 } else { 1_000_003 });
-            records.push(play_one(engine, &config, side, seed));
-        }
-    }
-    let summary = ArenaSummary::from_records(&records);
-    (records, summary)
+/// The comparison changes only the per-side evaluation or the first side's policy.
+#[derive(Clone, Debug)]
+pub enum ArenaMatch {
+    SelfPlay,
+    Evaluation {
+        first: Evaluation,
+        second: Evaluation,
+    },
+    Policy(std::sync::Arc<crate::policy::LinearPolicy>),
 }
 
-/// Pit two configurations against each other.
-///
-/// This is how an evaluation change is judged: the two search settings differ only in the thing
-/// being tested, and colour is exchanged so the first-move advantage cancels. `ArenaConfig` is
-/// reused for the shared limits, but each side gets its own evaluation.
-pub fn run_match(
+/// Versioned call-boundary event. Start/end pairs share a zero-based action_index.
+/// game_end uses the total completed action count instead.
+/// If interrupted, the final complete `*_start` without its matching `*_end` identifies the call.
+#[derive(Debug, Serialize)]
+pub struct ArenaEvent {
+    pub schema_version: u32,
+    pub run_id: String,
+    pub sequence: u64,
+    pub elapsed_ms: f64,
+    pub unix_ms: u128,
+    pub event: &'static str,
+    pub game_index: Option<u64>,
+    pub action_index: Option<u32>,
+    pub data: serde_json::Value,
+}
+
+/// Borrowed event sink; an error stops the arena before the next engine call.
+pub type ArenaObserver<'a> = &'a mut dyn FnMut(&ArenaEvent) -> std::io::Result<()>;
+
+struct Observer<'a> {
+    callback: Option<ArenaObserver<'a>>,
+    started: std::time::Instant,
+    run_id: String,
+    sequence: u64,
+}
+
+impl Observer<'_> {
+    fn emit(
+        &mut self,
+        event: &'static str,
+        game: Option<u64>,
+        action: Option<u32>,
+        data: impl FnOnce() -> serde_json::Value,
+    ) -> std::io::Result<()> {
+        let Some(callback) = self.callback.as_mut() else {
+            return Ok(());
+        };
+        let unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(std::io::Error::other)?
+            .as_millis();
+        callback(&ArenaEvent {
+            schema_version: 1,
+            run_id: self.run_id.clone(),
+            sequence: self.sequence,
+            elapsed_ms: self.started.elapsed().as_secs_f64() * 1000.0,
+            unix_ms,
+            event,
+            game_index: game,
+            action_index: action,
+            data: data(),
+        })?;
+        self.sequence += 1;
+        Ok(())
+    }
+}
+
+fn search_settings(config: &SearchConfig) -> serde_json::Value {
+    serde_json::json!({
+        "time_ms": config.time_limit.as_millis(), "max_depth": config.max_depth,
+        "depth_unit": config.depth_unit, "max_nodes": config.max_nodes,
+        "chance_samples": config.chance_samples, "search_seed": config.search_seed,
+        "evaluation": config.evaluation.label(), "policy": config.policy.as_deref(),
+    })
+}
+
+fn state_snapshot(state: &augment_core::GameState) -> serde_json::Value {
+    // Debug is intentional: GameState has private RNG/runtime fields and no serialization API.
+    // Keep a readable board as well, and never pretend this is a restorable state format.
+    let board: Vec<_> = state
+        .board
+        .iter()
+        .map(|(square, piece)| {
+            serde_json::json!({
+                "square": square.to_string(), "owner": format!("{:?}", piece.owner),
+                "kind": format!("{:?}", piece.kind), "piece_debug": format!("{piece:?}"),
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "fingerprint": state.fingerprint(), "turn": format!("{:?}", state.turn),
+        "phase": format!("{:?}", state.phase), "status": format!("{:?}", state.status),
+        "ply": state.ply, "actions_remaining": state.actions_remaining,
+        "board": board, "cards_debug": format!("{:?}", state.cards),
+        "full_state_debug": format!("{state:?}"), "restorable": false,
+    })
+}
+
+/// Run every arena variant with a fallible observer, before and after each potentially slow call.
+/// Recording failure stops the run before the next engine call. The legacy APIs below remain usable.
+pub fn run_observed(
     engine: &Engine,
     config: ArenaConfig,
-    first: Evaluation,
-    second: Evaluation,
-) -> (Vec<GameRecord>, ArenaSummary) {
-    let mut records = Vec::new();
-    for pairing in 0..config.games_per_pairing {
-        // Alternate which colour the first configuration holds, so both sides see both colours.
-        for (first_plays, _) in [(Side::White, Side::Black), (Side::Black, Side::White)] {
-            let seed = config.seed.wrapping_add(u64::from(pairing)).wrapping_add(
-                if first_plays == Side::White {
-                    0
-                } else {
-                    1_000_003
-                },
-            );
-            records.push(play_match(
-                engine,
-                &config,
-                first_plays,
-                first,
-                second,
-                seed,
-            ));
-        }
-    }
-    let summary = ArenaSummary::from_records(&records);
-    (records, summary)
+    comparison: ArenaMatch,
+    observer: ArenaObserver<'_>,
+) -> std::io::Result<(Vec<GameRecord>, ArenaSummary)> {
+    run_with_callbacks(
+        engine,
+        config,
+        comparison,
+        Some(observer),
+        &mut |_, _, _| Ok(()),
+    )
 }
 
-/// One game where each side may use a different evaluation.
-fn play_match(
-    engine: &Engine,
-    config: &ArenaConfig,
-    first_plays: Side,
-    first: Evaluation,
-    second: Evaluation,
-    seed: u64,
-) -> GameRecord {
-    let mut record = GameRecord {
-        first_plays,
-        outcome: Outcome::Decided,
-        winner: None,
-        actions: 0,
-        max_overrun_ms: 0.0,
-        error: None,
-    };
-    let mut state = match engine.new_game(Mode::Standard, seed) {
-        Ok(state) => state,
-        Err(error) => {
-            record.outcome = Outcome::Error;
-            record.error = Some(error.to_string());
-            return record;
-        }
-    };
-
-    while state.status == GameStatus::Ongoing {
-        if record.actions >= config.max_actions {
-            record.outcome = Outcome::Truncated;
-            return record;
-        }
-        // A side's evaluation is chosen by which colour it holds, so colour exchange swaps them.
-        let evaluation = if state.turn == first_plays.player() {
-            first
-        } else {
-            second
-        };
-        let mut search_config = config.search.clone();
-        search_config.evaluation = evaluation;
-        search_config.search_seed = seed;
-        let report = match search(engine, &state, search_config.clone()) {
-            Ok(report) => report,
-            Err(error) => {
-                record.outcome = Outcome::Truncated;
-                record.error = Some(format!("search stopped in {:?}: {error}", state.phase));
-                return record;
-            }
-        };
-        record.max_overrun_ms = record.max_overrun_ms.max(report.budget_overrun_ms);
-        let Some(action) = report.selected_action else {
-            record.outcome = Outcome::Error;
-            record.error = Some("search returned no action".to_owned());
-            return record;
-        };
-        match engine.apply(&state, action) {
-            Ok(transition) => {
-                state = transition.state;
-                record.actions += 1;
-            }
-            Err(error) => {
-                record.outcome = Outcome::Error;
-                record.error = Some(error.to_string());
-                return record;
-            }
-        }
-    }
-
-    record.winner = match state.status {
-        GameStatus::Won { winner, .. } => {
-            if winner == first_plays.player() {
-                Some(Winner::First)
-            } else {
-                Some(Winner::Second)
-            }
-        }
-        GameStatus::Draw { .. } | GameStatus::Ongoing => None,
-    };
-    record.outcome = if record.max_overrun_ms > OVERRUN_TOLERANCE_MS {
-        Outcome::Overrun
-    } else {
-        Outcome::Decided
-    };
-    record
-}
-
-fn play_one(engine: &Engine, config: &ArenaConfig, first_plays: Side, seed: u64) -> GameRecord {
-    let mut record = GameRecord {
-        first_plays,
-        outcome: Outcome::Decided,
-        winner: None,
-        actions: 0,
-        max_overrun_ms: 0.0,
-        error: None,
-    };
-    let mut state = match engine.new_game(Mode::Standard, seed) {
-        Ok(state) => state,
-        Err(error) => {
-            record.outcome = Outcome::Error;
-            record.error = Some(error.to_string());
-            return record;
-        }
-    };
-    let mut search_config = config.search.clone();
-    search_config.search_seed = seed;
-
-    while state.status == GameStatus::Ongoing {
-        if record.actions >= config.max_actions {
-            record.outcome = Outcome::Truncated;
-            return record;
-        }
-        // Draft and forced-choice phases need their own action selection, which the arena does not
-        // implement. It plays whatever `search` returns for the current phase; when the engine
-        // offers nothing to search, the game is reported unfinished rather than counted as a loss.
-        let report = match search(engine, &state, search_config.clone()) {
-            Ok(report) => report,
-            Err(error) => {
-                record.outcome = Outcome::Truncated;
-                record.error = Some(format!("search stopped in {:?}: {error}", state.phase));
-                return record;
-            }
-        };
-        record.max_overrun_ms = record.max_overrun_ms.max(report.budget_overrun_ms);
-        let Some(action) = report.selected_action else {
-            record.outcome = Outcome::Error;
-            record.error = Some("search returned no action".to_owned());
-            return record;
-        };
-        match engine.apply(&state, action) {
-            Ok(transition) => {
-                state = transition.state;
-                record.actions += 1;
-            }
-            Err(error) => {
-                record.outcome = Outcome::Error;
-                record.error = Some(error.to_string());
-                return record;
-            }
-        }
-    }
-
-    // `winner` records which CONFIGURATION won, not which colour. With colour exchanged, a win for
-    // the configuration that happened to hold White is `First`; the same configuration winning as
-    // Black is also `First`. That is what makes a batch comparable across pairings.
-    record.winner = match state.status {
-        GameStatus::Won { winner, .. } => {
-            if winner == first_plays.player() {
-                Some(Winner::First)
-            } else {
-                Some(Winner::Second)
-            }
-        }
-        GameStatus::Draw { .. } | GameStatus::Ongoing => None,
-    };
-    // An overrun is only worth reporting when it is large enough to have changed the move. The
-    // search stops on its own deadline and reports the tiny remainder it spent finishing the
-    // current node, so a sub-millisecond figure is normal operation, not a broken clock. Treating
-    // any positive value as an overrun would relabel every decided game and hide the result.
-    record.outcome = if record.max_overrun_ms > OVERRUN_TOLERANCE_MS {
-        Outcome::Overrun
-    } else {
-        Outcome::Decided
-    };
-    record
-}
-
-/// Pit policy-guided search against the same search without it.
-///
-/// This answers P2-2's second question. Imitation accuracy does not imply strength: a policy can
-/// copy the teacher and still not reach better positions. Only a game result shows whether the prior
-/// helps, so the two sides differ in exactly one thing — whether the root is ordered by the policy —
-/// and colour is exchanged so the first-move advantage cancels.
-///
-/// The prior only reorders; every candidate is still scored, so a wrong prior costs time rather than
-/// hiding a move.
-pub fn run_policy_match(
+/// Finished-game persistence without per-action snapshots, for callers that do not need a trace.
+pub fn run_with_progress(
     engine: &Engine,
     config: ArenaConfig,
-    policy: std::sync::Arc<crate::policy::LinearPolicy>,
-) -> (Vec<GameRecord>, ArenaSummary) {
+    comparison: ArenaMatch,
+    progress: &mut dyn FnMut(usize, usize, &GameRecord) -> std::io::Result<()>,
+) -> std::io::Result<(Vec<GameRecord>, ArenaSummary)> {
+    run_with_callbacks(engine, config, comparison, None, progress)
+}
+
+fn run_with_callbacks(
+    engine: &Engine,
+    config: ArenaConfig,
+    comparison: ArenaMatch,
+    observer: Option<ArenaObserver<'_>>,
+    progress: &mut dyn FnMut(usize, usize, &GameRecord) -> std::io::Result<()>,
+) -> std::io::Result<(Vec<GameRecord>, ArenaSummary)> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(std::io::Error::other)?;
+    let mut observer = Observer {
+        callback: observer,
+        started: std::time::Instant::now(),
+        run_id: format!("{}-{}", std::process::id(), now.as_nanos()),
+        sequence: 0,
+    };
+    let (variant, first, second, policy) = match &comparison {
+        ArenaMatch::SelfPlay => (
+            "self_play",
+            config.search.evaluation,
+            config.search.evaluation,
+            config.search.policy.as_deref(),
+        ),
+        ArenaMatch::Evaluation { first, second } => (
+            "evaluation",
+            *first,
+            *second,
+            config.search.policy.as_deref(),
+        ),
+        ArenaMatch::Policy(policy) => (
+            "policy",
+            config.search.evaluation,
+            config.search.evaluation,
+            Some(policy.as_ref()),
+        ),
+    };
+    observer.emit("run_start", None, None, || serde_json::json!({
+        "variant": variant, "ruleset": engine.ruleset().id, "ruleset_debug": format!("{:?}", engine.ruleset()),
+        "engine_identity": {
+            "ruleset_id": augment_core::latest_identity().0,
+            "catalog_hash": augment_core::latest_identity().1,
+            "card_profile_hash": format!("{:016x}", augment_core::latest_identity().2),
+        },
+        "package_version": env!("CARGO_PKG_VERSION"),
+        "build": if cfg!(debug_assertions) { "debug" } else { "release" },
+        "site_parity_verified": false, "search": search_settings(&config.search),
+        "first_evaluation": first.label(), "second_evaluation": second.label(), "policy": policy,
+        "games_per_pairing": config.games_per_pairing, "total_games": u64::from(config.games_per_pairing) * 2,
+        "max_actions": config.max_actions, "base_seed": config.seed,
+        "seed_schedule": {"formula": "base_seed.wrapping_add(pairing_index).wrapping_add(first_plays == Black ? 1000003 : 0)",
+            "black_offset": 1_000_003, "color_exchange_uses_same_seed": false,
+            "independent_samples": false,
+            "warning": "Consecutive base-seed batches overlap when games_per_pairing > 1; color-exchanged games use different seeds, not matched-seed pairs. All arithmetic wraps at u64."},
+        "indexing": "game_index and pairing_index are zero-based; action start/end share the zero-based action_index; game_end uses total completed actions",
+        "snapshot_format": "structured board plus full Rust Debug state; snapshot alone is not deserializable",
+        "replay": "Recreate Standard game from game_start.seed under the recorded engine identity, deserialize apply_start.data.action as Action, and apply in action_index order. Only matching successful apply_end confirms completion. If apply_end is missing, preserve the pre-apply state and treat action as pending. Check new_game_end/apply_end fingerprints.",
+        "durability": "observer must flush each event; file writer flushes, does not fsync; ignore an incomplete final JSON line after interruption",
+    }))?;
     let mut records = Vec::new();
     for pairing in 0..config.games_per_pairing {
         for first_plays in [Side::White, Side::Black] {
@@ -419,27 +372,54 @@ pub fn run_policy_match(
                     1_000_003
                 },
             );
-            records.push(play_policy_match(
+            let game = records.len() as u64;
+            observer.emit("game_start", Some(game), Some(0), || serde_json::json!({
+                "pairing_index": pairing, "seed": seed, "search_seed": seed,
+                "first_plays": first_plays, "first_evaluation": first.label(), "second_evaluation": second.label(),
+                "first_policy": policy.is_some(), "second_policy": !matches!(comparison, ArenaMatch::Policy(_)) && config.search.policy.is_some(),
+            }))?;
+            let record = play_observed(
                 engine,
                 &config,
+                &comparison,
                 first_plays,
-                &policy,
                 seed,
-            ));
+                game,
+                &mut observer,
+            )?;
+            observer.emit(
+                "game_end",
+                Some(game),
+                Some(record.actions),
+                || serde_json::json!({"seed": seed, "record": record}),
+            )?;
+            progress(
+                records.len() + 1,
+                (u64::from(config.games_per_pairing) * 2) as usize,
+                &record,
+            )?;
+            records.push(record);
         }
     }
     let summary = ArenaSummary::from_records(&records);
-    (records, summary)
+    observer.emit(
+        "run_end",
+        None,
+        None,
+        || serde_json::json!({"summary": summary}),
+    )?;
+    Ok((records, summary))
 }
 
-/// One game: the first configuration searches with the policy prior, the second without.
-fn play_policy_match(
+fn play_observed(
     engine: &Engine,
     config: &ArenaConfig,
+    comparison: &ArenaMatch,
     first_plays: Side,
-    policy: &std::sync::Arc<crate::policy::LinearPolicy>,
     seed: u64,
-) -> GameRecord {
+    game: u64,
+    observer: &mut Observer<'_>,
+) -> std::io::Result<GameRecord> {
     let mut record = GameRecord {
         first_plays,
         outcome: Outcome::Decided,
@@ -448,61 +428,99 @@ fn play_policy_match(
         max_overrun_ms: 0.0,
         error: None,
     };
-    let mut state = match engine.new_game(Mode::Standard, seed) {
-        Ok(state) => state,
+    observer.emit(
+        "new_game_start",
+        Some(game),
+        Some(0),
+        || serde_json::json!({"seed": seed, "mode": "Standard"}),
+    )?;
+    let started = std::time::Instant::now();
+    let result = engine.new_game(Mode::Standard, seed);
+    let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let mut state = match result {
+        Ok(state) => {
+            observer.emit("new_game_end", Some(game), Some(0), || serde_json::json!({"ok": true, "elapsed_ms": elapsed_ms, "state": state_snapshot(&state)}))?;
+            state
+        }
         Err(error) => {
+            observer.emit("new_game_end", Some(game), Some(0), || serde_json::json!({"ok": false, "elapsed_ms": elapsed_ms, "error": error.to_string()}))?;
             record.outcome = Outcome::Error;
             record.error = Some(error.to_string());
-            return record;
+            return Ok(record);
         }
     };
-
     while state.status == GameStatus::Ongoing {
         if record.actions >= config.max_actions {
             record.outcome = Outcome::Truncated;
-            return record;
+            return Ok(record);
         }
         let mut search_config = config.search.clone();
         search_config.search_seed = seed;
-        // Only the first configuration carries the prior.
-        if state.turn == first_plays.player() {
-            search_config.policy = Some(policy.clone());
+        let is_first = state.turn == first_plays.player();
+        match comparison {
+            ArenaMatch::SelfPlay => {}
+            ArenaMatch::Evaluation { first, second } => {
+                search_config.evaluation = if is_first { *first } else { *second }
+            }
+            ArenaMatch::Policy(policy) => {
+                search_config.policy = if is_first { Some(policy.clone()) } else { None }
+            }
         }
-        let report = match search(engine, &state, search_config) {
-            Ok(report) => report,
+        observer.emit("search_start", Some(game), Some(record.actions), || {
+            serde_json::json!({
+                "seed": seed, "actor": format!("{:?}", state.turn), "is_first": is_first,
+                "config": search_settings(&search_config), "state": state_snapshot(&state),
+            })
+        })?;
+        let started = std::time::Instant::now();
+        let result = search(engine, &state, search_config);
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+        let report = match result {
+            Ok(report) => {
+                observer.emit("search_end", Some(game), Some(record.actions), || serde_json::json!({
+                    "ok": true, "elapsed_ms": elapsed_ms, "selected_action": report.selected_action.as_ref().map(|a| format!("{a:?}")), "action": report.selected_action.as_ref(), "report": report,
+                }))?;
+                report
+            }
             Err(error) => {
+                observer.emit("search_end", Some(game), Some(record.actions), || serde_json::json!({"ok": false, "elapsed_ms": elapsed_ms, "error": error.to_string()}))?;
                 record.outcome = Outcome::Truncated;
                 record.error = Some(format!("search stopped in {:?}: {error}", state.phase));
-                return record;
+                return Ok(record);
             }
         };
         record.max_overrun_ms = record.max_overrun_ms.max(report.budget_overrun_ms);
         let Some(action) = report.selected_action else {
             record.outcome = Outcome::Error;
             record.error = Some("search returned no action".to_owned());
-            return record;
+            return Ok(record);
         };
-        match engine.apply(&state, action) {
+        observer.emit("apply_start", Some(game), Some(record.actions), || serde_json::json!({"selected_action": format!("{action:?}"), "action": action, "state_fingerprint": state.fingerprint()}))?;
+        let started = std::time::Instant::now();
+        let result = engine.apply(&state, action);
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+        match result {
             Ok(transition) => {
+                observer.emit("apply_end", Some(game), Some(record.actions), || serde_json::json!({
+                    "ok": true, "elapsed_ms": elapsed_ms, "state": state_snapshot(&transition.state), "events_debug": format!("{:?}", transition.events),
+                }))?;
                 state = transition.state;
                 record.actions += 1;
             }
             Err(error) => {
+                observer.emit("apply_end", Some(game), Some(record.actions), || serde_json::json!({"ok": false, "elapsed_ms": elapsed_ms, "error": error.to_string()}))?;
                 record.outcome = Outcome::Error;
                 record.error = Some(error.to_string());
-                return record;
+                return Ok(record);
             }
         }
     }
-
     record.winner = match state.status {
-        GameStatus::Won { winner, .. } => {
-            if winner == first_plays.player() {
-                Some(Winner::First)
-            } else {
-                Some(Winner::Second)
-            }
-        }
+        GameStatus::Won { winner, .. } => Some(if winner == first_plays.player() {
+            Winner::First
+        } else {
+            Winner::Second
+        }),
         GameStatus::Draw { .. } | GameStatus::Ongoing => None,
     };
     record.outcome = if record.max_overrun_ms > OVERRUN_TOLERANCE_MS {
@@ -510,7 +528,64 @@ fn play_policy_match(
     } else {
         Outcome::Decided
     };
-    record
+    Ok(record)
+}
+
+/// Self-play compatibility API. Use `run_observed` for fallible persistence.
+pub fn run(engine: &Engine, config: ArenaConfig) -> (Vec<GameRecord>, ArenaSummary) {
+    run_with_callbacks(
+        engine,
+        config,
+        ArenaMatch::SelfPlay,
+        None,
+        &mut |_, _, _| Ok(()),
+    )
+    .expect("no-op observer cannot fail")
+}
+
+pub fn run_match(
+    engine: &Engine,
+    config: ArenaConfig,
+    first: Evaluation,
+    second: Evaluation,
+) -> (Vec<GameRecord>, ArenaSummary) {
+    run_match_with_progress(engine, config, first, second, &mut |_, _, _| {})
+}
+
+/// Legacy finished-game callback, preserved for existing callers. For recording errors, use `run_observed`.
+pub fn run_match_with_progress(
+    engine: &Engine,
+    config: ArenaConfig,
+    first: Evaluation,
+    second: Evaluation,
+    progress: &mut dyn FnMut(usize, usize, &GameRecord),
+) -> (Vec<GameRecord>, ArenaSummary) {
+    run_with_callbacks(
+        engine,
+        config,
+        ArenaMatch::Evaluation { first, second },
+        None,
+        &mut |played, total, record| {
+            progress(played, total, record);
+            Ok(())
+        },
+    )
+    .expect("no-op observer cannot fail")
+}
+
+pub fn run_policy_match(
+    engine: &Engine,
+    config: ArenaConfig,
+    policy: std::sync::Arc<crate::policy::LinearPolicy>,
+) -> (Vec<GameRecord>, ArenaSummary) {
+    run_with_callbacks(
+        engine,
+        config,
+        ArenaMatch::Policy(policy),
+        None,
+        &mut |_, _, _| Ok(()),
+    )
+    .expect("no-op observer cannot fail")
 }
 
 #[cfg(test)]

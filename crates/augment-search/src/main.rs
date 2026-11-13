@@ -138,6 +138,14 @@ fn tactical_diagnostics(args: &[String]) -> Result<(), Box<dyn std::error::Error
 /// position, and unfinished or errored games are counted apart from decided ones so the score rate
 /// stays an estimate over games that actually finished.
 fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    if args.iter().any(|arg| arg == "--help" || arg == "-h") {
+        println!(
+            "arena [--time-ms N] [--depth N] [--nodes N] [--chance-samples N] [--games N] [--max-actions N] [--seed N]\n  [--evaluation material|positional|legacy-material]\n  [--against material|positional|legacy-material | --policy FILE]\n  --trace FILE  Recommended: versioned metadata and flushed new_game/search/apply start/end events, with diagnostic state snapshots.\n  --out FILE    Legacy GameRecord JSONL, one flushed line per finished game, for every arena variant.\n                AUGMENTIA_ARENA_OUT is the fallback when --out is absent.\n  Both outputs create NEW files only; existing paths are refused. No fsync/power-loss guarantee.\n  Games exchange colors but use DIFFERENT seeds. Consecutive base-seed batches can overlap; see trace metadata."
+        );
+        return Ok(());
+    }
+    let mut trace_path: Option<std::path::PathBuf> = None;
+    let mut out_path: Option<std::path::PathBuf> = None;
     let mut config = SearchConfig::default();
     let mut arena = ArenaConfig::default();
     // When set, the arena becomes a match between this configuration and the opponent.
@@ -165,6 +173,8 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
+            "--trace" => trace_path = Some(value.into()),
+            "--out" => out_path = Some(value.into()),
             "--games" => arena.games_per_pairing = value.parse()?,
             "--max-actions" => arena.max_actions = value.parse()?,
             "--seed" => arena.seed = value.parse()?,
@@ -186,9 +196,17 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             _ => return Err(format!("Unknown flag {flag}").into()),
         }
     }
+    if opponent.is_some() && policy_path.is_some() {
+        return Err("--against and --policy are mutually exclusive".into());
+    }
+    if out_path.is_none() {
+        out_path = std::env::var_os("AUGMENTIA_ARENA_OUT")
+            .filter(|p| !p.is_empty())
+            .map(Into::into);
+    }
     arena.search = config.clone();
-    if let Some(path) = policy_path {
-        let text = std::fs::read_to_string(&path)?;
+    if let Some(path) = &policy_path {
+        let text = std::fs::read_to_string(path)?;
         policy = Some(serde_json::from_str(&text)?);
     }
     let engine = Engine::bundled_latest()?;
@@ -201,14 +219,67 @@ fn arena_games(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         "policy": policy.is_some(),
         "games_per_pairing": arena.games_per_pairing,
         "max_actions": arena.max_actions,
+        "seed": arena.seed,
+        "nodes": arena.search.max_nodes,
+        "chance_samples": arena.search.chance_samples,
+        "depth_unit": arena.search.depth_unit,
+        "policy_path": policy_path,
+        "trace_path": trace_path,
+        "out_path": out_path,
+        "seed_note": "Color-exchanged games use different seeds; consecutive base-seed batches may overlap. See trace run_start.seed_schedule.",
     });
-    let (records, summary) = if let Some(policy) = policy {
-        arena::run_policy_match(&engine, arena, std::sync::Arc::new(policy))
-    } else {
-        match opponent {
-            Some(other) => arena::run_match(&engine, arena, config.evaluation, other),
-            None => arena::run(&engine, arena),
+    use arena::recording::JsonlWriter;
+    let open = |path: &std::path::PathBuf, flag: &str| {
+        JsonlWriter::create_new(path).map_err(|error| {
+            std::io::Error::new(error.kind(), format!("{flag} {}: {error}", path.display()))
+        })
+    };
+    let trace_writer = trace_path
+        .as_ref()
+        .map(|path| open(path, "--trace"))
+        .transpose()?;
+    let mut out_writer = out_path
+        .as_ref()
+        .map(|path| open(path, "--out"))
+        .transpose()?;
+    let comparison = if let Some(policy) = policy {
+        arena::ArenaMatch::Policy(std::sync::Arc::new(policy))
+    } else if let Some(second) = opponent {
+        arena::ArenaMatch::Evaluation {
+            first: config.evaluation,
+            second,
         }
+    } else {
+        arena::ArenaMatch::SelfPlay
+    };
+    let total = u64::from(arena.games_per_pairing) * 2;
+    let mut completed = |played: u64, record: &Value| -> std::io::Result<()> {
+        if let Some(writer) = &mut out_writer {
+            writer.write(record).map_err(|error| {
+                std::io::Error::new(error.kind(), format!("--out recording failed: {error}"))
+            })?;
+        }
+        eprintln!(
+            "game {played}/{total}: {} {}",
+            record["outcome"], record["winner"]
+        );
+        Ok(())
+    };
+    let (records, summary) = if let Some(mut writer) = trace_writer {
+        arena::run_observed(&engine, arena, comparison, &mut |event| {
+            writer.write(event).map_err(|error| {
+                std::io::Error::new(error.kind(), format!("--trace recording failed: {error}"))
+            })?;
+            if event.event == "game_end" {
+                completed(event.game_index.unwrap_or(0) + 1, &event.data["record"])?;
+            }
+            Ok(())
+        })?
+    } else {
+        arena::run_with_progress(&engine, arena, comparison, &mut |played, _, record| {
+            let record = serde_json::to_value(record).map_err(std::io::Error::other)?;
+            completed(played as u64, &record)
+        })?
     };
     println!(
         "{}",

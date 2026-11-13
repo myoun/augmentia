@@ -121,7 +121,14 @@ impl Default for SearchConfig {
 }
 #[derive(Default, Debug, Clone, Serialize)]
 pub struct SearchStats {
+    /// All applied search transitions, including the tactical safety pass.
     pub nodes: u64,
+    pub safety_nodes: u64,
+    pub safety_ms: f64,
+    /// False if a budget/cancellation interrupted the pass. True does not prove stochastic moves safe.
+    pub safety_completed: bool,
+    pub safety_unsafe_actions: usize,
+    pub safety_unverified_actions: usize,
     pub legal_calls: u64,
     pub apply_calls: u64,
     pub chance_samples: u64,
@@ -147,14 +154,16 @@ pub struct SearchReport {
     pub action: Option<String>,
     #[serde(skip)]
     pub selected_action: Option<Action>,
-    /// At completed_depth=0 this evaluates the root, NOT the fallback action.
+    /// At completed_depth=0 this evaluates the root, NOT the fallback action, except for
+    /// stop_reason="immediate_win", which proves the selected action's terminal score directly.
     pub score: f64,
     /// Even full root coverage is only over Engine::legal_actions, not every accepted target.
     pub action_space: String,
     pub completed_depth: u8,
     pub depth_unit: DepthUnit,
     pub root_actions: usize,
-    /// Enumerated root coverage in the deepest FULLY completed iteration, never a partial iteration.
+    /// Root edges scored in the deepest completed iteration, excluding safety-proven losing moves.
+    /// Zero for partial iterations and the direct terminal-win shortcut.
     pub scored_root_actions: usize,
     pub stop_reason: String,
     pub elapsed_ms: f64,
@@ -299,65 +308,46 @@ pub fn search_with_cancel(
     if state.status == GameStatus::Ongoing && actions.is_empty() {
         return Err(SearchError::EmptyOngoingState);
     }
-    // Forced-move safety, decided before any deepening. Two cheap guarantees, each one apply per
-    // candidate:
-    //   1. a move that ends the game right away is taken immediately, without searching;
-    //   2. if some move hands the opponent an immediate win, the incumbent is narrowed to the moves
-    //      that avoid it, so a time-limited shallow iteration cannot pick a losing one.
-    // The seed-20260807 game showed why this belongs before the loop: depth 1 in turn units cannot see
-    // the opponent's reply, and its choice uncritically let a king capture through.
-    let forced = ctx.forced_root_action(state, &actions);
-    let immediate_win = matches!(&forced, ForcedRoot::Win(_));
-    // `ForcedRoot::None` means every candidate loses immediately: nothing can be saved, so the deep
-    // search runs unconstrained and any move is as good as it gets. Falling back to the first legal
-    // action keeps the report well-formed for that lost position.
-    let mut best = match &forced {
-        ForcedRoot::Win(action) | ForcedRoot::Safe(action) => Some(action.clone()),
-        ForcedRoot::None => actions.first().cloned(),
-    };
-    // The deep loop may only choose among these: every root candidate that neither loses on the spot
-    // nor allows the opponent an immediate win. `None` means the sweep found nothing to protect against
-    // (all candidates lose at once), in which case the constraint lifts.
-    let safe_set: Option<std::collections::BTreeSet<Action>> = match &forced {
-        ForcedRoot::Win(_) => None, // the win returns below; the set is unused
-        ForcedRoot::Safe(_) => Some(
-            actions
-                .iter()
-                .filter(|candidate| {
-                    Some(*candidate) == best.as_ref() || !ctx.is_two_ply_blunder(state, candidate)
-                })
-                .cloned()
-                .collect(),
-        ),
-        ForcedRoot::None => None,
-    };
-    let mut score = ctx.evaluate(state);
-    if immediate_win {
-        let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
-        return Ok(SearchReport {
-            action: best.as_ref().map(|a| format!("{a:?}")),
-            selected_action: best,
-            score: WIN,
-            action_space: "engine-enumerated-subset".into(),
-            completed_depth: 1,
-            depth_unit: depth_unit_recorded,
-            root_actions: actions.len(),
-            scored_root_actions: actions.len(),
-            stop_reason: "immediate_win".into(),
-            elapsed_ms,
-            budget_overrun_ms: (elapsed_ms - time_limit.as_secs_f64() * 1000.0).max(0.0),
-            stats: ctx.stats,
-            provenance,
-        });
-    }
-    let mut completed_depth = 0;
-    let mut stop = if actions.is_empty() {
-        "terminal"
+    // The tactical pass shares the search's deadline, cancellation flag and node budget.
+    // Unchecked candidates remain unknown, never classified as safe or as forced losses.
+    let mut safety = RootSafety::new(actions.len());
+    let safety_start = Instant::now();
+    let safety_result = if actions.is_empty() {
+        Ok(())
     } else {
-        "depth_limit"
+        ctx.screen_root(&actions, &mut safety)
     };
+    ctx.stats.safety_ms = safety_start.elapsed().as_secs_f64() * 1000.0;
+    ctx.stats.safety_completed = safety_result.is_ok();
+    ctx.stats.safety_unsafe_actions = safety.allowed.iter().filter(|allowed| !**allowed).count();
+    ctx.stats.safety_unverified_actions = safety
+        .allowed
+        .iter()
+        .enumerate()
+        .filter(|(index, allowed)| {
+            **allowed && !safety.verified[*index] && safety.winning != Some(*index)
+        })
+        .count();
+    let mut stop = match safety_result {
+        Ok(()) if actions.is_empty() => "terminal",
+        Ok(()) => "depth_limit",
+        Err(Failure::Stop(reason)) => reason,
+        Err(Failure::Error(error)) => return Err(error),
+    };
+    let safety_stopped = !ctx.stats.safety_completed;
+    let mut best = safety.fallback(&actions);
+    let mut score = ctx.evaluate(state);
+    let mut completed_depth = 0;
+    let mut scored_root_actions = 0;
+    if let Some(index) = safety.winning {
+        best = Some(actions[index].clone());
+        score = WIN;
+        stop = "immediate_win";
+    }
+    // If all moves are proven lost, retain a legal move and let deepening compare them.
+    let restrict = safety.allowed.iter().any(|allowed| *allowed);
     for depth in 1..=max_depth {
-        if actions.is_empty() {
+        if actions.is_empty() || safety_stopped || safety.winning.is_some() {
             break;
         }
         let mut order: Vec<usize> = (0..actions.len()).collect();
@@ -392,8 +382,14 @@ pub fn search_with_cancel(
         });
         let mut iteration_best = None;
         let mut iteration_score = f64::NEG_INFINITY;
+        let mut iteration_scored = 0;
         let mut aborted = false;
         for index in order {
+            // These root edges already have a deterministic losing reply. They cannot improve
+            // a non-losing incumbent and need not consume the search budget again.
+            if restrict && !safety.allowed[index] {
+                continue;
+            }
             match ctx.edge(
                 &actions,
                 &actions[index],
@@ -405,10 +401,8 @@ pub fn search_with_cancel(
                 mix(search_seed ^ index as u64),
             ) {
                 Ok(value) => {
-                    let eligible = safe_set
-                        .as_ref()
-                        .is_none_or(|safe| safe.contains(&actions[index]));
-                    if eligible && value > iteration_score {
+                    iteration_scored += 1;
+                    if value > iteration_score {
                         iteration_score = value;
                         iteration_best = Some(actions[index].clone());
                     }
@@ -424,16 +418,12 @@ pub fn search_with_cancel(
         if aborted {
             break;
         }
-        // A safe move exists, so the iteration must not hand the choice to a losing one. When the
-        // whole iteration landed on unsafe moves only, keep the previous best.
-        if iteration_best
-            .as_ref()
-            .is_some_and(|chosen| safe_set.as_ref().is_none_or(|safe| safe.contains(chosen)))
-        {
+        if iteration_best.is_some() {
             best = iteration_best;
             score = iteration_score;
         }
         completed_depth = depth;
+        scored_root_actions = iteration_scored;
     }
     let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
     Ok(SearchReport {
@@ -444,11 +434,7 @@ pub fn search_with_cancel(
         completed_depth,
         depth_unit: depth_unit_recorded,
         root_actions: actions.len(),
-        scored_root_actions: if completed_depth > 0 {
-            actions.len()
-        } else {
-            0
-        },
+        scored_root_actions,
         stop_reason: stop.into(),
         elapsed_ms,
         budget_overrun_ms: (elapsed_ms - time_limit.as_secs_f64() * 1000.0).max(0.0),
@@ -467,15 +453,30 @@ impl From<SearchError> for Failure {
     }
 }
 
-/// What the pre-search forced-move sweep decided about the root.
-///
-/// `Win` is a move that ends the game on the spot: it is played without searching. `Safe` is a move
-/// that does not hand the opponent an immediate win; when at least one exists, only these may be
-/// chosen. `None` means every move loses immediately, so any of them is as good as it gets.
-enum ForcedRoot {
-    Win(Action),
-    Safe(Action),
-    None,
+struct RootSafety {
+    // True means not proven lost, which includes unexamined and stochastic candidates.
+    allowed: Vec<bool>,
+    verified: Vec<bool>,
+    winning: Option<usize>,
+}
+
+impl RootSafety {
+    fn new(count: usize) -> Self {
+        Self {
+            allowed: vec![true; count],
+            verified: vec![false; count],
+            winning: None,
+        }
+    }
+
+    fn fallback(&self, actions: &[Action]) -> Option<Action> {
+        self.winning
+            .or_else(|| self.verified.iter().position(|verified| *verified))
+            .or_else(|| self.allowed.iter().position(|allowed| *allowed))
+            .and_then(|index| actions.get(index))
+            .or_else(|| actions.first())
+            .cloned()
+    }
 }
 
 struct Context<'a> {
@@ -504,107 +505,120 @@ impl Context<'_> {
         Ok(())
     }
 
-    /// Decide the forced part of the root before any deepening.
-    ///
-    /// Walks the root candidates once, applying each:
-    ///   - a candidate that ends the game with the root player winning is returned as `Win` and stops
-    ///     the walk, because nothing can beat it;
-    ///   - a candidate that ends the game with the root player losing is skipped;
-    ///   - a candidate that keeps the game going is safe unless the opponent can win on the spot after
-    ///     it, so that reply is checked with one apply per opponent action.
-    ///
-    /// The second ply matters: depth 1 in turn units never sees the opponent's reply, and the
-    /// seed-20260807 game was lost exactly there — three of forty-four moves allowed an immediate king
-    /// capture, and a time-limited depth-1 search picked one.
-    ///
-    /// If every candidate loses at once, `None` is returned: losing immediately is unavoidable and the
-    /// deep search can pick among equally lost moves. Candidates with a search chance roll are treated
-    /// as safe — this net only catches outcomes that are certain.
-    fn forced_root_action(
+    fn check_runtime(&self) -> Result<(), Failure> {
+        if self
+            .cancellation
+            .is_some_and(|flag| flag.load(Ordering::Relaxed))
+        {
+            return Err(Failure::Stop("cancelled"));
+        }
+        if self.start.elapsed() >= self.config.time_limit {
+            return Err(Failure::Stop("time_limit"));
+        }
+        Ok(())
+    }
+
+    /// Reuse the root batch. Regenerating it for every candidate is quadratic for combination cards.
+    /// First inspect direct outcomes, so a large reply space cannot hide a later immediate win.
+    fn screen_root(
         &mut self,
-        _state: &GameState,
         actions: &LegalActionBatch<'_>,
-    ) -> ForcedRoot {
-        for index in 0..actions.len() {
-            let action = &actions[index];
-            let mut chance = SearchChanceContext::new(mix(index as u64));
-            let Ok(transition) = apply_search_transition(actions, action, &mut chance) else {
-                // An unapplicable root candidate is not the search's business; the deep loop will
-                // surface it if it matters.
-                continue;
-            };
+        safety: &mut RootSafety,
+    ) -> Result<(), Failure> {
+        let mut needs_reply = vec![false; actions.len()];
+        for (index, action) in actions.iter().enumerate() {
+            let path = mix(self.config.search_seed ^ index as u64);
+            let mut chance = SearchChanceContext::new(path);
+            let transition = self.safety_apply(actions, action, &mut chance)?;
+            if transition.sampled_chance {
+                continue; // One sampled outcome is not a proof about all outcomes.
+            }
             match transition.transition.state.status {
                 GameStatus::Won { winner, .. } if winner == self.root => {
-                    return ForcedRoot::Win(action.clone());
+                    safety.winning = Some(index);
+                    return Ok(());
                 }
-                GameStatus::Won { .. } => {
-                    // A certain immediate loss: never choose this if anything else exists.
-                    continue;
+                GameStatus::Won { .. } => safety.allowed[index] = false,
+                GameStatus::Draw { .. } => safety.verified[index] = true,
+                GameStatus::Ongoing if transition.transition.state.turn == self.root => {
+                    // Same-player continuations are not opponent replies.
+                    safety.verified[index] = true;
                 }
-                _ => {}
+                GameStatus::Ongoing => needs_reply[index] = true,
             }
-            // The opponent only gets to reply if this action ends the mover's turn. In turn-unit
-            // searches a player's turn spans several actions, so a first action that keeps the turn
-            // cannot be a blunder yet — checking the opponent here would exclude normal attacking
-            // moves, which is exactly how the depth-one-turn fixture lost its mating line. When the
-            // turn does pass, the reply is checked with one apply per opponent action.
-            if transition.transition.state.turn != self.root
-                && self.opponent_can_win_immediately(&transition.transition.state)
+        }
+        for (index, needs_reply) in needs_reply.into_iter().enumerate() {
+            if !needs_reply {
+                continue;
+            }
+            let path = mix(self.config.search_seed ^ index as u64);
+            let mut chance = SearchChanceContext::new(path);
+            let transition = self.safety_apply(actions, &actions[index], &mut chance)?;
+            match self.opponent_can_win_immediately(&transition.transition.state, path)? {
+                Some(true) => safety.allowed[index] = false,
+                Some(false) => safety.verified[index] = true,
+                None => {} // A stochastic reply leaves safety unknown, not proven.
+            }
+        }
+        Ok(())
+    }
+
+    fn opponent_can_win_immediately(
+        &mut self,
+        state: &GameState,
+        path: u64,
+    ) -> Result<Option<bool>, Failure> {
+        self.check()?;
+        let batch = self.legal(state)?;
+        self.check_runtime()?;
+        let mut uncertain = false;
+        for (index, action) in batch.iter().enumerate() {
+            let mut chance = SearchChanceContext::new(mix(path ^ index as u64));
+            let transition = self.safety_apply(&batch, action, &mut chance)?;
+            if transition.sampled_chance {
+                uncertain = true;
+                continue;
+            }
+            if matches!(transition.transition.state.status,
+                GameStatus::Won { winner, .. } if winner == state.turn)
             {
-                continue;
+                return Ok(Some(true));
             }
-            return ForcedRoot::Safe(action.clone());
         }
-        ForcedRoot::None
+        Ok(if uncertain { None } else { Some(false) })
     }
 
-    /// Whether the player to move in `state` can end the game with an immediate win.
-    ///
-    /// Only meaningful when `state.turn` differs from the mover: in a turn-unit search the mover may
-    /// hold several actions, and the reply only happens once the turn passes. One apply per opponent
-    /// action; stops at the first winning reply. This is what makes the safety net two plies deep.
-    fn opponent_can_win_immediately(&mut self, state: &GameState) -> bool {
-        if state.status != GameStatus::Ongoing {
-            return false;
-        }
-        let Ok(batch) = self.legal(state) else {
-            return false;
-        };
-        for opponent_index in 0..batch.len() {
-            let mut chance =
-                SearchChanceContext::new(mix(state.fingerprint() ^ opponent_index as u64));
-            let Ok(transition) = batch.apply_for_search(&batch[opponent_index], &mut chance) else {
-                continue;
-            };
-            if matches!(transition.transition.state.status, GameStatus::Won { .. }) {
-                return true;
-            }
-        }
-        false
+    fn safety_apply(
+        &mut self,
+        actions: &LegalActionBatch<'_>,
+        action: &Action,
+        chance: &mut SearchChanceContext,
+    ) -> Result<Box<augment_core::SearchTransition>, Failure> {
+        let before = self.stats.nodes;
+        let result = self.apply(actions, action, chance);
+        self.stats.safety_nodes += self.stats.nodes - before;
+        result
     }
 
-    /// Whether a root candidate is a two-ply blunder: it loses on the spot, or it lets the opponent
-    /// win on the spot. The same standard `forced_root_action` applies when picking the incumbent.
-    fn is_two_ply_blunder(&mut self, state: &GameState, action: &Action) -> bool {
-        let Ok(batch) = self.legal(state) else {
-            return false;
-        };
-        let Some(index) = batch.iter().position(|candidate| candidate == action) else {
-            return false;
-        };
-        let mut chance = SearchChanceContext::new(mix(state.fingerprint() ^ index as u64));
-        let Ok(transition) = batch.apply_for_search(action, &mut chance) else {
-            return false;
-        };
-        match transition.transition.state.status {
-            GameStatus::Won { winner, .. } if winner == self.root => false,
-            GameStatus::Won { .. } => true,
-            // The opponent can only punish if the turn actually passed; see forced_root_action.
-            _ => {
-                transition.transition.state.turn != self.root
-                    && self.opponent_can_win_immediately(&transition.transition.state)
-            }
+    fn apply(
+        &mut self,
+        actions: &LegalActionBatch<'_>,
+        action: &Action,
+        chance: &mut SearchChanceContext,
+    ) -> Result<Box<augment_core::SearchTransition>, Failure> {
+        self.check()?;
+        self.stats.nodes += 1;
+        let start = Instant::now();
+        let result = apply_search_transition(actions, action, chance);
+        self.stats.apply_calls += 1;
+        self.stats.apply_ms += start.elapsed().as_secs_f64() * 1000.0;
+        let transition = result.map_err(|error| SearchError::Engine(error.to_string()))?;
+        if transition.sampled_chance {
+            self.stats.chance_samples += 1;
         }
+        // A single engine call can overrun, but never launch another call afterwards.
+        self.check_runtime()?;
+        Ok(transition)
     }
     fn legal<'a>(&mut self, state: &'a GameState) -> Result<LegalActionBatch<'a>, SearchError>
     where
@@ -669,22 +683,10 @@ impl Context<'_> {
         let mut total = 0.0;
         for sample in 0..self.config.chance_samples {
             self.check()?;
-            self.stats.nodes += 1;
             let mut chance = SearchChanceContext::new(mix(
                 path ^ (sample as u64).wrapping_mul(0x9e3779b97f4a7c15)
             ));
-            let start = Instant::now();
-            let transition = apply_search_transition(actions, action, &mut chance);
-            self.stats.apply_calls += 1;
-            self.stats.apply_ms += start.elapsed().as_secs_f64() * 1000.0;
-            let transition = transition.map_err(|e| SearchError::Engine(e.to_string()))?;
-            // A single engine call can overrun. Do not claim the iteration completed then.
-            if self.start.elapsed() >= self.config.time_limit {
-                return Err(Failure::Stop("time_limit"));
-            }
-            if transition.sampled_chance {
-                self.stats.chance_samples += 1;
-            }
+            let transition = self.apply(actions, action, &mut chance)?;
             // Never average alpha-beta bounds as though they were exact values.
             let (a, b) = if transition.sampled_chance {
                 (f64::NEG_INFINITY, f64::INFINITY)
@@ -1122,7 +1124,11 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(result.completed_depth, 1);
+        // A direct terminal proof is not a completed full-root deepening iteration.
+        assert_eq!(result.stop_reason, "immediate_win");
+        assert_eq!(result.completed_depth, 0);
+        assert_eq!(result.scored_root_actions, 0);
+        assert_eq!(result.score, WIN);
         assert_eq!(state.fingerprint(), before);
     }
     #[test]
@@ -1158,15 +1164,45 @@ mod tests {
         assert_eq!(result.score, material_score(&state, state.turn));
     }
     #[test]
-    fn partial_iteration_does_not_replace_completed_result() {
+    fn expired_budget_does_not_run_unbounded_safety_probes() {
         let (engine, state) = fixture();
-        let count = engine.legal_actions(&state).unwrap().len() as u64;
+        let report = search(
+            &engine,
+            &state,
+            SearchConfig {
+                time_limit: Duration::ZERO,
+                ..config(3)
+            },
+        )
+        .unwrap();
+        // One enumeration is needed for a legal fallback, not a full root/reply sweep.
+        assert_eq!(report.stats.legal_calls, 1);
+        assert_eq!(report.stats.apply_calls, 0);
+        assert_eq!(report.completed_depth, 0);
+        assert_eq!(report.stop_reason, "time_limit");
+    }
+
+    #[test]
+    fn precancelled_search_does_not_run_safety_probes() {
+        let (engine, state) = fixture();
+        let cancelled = AtomicBool::new(true);
+        let report = search_with_cancel(&engine, &state, config(3), Some(&cancelled)).unwrap();
+        assert_eq!(report.stats.legal_calls, 1);
+        assert_eq!(report.stats.apply_calls, 0);
+        assert_eq!(report.stop_reason, "cancelled");
+    }
+
+    #[test]
+    fn partial_iteration_does_not_replace_completed_result() {
+        let (engine, mut state) = fixture();
+        state.board.set("h1".parse().unwrap(), None); // No direct terminal shortcut.
         let shallow = search(&engine, &state, config(1)).unwrap();
         let interrupted = search(
             &engine,
             &state,
             SearchConfig {
-                max_nodes: count + 1,
+                // Safety transitions count too; the second iteration gets exactly one node.
+                max_nodes: shallow.stats.nodes + 1,
                 ..config(3)
             },
         )
@@ -1359,7 +1395,12 @@ mod tests {
                     .unwrap_or_else(|_| panic!("search failed"));
                 assert_eq!(actual, unpruned(&engine, &state, 3, Player::White));
                 let report = search(&engine, &state, config(3)).unwrap();
-                assert_eq!(report.completed_depth, 3);
+                if report.stop_reason == "immediate_win" {
+                    assert_eq!(report.completed_depth, 0);
+                    assert_eq!(report.scored_root_actions, 0);
+                } else {
+                    assert_eq!(report.completed_depth, 3);
+                }
                 assert_eq!(report.score, unpruned(&engine, &state, 3, actor));
                 let child = engine
                     .apply(&state, report.selected_action.unwrap())
@@ -1601,8 +1642,10 @@ mod tests {
     }
     #[test]
     fn exact_node_budget_finishes_and_draw_is_terminal() {
-        let (engine, state) = fixture();
-        let count = engine.legal_actions(&state).unwrap().len() as u64;
+        let (engine, mut state) = fixture();
+        state.board.set("h1".parse().unwrap(), None);
+        // Count every applied transition, including the safety pass, in the shared budget.
+        let count = search(&engine, &state, config(1)).unwrap().stats.nodes;
         let report = search(
             &engine,
             &state,
@@ -1843,6 +1886,350 @@ mod tests {
         assert_eq!(report.scored_root_actions, 0);
         assert_eq!(report.stats.max_action_path, MAX_ACTION_PATH);
         assert!(report.selected_action.is_some());
+    }
+
+    fn replay_fixture(text: &str) -> (Engine, GameState) {
+        #[derive(serde::Deserialize)]
+        struct Replay {
+            seed: u64,
+            actions: Vec<Action>,
+        }
+        let replay: Replay = serde_json::from_str(text).unwrap();
+        let engine = Engine::bundled_latest().unwrap();
+        let mut state = engine.new_game(Mode::Standard, replay.seed).unwrap();
+        for action in replay.actions {
+            state = engine.apply(&state, action).unwrap().state;
+        }
+        (engine, state)
+    }
+
+    #[test]
+    fn safety_transitions_share_the_node_budget() {
+        let (engine, state) = fixture();
+        let report = search(
+            &engine,
+            &state,
+            SearchConfig {
+                max_nodes: 1,
+                ..config(1)
+            },
+        )
+        .unwrap();
+        assert_eq!(report.stop_reason, "node_limit");
+        assert_eq!(report.stats.nodes, 1);
+        assert_eq!(report.stats.apply_calls, 1);
+        assert_eq!(report.stats.safety_nodes, 1);
+        assert!(!report.stats.safety_completed);
+        assert_eq!(report.completed_depth, 0);
+        assert_eq!(report.scored_root_actions, 0);
+        assert!(report.selected_action.is_some());
+    }
+
+    #[test]
+    fn same_turn_safety_reuses_the_root_batch() {
+        let (engine, mut state) = fixture();
+        state.board.set("h1".parse().unwrap(), None);
+        state.actions_remaining = 2;
+        let count = engine.legal_actions(&state).unwrap().len() as u64;
+        let report = search(&engine, &state, config(1)).unwrap();
+        assert_eq!(report.stats.legal_calls, 1);
+        assert_eq!(report.stats.safety_nodes, count);
+        assert_eq!(report.stats.nodes, count * 2);
+        assert_eq!(report.stats.apply_calls, report.stats.nodes);
+        assert!(report.stats.safety_completed);
+    }
+
+    #[test]
+    fn captured_arena_stall_returns_at_a_tiny_node_budget() {
+        let (engine, state) =
+            replay_fixture(include_str!("../fixtures/arena-stall-seed1000012.json"));
+        let before = state.fingerprint();
+        let report = search(
+            &engine,
+            &state,
+            SearchConfig {
+                max_nodes: 24,
+                ..config(1)
+            },
+        )
+        .unwrap();
+        assert_eq!(report.stop_reason, "node_limit");
+        assert_eq!(report.stats.nodes, 24);
+        assert_eq!(report.stats.safety_nodes, 24);
+        assert_eq!(report.stats.apply_calls, 24);
+        assert!(!report.stats.safety_completed);
+        assert_eq!(report.completed_depth, 0);
+        assert!(
+            report.stats.legal_calls <= 2,
+            "root batch must not be regenerated"
+        );
+        assert_eq!(state.fingerprint(), before);
+    }
+
+    #[test]
+    fn original_web_blunder_is_rejected_at_depth_one() {
+        let (engine, state) =
+            replay_fixture(include_str!("../fixtures/web-selfmate-seed20260807.json"));
+        assert_eq!(state.turn, Player::Black);
+        let before = state.fingerprint();
+        let report = search(&engine, &state, config(1)).unwrap();
+        assert!(report.stats.safety_completed);
+        assert_eq!(report.stats.safety_unsafe_actions, 3);
+        assert_eq!(report.scored_root_actions, report.root_actions - 3);
+        let next = engine
+            .apply(&state, report.selected_action.unwrap())
+            .unwrap()
+            .state;
+        if next.status == GameStatus::Ongoing && next.turn == Player::White {
+            for reply in engine.legal_actions(&next).unwrap() {
+                let end = engine.apply(&next, reply).unwrap().state;
+                assert!(!matches!(
+                    end.status,
+                    GameStatus::Won {
+                        winner: Player::White,
+                        ..
+                    }
+                ));
+            }
+        }
+        assert_eq!(state.fingerprint(), before);
+    }
+
+    #[test]
+    fn sampled_draft_outcomes_are_not_safety_proofs() {
+        let engine = Engine::bundled_latest().unwrap();
+        let state = engine.new_game(Mode::Standard, 701).unwrap();
+        let batch = engine.legal_action_batch(&state).unwrap();
+        let mut safety = RootSafety::new(batch.len());
+        let mut ctx = Context {
+            engine: &engine,
+            config: config(1),
+            start: Instant::now(),
+            root: state.turn,
+            stats: SearchStats::default(),
+            active_edges: 0,
+            cancellation: None,
+        };
+        ctx.screen_root(&batch, &mut safety)
+            .unwrap_or_else(|_| panic!("screen failed"));
+        assert!(safety.winning.is_none());
+        assert!(safety.allowed[0]);
+        assert!(!safety.verified[0]);
+        assert!(ctx.stats.chance_samples > 0);
+    }
+
+    struct CancelDuringAction {
+        flag: std::sync::Arc<AtomicBool>,
+        calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+    impl augment_core::EffectHandler for CancelDuringAction {
+        fn definition_id(&self) -> &str {
+            "test.search-cancellation"
+        }
+        fn react(
+            &self,
+            _: &augment_core::CardInstance,
+            event: &augment_core::Event,
+            _: &GameState,
+        ) -> Vec<augment_core::EffectCommand> {
+            if matches!(event, augment_core::Event::ActionApplied { .. }) {
+                self.calls.fetch_add(1, Ordering::Relaxed);
+                self.flag.store(true, Ordering::Relaxed);
+            }
+            Vec::new()
+        }
+    }
+
+    #[test]
+    fn cancellation_during_safety_stops_before_the_next_engine_call() {
+        let (mut engine, mut state) = fixture();
+        let cancelled = std::sync::Arc::new(AtomicBool::new(false));
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        engine
+            .effects_mut()
+            .register(CancelDuringAction {
+                flag: cancelled.clone(),
+                calls: calls.clone(),
+            })
+            .unwrap();
+        state.cards.push(augment_core::CardInstance {
+            instance_id: 90,
+            definition_id: "test.search-cancellation".into(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+        let report = search_with_cancel(&engine, &state, config(1), Some(&cancelled)).unwrap();
+        assert_eq!(report.stop_reason, "cancelled");
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+        assert_eq!(report.stats.nodes, 1);
+        assert_eq!(report.stats.safety_nodes, 1);
+        assert_eq!(report.stats.legal_calls, 1);
+        assert!(!report.stats.safety_completed);
+    }
+
+    struct WinForWhite;
+    impl augment_core::EffectHandler for WinForWhite {
+        fn definition_id(&self) -> &str {
+            "test.white-wins"
+        }
+        fn react(
+            &self,
+            _: &augment_core::CardInstance,
+            event: &augment_core::Event,
+            _: &GameState,
+        ) -> Vec<augment_core::EffectCommand> {
+            if matches!(event, augment_core::Event::ActionApplied { .. }) {
+                vec![augment_core::EffectCommand::Win {
+                    winner: Player::White,
+                    reason: "test".into(),
+                }]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    #[test]
+    fn an_opponents_losing_reply_is_not_an_opponents_winning_reply() {
+        let (mut engine, mut state) = fixture();
+        state.turn = Player::Black;
+        engine.effects_mut().register(WinForWhite).unwrap();
+        state.cards.push(augment_core::CardInstance {
+            instance_id: 91,
+            definition_id: "test.white-wins".into(),
+            owner: Player::Black,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+        let mut ctx = Context {
+            engine: &engine,
+            config: config(1),
+            start: Instant::now(),
+            root: Player::White,
+            stats: SearchStats::default(),
+            active_edges: 0,
+            cancellation: None,
+        };
+        let result = ctx
+            .opponent_can_win_immediately(&state, 19)
+            .unwrap_or_else(|_| panic!("screen failed"));
+        assert_eq!(result, Some(false));
+    }
+
+    #[test]
+    fn all_proven_losing_moves_still_return_a_legal_move() {
+        let (mut engine, mut state) = fixture();
+        state.turn = Player::Black;
+        engine.effects_mut().register(WinForWhite).unwrap();
+        state.cards.push(augment_core::CardInstance {
+            instance_id: 91,
+            definition_id: "test.white-wins".into(),
+            owner: Player::Black,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+        let legal = engine.legal_actions(&state).unwrap();
+        let report = search(&engine, &state, config(1)).unwrap();
+        assert!(report.stats.safety_completed);
+        assert_eq!(report.stats.safety_unsafe_actions, legal.len());
+        assert!(legal.contains(&report.selected_action.unwrap()));
+        assert_eq!(report.score, -WIN);
+    }
+
+    struct WinAfterRandomSample;
+    impl augment_core::EffectHandler for WinAfterRandomSample {
+        fn definition_id(&self) -> &str {
+            "test.random-win"
+        }
+        fn react(
+            &self,
+            _: &augment_core::CardInstance,
+            event: &augment_core::Event,
+            _: &GameState,
+        ) -> Vec<augment_core::EffectCommand> {
+            if matches!(event, augment_core::Event::RandomSample { .. }) {
+                vec![augment_core::EffectCommand::Win {
+                    winner: Player::White,
+                    reason: "test".into(),
+                }]
+            } else {
+                Vec::new()
+            }
+        }
+    }
+
+    #[test]
+    fn a_sampled_terminal_win_is_not_a_root_or_reply_proof() {
+        let (mut engine, mut state) = fixture();
+        for square in ["a8", "h2"] {
+            state.board.set(
+                square.parse().unwrap(),
+                Some(Piece::new(Player::Black, PieceKind::Rook)),
+            );
+        }
+        engine.effects_mut().register(WinAfterRandomSample).unwrap();
+        state.cards.push(augment_core::CardInstance {
+            instance_id: 91,
+            definition_id: "test.random-win".into(),
+            owner: Player::White,
+            half_stars: 0,
+            charges: 0,
+            available_after_turn: None,
+        });
+        state = engine
+            .grant_card(&state, 92, augment_core::CLEANUP_SACRIFICE, Player::White)
+            .unwrap()
+            .state;
+        let batch = engine.legal_action_batch(&state).unwrap();
+        let random_index = batch
+            .iter()
+            .position(|action| {
+                matches!(
+                    action,
+                    Action::UseCard {
+                        instance_id: 92,
+                        ..
+                    }
+                )
+            })
+            .unwrap();
+        let transition = batch
+            .apply_for_search(&batch[random_index], &mut SearchChanceContext::new(19))
+            .unwrap();
+        assert!(transition.sampled_chance);
+        assert!(matches!(
+            transition.transition.state.status,
+            GameStatus::Won {
+                winner: Player::White,
+                ..
+            }
+        ));
+        let mut safety = RootSafety::new(batch.len());
+        let mut ctx = Context {
+            engine: &engine,
+            config: config(1),
+            start: Instant::now(),
+            root: Player::White,
+            stats: SearchStats::default(),
+            active_edges: 0,
+            cancellation: None,
+        };
+        ctx.screen_root(&batch, &mut safety)
+            .unwrap_or_else(|_| panic!("screen failed"));
+        assert!(safety.winning.is_none());
+        assert!(safety.allowed[random_index]);
+        assert!(!safety.verified[random_index]);
+        // To a Black root, White is the opponent; the same sampled win cannot prove a losing reply.
+        ctx.root = Player::Black;
+        assert_eq!(
+            ctx.opponent_can_win_immediately(&state, 19)
+                .unwrap_or_else(|_| panic!("reply screen failed")),
+            None
+        );
     }
 
     #[test]
